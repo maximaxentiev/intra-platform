@@ -13,13 +13,16 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
+import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCentresRouteImport } from './routes/_authenticated/centres'
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
+import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenticated/shifts.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
 import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
 import { Route as AuthenticatedStaffIdRouteImport } from './routes/_authenticated/staff.$id'
+import { Route as AuthenticatedShiftsNewRouteImport } from './routes/_authenticated/shifts.new'
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
@@ -42,6 +45,11 @@ const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedShiftsRoute = AuthenticatedShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -62,6 +70,12 @@ const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedStaffRoute,
 } as any)
+const AuthenticatedShiftsIndexRoute =
+  AuthenticatedShiftsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedShiftsRoute,
+  } as any)
 const AuthenticatedCentresIndexRoute =
   AuthenticatedCentresIndexRouteImport.update({
     id: '/',
@@ -77,6 +91,11 @@ const AuthenticatedStaffIdRoute = AuthenticatedStaffIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
+const AuthenticatedShiftsNewRoute = AuthenticatedShiftsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedShiftsRoute,
 } as any)
 const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
   id: '/new',
@@ -95,12 +114,15 @@ export interface FileRoutesByFullPath {
   '/centres': typeof AuthenticatedCentresRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/staff': typeof AuthenticatedStaffRouteWithChildren
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
+  '/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesByTo {
@@ -110,9 +132,11 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
+  '/shifts': typeof AuthenticatedShiftsIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesById {
@@ -123,12 +147,15 @@ export interface FileRoutesById {
   '/_authenticated/centres': typeof AuthenticatedCentresRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/_authenticated/staff/$id': typeof AuthenticatedStaffIdRoute
   '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
+  '/_authenticated/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRouteTypes {
@@ -139,12 +166,15 @@ export interface FileRouteTypes {
     | '/centres'
     | '/dashboard'
     | '/profile'
+    | '/shifts'
     | '/staff'
     | '/centres/$id'
     | '/centres/new'
+    | '/shifts/new'
     | '/staff/$id'
     | '/staff/new'
     | '/centres/'
+    | '/shifts/'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,9 +184,11 @@ export interface FileRouteTypes {
     | '/profile'
     | '/centres/$id'
     | '/centres/new'
+    | '/shifts/new'
     | '/staff/$id'
     | '/staff/new'
     | '/centres'
+    | '/shifts'
     | '/staff'
   id:
     | '__root__'
@@ -166,12 +198,15 @@ export interface FileRouteTypes {
     | '/_authenticated/centres'
     | '/_authenticated/dashboard'
     | '/_authenticated/profile'
+    | '/_authenticated/shifts'
     | '/_authenticated/staff'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
+    | '/_authenticated/shifts/new'
     | '/_authenticated/staff/$id'
     | '/_authenticated/staff/new'
     | '/_authenticated/centres/'
+    | '/_authenticated/shifts/'
     | '/_authenticated/staff/'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/shifts': {
+      id: '/_authenticated/shifts'
+      path: '/shifts'
+      fullPath: '/shifts'
+      preLoaderRoute: typeof AuthenticatedShiftsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -239,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffIndexRouteImport
       parentRoute: typeof AuthenticatedStaffRoute
     }
+    '/_authenticated/shifts/': {
+      id: '/_authenticated/shifts/'
+      path: '/'
+      fullPath: '/shifts/'
+      preLoaderRoute: typeof AuthenticatedShiftsIndexRouteImport
+      parentRoute: typeof AuthenticatedShiftsRoute
+    }
     '/_authenticated/centres/': {
       id: '/_authenticated/centres/'
       path: '/'
@@ -259,6 +308,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/staff/$id'
       preLoaderRoute: typeof AuthenticatedStaffIdRouteImport
       parentRoute: typeof AuthenticatedStaffRoute
+    }
+    '/_authenticated/shifts/new': {
+      id: '/_authenticated/shifts/new'
+      path: '/new'
+      fullPath: '/shifts/new'
+      preLoaderRoute: typeof AuthenticatedShiftsNewRouteImport
+      parentRoute: typeof AuthenticatedShiftsRoute
     }
     '/_authenticated/centres/new': {
       id: '/_authenticated/centres/new'
@@ -292,6 +348,19 @@ const AuthenticatedCentresRouteChildren: AuthenticatedCentresRouteChildren = {
 const AuthenticatedCentresRouteWithChildren =
   AuthenticatedCentresRoute._addFileChildren(AuthenticatedCentresRouteChildren)
 
+interface AuthenticatedShiftsRouteChildren {
+  AuthenticatedShiftsNewRoute: typeof AuthenticatedShiftsNewRoute
+  AuthenticatedShiftsIndexRoute: typeof AuthenticatedShiftsIndexRoute
+}
+
+const AuthenticatedShiftsRouteChildren: AuthenticatedShiftsRouteChildren = {
+  AuthenticatedShiftsNewRoute: AuthenticatedShiftsNewRoute,
+  AuthenticatedShiftsIndexRoute: AuthenticatedShiftsIndexRoute,
+}
+
+const AuthenticatedShiftsRouteWithChildren =
+  AuthenticatedShiftsRoute._addFileChildren(AuthenticatedShiftsRouteChildren)
+
 interface AuthenticatedStaffRouteChildren {
   AuthenticatedStaffIdRoute: typeof AuthenticatedStaffIdRoute
   AuthenticatedStaffNewRoute: typeof AuthenticatedStaffNewRoute
@@ -311,6 +380,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCentresRoute: typeof AuthenticatedCentresRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedShiftsRoute: typeof AuthenticatedShiftsRouteWithChildren
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRouteWithChildren
 }
 
@@ -318,6 +388,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCentresRoute: AuthenticatedCentresRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedShiftsRoute: AuthenticatedShiftsRouteWithChildren,
   AuthenticatedStaffRoute: AuthenticatedStaffRouteWithChildren,
 }
 
