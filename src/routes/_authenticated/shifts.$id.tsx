@@ -76,17 +76,22 @@ function ShiftDetail() {
 
   const contactedSet = new Set((contactedQ.data ?? []).map((r: any) => r.staff_id));
 
-  if (!shift) return <div>Loading...</div>;
-
   const [editing, setEditing] = useState(false);
-  const [edit, setEdit] = useState<any>({
+  const [edit, setEdit] = useState<any>(null);
+  const centresQ = useQuery({
+    queryKey: ["centres-all"],
+    queryFn: async () => (await db.from("centres").select("id, name").order("name")).data ?? [],
+  });
+
+  if (!shift) return <div>Loading...</div>;
+  const editVals = edit ?? {
     centre_id: shift.centre_id,
     shift_date: shift.shift_date,
     start_time: shift.start_time.slice(0, 5),
     end_time: shift.end_time.slice(0, 5),
     role_needed: shift.role_needed,
     notes: shift.notes,
-  });
+  };
 
   async function saveEdits() {
     const payload = { ...edit, start_time: edit.start_time + ":00", end_time: edit.end_time + ":00" };
