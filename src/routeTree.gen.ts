@@ -14,6 +14,10 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCentresRouteImport } from './routes/_authenticated/centres'
+import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
+import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
+import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,39 +43,90 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCentresRoute = AuthenticatedCentresRouteImport.update({
+  id: '/centres',
+  path: '/centres',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCentresIndexRoute =
+  AuthenticatedCentresIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCentresRoute,
+  } as any)
+const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedCentresRoute,
+} as any)
+const AuthenticatedCentresIdRoute = AuthenticatedCentresIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedCentresRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/centres': typeof AuthenticatedCentresRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/centres/': typeof AuthenticatedCentresIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/centres': typeof AuthenticatedCentresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/centres': typeof AuthenticatedCentresRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/profile'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/centres'
+    | '/dashboard'
+    | '/profile'
+    | '/centres/$id'
+    | '/centres/new'
+    | '/centres/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/profile'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/profile'
+    | '/centres/$id'
+    | '/centres/new'
+    | '/centres'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/centres'
     | '/_authenticated/dashboard'
     | '/_authenticated/profile'
+    | '/_authenticated/centres/$id'
+    | '/_authenticated/centres/new'
+    | '/_authenticated/centres/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,15 +172,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/centres': {
+      id: '/_authenticated/centres'
+      path: '/centres'
+      fullPath: '/centres'
+      preLoaderRoute: typeof AuthenticatedCentresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/centres/': {
+      id: '/_authenticated/centres/'
+      path: '/'
+      fullPath: '/centres/'
+      preLoaderRoute: typeof AuthenticatedCentresIndexRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/_authenticated/centres/new': {
+      id: '/_authenticated/centres/new'
+      path: '/new'
+      fullPath: '/centres/new'
+      preLoaderRoute: typeof AuthenticatedCentresNewRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/_authenticated/centres/$id': {
+      id: '/_authenticated/centres/$id'
+      path: '/$id'
+      fullPath: '/centres/$id'
+      preLoaderRoute: typeof AuthenticatedCentresIdRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
   }
 }
 
+interface AuthenticatedCentresRouteChildren {
+  AuthenticatedCentresIdRoute: typeof AuthenticatedCentresIdRoute
+  AuthenticatedCentresNewRoute: typeof AuthenticatedCentresNewRoute
+  AuthenticatedCentresIndexRoute: typeof AuthenticatedCentresIndexRoute
+}
+
+const AuthenticatedCentresRouteChildren: AuthenticatedCentresRouteChildren = {
+  AuthenticatedCentresIdRoute: AuthenticatedCentresIdRoute,
+  AuthenticatedCentresNewRoute: AuthenticatedCentresNewRoute,
+  AuthenticatedCentresIndexRoute: AuthenticatedCentresIndexRoute,
+}
+
+const AuthenticatedCentresRouteWithChildren =
+  AuthenticatedCentresRoute._addFileChildren(AuthenticatedCentresRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCentresRoute: typeof AuthenticatedCentresRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCentresRoute: AuthenticatedCentresRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
