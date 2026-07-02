@@ -12,10 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCentresRouteImport } from './routes/_authenticated/centres'
+import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
+import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
+import { Route as AuthenticatedStaffIdRouteImport } from './routes/_authenticated/staff.$id'
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
@@ -33,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -48,12 +57,27 @@ const AuthenticatedCentresRoute = AuthenticatedCentresRouteImport.update({
   path: '/centres',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
 const AuthenticatedCentresIndexRoute =
   AuthenticatedCentresIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedCentresRoute,
   } as any)
+const AuthenticatedStaffNewRoute = AuthenticatedStaffNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
+const AuthenticatedStaffIdRoute = AuthenticatedStaffIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
 const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -71,9 +95,13 @@ export interface FileRoutesByFullPath {
   '/centres': typeof AuthenticatedCentresRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/staff': typeof AuthenticatedStaffRouteWithChildren
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/new': typeof AuthenticatedStaffNewRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
+  '/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +110,10 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/new': typeof AuthenticatedStaffNewRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
+  '/staff': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -92,9 +123,13 @@ export interface FileRoutesById {
   '/_authenticated/centres': typeof AuthenticatedCentresRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
+  '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -104,9 +139,13 @@ export interface FileRouteTypes {
     | '/centres'
     | '/dashboard'
     | '/profile'
+    | '/staff'
     | '/centres/$id'
     | '/centres/new'
+    | '/staff/$id'
+    | '/staff/new'
     | '/centres/'
+    | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -115,7 +154,10 @@ export interface FileRouteTypes {
     | '/profile'
     | '/centres/$id'
     | '/centres/new'
+    | '/staff/$id'
+    | '/staff/new'
     | '/centres'
+    | '/staff'
   id:
     | '__root__'
     | '/'
@@ -124,9 +166,13 @@ export interface FileRouteTypes {
     | '/_authenticated/centres'
     | '/_authenticated/dashboard'
     | '/_authenticated/profile'
+    | '/_authenticated/staff'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
+    | '/_authenticated/staff/$id'
+    | '/_authenticated/staff/new'
     | '/_authenticated/centres/'
+    | '/_authenticated/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/staff': {
+      id: '/_authenticated/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AuthenticatedStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -179,12 +232,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCentresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/staff/': {
+      id: '/_authenticated/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof AuthenticatedStaffIndexRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
     '/_authenticated/centres/': {
       id: '/_authenticated/centres/'
       path: '/'
       fullPath: '/centres/'
       preLoaderRoute: typeof AuthenticatedCentresIndexRouteImport
       parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/_authenticated/staff/new': {
+      id: '/_authenticated/staff/new'
+      path: '/new'
+      fullPath: '/staff/new'
+      preLoaderRoute: typeof AuthenticatedStaffNewRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
+    '/_authenticated/staff/$id': {
+      id: '/_authenticated/staff/$id'
+      path: '/$id'
+      fullPath: '/staff/$id'
+      preLoaderRoute: typeof AuthenticatedStaffIdRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
     }
     '/_authenticated/centres/new': {
       id: '/_authenticated/centres/new'
@@ -218,16 +292,33 @@ const AuthenticatedCentresRouteChildren: AuthenticatedCentresRouteChildren = {
 const AuthenticatedCentresRouteWithChildren =
   AuthenticatedCentresRoute._addFileChildren(AuthenticatedCentresRouteChildren)
 
+interface AuthenticatedStaffRouteChildren {
+  AuthenticatedStaffIdRoute: typeof AuthenticatedStaffIdRoute
+  AuthenticatedStaffNewRoute: typeof AuthenticatedStaffNewRoute
+  AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
+}
+
+const AuthenticatedStaffRouteChildren: AuthenticatedStaffRouteChildren = {
+  AuthenticatedStaffIdRoute: AuthenticatedStaffIdRoute,
+  AuthenticatedStaffNewRoute: AuthenticatedStaffNewRoute,
+  AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,
+}
+
+const AuthenticatedStaffRouteWithChildren =
+  AuthenticatedStaffRoute._addFileChildren(AuthenticatedStaffRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCentresRoute: typeof AuthenticatedCentresRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedStaffRoute: typeof AuthenticatedStaffRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCentresRoute: AuthenticatedCentresRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedStaffRoute: AuthenticatedStaffRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
