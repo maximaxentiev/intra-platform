@@ -9,38 +9,254 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
+import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCentresRouteImport } from './routes/_authenticated/centres'
+import { Route as AuthenticatedAvailabilityRouteImport } from './routes/_authenticated/availability'
+import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
+import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenticated/shifts.index'
+import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
+import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
+import { Route as AuthenticatedStaffIdRouteImport } from './routes/_authenticated/staff.$id'
+import { Route as AuthenticatedShiftsNewRouteImport } from './routes/_authenticated/shifts.new'
+import { Route as AuthenticatedShiftsIdRouteImport } from './routes/_authenticated/shifts.$id'
+import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
+import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedShiftsRoute = AuthenticatedShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCentresRoute = AuthenticatedCentresRouteImport.update({
+  id: '/centres',
+  path: '/centres',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAvailabilityRoute =
+  AuthenticatedAvailabilityRouteImport.update({
+    id: '/availability',
+    path: '/availability',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
+const AuthenticatedShiftsIndexRoute =
+  AuthenticatedShiftsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedShiftsRoute,
+  } as any)
+const AuthenticatedCentresIndexRoute =
+  AuthenticatedCentresIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCentresRoute,
+  } as any)
+const AuthenticatedStaffNewRoute = AuthenticatedStaffNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
+const AuthenticatedStaffIdRoute = AuthenticatedStaffIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedStaffRoute,
+} as any)
+const AuthenticatedShiftsNewRoute = AuthenticatedShiftsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedShiftsRoute,
+} as any)
+const AuthenticatedShiftsIdRoute = AuthenticatedShiftsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedShiftsRoute,
+} as any)
+const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedCentresRoute,
+} as any)
+const AuthenticatedCentresIdRoute = AuthenticatedCentresIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedCentresRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/availability': typeof AuthenticatedAvailabilityRoute
+  '/centres': typeof AuthenticatedCentresRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/shifts': typeof AuthenticatedShiftsRouteWithChildren
+  '/staff': typeof AuthenticatedStaffRouteWithChildren
+  '/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/shifts/$id': typeof AuthenticatedShiftsIdRoute
+  '/shifts/new': typeof AuthenticatedShiftsNewRoute
+  '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/new': typeof AuthenticatedStaffNewRoute
+  '/centres/': typeof AuthenticatedCentresIndexRoute
+  '/shifts/': typeof AuthenticatedShiftsIndexRoute
+  '/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/availability': typeof AuthenticatedAvailabilityRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/shifts/$id': typeof AuthenticatedShiftsIdRoute
+  '/shifts/new': typeof AuthenticatedShiftsNewRoute
+  '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/new': typeof AuthenticatedStaffNewRoute
+  '/centres': typeof AuthenticatedCentresIndexRoute
+  '/shifts': typeof AuthenticatedShiftsIndexRoute
+  '/staff': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/availability': typeof AuthenticatedAvailabilityRoute
+  '/_authenticated/centres': typeof AuthenticatedCentresRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
+  '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
+  '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
+  '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/shifts/$id': typeof AuthenticatedShiftsIdRoute
+  '/_authenticated/shifts/new': typeof AuthenticatedShiftsNewRoute
+  '/_authenticated/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
+  '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
+  '/_authenticated/shifts/': typeof AuthenticatedShiftsIndexRoute
+  '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/availability'
+    | '/centres'
+    | '/dashboard'
+    | '/profile'
+    | '/shifts'
+    | '/staff'
+    | '/centres/$id'
+    | '/centres/new'
+    | '/shifts/$id'
+    | '/shifts/new'
+    | '/staff/$id'
+    | '/staff/new'
+    | '/centres/'
+    | '/shifts/'
+    | '/staff/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/availability'
+    | '/dashboard'
+    | '/profile'
+    | '/centres/$id'
+    | '/centres/new'
+    | '/shifts/$id'
+    | '/shifts/new'
+    | '/staff/$id'
+    | '/staff/new'
+    | '/centres'
+    | '/shifts'
+    | '/staff'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/availability'
+    | '/_authenticated/centres'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/profile'
+    | '/_authenticated/shifts'
+    | '/_authenticated/staff'
+    | '/_authenticated/centres/$id'
+    | '/_authenticated/centres/new'
+    | '/_authenticated/shifts/$id'
+    | '/_authenticated/shifts/new'
+    | '/_authenticated/staff/$id'
+    | '/_authenticated/staff/new'
+    | '/_authenticated/centres/'
+    | '/_authenticated/shifts/'
+    | '/_authenticated/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +264,185 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/staff': {
+      id: '/_authenticated/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AuthenticatedStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/shifts': {
+      id: '/_authenticated/shifts'
+      path: '/shifts'
+      fullPath: '/shifts'
+      preLoaderRoute: typeof AuthenticatedShiftsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/centres': {
+      id: '/_authenticated/centres'
+      path: '/centres'
+      fullPath: '/centres'
+      preLoaderRoute: typeof AuthenticatedCentresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/availability': {
+      id: '/_authenticated/availability'
+      path: '/availability'
+      fullPath: '/availability'
+      preLoaderRoute: typeof AuthenticatedAvailabilityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/': {
+      id: '/_authenticated/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof AuthenticatedStaffIndexRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
+    '/_authenticated/shifts/': {
+      id: '/_authenticated/shifts/'
+      path: '/'
+      fullPath: '/shifts/'
+      preLoaderRoute: typeof AuthenticatedShiftsIndexRouteImport
+      parentRoute: typeof AuthenticatedShiftsRoute
+    }
+    '/_authenticated/centres/': {
+      id: '/_authenticated/centres/'
+      path: '/'
+      fullPath: '/centres/'
+      preLoaderRoute: typeof AuthenticatedCentresIndexRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/_authenticated/staff/new': {
+      id: '/_authenticated/staff/new'
+      path: '/new'
+      fullPath: '/staff/new'
+      preLoaderRoute: typeof AuthenticatedStaffNewRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
+    '/_authenticated/staff/$id': {
+      id: '/_authenticated/staff/$id'
+      path: '/$id'
+      fullPath: '/staff/$id'
+      preLoaderRoute: typeof AuthenticatedStaffIdRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
+    '/_authenticated/shifts/new': {
+      id: '/_authenticated/shifts/new'
+      path: '/new'
+      fullPath: '/shifts/new'
+      preLoaderRoute: typeof AuthenticatedShiftsNewRouteImport
+      parentRoute: typeof AuthenticatedShiftsRoute
+    }
+    '/_authenticated/shifts/$id': {
+      id: '/_authenticated/shifts/$id'
+      path: '/$id'
+      fullPath: '/shifts/$id'
+      preLoaderRoute: typeof AuthenticatedShiftsIdRouteImport
+      parentRoute: typeof AuthenticatedShiftsRoute
+    }
+    '/_authenticated/centres/new': {
+      id: '/_authenticated/centres/new'
+      path: '/new'
+      fullPath: '/centres/new'
+      preLoaderRoute: typeof AuthenticatedCentresNewRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/_authenticated/centres/$id': {
+      id: '/_authenticated/centres/$id'
+      path: '/$id'
+      fullPath: '/centres/$id'
+      preLoaderRoute: typeof AuthenticatedCentresIdRouteImport
+      parentRoute: typeof AuthenticatedCentresRoute
+    }
   }
 }
 
+interface AuthenticatedCentresRouteChildren {
+  AuthenticatedCentresIdRoute: typeof AuthenticatedCentresIdRoute
+  AuthenticatedCentresNewRoute: typeof AuthenticatedCentresNewRoute
+  AuthenticatedCentresIndexRoute: typeof AuthenticatedCentresIndexRoute
+}
+
+const AuthenticatedCentresRouteChildren: AuthenticatedCentresRouteChildren = {
+  AuthenticatedCentresIdRoute: AuthenticatedCentresIdRoute,
+  AuthenticatedCentresNewRoute: AuthenticatedCentresNewRoute,
+  AuthenticatedCentresIndexRoute: AuthenticatedCentresIndexRoute,
+}
+
+const AuthenticatedCentresRouteWithChildren =
+  AuthenticatedCentresRoute._addFileChildren(AuthenticatedCentresRouteChildren)
+
+interface AuthenticatedShiftsRouteChildren {
+  AuthenticatedShiftsIdRoute: typeof AuthenticatedShiftsIdRoute
+  AuthenticatedShiftsNewRoute: typeof AuthenticatedShiftsNewRoute
+  AuthenticatedShiftsIndexRoute: typeof AuthenticatedShiftsIndexRoute
+}
+
+const AuthenticatedShiftsRouteChildren: AuthenticatedShiftsRouteChildren = {
+  AuthenticatedShiftsIdRoute: AuthenticatedShiftsIdRoute,
+  AuthenticatedShiftsNewRoute: AuthenticatedShiftsNewRoute,
+  AuthenticatedShiftsIndexRoute: AuthenticatedShiftsIndexRoute,
+}
+
+const AuthenticatedShiftsRouteWithChildren =
+  AuthenticatedShiftsRoute._addFileChildren(AuthenticatedShiftsRouteChildren)
+
+interface AuthenticatedStaffRouteChildren {
+  AuthenticatedStaffIdRoute: typeof AuthenticatedStaffIdRoute
+  AuthenticatedStaffNewRoute: typeof AuthenticatedStaffNewRoute
+  AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
+}
+
+const AuthenticatedStaffRouteChildren: AuthenticatedStaffRouteChildren = {
+  AuthenticatedStaffIdRoute: AuthenticatedStaffIdRoute,
+  AuthenticatedStaffNewRoute: AuthenticatedStaffNewRoute,
+  AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,
+}
+
+const AuthenticatedStaffRouteWithChildren =
+  AuthenticatedStaffRoute._addFileChildren(AuthenticatedStaffRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAvailabilityRoute: typeof AuthenticatedAvailabilityRoute
+  AuthenticatedCentresRoute: typeof AuthenticatedCentresRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedShiftsRoute: typeof AuthenticatedShiftsRouteWithChildren
+  AuthenticatedStaffRoute: typeof AuthenticatedStaffRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAvailabilityRoute: AuthenticatedAvailabilityRoute,
+  AuthenticatedCentresRoute: AuthenticatedCentresRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedShiftsRoute: AuthenticatedShiftsRouteWithChildren,
+  AuthenticatedStaffRoute: AuthenticatedStaffRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
