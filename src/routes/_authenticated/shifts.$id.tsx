@@ -94,7 +94,7 @@ function ShiftDetail() {
   };
 
   async function saveEdits() {
-    const payload = { ...edit, start_time: edit.start_time + ":00", end_time: edit.end_time + ":00" };
+    const payload = { ...editVals, start_time: editVals.start_time + ":00", end_time: editVals.end_time + ":00" };
     const { error } = await db.from("shifts").update(payload).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Shift updated");
@@ -200,18 +200,18 @@ function ShiftDetail() {
               ) : (
                 <div className="space-y-3">
                   <div className="space-y-2"><Label>Centre</Label>
-                    <Select value={edit.centre_id} onValueChange={v => setEdit({ ...edit, centre_id: v })}>
+                    <Select value={editVals.centre_id} onValueChange={v => setEdit({ ...editVals, centre_id: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{(centresQ.data ?? []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label>Date</Label><Input type="date" value={edit.shift_date} onChange={e => setEdit({ ...edit, shift_date: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Date</Label><Input type="date" value={editVals.shift_date} onChange={e => setEdit({ ...editVals, shift_date: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2"><Label>Start</Label><Input type="time" value={edit.start_time} onChange={e => setEdit({ ...edit, start_time: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>End</Label><Input type="time" value={edit.end_time} onChange={e => setEdit({ ...edit, end_time: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Start</Label><Input type="time" value={editVals.start_time} onChange={e => setEdit({ ...editVals, start_time: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>End</Label><Input type="time" value={editVals.end_time} onChange={e => setEdit({ ...editVals, end_time: e.target.value })} /></div>
                   </div>
-                  <div className="space-y-2"><Label>Role needed</Label><Input value={edit.role_needed} onChange={e => setEdit({ ...edit, role_needed: e.target.value })} /></div>
-                  <div className="space-y-2"><Label>Notes</Label><Textarea rows={3} value={edit.notes} onChange={e => setEdit({ ...edit, notes: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Role needed</Label><Input value={editVals.role_needed} onChange={e => setEdit({ ...editVals, role_needed: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Notes</Label><Textarea rows={3} value={editVals.notes} onChange={e => setEdit({ ...editVals, notes: e.target.value })} /></div>
                   <Button onClick={saveEdits}>Save changes</Button>
                 </div>
               )}
