@@ -80,7 +80,7 @@ function AvailabilityPage() {
 
           <div className="border rounded-md divide-y">
             {rows.length === 0 && <div className="p-6 text-sm text-muted-foreground text-center">No staff match these filters.</div>}
-            {rows.map(({ staff, entries }) => (
+            {rows.map(({ staff, entries }: any) => (
               <div key={staff.id} className="p-3 flex items-start gap-4">
                 <Link to="/staff/$id" params={{ id: staff.id }} className="w-48 shrink-0 font-medium hover:underline">{displayStaff(staff)}</Link>
                 <div className="flex-1 flex flex-wrap gap-2">
