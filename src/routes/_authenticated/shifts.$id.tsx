@@ -142,10 +142,6 @@ function ShiftDetail() {
     navigate({ to: "/shifts" });
   }
 
-  const centresQ = useQuery({
-    queryKey: ["centres-all"],
-    queryFn: async () => (await db.from("centres").select("id, name").order("name")).data ?? [],
-  });
 
   return (
     <div className="space-y-6">
