@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { db } from "@/lib/db";
+import { db, channelLabel } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -15,9 +15,17 @@ function CentresIndex() {
   const [q, setQ] = useState("");
   const { data } = useQuery({
     queryKey: ["centres"],
-    queryFn: async () => (await db.from("centres").select("*").order("name")).data ?? [],
+    queryFn: async () =>
+      (await db.from("centres").select("*, centre_contacts(name, sort_order)").order("name")).data ?? [],
   });
   const filtered = (data ?? []).filter((c: any) => c.name.toLowerCase().includes(q.toLowerCase()));
+
+  function primaryContactName(c: any) {
+    const contacts = [...(c.centre_contacts ?? [])].sort(
+      (a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order,
+    );
+    return contacts[0]?.name || "No contact";
+  }
 
   return (
     <div className="space-y-6">
@@ -41,7 +49,9 @@ function CentresIndex() {
               <Card className="p-4 hover:shadow-md transition-shadow">
                 <div className="font-medium">{c.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">{c.address || "No address"}</div>
-                <div className="text-xs text-muted-foreground mt-2">{c.contact_name || "No contact"} · {c.preferred_channel}</div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  {primaryContactName(c)} · {channelLabel(c.primary_channel ?? c.preferred_channel)}
+                </div>
               </Card>
             </Link>
           ))}

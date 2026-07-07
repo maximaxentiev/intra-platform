@@ -13,6 +13,26 @@ export type StaffStatus = "active" | "inactive";
 export type CentreChannel = "whatsapp" | "goto" | "email";
 export type ShiftStatus = "pending" | "filled" | "cancelled" | "completed";
 
+export const CENTRE_CHANNEL_OPTIONS: { value: CentreChannel; label: string }[] = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "goto", label: "GoTo" },
+  { value: "email", label: "Email" },
+];
+
+export function channelLabel(channel: CentreChannel): string {
+  return CENTRE_CHANNEL_OPTIONS.find(o => o.value === channel)?.label ?? channel;
+}
+
+export async function saveCentreSecondaryChannels(centreId: string, channels: CentreChannel[]) {
+  await db.from("centre_secondary_channels").delete().eq("centre_id", centreId);
+  if (channels.length) {
+    const { error } = await db.from("centre_secondary_channels").insert(
+      channels.map(channel => ({ centre_id: centreId, channel })),
+    );
+    if (error) throw error;
+  }
+}
+
 export interface Staff {
   id: string;
   legal_name: string;
@@ -37,7 +57,20 @@ export interface Centre {
   contact_phone: string;
   contact_email: string;
   preferred_channel: CentreChannel;
+  primary_channel: CentreChannel;
   notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CentreContact {
+  id: string;
+  centre_id: string;
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -62,8 +95,17 @@ export interface Shift {
   status: ShiftStatus;
   assigned_staff_id: string | null;
   cancellation_reason: string;
+  added_to_staffpoint: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShiftComment {
+  id: string;
+  shift_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
 }
 
 export const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

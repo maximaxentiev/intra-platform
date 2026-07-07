@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { db, toDateStr } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 
 export const Route = createFileRoute("/_authenticated/shifts/new")({
   component: NewShift,
@@ -16,10 +16,6 @@ export const Route = createFileRoute("/_authenticated/shifts/new")({
 
 function NewShift() {
   const navigate = useNavigate();
-  const centresQ = useQuery({
-    queryKey: ["centres-all"],
-    queryFn: async () => (await db.from("centres").select("id, name").order("name")).data ?? [],
-  });
   const [values, setValues] = useState<any>({
     centre_id: "",
     shift_date: toDateStr(new Date()),
@@ -27,6 +23,7 @@ function NewShift() {
     end_time: "16:00",
     role_needed: "",
     notes: "",
+    added_to_staffpoint: false,
   });
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: any) => setValues((prev: any) => ({ ...prev, [k]: v }));
@@ -36,7 +33,13 @@ function NewShift() {
     if (!values.centre_id) { toast.error("Please pick a centre"); return; }
     if (!values.role_needed) { toast.error("Please pick a role"); return; }
     setSaving(true);
-    const payload = { ...values, start_time: values.start_time + ":00", end_time: values.end_time + ":00", status: "pending" };
+    const payload = {
+      ...values,
+      start_time: values.start_time + ":00",
+      end_time: values.end_time + ":00",
+      status: "pending",
+      added_to_staffpoint: !!values.added_to_staffpoint,
+    };
     const { data, error } = await db.from("shifts").insert(payload).select("id").single();
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -53,12 +56,7 @@ function NewShift() {
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
               <Label>Centre *</Label>
-              <Select value={values.centre_id} onValueChange={v => set("centre_id", v)}>
-                <SelectTrigger><SelectValue placeholder="Choose centre..." /></SelectTrigger>
-                <SelectContent>
-                  {(centresQ.data ?? []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableCentreSelect value={values.centre_id} onChange={v => set("centre_id", v)} />
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
@@ -81,6 +79,19 @@ function NewShift() {
                 <SelectContent>
                   <SelectItem value="ECA">ECA</SelectItem>
                   <SelectItem value="ECE">ECE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Added to Staffpoint</Label>
+              <Select
+                value={values.added_to_staffpoint ? "yes" : "no"}
+                onValueChange={v => set("added_to_staffpoint", v === "yes")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">No</SelectItem>
+                  <SelectItem value="yes">Yes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -80,8 +80,8 @@ export function StaffForm({ initial, onSubmit }: { initial: any; onSubmit: (valu
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="docs">Documents link (OneDrive URL)</Label>
-        <Input id="docs" type="url" placeholder="https://..." value={values.documents_url} onChange={e => set("documents_url", e.target.value)} />
+        <Label htmlFor="docs">Documents link (optional)</Label>
+        <Input id="docs" placeholder="Paste a link or note..." value={values.documents_url} onChange={e => set("documents_url", e.target.value)} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>

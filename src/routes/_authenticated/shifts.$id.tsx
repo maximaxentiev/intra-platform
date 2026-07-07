@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Star, Trash2, UserCheck, XCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
+import { ShiftComments } from "@/components/ShiftComments";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -80,10 +82,6 @@ function ShiftDetail() {
 
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<any>(null);
-  const centresQ = useQuery({
-    queryKey: ["centres-all"],
-    queryFn: async () => (await db.from("centres").select("id, name").order("name")).data ?? [],
-  });
 
   if (!shift) return <div>Loading...</div>;
   const editVals = edit ?? {
@@ -93,6 +91,7 @@ function ShiftDetail() {
     end_time: shift.end_time.slice(0, 5),
     role_needed: shift.role_needed,
     notes: shift.notes,
+    added_to_staffpoint: !!shift.added_to_staffpoint,
   };
 
   async function saveEdits() {
@@ -192,6 +191,7 @@ function ShiftDetail() {
                   <div><span className="text-muted-foreground">Time:</span> {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}</div>
                   <div><span className="text-muted-foreground">Role:</span> {shift.role_needed || "—"}</div>
                   <div><span className="text-muted-foreground">Notes:</span> {shift.notes || "—"}</div>
+                  <div><span className="text-muted-foreground">Added to Staffpoint:</span> {shift.added_to_staffpoint ? "Yes" : "No"}</div>
                   <div><span className="text-muted-foreground">Assigned:</span> {shift.staff ? displayStaff(shift.staff) : <span className="italic">Unassigned</span>}
                     {shift.staff && <Button size="sm" variant="link" onClick={unassign}>Unassign</Button>}
                   </div>
@@ -201,11 +201,12 @@ function ShiftDetail() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="space-y-2"><Label>Centre</Label>
-                    <Select value={editVals.centre_id} onValueChange={v => setEdit({ ...editVals, centre_id: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{(centresQ.data ?? []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                    </Select>
+                  <div className="space-y-2">
+                    <Label>Centre</Label>
+                    <SearchableCentreSelect
+                      value={editVals.centre_id}
+                      onChange={v => setEdit({ ...editVals, centre_id: v })}
+                    />
                   </div>
                   <div className="space-y-2"><Label>Date</Label><Input type="date" value={editVals.shift_date} onChange={e => setEdit({ ...editVals, shift_date: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-2">
@@ -223,6 +224,19 @@ function ShiftDetail() {
                     </Select>
                   </div>
                   <div className="space-y-2"><Label>Notes</Label><Textarea rows={3} value={editVals.notes} onChange={e => setEdit({ ...editVals, notes: e.target.value })} /></div>
+                  <div className="space-y-2">
+                    <Label>Added to Staffpoint</Label>
+                    <Select
+                      value={editVals.added_to_staffpoint ? "yes" : "no"}
+                      onValueChange={v => setEdit({ ...editVals, added_to_staffpoint: v === "yes" })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button onClick={saveEdits}>Save changes</Button>
                 </div>
               )}
@@ -258,12 +272,23 @@ function ShiftDetail() {
                 <div className="text-sm text-muted-foreground py-4">No eligible staff. Everyone active is either banned at this centre or already booked at this time.</div>
               ) : (
                 <ul className="divide-y">
-                  {availableList.map((s: any) => (
-                    <li key={s.id} className={`flex items-center justify-between py-2 ${s.isTop ? "bg-amber-50/50 -mx-6 px-6" : ""}`}>
+                  {availableList.map((s: any) => {
+                    const isAssigned = shift.assigned_staff_id === s.id;
+                    return (
+                    <li
+                      key={s.id}
+                      className={`flex items-center justify-between py-2.5 px-3 rounded-md ${
+                        isAssigned
+                          ? "bg-emerald-50 border border-emerald-300 ring-1 ring-emerald-200"
+                          : s.isTop
+                            ? "bg-amber-50/50"
+                            : ""
+                      }`}
+                    >
                       <div className="flex items-center gap-2">
                         {s.isTop && <Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
                         <div>
-                          <div className="text-sm font-medium">{displayStaff(s)}</div>
+                          <div className={`text-sm font-medium ${isAssigned ? "text-emerald-900" : ""}`}>{displayStaff(s)}</div>
                           <div className="text-xs text-muted-foreground">{s.role || "No role"}</div>
                         </div>
                       </div>
@@ -272,20 +297,26 @@ function ShiftDetail() {
                           <Checkbox checked={contactedSet.has(s.id)} onCheckedChange={() => toggleContacted(s.id)} />
                           Contacted
                         </label>
-                        {shift.assigned_staff_id === s.id ? (
-                          <Badge>Assigned</Badge>
+                        {isAssigned ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-emerald-600 gap-1 px-3 py-1">
+                            <UserCheck className="h-4 w-4" />
+                            Assigned
+                          </Badge>
                         ) : (
                           <Button size="sm" onClick={() => assignStaff(s.id)}><UserCheck className="h-4 w-4 mr-1" /> Assign</Button>
                         )}
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <ShiftComments shiftId={id} />
     </div>
   );
 }

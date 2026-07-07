@@ -17,6 +17,7 @@ const searchSchema = z.object({
   centre: z.string().optional(),
   status: z.enum(["pending", "filled", "cancelled", "completed"]).optional(),
   staff: z.string().optional(),
+  staffpoint: z.enum(["yes", "no"]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/shifts/")({
@@ -32,6 +33,15 @@ function ShiftsIndex() {
   const [centreId, setCentreId] = useState(search.centre ?? "all");
   const [status, setStatus] = useState<ShiftStatus | "all">((search.status ?? "all") as any);
   const [staffId, setStaffId] = useState(search.staff ?? "all");
+  const [staffpoint, setStaffpoint] = useState<"all" | "yes" | "no">((search.staffpoint ?? "all") as any);
+
+  const hasFilters =
+    from !== "" ||
+    to !== "" ||
+    centreId !== "all" ||
+    status !== "all" ||
+    staffId !== "all" ||
+    staffpoint !== "all";
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -43,7 +53,7 @@ function ShiftsIndex() {
   });
 
   const { data } = useQuery({
-    queryKey: ["shifts-list", from, to, centreId, status, staffId],
+    queryKey: ["shifts-list", from, to, centreId, status, staffId, staffpoint],
     queryFn: async () => {
       let q = db.from("shifts").select("*, centre:centre_id(name), staff:assigned_staff_id(legal_name, display_name, use_display_name)").order("shift_date", { ascending: false });
       if (from) q = q.gte("shift_date", from);
@@ -51,6 +61,8 @@ function ShiftsIndex() {
       if (centreId !== "all") q = q.eq("centre_id", centreId);
       if (status !== "all") q = q.eq("status", status);
       if (staffId !== "all") q = q.eq("assigned_staff_id", staffId);
+      if (staffpoint === "yes") q = q.eq("added_to_staffpoint", true);
+      if (staffpoint === "no") q = q.eq("added_to_staffpoint", false);
       return (await q).data ?? [];
     },
   });
@@ -63,8 +75,19 @@ function ShiftsIndex() {
         centre: centreId === "all" ? undefined : centreId,
         status: status === "all" ? undefined : status,
         staff: staffId === "all" ? undefined : staffId,
+        staffpoint: staffpoint === "all" ? undefined : staffpoint,
       },
     });
+  }
+
+  function clearFilters() {
+    setFrom("");
+    setTo("");
+    setCentreId("all");
+    setStatus("all");
+    setStaffId("all");
+    setStaffpoint("all");
+    navigate({ search: {} });
   }
 
   return (
@@ -78,7 +101,7 @@ function ShiftsIndex() {
       </div>
 
       <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-6 items-end">
+        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7 items-end">
           <div className="space-y-1">
             <label className="text-xs font-medium">From</label>
             <Input type="date" value={from} onChange={e => setFrom(e.target.value)} />
@@ -120,7 +143,23 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={applyFilters}>Apply filters</Button>
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Staffpoint</label>
+            <Select value={staffpoint} onValueChange={v => setStaffpoint(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:col-span-2">
+            <Button onClick={applyFilters}>Apply filters</Button>
+            <Button variant="outline" onClick={clearFilters} disabled={!hasFilters}>
+              Clear filters
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -133,27 +172,36 @@ function ShiftsIndex() {
               <TableHead>Time</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Assigned to</TableHead>
+              <TableHead>Staffpoint</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(data ?? []).length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No shifts match your filters.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No shifts match your filters.</TableCell></TableRow>
             )}
-            {(data ?? []).map((s: any) => (
-              <TableRow key={s.id} className="cursor-pointer" onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}>
+            {(data ?? []).map((s: any) => {
+              const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < new Date();
+              return (
+              <TableRow
+                key={s.id}
+                className={`cursor-pointer ${isPastDue ? "bg-muted/40 text-muted-foreground opacity-75" : ""}`}
+                onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
+              >
                 <TableCell className="font-medium">{s.shift_date}</TableCell>
                 <TableCell>{s.centre?.name}</TableCell>
                 <TableCell>{fmtTime(s.start_time)} – {fmtTime(s.end_time)}</TableCell>
                 <TableCell>{s.role_needed || "—"}</TableCell>
                 <TableCell>{s.staff ? displayStaff(s.staff) : <span className="text-muted-foreground italic">Unassigned</span>}</TableCell>
+                <TableCell>{s.added_to_staffpoint ? "Yes" : "No"}</TableCell>
                 <TableCell>
                   <Badge variant={s.status === "filled" ? "default" : s.status === "pending" ? "secondary" : s.status === "cancelled" ? "destructive" : "outline"}>
                     {s.status}
                   </Badge>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </Card>

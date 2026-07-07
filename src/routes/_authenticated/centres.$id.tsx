@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { db, displayStaff, fmtTime } from "@/lib/db";
+import { db, displayStaff, fmtTime, saveCentreSecondaryChannels, type CentreChannel } from "@/lib/db";
 import { CentreForm } from "@/components/CentreForm";
+import { CentreContactsEditor } from "@/components/CentreContactsEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,19 +11,34 @@ import { MultiStaffSelect } from "@/components/MultiStaffSelect";
 import { toast } from "sonner";
 import { Star, Ban, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  tab: z.enum(["details", "staff-lists", "shifts"]).optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/centres/$id")({
+  validateSearch: (s) => searchSchema.parse(s),
   component: CentreDetail,
 });
 
 function CentreDetail() {
   const { id } = Route.useParams();
+  const { tab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const activeTab = tab ?? "details";
 
   const centreQ = useQuery({
     queryKey: ["centre", id],
     queryFn: async () => (await db.from("centres").select("*").eq("id", id).single()).data,
+  });
+  const secondaryQ = useQuery({
+    queryKey: ["centre-secondary-channels", id],
+    queryFn: async () =>
+      ((await db.from("centre_secondary_channels").select("channel").eq("centre_id", id)).data ?? []).map(
+        (r: { channel: CentreChannel }) => r.channel,
+      ),
   });
   const topQ = useQuery({
     queryKey: ["centre-top", id],
@@ -81,27 +97,44 @@ function CentreDetail() {
         </AlertDialog>
       </div>
 
-      <Tabs defaultValue="details">
+      <Tabs
+        value={activeTab}
+        onValueChange={v => navigate({ to: "/centres/$id", params: { id }, search: { tab: v === "details" ? undefined : v } })}
+      >
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="staff-lists">Top &amp; Banned Staff</TabsTrigger>
           <TabsTrigger value="shifts">Shifts</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="pt-4">
+        <TabsContent value="details" className="pt-4 space-y-4">
           <Card>
             <CardHeader><CardTitle>Edit centre details</CardTitle></CardHeader>
             <CardContent>
               <CentreForm
                 initial={centre}
-                onSubmit={async (values) => {
-                  const { error } = await db.from("centres").update(values).eq("id", id);
+                secondaryChannels={secondaryQ.data ?? []}
+                onSubmit={async (values, secondary) => {
+                  const payload = { ...values, preferred_channel: values.primary_channel };
+                  const { error } = await db.from("centres").update(payload).eq("id", id);
                   if (error) { toast.error(error.message); return; }
+                  try {
+                    await saveCentreSecondaryChannels(id, secondary);
+                  } catch (e: any) {
+                    toast.error(e.message);
+                    return;
+                  }
                   toast.success("Centre saved");
                   qc.invalidateQueries({ queryKey: ["centre", id] });
+                  qc.invalidateQueries({ queryKey: ["centre-secondary-channels", id] });
                   qc.invalidateQueries({ queryKey: ["centres"] });
                 }}
               />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <CentreContactsEditor centreId={id} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -160,15 +193,30 @@ function CentreDetail() {
               ) : (
                 <div className="divide-y">
                   {(shiftsQ.data ?? []).map((s: any) => {
-                    const isPast = new Date(s.shift_date + "T" + s.end_time) < now;
+                    const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < now;
                     return (
-                      <Link key={s.id} to="/shifts/$id" params={{ id: s.id }} className="flex items-center justify-between py-2 hover:bg-muted/50 px-2 -mx-2 rounded">
+                      <Link
+                        key={s.id}
+                        to="/shifts/$id"
+                        params={{ id: s.id }}
+                        className={`flex items-center justify-between py-2 hover:bg-muted/50 px-2 -mx-2 rounded ${isPastDue ? "opacity-75 text-muted-foreground" : ""}`}
+                      >
                         <div>
                           <div className="text-sm font-medium">{s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}</div>
                           <div className="text-xs text-muted-foreground">{s.role_needed || "No role"} · {s.staff ? displayStaff(s.staff) : "Unassigned"}</div>
                         </div>
-                        <Badge variant={s.status === "filled" ? "default" : s.status === "pending" ? "secondary" : "outline"}>
-                          {isPast ? "Past" : "Upcoming"} · {s.status}
+                        <Badge
+                          variant={
+                            s.status === "filled"
+                              ? "default"
+                              : s.status === "pending"
+                                ? "secondary"
+                                : s.status === "cancelled"
+                                  ? "destructive"
+                                  : "outline"
+                          }
+                        >
+                          {s.status}
                         </Badge>
                       </Link>
                     );
