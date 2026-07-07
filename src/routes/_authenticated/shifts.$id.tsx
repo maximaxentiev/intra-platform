@@ -68,7 +68,9 @@ function ShiftDetail() {
         .filter((s: any) => overlap(shift.start_time, shift.end_time, s.start_time, s.end_time))
         .map((s: any) => s.assigned_staff_id),
     );
-    const eligible = (staffQ.data ?? []).filter((s: any) => !bannedIds.has(s.id) && !conflictIds.has(s.id));
+    const eligible = (staffQ.data ?? []).filter(
+      (s: any) => !bannedIds.has(s.id) && !conflictIds.has(s.id) && s.role === shift.role_needed,
+    );
     const top = eligible.filter((s: any) => topIds.has(s.id)).sort((a: any, b: any) => displayStaff(a).localeCompare(displayStaff(b)));
     const rest = eligible.filter((s: any) => !topIds.has(s.id)).sort((a: any, b: any) => displayStaff(a).localeCompare(displayStaff(b)));
     return [...top.map((s: any) => ({ ...s, isTop: true })), ...rest.map((s: any) => ({ ...s, isTop: false }))];
@@ -210,7 +212,16 @@ function ShiftDetail() {
                     <div className="space-y-2"><Label>Start</Label><Input type="time" value={editVals.start_time} onChange={e => setEdit({ ...editVals, start_time: e.target.value })} /></div>
                     <div className="space-y-2"><Label>End</Label><Input type="time" value={editVals.end_time} onChange={e => setEdit({ ...editVals, end_time: e.target.value })} /></div>
                   </div>
-                  <div className="space-y-2"><Label>Role needed</Label><Input value={editVals.role_needed} onChange={e => setEdit({ ...editVals, role_needed: e.target.value })} /></div>
+                  <div className="space-y-2">
+                    <Label>Role needed</Label>
+                    <Select value={editVals.role_needed || undefined} onValueChange={v => setEdit({ ...editVals, role_needed: v })}>
+                      <SelectTrigger><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ECA">ECA</SelectItem>
+                        <SelectItem value="ECE">ECE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2"><Label>Notes</Label><Textarea rows={3} value={editVals.notes} onChange={e => setEdit({ ...editVals, notes: e.target.value })} /></div>
                   <Button onClick={saveEdits}>Save changes</Button>
                 </div>

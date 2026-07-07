@@ -34,6 +34,7 @@ function NewShift() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!values.centre_id) { toast.error("Please pick a centre"); return; }
+    if (!values.role_needed) { toast.error("Please pick a role"); return; }
     setSaving(true);
     const payload = { ...values, start_time: values.start_time + ":00", end_time: values.end_time + ":00", status: "pending" };
     const { data, error } = await db.from("shifts").insert(payload).select("id").single();
@@ -74,8 +75,14 @@ function NewShift() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role needed</Label>
-              <Input id="role" placeholder="e.g. Early Childhood Educator" value={values.role_needed} onChange={e => set("role_needed", e.target.value)} />
+              <Label>Role needed *</Label>
+              <Select value={values.role_needed || undefined} onValueChange={v => set("role_needed", v)} required>
+                <SelectTrigger><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ECA">ECA</SelectItem>
+                  <SelectItem value="ECE">ECE</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (internal)</Label>

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 export function StaffForm({ initial, onSubmit }: { initial: any; onSubmit: (values: any) => Promise<void> }) {
   const [values, setValues] = useState<any>({
@@ -24,6 +25,10 @@ export function StaffForm({ initial, onSubmit }: { initial: any; onSubmit: (valu
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!values.role) {
+      toast.error("Please pick a role");
+      return;
+    }
     setSaving(true);
     await onSubmit(values);
     setSaving(false);
@@ -54,8 +59,14 @@ export function StaffForm({ initial, onSubmit }: { initial: any; onSubmit: (valu
           <Input id="email" type="email" value={values.email} onChange={e => set("email", e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="role">Role (e.g. Early Childhood Educator)</Label>
-          <Input id="role" value={values.role} onChange={e => set("role", e.target.value)} />
+          <Label>Role *</Label>
+          <Select value={values.role || undefined} onValueChange={v => set("role", v)} required>
+            <SelectTrigger><SelectValue placeholder="Choose role..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ECA">ECA</SelectItem>
+              <SelectItem value="ECE">ECE</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Status</Label>

@@ -114,10 +114,14 @@ function StaffDetail() {
             <CardContent>
               <MultiCentreSelect
                 selectedIds={topIds}
+                excludeIds={bannedIds}
                 onChange={async (newIds) => {
                   const toAdd = newIds.filter(x => !topIds.includes(x));
                   const toRemove = topIds.filter((x: string) => !newIds.includes(x));
-                  if (toAdd.length) await db.from("staff_centre_top").insert(toAdd.map(cid => ({ staff_id: id, centre_id: cid })));
+                  if (toAdd.length) {
+                    await db.from("staff_centre_top").insert(toAdd.map(cid => ({ staff_id: id, centre_id: cid })));
+                    await db.from("staff_centre_banned").delete().eq("staff_id", id).in("centre_id", toAdd);
+                  }
                   if (toRemove.length) await db.from("staff_centre_top").delete().eq("staff_id", id).in("centre_id", toRemove);
                   qc.invalidateQueries();
                   toast.success("Top centres updated");
@@ -130,10 +134,14 @@ function StaffDetail() {
             <CardContent>
               <MultiCentreSelect
                 selectedIds={bannedIds}
+                excludeIds={topIds}
                 onChange={async (newIds) => {
                   const toAdd = newIds.filter(x => !bannedIds.includes(x));
                   const toRemove = bannedIds.filter((x: string) => !newIds.includes(x));
-                  if (toAdd.length) await db.from("staff_centre_banned").insert(toAdd.map(cid => ({ staff_id: id, centre_id: cid })));
+                  if (toAdd.length) {
+                    await db.from("staff_centre_banned").insert(toAdd.map(cid => ({ staff_id: id, centre_id: cid })));
+                    await db.from("staff_centre_top").delete().eq("staff_id", id).in("centre_id", toAdd);
+                  }
                   if (toRemove.length) await db.from("staff_centre_banned").delete().eq("staff_id", id).in("centre_id", toRemove);
                   qc.invalidateQueries();
                   toast.success("Banned centres updated");

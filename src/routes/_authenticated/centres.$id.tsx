@@ -112,10 +112,14 @@ function CentreDetail() {
             <CardContent>
               <MultiStaffSelect
                 selectedIds={topIds}
+                excludeIds={bannedIds}
                 onChange={async (newIds) => {
                   const toAdd = newIds.filter(x => !topIds.includes(x));
                   const toRemove = topIds.filter((x: string) => !newIds.includes(x));
-                  if (toAdd.length) await db.from("staff_centre_top").insert(toAdd.map(sid => ({ centre_id: id, staff_id: sid })));
+                  if (toAdd.length) {
+                    await db.from("staff_centre_top").insert(toAdd.map(sid => ({ centre_id: id, staff_id: sid })));
+                    await db.from("staff_centre_banned").delete().eq("centre_id", id).in("staff_id", toAdd);
+                  }
                   if (toRemove.length) await db.from("staff_centre_top").delete().eq("centre_id", id).in("staff_id", toRemove);
                   qc.invalidateQueries({ queryKey: ["centre-top", id] });
                   qc.invalidateQueries();
@@ -129,10 +133,14 @@ function CentreDetail() {
             <CardContent>
               <MultiStaffSelect
                 selectedIds={bannedIds}
+                excludeIds={topIds}
                 onChange={async (newIds) => {
                   const toAdd = newIds.filter(x => !bannedIds.includes(x));
                   const toRemove = bannedIds.filter((x: string) => !newIds.includes(x));
-                  if (toAdd.length) await db.from("staff_centre_banned").insert(toAdd.map(sid => ({ centre_id: id, staff_id: sid })));
+                  if (toAdd.length) {
+                    await db.from("staff_centre_banned").insert(toAdd.map(sid => ({ centre_id: id, staff_id: sid })));
+                    await db.from("staff_centre_top").delete().eq("centre_id", id).in("staff_id", toAdd);
+                  }
                   if (toRemove.length) await db.from("staff_centre_banned").delete().eq("centre_id", id).in("staff_id", toRemove);
                   qc.invalidateQueries({ queryKey: ["centre-banned", id] });
                   qc.invalidateQueries();

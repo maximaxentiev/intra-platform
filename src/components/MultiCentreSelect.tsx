@@ -7,12 +7,22 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-export function MultiCentreSelect({ selectedIds, onChange }: { selectedIds: string[]; onChange: (ids: string[]) => void | Promise<void> }) {
+export function MultiCentreSelect({
+  selectedIds,
+  excludeIds = [],
+  onChange,
+}: {
+  selectedIds: string[];
+  excludeIds?: string[];
+  onChange: (ids: string[]) => void | Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const { data: centres } = useQuery({
     queryKey: ["centres-all"],
     queryFn: async () => (await db.from("centres").select("id, name").order("name")).data ?? [],
   });
+  const excluded = new Set(excludeIds);
+  const options = (centres ?? []).filter((c: any) => !excluded.has(c.id) || selectedIds.includes(c.id));
   const byId = new Map<string, any>((centres ?? []).map((c: any) => [c.id, c]));
 
   function toggle(id: string) {
@@ -45,7 +55,7 @@ export function MultiCentreSelect({ selectedIds, onChange }: { selectedIds: stri
             <CommandList>
               <CommandEmpty>No centres found.</CommandEmpty>
               <CommandGroup>
-                {(centres ?? []).map((c: any) => {
+                {options.map((c: any) => {
                   const on = selectedIds.includes(c.id);
                   return (
                     <CommandItem key={c.id} onSelect={() => toggle(c.id)}>

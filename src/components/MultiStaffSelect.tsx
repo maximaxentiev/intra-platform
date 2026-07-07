@@ -7,12 +7,22 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-export function MultiStaffSelect({ selectedIds, onChange }: { selectedIds: string[]; onChange: (ids: string[]) => void | Promise<void> }) {
+export function MultiStaffSelect({
+  selectedIds,
+  excludeIds = [],
+  onChange,
+}: {
+  selectedIds: string[];
+  excludeIds?: string[];
+  onChange: (ids: string[]) => void | Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const { data: staff } = useQuery({
     queryKey: ["staff-all"],
     queryFn: async () => (await db.from("staff").select("id, legal_name, display_name, use_display_name, status").order("legal_name")).data ?? [],
   });
+  const excluded = new Set(excludeIds);
+  const options = (staff ?? []).filter((s: any) => !excluded.has(s.id) || selectedIds.includes(s.id));
   const byId = new Map<string, any>((staff ?? []).map((s: any) => [s.id, s]));
 
   function toggle(id: string) {
@@ -47,7 +57,7 @@ export function MultiStaffSelect({ selectedIds, onChange }: { selectedIds: strin
             <CommandList>
               <CommandEmpty>No staff found.</CommandEmpty>
               <CommandGroup>
-                {(staff ?? []).map((s: any) => {
+                {options.map((s: any) => {
                   const on = selectedIds.includes(s.id);
                   return (
                     <CommandItem key={s.id} onSelect={() => toggle(s.id)}>
