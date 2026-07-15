@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 
 function isDayPast(dayDate: Date): boolean {
   const today = new Date();
