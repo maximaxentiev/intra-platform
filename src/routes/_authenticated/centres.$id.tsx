@@ -228,14 +228,3 @@ function CentreDetail() {
   );
 }
 
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
