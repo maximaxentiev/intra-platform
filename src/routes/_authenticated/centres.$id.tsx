@@ -5,11 +5,11 @@ import { CentreForm } from "@/components/CentreForm";
 import { CentreContactsEditor } from "@/components/CentreContactsEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiStaffSelect } from "@/components/MultiStaffSelect";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
-import { Star, Ban, Trash2 } from "lucide-react";
+import { Star, Ban, Trash2, MapPin } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 
