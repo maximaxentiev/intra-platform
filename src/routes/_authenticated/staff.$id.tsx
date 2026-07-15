@@ -53,31 +53,32 @@ function StaffDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to="/staff" className="text-sm text-muted-foreground hover:underline">&larr; Staff</Link>
-          <div className="flex items-center gap-3 mt-1">
-            <h1 className="text-2xl font-semibold">{displayStaff(staff)}</h1>
-            <Badge variant={staff.status === "active" ? "default" : "outline"}>{staff.status}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{staff.role || "No role set"}</p>
-        </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
-              <AlertDialogDescription>This removes their profile, availability, and Top/Banned associations. Assigned shifts stay but the assignment becomes empty.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteStaff}>Delete staff</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      <PageHeader
+        eyebrow="Staff"
+        backTo="/staff"
+        backLabel="Back to Staff"
+        title={displayStaff(staff)}
+        subtitle={staff.role || "No role set"}
+        meta={<StatusBadge status={staff.status === "active" ? "active" : "inactive"}>{staff.status}</StatusBadge>}
+        actions={
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
+                <AlertDialogDescription>This removes their profile, availability, and Top/Banned associations. Assigned shifts stay but the assignment becomes empty.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteStaff}>Delete staff</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        }
+      />
+
 
       <Tabs defaultValue="details">
         <TabsList>
