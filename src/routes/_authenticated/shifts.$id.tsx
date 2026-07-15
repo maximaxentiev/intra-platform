@@ -146,20 +146,14 @@ function ShiftDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to="/shifts" className="text-sm text-muted-foreground hover:underline">&larr; Shifts</Link>
-          <h1 className="text-2xl font-semibold mt-1">
-            {shift.centre?.name} · {shift.shift_date}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)} · {shift.role_needed || "No role"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className="text-sm" variant={shift.status === "filled" ? "default" : shift.status === "pending" ? "secondary" : shift.status === "cancelled" ? "destructive" : "outline"}>
-            {shift.status.toUpperCase()}
-          </Badge>
+      <PageHeader
+        eyebrow="Shift"
+        backTo="/shifts"
+        backLabel="Back to Shifts"
+        title={`${shift.centre?.name ?? "Shift"} · ${shift.shift_date}`}
+        subtitle={`${fmtTime(shift.start_time)} – ${fmtTime(shift.end_time)} · ${shift.role_needed || "No role"}`}
+        meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}
+        actions={
           <AlertDialog>
             <AlertDialogTrigger asChild><Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
             <AlertDialogContent>
@@ -173,8 +167,9 @@ function ShiftDetail() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-      </div>
+        }
+      />
+
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-1">
