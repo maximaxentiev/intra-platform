@@ -171,7 +171,7 @@ function StaffDetail() {
                         <div className="text-sm font-medium">{s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}</div>
                         <div className="text-xs text-muted-foreground">{s.centre?.name} · {s.role_needed || "No role"}</div>
                       </div>
-                      <Badge variant={s.status === "filled" ? "default" : "outline"}>{s.status}</Badge>
+                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
                     </Link>
                   ))}
                 </div>
