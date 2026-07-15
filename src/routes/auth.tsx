@@ -54,15 +54,16 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold">Ops Portal</h1>
-          <p className="text-sm text-muted-foreground">Childcare Staffing — Internal Team</p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-base font-bold shadow-sm">OP</div>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Ops Portal</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Childcare Staffing — Internal Team</p>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-lg">Welcome</CardTitle>
             <CardDescription>Sign in or create your ops team account.</CardDescription>
           </CardHeader>
           <CardContent>

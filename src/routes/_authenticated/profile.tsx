@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -50,12 +51,12 @@ function ProfilePage() {
   if (loading) return <div>Loading...</div>;
   return (
     <div className="max-w-lg space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">My profile</h1>
-        <p className="text-sm text-muted-foreground">Update your name and contact email.</p>
-      </div>
-      <Card>
-        <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+      <PageHeader
+        title="My profile"
+        subtitle="Update your name and contact email."
+      />
+      <Card className="border-border/70 shadow-xs">
+        <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={save} className="space-y-4">
             <div className="space-y-2">
