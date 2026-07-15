@@ -112,7 +112,7 @@ function StaffDetail() {
 
         <TabsContent value="centres" className="pt-4 space-y-4">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Star className="h-5 w-5 text-amber-500" /> Top Centres</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-warning fill-warning" /> Top Centres</CardTitle></CardHeader>
             <CardContent>
               <MultiCentreSelect
                 selectedIds={topIds}

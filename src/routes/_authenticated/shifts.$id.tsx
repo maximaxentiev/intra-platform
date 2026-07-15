@@ -15,6 +15,8 @@ import { Star, Trash2, UserCheck, XCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ShiftComments } from "@/components/ShiftComments";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -260,7 +262,7 @@ function ShiftDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Available staff for this shift</CardTitle>
-              <p className="text-sm text-muted-foreground">Banned staff and anyone already booked at this time are excluded. <Star className="inline h-3.5 w-3.5 text-amber-500 -mt-0.5" /> = Top staff for this centre.</p>
+              <p className="text-sm text-muted-foreground">Banned staff and anyone already booked at this time are excluded. <Star className="inline h-3.5 w-3.5 text-warning fill-warning -mt-0.5" /> = Top staff for this centre.</p>
             </CardHeader>
             <CardContent>
               {availableList.length === 0 ? (
@@ -272,18 +274,18 @@ function ShiftDetail() {
                     return (
                     <li
                       key={s.id}
-                      className={`flex items-center justify-between py-2.5 px-3 rounded-md ${
+                      className={`flex items-center justify-between py-2.5 px-3 rounded-md transition-colors ${
                         isAssigned
-                          ? "bg-emerald-50 border border-emerald-300 ring-1 ring-emerald-200"
+                          ? "bg-success-soft border border-success/30 ring-1 ring-success/20"
                           : s.isTop
-                            ? "bg-amber-50/50"
+                            ? "bg-warning-soft/60"
                             : ""
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {s.isTop && <Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
+                        {s.isTop && <Star className="h-4 w-4 text-warning fill-warning" />}
                         <div>
-                          <div className={`text-sm font-medium ${isAssigned ? "text-emerald-900" : ""}`}>{displayStaff(s)}</div>
+                          <div className={`text-sm font-medium ${isAssigned ? "text-success" : ""}`}>{displayStaff(s)}</div>
                           <div className="text-xs text-muted-foreground">{s.role || "No role"}</div>
                         </div>
                       </div>
@@ -293,10 +295,10 @@ function ShiftDetail() {
                           Contacted
                         </label>
                         {isAssigned ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-emerald-600 gap-1 px-3 py-1">
-                            <UserCheck className="h-4 w-4" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success text-success-foreground px-3 py-1 text-xs font-medium">
+                            <UserCheck className="h-3.5 w-3.5" />
                             Assigned
-                          </Badge>
+                          </span>
                         ) : (
                           <Button size="sm" onClick={() => assignStaff(s.id)}><UserCheck className="h-4 w-4 mr-1" /> Assign</Button>
                         )}
