@@ -85,7 +85,7 @@ function ShiftDetail() {
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<any>(null);
 
-  if (!shift) return <div>Loading...</div>;
+  if (!shift) return <DetailLoading />;
   const editVals = edit ?? {
     centre_id: shift.centre_id,
     shift_date: shift.shift_date,

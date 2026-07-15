@@ -39,7 +39,7 @@ function StaffDetail() {
     queryFn: async () => (await db.from("shifts").select("id, shift_date, start_time, end_time, status, role_needed, centre_id, centre:centre_id(name)").eq("assigned_staff_id", id).order("shift_date", { ascending: false })).data ?? [],
   });
 
-  if (!staffQ.data) return <div>Loading...</div>;
+  if (!staffQ.data) return <DetailLoading />;
   const staff = staffQ.data;
   const topIds = (topQ.data ?? []).map((r: any) => r.centre_id);
   const bannedIds = (bannedQ.data ?? []).map((r: any) => r.centre_id);

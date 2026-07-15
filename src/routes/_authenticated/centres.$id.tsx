@@ -60,7 +60,7 @@ function CentreDetail() {
     queryFn: async () => (await db.from("shifts").select("id, shift_date, start_time, end_time, status, role_needed, assigned_staff_id, staff:assigned_staff_id(legal_name, display_name, use_display_name)").eq("centre_id", id).order("shift_date", { ascending: false })).data ?? [],
   });
 
-  if (!centreQ.data) return <div>Loading...</div>;
+  if (!centreQ.data) return <DetailLoading />;
   const centre = centreQ.data;
   const topIds = (topQ.data ?? []).map((r: any) => r.staff_id);
   const bannedIds = (bannedQ.data ?? []).map((r: any) => r.staff_id);

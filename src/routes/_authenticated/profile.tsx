@@ -48,7 +48,7 @@ function ProfilePage() {
     navigate({ to: "/auth", replace: true });
   }
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <DetailLoading />;
   return (
     <div className="max-w-lg space-y-6">
       <PageHeader
