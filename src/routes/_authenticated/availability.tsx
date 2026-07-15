@@ -113,89 +113,106 @@ function AvailabilityPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Team availability</h1>
-        <p className="text-sm text-muted-foreground">See who is available across the whole team. Set individual availability from each staff profile.</p>
-      </div>
+      <PageHeader
+        title="Team availability"
+        subtitle="See who is available across the whole team. Set individual availability from each staff profile."
+      />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <CardTitle>Week of {weekStart.toLocaleDateString()} – {addDays(weekStart, 6).toLocaleDateString()}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => shiftWeek(-7)} aria-label="Previous week">
+      <Card className="border-border/70 shadow-xs">
+        <CardHeader className="pb-4 border-b border-border/70">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="text-base font-semibold">
+              Week of {weekStart.toLocaleDateString()} – {addDays(weekStart, 6).toLocaleDateString()}
+            </CardTitle>
+            <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => shiftWeek(-7)} aria-label="Previous week">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={goToThisWeek}>This week</Button>
-              <Button size="sm" variant="outline" onClick={() => shiftWeek(7)} aria-label="Next week">
+              <Button size="sm" variant="ghost" className="h-8 px-3 text-xs font-medium" onClick={goToThisWeek}>This week</Button>
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => shiftWeek(7)} aria-label="Next week">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-5 mb-4 items-end">
-            <div className="space-y-1">
-              <Label className="text-xs">Filter by day</Label>
+        <CardContent className="pt-5 space-y-5">
+          <div className="grid gap-3 md:grid-cols-5 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Filter by day</Label>
               <Select value={dayFilter} onValueChange={handleDayFilterChange}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All days</SelectItem>
                   {DAY_FULL.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Or filter by specific date</Label>
-              <Input type="date" value={dateFilter} onChange={e => handleDateFilterChange(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Or specific date</Label>
+              <Input type="date" value={dateFilter} onChange={e => handleDateFilterChange(e.target.value)} className="h-10" />
             </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label className="text-xs">Available during time</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">From</Label>
-                  <Input type="time" value={timeStartFilter} onChange={e => setTimeStartFilter(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">To (optional)</Label>
-                  <Input type="time" value={timeEndFilter} onChange={e => setTimeEndFilter(e.target.value)} />
-                </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-xs font-medium text-muted-foreground">Available during time</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="time" value={timeStartFilter} onChange={e => setTimeStartFilter(e.target.value)} className="h-10" aria-label="From time" placeholder="From" />
+                <Input type="time" value={timeEndFilter} onChange={e => setTimeEndFilter(e.target.value)} className="h-10" aria-label="To time" placeholder="To" />
               </div>
             </div>
-            <Button variant="outline" onClick={clearFilters} disabled={!hasFilters}>
-              Clear filters
+            <Button variant="outline" onClick={clearFilters} disabled={!hasFilters} className="h-10">
+              <X className="h-4 w-4 mr-1.5" /> Clear filters
             </Button>
           </div>
 
-          <div className="border rounded-md divide-y">
-            {rows.length === 0 && <div className="p-6 text-sm text-muted-foreground text-center">No staff match these filters.</div>}
-            {rows.map(({ staff, entries }: any) => (
-              <div key={staff.id} className="p-3 flex items-start gap-4">
-                <Link to="/staff/$id" params={{ id: staff.id }} className="w-48 shrink-0 font-medium hover:underline">{displayStaff(staff)}</Link>
-                <div className="flex-1 flex flex-wrap gap-2">
-                  {entries.length === 0 && <span className="text-xs text-muted-foreground italic">No availability set for this week</span>}
-                  {entries.sort((a: any, b: any) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)).map((a: any) => {
-                    const dayDate = addDays(weekStart, a.day_of_week);
-                    const past = isRangePast(dayDate, a.end_time);
-                    return (
-                      <span
-                        key={a.id}
-                        className={`text-xs px-2 py-1 rounded border ${
-                          past
-                            ? "border-[#cfcfcf] bg-[#ececec] text-muted-foreground"
-                            : "border-[#e8d5a8] bg-[#fff4db] text-foreground"
-                        }`}
-                      >
-                        <b>{DAY_FULL[a.day_of_week].slice(0, 3)}</b> {fmtTime(a.start_time)} – {fmtTime(a.end_time)}
-                      </span>
-                    );
-                  })}
+          <div className="rounded-lg border border-border overflow-hidden bg-card">
+            {rows.length === 0 && (
+              <div className="p-10 text-center">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary">
+                  <CalendarDays className="h-6 w-6" />
                 </div>
+                <div className="mt-3 text-sm font-medium">No staff match these filters</div>
+                <div className="mt-1 text-xs text-muted-foreground">Try clearing filters or picking a different week.</div>
               </div>
-            ))}
+            )}
+            <ul className="divide-y divide-border">
+              {rows.map(({ staff, entries }: any) => (
+                <li key={staff.id} className="p-3 sm:p-4 flex items-start gap-4 transition-colors hover:bg-muted/30">
+                  <Link
+                    to="/staff/$id"
+                    params={{ id: staff.id }}
+                    className="w-40 sm:w-48 shrink-0 text-sm font-medium text-foreground hover:text-primary truncate"
+                  >
+                    {displayStaff(staff)}
+                  </Link>
+                  <div className="flex-1 flex flex-wrap gap-1.5">
+                    {entries.length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">No availability set</span>
+                    )}
+                    {entries.sort((a: any, b: any) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)).map((a: any) => {
+                      const dayDate = addDays(weekStart, a.day_of_week);
+                      const past = isRangePast(dayDate, a.end_time);
+                      return (
+                        <span
+                          key={a.id}
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border tabular-nums ${
+                            past
+                              ? "bg-muted text-muted-foreground border-border"
+                              : "bg-warning-soft text-warning-foreground border-warning/25"
+                          }`}
+                        >
+                          <span className="font-semibold uppercase tracking-wide">{DAY_FULL[a.day_of_week].slice(0, 3)}</span>
+                          <span className="opacity-80">·</span>
+                          {fmtTime(a.start_time)} – {fmtTime(a.end_time)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
