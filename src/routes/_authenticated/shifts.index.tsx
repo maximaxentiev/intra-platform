@@ -5,10 +5,13 @@ import { db, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Plus, CalendarClock, X } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -36,12 +39,8 @@ function ShiftsIndex() {
   const [staffpoint, setStaffpoint] = useState<"all" | "yes" | "no">((search.staffpoint ?? "all") as any);
 
   const hasFilters =
-    from !== "" ||
-    to !== "" ||
-    centreId !== "all" ||
-    status !== "all" ||
-    staffId !== "all" ||
-    staffpoint !== "all";
+    from !== "" || to !== "" || centreId !== "all" || status !== "all" ||
+    staffId !== "all" || staffpoint !== "all";
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -52,7 +51,7 @@ function ShiftsIndex() {
     queryFn: async () => (await db.from("staff").select("id, legal_name, display_name, use_display_name").order("legal_name")).data ?? [],
   });
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["shifts-list", from, to, centreId, status, staffId, staffpoint],
     queryFn: async () => {
       let q = db.from("shifts").select("*, centre:centre_id(name), staff:assigned_staff_id(legal_name, display_name, use_display_name)").order("shift_date", { ascending: false });
@@ -81,49 +80,47 @@ function ShiftsIndex() {
   }
 
   function clearFilters() {
-    setFrom("");
-    setTo("");
-    setCentreId("all");
-    setStatus("all");
-    setStaffId("all");
-    setStaffpoint("all");
+    setFrom(""); setTo(""); setCentreId("all"); setStatus("all");
+    setStaffId("all"); setStaffpoint("all");
     navigate({ search: {} });
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Shifts</h1>
-          <p className="text-sm text-muted-foreground">All shifts across every centre.</p>
-        </div>
-        <Button asChild><Link to="/shifts/new"><Plus className="h-4 w-4 mr-2" /> Create shift</Link></Button>
-      </div>
+      <PageHeader
+        title="Shifts"
+        subtitle="All shifts across every centre."
+        actions={
+          <Button asChild>
+            <Link to="/shifts/new"><Plus className="h-4 w-4 mr-1.5" /> Create shift</Link>
+          </Button>
+        }
+      />
 
-      <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7 items-end">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">From</label>
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+      <Card className="p-4 border-border/70 shadow-xs">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">From</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">To</label>
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">To</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Centre</label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
             <Select value={centreId} onValueChange={setCentreId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All centres</SelectItem>
                 {(centresQ.data ?? []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Status</label>
-            <Select value={status} onValueChange={v => setStatus(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -133,20 +130,20 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Assigned to</label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Assigned to</Label>
             <Select value={staffId} onValueChange={setStaffId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Anyone</SelectItem>
                 {(staffQ.data ?? []).map((s: any) => <SelectItem key={s.id} value={s.id}>{displayStaff(s)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Staffpoint</label>
-            <Select value={staffpoint} onValueChange={v => setStaffpoint(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Staffpoint</Label>
+            <Select value={staffpoint} onValueChange={(v) => setStaffpoint(v as any)}>
+              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="yes">Yes</SelectItem>
@@ -154,56 +151,84 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-wrap gap-2 lg:col-span-2">
-            <Button onClick={applyFilters}>Apply filters</Button>
-            <Button variant="outline" onClick={clearFilters} disabled={!hasFilters}>
-              Clear filters
-            </Button>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-border/70">
+          <div className="text-xs text-muted-foreground">
+            {isLoading ? "Loading…" : `${(data ?? []).length} shift${(data ?? []).length === 1 ? "" : "s"}`}
+          </div>
+          <div className="flex gap-2">
+            {hasFilters && (
+              <Button variant="ghost" onClick={clearFilters} size="sm">
+                <X className="h-4 w-4 mr-1" /> Clear
+              </Button>
+            )}
+            <Button onClick={applyFilters} size="sm">Apply filters</Button>
           </div>
         </div>
       </Card>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Centre</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Assigned to</TableHead>
-              <TableHead>Staffpoint</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data ?? []).length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No shifts match your filters.</TableCell></TableRow>
-            )}
-            {(data ?? []).map((s: any) => {
-              const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < new Date();
-              return (
-              <TableRow
-                key={s.id}
-                className={`cursor-pointer ${isPastDue ? "bg-muted/40 text-muted-foreground opacity-75" : ""}`}
-                onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
-              >
-                <TableCell className="font-medium">{s.shift_date}</TableCell>
-                <TableCell>{s.centre?.name}</TableCell>
-                <TableCell>{fmtTime(s.start_time)} – {fmtTime(s.end_time)}</TableCell>
-                <TableCell>{s.role_needed || "—"}</TableCell>
-                <TableCell>{s.staff ? displayStaff(s.staff) : <span className="text-muted-foreground italic">Unassigned</span>}</TableCell>
-                <TableCell>{s.added_to_staffpoint ? "Yes" : "No"}</TableCell>
-                <TableCell>
-                  <Badge variant={s.status === "filled" ? "default" : s.status === "pending" ? "secondary" : s.status === "cancelled" ? "destructive" : "outline"}>
-                    {s.status}
-                  </Badge>
-                </TableCell>
+      <Card className="border-border/70 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Date</TableHead>
+                <TableHead>Centre</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Assigned to</TableHead>
+                <TableHead className="text-center">Staffpoint</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))}
+              {!isLoading && (data ?? []).length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={7} className="text-center py-12">
+                    <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary mb-3">
+                      <CalendarClock className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm font-medium">No shifts match your filters</div>
+                    <div className="text-xs text-muted-foreground mt-1">Adjust filters, or create a new shift.</div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && (data ?? []).map((s: any) => {
+                const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < new Date();
+                return (
+                  <TableRow
+                    key={s.id}
+                    className={`cursor-pointer transition-colors ${isPastDue ? "opacity-70" : ""}`}
+                    onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
+                  >
+                    <TableCell className="font-medium tabular-nums">{s.shift_date}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{s.centre?.name}</TableCell>
+                    <TableCell className="tabular-nums text-muted-foreground">{fmtTime(s.start_time)} – {fmtTime(s.end_time)}</TableCell>
+                    <TableCell>{s.role_needed || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell>
+                      {s.staff
+                        ? displayStaff(s.staff)
+                        : <span className="text-muted-foreground italic">Unassigned</span>}
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground text-xs">
+                      {s.added_to_staffpoint ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   );
