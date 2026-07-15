@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ShiftComments } from "@/components/ShiftComments";
 import { PageHeader } from "@/components/PageHeader";
+import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
