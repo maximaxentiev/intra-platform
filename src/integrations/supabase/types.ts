@@ -52,6 +52,76 @@ export type Database = {
           },
         ]
       }
+      centre_contacts: {
+        Row: {
+          centre_id: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          centre_id: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          centre_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centre_contacts_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "centres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centre_secondary_channels: {
+        Row: {
+          centre_id: string
+          channel: Database["public"]["Enums"]["centre_channel"]
+          created_at: string
+        }
+        Insert: {
+          centre_id: string
+          channel: Database["public"]["Enums"]["centre_channel"]
+          created_at?: string
+        }
+        Update: {
+          centre_id?: string
+          channel?: Database["public"]["Enums"]["centre_channel"]
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centre_secondary_channels_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "centres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       centres: {
         Row: {
           address: string | null
@@ -64,6 +134,7 @@ export type Database = {
           name: string
           notes: string | null
           preferred_channel: Database["public"]["Enums"]["centre_channel"]
+          primary_channel: Database["public"]["Enums"]["centre_channel"]
           updated_at: string
         }
         Insert: {
@@ -77,6 +148,7 @@ export type Database = {
           name: string
           notes?: string | null
           preferred_channel?: Database["public"]["Enums"]["centre_channel"]
+          primary_channel?: Database["public"]["Enums"]["centre_channel"]
           updated_at?: string
         }
         Update: {
@@ -90,6 +162,7 @@ export type Database = {
           name?: string
           notes?: string | null
           preferred_channel?: Database["public"]["Enums"]["centre_channel"]
+          primary_channel?: Database["public"]["Enums"]["centre_channel"]
           updated_at?: string
         }
         Relationships: []
@@ -117,6 +190,45 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      shift_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          shift_id: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          created_at?: string
+          id?: string
+          shift_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_comments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_contacted: {
         Row: {
@@ -153,6 +265,7 @@ export type Database = {
       }
       shifts: {
         Row: {
+          added_to_staffpoint: boolean
           assigned_staff_id: string | null
           cancellation_reason: string | null
           centre_id: string
@@ -167,6 +280,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_to_staffpoint?: boolean
           assigned_staff_id?: string | null
           cancellation_reason?: string | null
           centre_id: string
@@ -181,6 +295,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_to_staffpoint?: boolean
           assigned_staff_id?: string | null
           cancellation_reason?: string | null
           centre_id?: string

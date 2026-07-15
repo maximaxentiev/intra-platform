@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/shifts/new")({
   component: NewShift,
@@ -49,9 +50,15 @@ function NewShift() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Create shift</h1>
-      <p className="text-sm text-muted-foreground">Save the shift now — you can find and assign staff on the next screen.</p>
-      <Card>
+      <PageHeader
+        eyebrow="New"
+        backTo="/shifts"
+        backLabel="Back to Shifts"
+        title="Create shift"
+        subtitle="Save the shift now — you can find and assign staff on the next screen."
+      />
+      <Card className="border-border/70 shadow-xs">
+
         <CardContent className="pt-6">
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">

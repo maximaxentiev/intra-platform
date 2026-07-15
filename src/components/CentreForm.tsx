@@ -24,10 +24,9 @@ export function CentreForm({
   onSubmit: (values: CentreFormValues, secondary: CentreChannel[]) => Promise<void>;
 }) {
   const [values, setValues] = useState<CentreFormValues>({
-    name: "",
-    address: "",
-    primary_channel: "email",
-    notes: "",
+    name: initial.name ?? "",
+    address: initial.address ?? "",
+    notes: initial.notes ?? "",
     ...initial,
     primary_channel: initial.primary_channel ?? initial.preferred_channel ?? "email",
   });

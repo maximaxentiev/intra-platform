@@ -5,11 +5,13 @@ import { CentreForm } from "@/components/CentreForm";
 import { CentreContactsEditor } from "@/components/CentreContactsEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiStaffSelect } from "@/components/MultiStaffSelect";
+import { PageHeader } from "@/components/PageHeader";
+import { DetailLoading } from "@/components/DetailLoading";
+import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
-import { Star, Ban, Trash2 } from "lucide-react";
+import { Star, Ban, Trash2, MapPin } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 
@@ -59,7 +61,7 @@ function CentreDetail() {
     queryFn: async () => (await db.from("shifts").select("id, shift_date, start_time, end_time, status, role_needed, assigned_staff_id, staff:assigned_staff_id(legal_name, display_name, use_display_name)").eq("centre_id", id).order("shift_date", { ascending: false })).data ?? [],
   });
 
-  if (!centreQ.data) return <div>Loading...</div>;
+  if (!centreQ.data) return <DetailLoading />;
   const centre = centreQ.data;
   const topIds = (topQ.data ?? []).map((r: any) => r.staff_id);
   const bannedIds = (bannedQ.data ?? []).map((r: any) => r.staff_id);
@@ -74,28 +76,36 @@ function CentreDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to="/centres" className="text-sm text-muted-foreground hover:underline">&larr; Centres</Link>
-          <h1 className="text-2xl font-semibold mt-1">{centre.name}</h1>
-          <p className="text-sm text-muted-foreground">{centre.address}</p>
-        </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this centre?</AlertDialogTitle>
-              <AlertDialogDescription>This removes the centre and its Top/Banned staff lists. Existing shifts referencing it will block deletion.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteCentre}>Delete centre</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      <PageHeader
+        eyebrow="Centre"
+        backTo="/centres"
+        backLabel="Back to Centres"
+        title={centre.name}
+        subtitle={
+          centre.address ? (
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5" /> {centre.address}
+            </span>
+          ) : "No address on file"
+        }
+        actions={
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this centre?</AlertDialogTitle>
+                <AlertDialogDescription>This removes the centre and its Top/Banned staff lists. Existing shifts referencing it will block deletion.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteCentre}>Delete centre</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        }
+      />
 
       <Tabs
         value={activeTab}
@@ -106,6 +116,7 @@ function CentreDetail() {
           <TabsTrigger value="staff-lists">Top &amp; Banned Staff</TabsTrigger>
           <TabsTrigger value="shifts">Shifts</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="details" className="pt-4 space-y-4">
           <Card>
@@ -141,7 +152,7 @@ function CentreDetail() {
 
         <TabsContent value="staff-lists" className="pt-4 space-y-4">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Star className="h-5 w-5 text-amber-500" /> Top Staff</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-warning fill-warning" /> Top Staff</CardTitle></CardHeader>
             <CardContent>
               <MultiStaffSelect
                 selectedIds={topIds}
@@ -162,7 +173,7 @@ function CentreDetail() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Ban className="h-5 w-5 text-destructive" /> Banned Staff</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Ban className="h-4 w-4 text-destructive" /> Banned Staff</CardTitle></CardHeader>
             <CardContent>
               <MultiStaffSelect
                 selectedIds={bannedIds}
@@ -205,19 +216,7 @@ function CentreDetail() {
                           <div className="text-sm font-medium">{s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}</div>
                           <div className="text-xs text-muted-foreground">{s.role_needed || "No role"} · {s.staff ? displayStaff(s.staff) : "Unassigned"}</div>
                         </div>
-                        <Badge
-                          variant={
-                            s.status === "filled"
-                              ? "default"
-                              : s.status === "pending"
-                                ? "secondary"
-                                : s.status === "cancelled"
-                                  ? "destructive"
-                                  : "outline"
-                          }
-                        >
-                          {s.status}
-                        </Badge>
+                        <StatusBadge status={s.status}>{s.status}</StatusBadge>
                       </Link>
                     );
                   })}
@@ -230,3 +229,4 @@ function CentreDetail() {
     </div>
   );
 }
+
