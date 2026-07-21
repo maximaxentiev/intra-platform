@@ -15,6 +15,9 @@ import { Star, Trash2, UserCheck, XCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ShiftComments } from "@/components/ShiftComments";
+import { PageHeader } from "@/components/PageHeader";
+import { DetailLoading } from "@/components/DetailLoading";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -83,7 +86,7 @@ function ShiftDetail() {
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<any>(null);
 
-  if (!shift) return <div>Loading...</div>;
+  if (!shift) return <DetailLoading />;
   const editVals = edit ?? {
     centre_id: shift.centre_id,
     shift_date: shift.shift_date,
@@ -146,20 +149,14 @@ function ShiftDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to="/shifts" className="text-sm text-muted-foreground hover:underline">&larr; Shifts</Link>
-          <h1 className="text-2xl font-semibold mt-1">
-            {shift.centre?.name} · {shift.shift_date}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)} · {shift.role_needed || "No role"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className="text-sm" variant={shift.status === "filled" ? "default" : shift.status === "pending" ? "secondary" : shift.status === "cancelled" ? "destructive" : "outline"}>
-            {shift.status.toUpperCase()}
-          </Badge>
+      <PageHeader
+        eyebrow="Shift"
+        backTo="/shifts"
+        backLabel="Back to Shifts"
+        title={`${shift.centre?.name ?? "Shift"} · ${shift.shift_date}`}
+        subtitle={`${fmtTime(shift.start_time)} – ${fmtTime(shift.end_time)} · ${shift.role_needed || "No role"}`}
+        meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}
+        actions={
           <AlertDialog>
             <AlertDialogTrigger asChild><Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
             <AlertDialogContent>
@@ -173,8 +170,9 @@ function ShiftDetail() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-      </div>
+        }
+      />
+
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-1">
@@ -265,7 +263,7 @@ function ShiftDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Available staff for this shift</CardTitle>
-              <p className="text-sm text-muted-foreground">Banned staff and anyone already booked at this time are excluded. <Star className="inline h-3.5 w-3.5 text-amber-500 -mt-0.5" /> = Top staff for this centre.</p>
+              <p className="text-sm text-muted-foreground">Banned staff and anyone already booked at this time are excluded. <Star className="inline h-3.5 w-3.5 text-warning fill-warning -mt-0.5" /> = Top staff for this centre.</p>
             </CardHeader>
             <CardContent>
               {availableList.length === 0 ? (
@@ -277,18 +275,18 @@ function ShiftDetail() {
                     return (
                     <li
                       key={s.id}
-                      className={`flex items-center justify-between py-2.5 px-3 rounded-md ${
+                      className={`flex items-center justify-between py-2.5 px-3 rounded-md transition-colors ${
                         isAssigned
-                          ? "bg-emerald-50 border border-emerald-300 ring-1 ring-emerald-200"
+                          ? "bg-success-soft border border-success/30 ring-1 ring-success/20"
                           : s.isTop
-                            ? "bg-amber-50/50"
+                            ? "bg-warning-soft/60"
                             : ""
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {s.isTop && <Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
+                        {s.isTop && <Star className="h-4 w-4 text-warning fill-warning" />}
                         <div>
-                          <div className={`text-sm font-medium ${isAssigned ? "text-emerald-900" : ""}`}>{displayStaff(s)}</div>
+                          <div className={`text-sm font-medium ${isAssigned ? "text-success" : ""}`}>{displayStaff(s)}</div>
                           <div className="text-xs text-muted-foreground">{s.role || "No role"}</div>
                         </div>
                       </div>
@@ -298,10 +296,10 @@ function ShiftDetail() {
                           Contacted
                         </label>
                         {isAssigned ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-emerald-600 gap-1 px-3 py-1">
-                            <UserCheck className="h-4 w-4" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success text-success-foreground px-3 py-1 text-xs font-medium">
+                            <UserCheck className="h-3.5 w-3.5" />
                             Assigned
-                          </Badge>
+                          </span>
                         ) : (
                           <Button size="sm" onClick={() => assignStaff(s.id)}><UserCheck className="h-4 w-4 mr-1" /> Assign</Button>
                         )}

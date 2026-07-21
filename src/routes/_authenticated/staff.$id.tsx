@@ -5,9 +5,11 @@ import { StaffForm } from "@/components/StaffForm";
 import { MultiCentreSelect } from "@/components/MultiCentreSelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvailabilityEditor } from "@/components/AvailabilityEditor";
+import { PageHeader } from "@/components/PageHeader";
+import { DetailLoading } from "@/components/DetailLoading";
+import { StatusBadge } from "@/components/StatusBadge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Star, Ban, Trash2, ExternalLink } from "lucide-react";
@@ -38,7 +40,7 @@ function StaffDetail() {
     queryFn: async () => (await db.from("shifts").select("id, shift_date, start_time, end_time, status, role_needed, centre_id, centre:centre_id(name)").eq("assigned_staff_id", id).order("shift_date", { ascending: false })).data ?? [],
   });
 
-  if (!staffQ.data) return <div>Loading...</div>;
+  if (!staffQ.data) return <DetailLoading />;
   const staff = staffQ.data;
   const topIds = (topQ.data ?? []).map((r: any) => r.centre_id);
   const bannedIds = (bannedQ.data ?? []).map((r: any) => r.centre_id);
@@ -52,31 +54,32 @@ function StaffDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to="/staff" className="text-sm text-muted-foreground hover:underline">&larr; Staff</Link>
-          <div className="flex items-center gap-3 mt-1">
-            <h1 className="text-2xl font-semibold">{displayStaff(staff)}</h1>
-            <Badge variant={staff.status === "active" ? "default" : "outline"}>{staff.status}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{staff.role || "No role set"}</p>
-        </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
-              <AlertDialogDescription>This removes their profile, availability, and Top/Banned associations. Assigned shifts stay but the assignment becomes empty.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteStaff}>Delete staff</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      <PageHeader
+        eyebrow="Staff"
+        backTo="/staff"
+        backLabel="Back to Staff"
+        title={displayStaff(staff)}
+        subtitle={staff.role || "No role set"}
+        meta={<StatusBadge status={staff.status === "active" ? "active" : "inactive"}>{staff.status}</StatusBadge>}
+        actions={
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
+                <AlertDialogDescription>This removes their profile, availability, and Top/Banned associations. Assigned shifts stay but the assignment becomes empty.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteStaff}>Delete staff</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        }
+      />
+
 
       <Tabs defaultValue="details">
         <TabsList>
@@ -110,7 +113,7 @@ function StaffDetail() {
 
         <TabsContent value="centres" className="pt-4 space-y-4">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Star className="h-5 w-5 text-amber-500" /> Top Centres</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-warning fill-warning" /> Top Centres</CardTitle></CardHeader>
             <CardContent>
               <MultiCentreSelect
                 selectedIds={topIds}
@@ -169,7 +172,7 @@ function StaffDetail() {
                         <div className="text-sm font-medium">{s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}</div>
                         <div className="text-xs text-muted-foreground">{s.centre?.name} · {s.role_needed || "No role"}</div>
                       </div>
-                      <Badge variant={s.status === "filled" ? "default" : "outline"}>{s.status}</Badge>
+                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
                     </Link>
                   ))}
                 </div>
