@@ -98,7 +98,7 @@ function ShiftsIndex() {
       />
 
       <Card className="p-4 border-border/70 shadow-xs">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">From</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
@@ -107,7 +107,7 @@ function ShiftsIndex() {
             <Label className="text-xs font-medium text-muted-foreground">To</Label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
             <Select value={centreId} onValueChange={setCentreId}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -140,7 +140,7 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className="text-xs font-medium text-muted-foreground">Staffpoint</Label>
             <Select value={staffpoint} onValueChange={(v) => setStaffpoint(v as any)}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -152,7 +152,7 @@ function ShiftsIndex() {
             </Select>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-border/70">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/70">
           <div className="text-xs text-muted-foreground">
             {isLoading ? "Loading…" : `${(data ?? []).length} shift${(data ?? []).length === 1 ? "" : "s"}`}
           </div>
@@ -166,6 +166,7 @@ function ShiftsIndex() {
           </div>
         </div>
       </Card>
+
 
       <Card className="border-border/70 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
