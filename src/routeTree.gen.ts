@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
@@ -41,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
   id: '/staff',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/staff': typeof AuthenticatedStaffRouteWithChildren
+  '/users': typeof AuthenticatedUsersRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/availability': typeof AuthenticatedAvailabilityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
   '/_authenticated/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/shifts'
     | '/staff'
+    | '/users'
     | '/centres/$id'
     | '/centres/new'
     | '/shifts/$id'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/dashboard'
     | '/profile'
+    | '/users'
     | '/centres/$id'
     | '/centres/new'
     | '/shifts/$id'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/shifts'
     | '/_authenticated/staff'
+    | '/_authenticated/users'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
     | '/_authenticated/shifts/$id'
@@ -263,6 +275,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/staff': {
       id: '/_authenticated/staff'
@@ -424,6 +443,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedShiftsRoute: typeof AuthenticatedShiftsRouteWithChildren
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRouteWithChildren
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -433,6 +453,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedShiftsRoute: AuthenticatedShiftsRouteWithChildren,
   AuthenticatedStaffRoute: AuthenticatedStaffRouteWithChildren,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

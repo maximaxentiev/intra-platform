@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MoreHorizontal, Mail, UserPlus, Ban, CheckCircle2, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,10 +67,9 @@ function UsersPage() {
   });
 
   const [meId, setMeId] = useState<string | null>(null);
-  useState(() => {
+  useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
-    return 0;
-  });
+  }, []);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
