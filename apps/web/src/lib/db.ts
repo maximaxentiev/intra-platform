@@ -1,0 +1,333 @@
+// Domain types, helpers, and typed resource clients for the Intra API.
+// (Replaces the former Supabase browser client.)
+import { api } from "@/lib/api";
+
+export type StaffStatus = "active" | "inactive";
+export type CentreChannel = "whatsapp" | "goto" | "email";
+export type ShiftStatus = "pending" | "filled" | "cancelled" | "completed";
+export type UserRole = "admin" | "ops";
+
+export const CENTRE_CHANNEL_OPTIONS: { value: CentreChannel; label: string }[] = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "goto", label: "GoTo" },
+  { value: "email", label: "Email" },
+];
+
+export function channelLabel(channel: CentreChannel): string {
+  return CENTRE_CHANNEL_OPTIONS.find((o) => o.value === channel)?.label ?? channel;
+}
+
+// ---------------------------------------------------------------------------
+// Types (camelCase — matches the API contract)
+// ---------------------------------------------------------------------------
+export interface CurrentUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Staff {
+  id: string;
+  legalName: string;
+  displayName: string;
+  useDisplayName: boolean;
+  phone: string;
+  email: string;
+  role: string;
+  status: StaffStatus;
+  notes: string;
+  documentsUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Centre {
+  id: string;
+  name: string;
+  address: string;
+  primaryChannel: CentreChannel;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CentreListItem extends Centre {
+  primaryContactName: string;
+}
+
+export interface CentreContact {
+  id: string;
+  centreId: string;
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Availability {
+  id: string;
+  staffId: string;
+  weekStartDate: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface Shift {
+  id: string;
+  centreId: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded: string;
+  notes: string;
+  status: ShiftStatus;
+  assignedStaffId: string | null;
+  cancellationReason: string;
+  addedToStaffpoint: boolean;
+  centreName?: string | null;
+  assignedLegalName?: string | null;
+  assignedDisplayName?: string | null;
+  assignedUseDisplayName?: boolean | null;
+}
+
+export interface ShiftComment {
+  id: string;
+  shiftId: string;
+  authorId: string;
+  authorName: string | null;
+  authorEmail: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface AvailableStaff {
+  id: string;
+  legalName: string;
+  displayName: string;
+  useDisplayName: boolean;
+  role: string;
+  isTop: boolean;
+  contacted: boolean;
+}
+
+export interface LinkedStaff {
+  staffId: string;
+  id: string;
+  legalName: string;
+  displayName: string;
+  useDisplayName: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Resource clients
+// ---------------------------------------------------------------------------
+export const authApi = {
+  session: () => api.get<CurrentUser>("/auth/session"),
+  login: (email: string, password: string) =>
+    api.post<CurrentUser>("/auth/login", { email, password }),
+  logout: () => api.post<{ ok: true }>("/auth/logout"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<{ ok: true }>("/auth/change-password", { currentPassword, newPassword }),
+  me: () => api.get<CurrentUser>("/me"),
+  updateMe: (fullName: string) => api.patch<CurrentUser>("/me", { fullName }),
+};
+
+export const usersApi = {
+  list: () => api.get<CurrentUser[]>("/users"),
+  invite: (values: { email: string; fullName: string; role: UserRole; password: string }) =>
+    api.post<CurrentUser>("/users", values),
+  update: (id: string, values: Partial<Pick<CurrentUser, "fullName" | "role" | "isActive">>) =>
+    api.patch<CurrentUser>(`/users/${id}`, values),
+};
+
+export const staffApi = {
+  list: () => api.get<Staff[]>("/staff"),
+  get: (id: string) => api.get<Staff>(`/staff/${id}`),
+  create: (values: Partial<Staff>) => api.post<Staff>("/staff", values),
+  update: (id: string, values: Partial<Staff>) => api.patch<Staff>(`/staff/${id}`, values),
+  remove: (id: string) => api.del<{ ok: true }>(`/staff/${id}`),
+  topCentres: (id: string) => api.get<string[]>(`/staff/${id}/top-centres`),
+  bannedCentres: (id: string) => api.get<string[]>(`/staff/${id}/banned-centres`),
+  setTopCentres: (id: string, centreIds: string[]) =>
+    api.put<string[]>(`/staff/${id}/top-centres`, { centreIds }),
+  setBannedCentres: (id: string, centreIds: string[]) =>
+    api.put<string[]>(`/staff/${id}/banned-centres`, { centreIds }),
+  shifts: (id: string) =>
+    api.get<
+      Array<{
+        id: string;
+        shiftDate: string;
+        startTime: string;
+        endTime: string;
+        status: ShiftStatus;
+        roleNeeded: string;
+        centreId: string;
+        centreName: string | null;
+      }>
+    >(`/staff/${id}/shifts`),
+};
+
+export const centresApi = {
+  list: () => api.get<CentreListItem[]>("/centres"),
+  get: (id: string) => api.get<Centre>(`/centres/${id}`),
+  create: (values: Partial<Centre>) => api.post<Centre>("/centres", values),
+  update: (id: string, values: Partial<Centre>) => api.patch<Centre>(`/centres/${id}`, values),
+  remove: (id: string) => api.del<{ ok: true }>(`/centres/${id}`),
+  secondaryChannels: (id: string) => api.get<CentreChannel[]>(`/centres/${id}/secondary-channels`),
+  setSecondaryChannels: (id: string, channels: CentreChannel[]) =>
+    api.put<CentreChannel[]>(`/centres/${id}/secondary-channels`, { channels }),
+  contacts: (id: string) => api.get<CentreContact[]>(`/centres/${id}/contacts`),
+  addContact: (id: string, values: Partial<CentreContact>) =>
+    api.post<CentreContact>(`/centres/${id}/contacts`, values),
+  updateContact: (contactId: string, values: Partial<CentreContact>) =>
+    api.patch<CentreContact>(`/centres/contacts/${contactId}`, values),
+  removeContact: (contactId: string) => api.del<{ ok: true }>(`/centres/contacts/${contactId}`),
+  reorderContacts: (id: string, ids: string[]) =>
+    api.put<CentreContact[]>(`/centres/${id}/contacts/reorder`, { ids }),
+  topStaff: (id: string) => api.get<LinkedStaff[]>(`/centres/${id}/top-staff`),
+  bannedStaff: (id: string) => api.get<LinkedStaff[]>(`/centres/${id}/banned-staff`),
+  setTopStaff: (id: string, staffIds: string[]) =>
+    api.put<LinkedStaff[]>(`/centres/${id}/top-staff`, { staffIds }),
+  setBannedStaff: (id: string, staffIds: string[]) =>
+    api.put<LinkedStaff[]>(`/centres/${id}/banned-staff`, { staffIds }),
+  shifts: (id: string) =>
+    api.get<
+      Array<{
+        id: string;
+        shiftDate: string;
+        startTime: string;
+        endTime: string;
+        status: ShiftStatus;
+        roleNeeded: string;
+        assignedStaffId: string | null;
+        assignedLegalName: string | null;
+        assignedDisplayName: string | null;
+        assignedUseDisplayName: boolean | null;
+      }>
+    >(`/centres/${id}/shifts`),
+};
+
+export async function saveCentreSecondaryChannels(centreId: string, channels: CentreChannel[]) {
+  await centresApi.setSecondaryChannels(centreId, channels);
+}
+
+export const availabilityApi = {
+  list: (weekStart: string, staffId?: string) =>
+    api.get<Availability[]>("/availability", { weekStart, staffId }),
+  create: (values: {
+    staffId: string;
+    weekStartDate: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }) => api.post<Availability>("/availability", values),
+  update: (id: string, values: { startTime?: string; endTime?: string }) =>
+    api.patch<Availability>(`/availability/${id}`, values),
+  remove: (id: string) => api.del<{ ok: true }>(`/availability/${id}`),
+};
+
+export const shiftsApi = {
+  list: (q: { centreId?: string; staffId?: string; status?: string; from?: string; to?: string }) =>
+    api.get<Shift[]>("/shifts", q),
+  get: (id: string) => api.get<Shift>(`/shifts/${id}`),
+  create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
+  update: (id: string, values: Partial<Shift>) => api.patch<Shift>(`/shifts/${id}`, values),
+  remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
+  assign: (id: string, staffId: string) => api.post<Shift>(`/shifts/${id}/assign`, { staffId }),
+  unassign: (id: string) => api.post<Shift>(`/shifts/${id}/unassign`),
+  changeStatus: (id: string, status: ShiftStatus, cancellationReason?: string) =>
+    api.post<Shift>(`/shifts/${id}/status`, { status, cancellationReason }),
+  availableStaff: (id: string) => api.get<AvailableStaff[]>(`/shifts/${id}/available-staff`),
+  markContacted: (id: string, staffId: string) =>
+    api.post<{ ok: true }>(`/shifts/${id}/contacted`, { staffId }),
+  unmarkContacted: (id: string, staffId: string) =>
+    api.del<{ ok: true }>(`/shifts/${id}/contacted/${staffId}`),
+  comments: (id: string) => api.get<ShiftComment[]>(`/shifts/${id}/comments`),
+  addComment: (id: string, body: string) =>
+    api.post<ShiftComment>(`/shifts/${id}/comments`, { body }),
+};
+
+export const dashboardApi = {
+  summary: (weekStart: string, weekEnd: string, dayOfWeek: number) =>
+    api.get<{
+      week: number;
+      pending: number;
+      filled: number;
+      availableToday: Array<{
+        id: string;
+        legalName: string;
+        displayName: string;
+        useDisplayName: boolean;
+      }>;
+    }>("/dashboard/summary", { weekStart, weekEnd, dayOfWeek }),
+};
+
+// ---------------------------------------------------------------------------
+// Pure helpers (unchanged behaviour; now camelCase-aware)
+// ---------------------------------------------------------------------------
+export const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+export const DAY_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+export function displayStaff(
+  s: Pick<Staff, "legalName" | "displayName" | "useDisplayName">,
+): string {
+  return s.useDisplayName && s.displayName ? s.displayName : s.legalName;
+}
+
+export function mondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const m = new Date(d);
+  m.setHours(0, 0, 0, 0);
+  m.setDate(m.getDate() + diff);
+  return m;
+}
+
+export function toDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function fromDateStr(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function fmtTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+export function addDays(d: Date, n: number): Date {
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() + n);
+  return nd;
+}
+
+export function dowFromDate(d: Date): number {
+  const js = d.getDay();
+  return js === 0 ? 6 : js - 1;
+}
+
+// Safe href for optional user-provided document links (defense-in-depth, M2).
+export function safeDocumentHref(url: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}

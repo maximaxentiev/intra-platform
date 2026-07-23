@@ -1,0 +1,48 @@
+{
+  "name": "@intra/api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intra Platform API — NestJS + Drizzle + Postgres + Redis.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx src/db/migrate.ts",
+    "db:import": "node --import tsx src/db/import-from-supabase.ts",
+    "db:import:api": "node --import tsx src/db/import-from-supabase-api.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/schedule": "^6.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "bcryptjs": "^3.0.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "cookie-parser": "^1.4.7",
+    "drizzle-orm": "^0.38.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
