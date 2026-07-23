@@ -1,0 +1,46 @@
+========================================
+ HOW TO RUN INTRA LOCALLY (next time)
+========================================
+1. Press the Windows key, type: PowerShell
+2. Open Windows PowerShell (or File Explorer)
+3. Go to the project's "dev" folder, for example:
+     cd "C:\Users\<you>\OneDrive\Desktop\intra-platform\dev"
+
+4. Run:
+     .\runservers.bat
+
+   (Or just double-click runservers.bat in File Explorer.)
+
+5. Wait until you see "Done. Two windows opened...".
+   Two new windows appear: "intra - API" and "intra - Web".
+   Leave both windows open while you work.
+
+6. Open your browser and go to:
+     http://localhost:8080
+
+   (The "intra - Web" window prints the exact Local URL if it differs.
+    API + docs: http://localhost:8000/api/docs)
+
+7. Sign in with the bootstrap admin account from your .env file
+   (BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD), or use the accounts
+   invited via the Users page.
+
+----------------------------------------
+ STOP / RESTART
+----------------------------------------
+- To stop the app: close the "intra - API" and "intra - Web" windows
+  (or just re-run runservers.bat - it stops old ones automatically).
+- To also stop the local Postgres/Redis containers: run
+     .\killservers.bat
+  (their data is preserved in Docker volumes; run again anytime to resume).
+- runservers.bat is safe to re-run any time - it kills old dev servers,
+  starts Postgres/Redis, runs pending DB migrations, then relaunches
+  the API and Web.
+
+----------------------------------------
+ FIRST-TIME SETUP (only if things aren't already installed)
+----------------------------------------
+- Node.js 22+     https://nodejs.org
+- Docker Desktop  https://www.docker.com/products/docker-desktop
+  (Docker Desktop must be running before you launch runservers.bat)
+========================================

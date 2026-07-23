@@ -1,0 +1,53 @@
+# Intra Platform — LOCAL DEV infrastructure ONLY (Postgres + Redis).
+#
+# This is separate from the root docker-compose.yml, which is the
+# Traefik-oriented staging/production stack (web + api + postgres + redis,
+# no host-published DB ports). This file exists purely so a developer can
+# run the web/api dev servers directly on their machine (fast reload, no
+# container rebuild) while pointing at a real local Postgres/Redis.
+#
+# Published on dedicated ports (5434 / 6380) — not the Postgres/Redis
+# defaults (5432 / 6379) — so this never collides with another local
+# Postgres/Redis instance a developer might already have running.
+#
+# Usage: dev\postgres-dev-up.bat (Windows) or:
+#   docker compose -p intra-dev -f docker-compose.dev.yml --env-file .env up -d
+#   docker compose -p intra-dev -f docker-compose.dev.yml down
+#
+# Data persists across restarts in named volumes below; `down -v` wipes it.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-intra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-intra-dev-password}
+      POSTGRES_DB: ${POSTGRES_DB:-intra}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - intra_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-intra} -d ${POSTGRES_DB:-intra}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - intra_dev_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  intra_dev_pgdata:
+  intra_dev_redisdata:

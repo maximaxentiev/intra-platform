@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from './config/env.validation';
+import { findRepoRootEnvFile } from './config/root-env';
 import { DrizzleModule } from './db/drizzle.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,7 +19,10 @@ import { HealthController } from './health.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // envFilePath resolves to the monorepo root .env for local dev (works
+    // regardless of the workspace-scoped cwd `npm run dev:api` runs with).
+    // Docker/production inject real env vars directly, so this is a no-op there.
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv, envFilePath: findRepoRootEnvFile() }),
     ScheduleModule.forRoot(),
     DrizzleModule,
     RedisModule,

@@ -29,6 +29,8 @@ Permanent source of truth for the **Intra Platform** (Ops Portal) — a childcar
 | `apps/web` | TanStack Start (React 19 + Vite), TanStack Router/Query, Tailwind 4, shadcn/ui |
 | `apps/api` | NestJS 11 (Express) + Drizzle ORM + node-postgres + ioredis, Swagger at `/api/docs` |
 | `docker-compose.yml` | web + api + postgres + redis behind Traefik (same-origin `/api` routing) |
+| `docker-compose.dev.yml` | local-dev-only Postgres (`:5434`) + Redis (`:6380`), no Traefik |
+| `dev/` | Windows `.bat` launchers for local dev (`runservers`, `killservers`, etc.) |
 | `.env.example` | env template (real secrets are gitignored / host-only) |
 
 **API surface** — cookie-session auth (invite-only, Redis-backed), global `SessionGuard` +
@@ -46,12 +48,35 @@ Authenticated pages use `ssr: false`. SSR error wrapper: `apps/web/src/server.ts
 
 ## Running locally
 
+**Windows — one-click launchers (recommended):**
+
+```
+dev\runservers.bat     # kills stale servers, starts Postgres/Redis (Docker), runs
+                        # migrations, launches API + Web in their own windows
+dev\killservers.bat    # stops the dev servers AND the Postgres/Redis containers
+dev\killdev.bat        # stops just the API/Web dev server processes
+dev\runback.bat        # API only
+dev\runfront.bat       # Web only
+```
+
+Requires Node 22+ and Docker Desktop running. `dev\runservers.bat` auto-creates `.env`
+from `.env.example` on first run (local-dev defaults — Postgres on `127.0.0.1:5434`, Redis
+on `127.0.0.1:6380`, no collision with any other local Postgres/Redis). Open
+**http://localhost:8080** (web) once both windows report ready; API + Swagger docs at
+`http://localhost:8000/api/docs`. See `dev\HOWTO-local.txt` for the plain-language walkthrough.
+This is dev-infra only (`docker-compose.dev.yml`, Postgres + Redis) — it does not build or run
+the web/api containers, unlike the root `docker-compose.yml` used for staging/production.
+
+**Manual / macOS / Linux:**
+
 ```
 cp .env.example .env         # fill in secrets
 npm install                  # root — installs both workspaces
-npm run dev:api              # NestJS on :8000 (needs Postgres + Redis)
-npm run dev:web              # web on :3000 (set VITE_API_URL=http://localhost:8000)
-# or the full stack:
+docker compose -f docker-compose.dev.yml up -d   # local Postgres (5434) + Redis (6380)
+npm run db:migrate
+npm run dev:api               # NestJS on :8000
+npm run dev:web                # web on :8080 (set VITE_API_URL=http://localhost:8000)
+# or the full staging-like stack:
 docker compose up --build    # web + api + postgres + redis behind Traefik
 ```
 
@@ -161,13 +186,14 @@ All of the above is on **`main`** in commit `54faa3b` ("Update ops platform MVP"
 | `centre_contacts` | New table: name, title, email, phone, `sort_order`; legacy flat fields backfilled |
 | `shift_comments` | New table: `shift_id`, `author_id` → `profiles`, `body`, `created_at` |
 
-## New stack (`stack-rewrite`)
+## New stack (`main`, July 23)
 
 **Drizzle migration:** `apps/api/drizzle/0000_init.sql` — 11 tables including `users` (replaces
 `auth.users` + `profiles`), all domain tables with camelCase API mapping.
 
-**Import:** `apps/api/src/db/import-from-supabase.ts` copies legacy data preserving UUIDs; bcrypt
-password hashes copied when available.
+**Import:** `apps/api/src/db/import-from-supabase.ts` (direct Postgres) and
+`import-from-supabase-api.ts` (Supabase REST + Auth Admin) copy legacy data preserving UUIDs;
+bcrypt password hashes copied when available.
 
 ---
 
@@ -187,7 +213,20 @@ password hashes copied when available.
 | `apps/web/src/lib/api.ts` | Typed fetch client for NestJS API |
 | `apps/web/src/routes/_authenticated/users.tsx` | Admin user management (mobile cards + desktop table) |
 | `AppShell.tsx` (updated) | Mobile hamburger nav, `/users` in sidebar |
-| `apps/api/src/db/import-from-supabase.ts` | One-shot legacy data import |
+
+## July 23 session (local Windows dev launchers)
+| Item | Purpose |
+|---|---|
+| `dev/runservers.bat` | One-click local dev: kills stale servers, starts Postgres/Redis, runs migrations, launches API + Web windows |
+| `dev/killservers.bat`, `dev/killdev.bat` | Stop dev servers (+ optionally the DB containers) |
+| `dev/runback.bat`, `dev/runfront.bat` | Launch just the API or just the Web dev server |
+| `dev/postgres-dev-up.bat` | Start/wait-healthy local Postgres + Redis containers |
+| `dev/HOWTO-local.txt` | Plain-language local run instructions, printed at the end of `runservers.bat` |
+| `docker-compose.dev.yml` | Local-only Postgres (`:5434`) + Redis (`:6380`), separate from staging's `docker-compose.yml` |
+| `apps/api/src/config/root-env.ts` | Finds the monorepo root `.env` regardless of the workspace-scoped cwd `npm run dev:api`/`db:migrate` run with |
+| `apps/api/src/db/import-from-supabase.ts` | One-shot legacy data import (direct Postgres) |
+| `apps/api/src/db/import-from-supabase-api.ts` | One-shot legacy data import (Supabase REST) |
+| `scripts/deploy-staging.sh` | Droplet deploy script (Compose build, health wait, optional import) |
 
 ---
 
@@ -196,7 +235,7 @@ password hashes copied when available.
 | Environment | URL | Status |
 |---|---|---|
 | **Staging (DO)** | `https://ops-test.intra.ca` | **Live** — NestJS + Drizzle stack (Compose project `intra-ops-test`) |
-| **Local dev** | `npm run dev:web` + `npm run dev:api` or `docker compose up` | Active |
+| **Local dev** | `dev\runservers.bat` (Windows) or `npm run dev:web` + `npm run dev:api` | Active |
 | **Lovable** | Editor | **Disconnect when ready** — `main` no longer uses Supabase client |
 | **Supabase (legacy)** | Hosted Postgres + Auth | **Decommission after import** — runtime no longer depends on it |
 | **Production (ops portal)** | Not yet dedicated | Staging is the current test target |
@@ -222,6 +261,7 @@ docker compose -p intra-ops-test exec -T api node dist/db/import-from-supabase-a
 | **Lovable** | Can be disconnected — web no longer uses Supabase client |
 | **Supabase** | Legacy data source only until import completes; then pause/delete project |
 | **DigitalOcean** | Droplet: Traefik + Compose (`intra-ops-test` + other sites) |
+| **Local dev** | Docker Desktop (Postgres/Redis via `docker-compose.dev.yml`); Node 22+ |
 
 **Env vars:** see `.env.example` for the full template. Real secrets live only in local `.env` (gitignored) and on the host.
 
@@ -276,10 +316,12 @@ needed. Historical `.env` in git history — rotate credentials if concerned.
 |---|---|
 | Local production build (`apps/web` + `apps/api`) | ✅ Pass (July 23) |
 | Typecheck web + API | ✅ Pass |
-| Supabase import script | ✅ Written; not yet run against live data |
-| Staging container (legacy stack) | ✅ Pass (July 7) |
-| End-to-end staging (new stack) | ✅ Auth, dashboard, API routing, security headers (July 23) |
-| Legacy data import | ⏳ Pending Supabase credentials on droplet |
+| Local dev launchers (`.bat` scripts, env loading) | ✅ Pass (July 23) |
+| Supabase import scripts | ✅ Written; not yet run against live data |
+| Staging container (legacy Supabase stack) | ✅ Pass (July 7) |
+| End-to-end staging (NestJS stack) | ✅ Auth, dashboard, API routing, security headers (July 23) |
+| Local end-to-end (Docker Desktop + `runservers.bat`) | ⏳ Requires Docker Desktop running on dev machine |
+| Legacy data import on staging | ⏳ Pending Supabase credentials on droplet |
 | Mobile layout QA | ⏳ Pending manual device check |
 
 ---
@@ -304,6 +346,11 @@ needed. Historical `.env` in git history — rotate credentials if concerned.
 
 ## Design
 - AppShell sidebar + **mobile hamburger nav**, shadcn/ui, Sonner toasts, responsive card/table layouts
+
+## Local development (July 23)
+- Windows one-click launchers (`dev/runservers.bat`) — Postgres/Redis via Docker, auto-migrate, API + Web in separate windows
+- Local-only Compose file (`docker-compose.dev.yml`) on ports 5434/6380
+- Root `.env` loading fix for workspace-scoped npm scripts
 
 ---
 
@@ -333,35 +380,44 @@ Use on staging after deploy + import.
 
 # Recent Changes
 
-### July 23, 2026 (continued) — Staging cutover + merge to `main`
+> **Summary (July 7 → July 23, 2026):** Ops feedback features shipped on Supabase/Lovable stack
+> (July 7). Full stack rewrite to NestJS + Drizzle monorepo, web cutover off Supabase, Lovable
+> mobile UI merge, staging deploy to `ops-test.intra.ca`, security audit closeout, and Windows
+> local dev launchers (July 23). Legacy Supabase data import to staging Postgres remains pending.
 
-**Deployed** full Compose stack to `ops-test.intra.ca`; removed legacy Supabase container.
-**Fixed** Traefik router name collision with `usa.intra.ca` (`intra-ops-test-*` prefix).
-**Merged** `stack-rewrite` → `main`; `.env` remains gitignored.
-**Security closeout:** C1–L3 documented above.
+### July 23, 2026 — Local Windows dev launchers
 
-### July 23, 2026 (continued) — Lovable merge + gap fixes (`stack-rewrite`)
+- Added `dev/` folder: `runservers.bat`, `killservers.bat`, `killdev.bat`, `runback.bat`,
+  `runfront.bat`, `postgres-dev-up.bat`, `HOWTO-local.txt`
+- Added `docker-compose.dev.yml` — local Postgres (`127.0.0.1:5434`) + Redis (`127.0.0.1:6380`)
+- Fixed root `.env` loading via `apps/api/src/config/root-env.ts` (API, migrate, drizzle-kit)
+- Updated `.env.example` with local-dev-ready defaults and staging/prod override notes
 
-**Merged from `main` (Lovable):**
-- Mobile-responsive `AppShell` (hamburger menu, sticky top bar)
-- Mobile card layouts on shifts list and detail pages (centres, staff, shifts)
-- New `/users` admin page (ported to NestJS `usersApi` — no Supabase server functions)
-- CSS: `no-scrollbar` utility, overflow/min-width touch fixes
+### July 23, 2026 — Staging cutover + merge to `main`
 
-**Gap fixes:**
-- Supabase → Postgres import script (`npm run db:import`)
-- Auth: logout cookie clear options; weak-password → 400
+- Deployed full Compose stack to `ops-test.intra.ca`; removed legacy Supabase frontend container
+- Fixed Traefik router name collision with `usa.intra.ca` (`intra-ops-test-*` prefix)
+- Merged `stack-rewrite` → `main`; `.env` remains gitignored
+- Security closeout: C1–L3 documented above
+
+### July 23, 2026 — Lovable merge + gap fixes
+
+- Mobile-responsive `AppShell`, mobile card layouts, `/users` admin page (NestJS `usersApi`)
+- Supabase → Postgres import scripts; auth logout cookie fix; weak-password → 400
 - Removed stale `bun.lock` and nested web lockfile
 
-**Git:** merged `origin/main` into `stack-rewrite`; pushed to GitHub.
+### July 23, 2026 — Stack rewrite (initial)
 
-### July 23, 2026 — Stack rewrite (initial, `stack-rewrite`)
+- Monorepo (`apps/web` + `apps/api`); NestJS + Drizzle + Redis API; web cutover off Supabase
+- Docker Compose for staging; secrets hygiene; Drizzle initial migration
 
-**Monorepo + backend:** NestJS + Drizzle + Redis API; Drizzle migration; web cutover off Supabase; Docker Compose; secrets hygiene.
+### July 7, 2026 — Ops feedback + Supabase migration
 
-### July 7, 2026
-
-**Git (`main`, pushed):** Ops feedback Phase 1 + Phase 2, migration file, staging deploy, this doc's first version.
+- Phase 1 (UI): searchable centre picker, filters, availability calendar/range, past-due greying,
+  cancelled badge on centre Shifts tab, green assigned indicator, documents link optional
+- Phase 2 (DB): Staffpoint field, primary/secondary channels, centre contacts, shift comments
+- Supabase migration `20260707130000_ops_feedback_db_features.sql`
+- Staging deploy of Supabase/Lovable frontend to `ops-test.intra.ca` (since replaced)
 
 ---
 
