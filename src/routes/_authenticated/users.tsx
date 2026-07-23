@@ -128,93 +128,144 @@ function UsersPage() {
         }
       />
 
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last sign-in</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead className="w-[60px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+      {(() => {
+        const rowActions = (u: OpsUserRow, s: Status, isMe: boolean) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {s === "invited" && (
+                <DropdownMenuItem onClick={() => resendMut.mutate(u)}>
+                  <Mail className="h-4 w-4 mr-2" /> Resend invite
+                </DropdownMenuItem>
+              )}
+              {s !== "deactivated" && !isMe && (
+                <DropdownMenuItem onClick={() => activeMut.mutate({ user_id: u.id, active: false })}>
+                  <Ban className="h-4 w-4 mr-2" /> Deactivate
+                </DropdownMenuItem>
+              )}
+              {s === "deactivated" && (
+                <DropdownMenuItem onClick={() => activeMut.mutate({ user_id: u.id, active: true })}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" /> Reactivate
+                </DropdownMenuItem>
+              )}
+              {!isMe && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setConfirmDelete(u)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+
+        return (
+          <>
+            {/* Mobile: card list */}
+            <div className="md:hidden space-y-2">
+              {isLoading && (
+                <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground text-sm">
                   <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading users…
-                </TableCell>
-              </TableRow>
-            )}
-            {!isLoading && (users ?? []).length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                </div>
+              )}
+              {!isLoading && (users ?? []).length === 0 && (
+                <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground text-sm">
                   No users yet.
-                </TableCell>
-              </TableRow>
-            )}
-            {(users ?? []).map((u) => {
-              const s = statusOf(u);
-              const isMe = u.id === meId;
-              return (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">
-                    {u.full_name || <span className="text-muted-foreground">—</span>}
-                    {isMe && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={s}>
-                      {s === "invited" ? "Invited" : s === "deactivated" ? "Deactivated" : "Active"}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{fmt(u.last_sign_in_at)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{fmt(u.created_at)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {s === "invited" && (
-                          <DropdownMenuItem onClick={() => resendMut.mutate(u)}>
-                            <Mail className="h-4 w-4 mr-2" /> Resend invite
-                          </DropdownMenuItem>
-                        )}
-                        {s !== "deactivated" && !isMe && (
-                          <DropdownMenuItem onClick={() => activeMut.mutate({ user_id: u.id, active: false })}>
-                            <Ban className="h-4 w-4 mr-2" /> Deactivate
-                          </DropdownMenuItem>
-                        )}
-                        {s === "deactivated" && (
-                          <DropdownMenuItem onClick={() => activeMut.mutate({ user_id: u.id, active: true })}>
-                            <CheckCircle2 className="h-4 w-4 mr-2" /> Reactivate
-                          </DropdownMenuItem>
-                        )}
-                        {!isMe && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setConfirmDelete(u)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                </div>
+              )}
+              {!isLoading && (users ?? []).map((u) => {
+                const s = statusOf(u);
+                const isMe = u.id === meId;
+                return (
+                  <div key={u.id} className="rounded-lg border bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">
+                          {u.full_name || <span className="text-muted-foreground">—</span>}
+                          {isMe && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <StatusBadge status={s}>
+                          {s === "invited" ? "Invited" : s === "deactivated" ? "Deactivated" : "Active"}
+                        </StatusBadge>
+                        {rowActions(u, s, isMe)}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
+                      <span>Last sign-in: {fmt(u.last_sign_in_at)}</span>
+                      <span>Added: {fmt(u.created_at)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block rounded-lg border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last sign-in</TableHead>
+                    <TableHead>Added</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading users…
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && (users ?? []).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                        No users yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {(users ?? []).map((u) => {
+                    const s = statusOf(u);
+                    const isMe = u.id === meId;
+                    return (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">
+                          {u.full_name || <span className="text-muted-foreground">—</span>}
+                          {isMe && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={s}>
+                            {s === "invited" ? "Invited" : s === "deactivated" ? "Deactivated" : "Active"}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{fmt(u.last_sign_in_at)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{fmt(u.created_at)}</TableCell>
+                        <TableCell>{rowActions(u, s, isMe)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        );
+      })()}
+
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
