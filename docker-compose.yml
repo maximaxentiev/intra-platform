@@ -1,0 +1,118 @@
+# Intra Platform — full stack: web (TanStack Start), api (NestJS),
+# postgres, redis. Web + API sit behind Traefik on the shared external
+# `web` network; postgres/redis stay on the private `backend` network.
+#
+# Same-origin routing: the browser calls /api/* on the same host, which
+# Traefik forwards to the API — so there is no cross-origin CORS/cookie issue.
+#
+# Requires Traefik already running with an external network named `web`,
+# an entrypoint `websecure`, and a cert resolver `letsencrypt`.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      API_PORT: "8000"
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: https://${APP_HOST}
+      SESSION_COOKIE_SECURE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - web
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      # API takes priority for /api on the app host.
+      - traefik.http.routers.intra-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/api`)
+      - traefik.http.routers.intra-api.entrypoints=websecure
+      - traefik.http.routers.intra-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-api.priority=100
+      - traefik.http.routers.intra-api.middlewares=intra-sec@docker
+      - traefik.http.services.intra-api.loadbalancer.server.port=8000
+      # Shared security-headers middleware (L3).
+      - traefik.http.middlewares.intra-sec.headers.stsSeconds=31536000
+      - traefik.http.middlewares.intra-sec.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.intra-sec.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.intra-sec.headers.browserXssFilter=true
+      - traefik.http.middlewares.intra-sec.headers.referrerPolicy=no-referrer
+      - traefik.http.middlewares.intra-sec.headers.frameDeny=true
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NITRO_PRESET: node-server
+        # Empty => same-origin /api calls (routed to api by Traefik).
+        VITE_API_URL: ""
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+    depends_on:
+      - api
+    networks:
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.intra-web.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.intra-web.entrypoints=websecure
+      - traefik.http.routers.intra-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-web.priority=1
+      - traefik.http.routers.intra-web.middlewares=intra-sec@docker
+      - traefik.http.services.intra-web.loadbalancer.server.port=3000
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  web:
+    external: true
+  backend:
+    driver: bridge

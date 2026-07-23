@@ -18,16 +18,45 @@ Permanent source of truth for the **Intra Platform** (Ops Portal) — a childcar
 
 # Current Architecture
 
-| Layer | Stack |
-|---|---|
-| Frontend | TanStack Start (React 19 + Vite), TanStack Router, TanStack Query |
-| UI | Tailwind CSS 4, shadcn/ui |
-| Data | Supabase PostgreSQL + Auth + RLS (client-side CRUD from browser) |
-| Build | `@lovable.dev/vite-tanstack-config`, Nitro (`node-server` on VPS) |
+> **Stack rewrite in progress** (branch `stack-rewrite`): exiting Supabase/Lovable for a
+> self-hosted NestJS + Drizzle + Postgres + Redis stack in a monorepo. `main` still runs the
+> legacy Supabase build; the new stack lives on the branch until data cutover.
 
-Authenticated pages use `ssr: false`. Domain logic lives in `src/lib/db.ts`. SSR error wrapper: `src/server.ts`.
+**Monorepo layout**
+
+| Path | Contents |
+|---|---|
+| `apps/web` | TanStack Start (React 19 + Vite), TanStack Router/Query, Tailwind 4, shadcn/ui |
+| `apps/api` | NestJS 11 (Express) + Drizzle ORM + node-postgres + ioredis, Swagger at `/api/docs` |
+| `docker-compose.yml` | web + api + postgres + redis behind Traefik (same-origin `/api` routing) |
+| `.env.example` | env template (real secrets are gitignored / host-only) |
+
+**API surface** — cookie-session auth (invite-only, Redis-backed), global `SessionGuard` +
+`RolesGuard`. Modules: `auth`, `users` (profiles/admin), `staff`, `centres`
+(contacts/channels/top-banned), `availability`, `shifts` (assign/status/available-staff/
+contacted/comments), `dashboard`. Shift auto-complete runs via `@nestjs/schedule` (replaces
+pg_cron). Drizzle schema: `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`.
+
+**Web data layer** — `apps/web/src/lib/api.ts` (fetch client, `credentials: include`) +
+typed resource clients in `apps/web/src/lib/db.ts`. No Supabase client remains; signup removed.
+
+Authenticated pages use `ssr: false`. SSR error wrapper: `apps/web/src/server.ts`.
 
 **Routes:** `/auth`, `/dashboard`, `/staff`, `/centres`, `/shifts`, `/availability`, `/profile` (+ `/new` and `/:id` detail pages).
+
+## Running locally
+
+```
+cp .env.example .env         # fill in secrets
+npm install                  # root — installs both workspaces
+npm run dev:api              # NestJS on :8000 (needs Postgres + Redis)
+npm run dev:web              # web on :3000 (set VITE_API_URL=http://localhost:8000)
+# or the full stack:
+docker compose up --build    # web + api + postgres + redis behind Traefik
+```
+
+Bootstrap admin (empty DB): set `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD`; the API
+provisions the first admin on startup, then it's invite-only via `POST /api/users` (admin).
 
 ---
 
@@ -108,20 +137,16 @@ No new route URLs were added; existing pages gained the features above.
 | **Production (ops portal)** | Not yet dedicated | Staging is the current test target |
 
 **Staging deploy details:**
-- Droplet: `162.243.15.122` (NYC2)
-- App path: `/opt/projects/ops-test.intra.ca/app`
+- Host: DigitalOcean droplet (IP/paths kept out of git — see the private ops runbook)
 - Reverse proxy: Traefik (HTTPS via Let's Encrypt)
-- Redeploy script: `/opt/projects/ops-test.intra.ca/redeploy.sh`
-- Docker compose project: `ops-test` (use `-p ops-test` to avoid clashing with `usa.intra.ca`)
+- Deployed as an isolated Docker Compose project so other sites on the host are unaffected
 
-**Not in git:** Server-side `Dockerfile`, `docker-compose.prod.yml`, and `.env` live on the droplet only. Redeploy source via `git archive` + SCP (repo is private).
+**Not in git:** Server-side deploy config and `.env` live on the host only (private ops runbook). Repo is private.
 
 **Pending for staging to work end-to-end:**
-1. GoDaddy **A record**: `ops-test` → `162.243.15.122`
-2. Supabase Auth redirect URLs include `https://ops-test.intra.ca/**`
-3. Run ops feedback migration on Supabase
-
-**Note:** Same droplet also hosts `usa.intra.ca` (separate app — `remote-canada-connect`); do not share Docker Compose project names.
+1. DNS A record for the staging host → droplet (configured in registrar)
+2. Auth callback/allowed origins configured for the staging host
+3. Database migrations applied on the target database
 
 ---
 
@@ -129,12 +154,12 @@ No new route URLs were added; existing pages gained the features above.
 
 | Service | Details |
 |---|---|
-| **GitHub** | `maximaxentiev/intra-platform` (private), branch `main`, latest `54faa3b` |
-| **Lovable** | Connected; pushes to `main` sync to Lovable editor. **Do not force-push** — see `AGENTS.md` |
-| **Supabase** | Project `omuzlulbauvcnaaleitb` — DB, Auth, RLS, pg_cron auto-complete |
-| **DigitalOcean** | Droplet `162.243.15.122` — Docker + Traefik; staging ops portal at `ops-test.intra.ca` |
+| **GitHub** | Private repo, active work on `stack-rewrite` branch |
+| **Lovable** | Being disconnected as part of the stack rewrite (git + Docker after cutover) |
+| **Supabase** | Legacy backend — being replaced by self-hosted Postgres + NestJS (see stack rewrite plan) |
+| **DigitalOcean** | Droplet running Docker + Traefik; hosts staging (details in private ops runbook) |
 
-**Env vars:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (set in Lovable Cloud, local `.env`, and staging `.env` on droplet).
+**Env vars:** see `.env.example` for the full template. Real secrets live only in local `.env` (gitignored) and on the host.
 
 ---
 
@@ -226,6 +251,33 @@ Use on staging after DNS + migration + Auth URLs are in place.
 
 # Recent Changes
 
+### July 23, 2026 — Stack rewrite (branch `stack-rewrite`)
+
+**Monorepo + backend:**
+- Restructured repo into `apps/web` + `apps/api` npm workspaces.
+- New NestJS API (Drizzle + Postgres + Redis): auth (cookie sessions, invite-only), users,
+  staff, centres (contacts/channels/top-banned), availability, shifts (assign/status/
+  available-staff/contacted/comments), dashboard. Swagger at `/api/docs`.
+- Drizzle schema mirrored from the Supabase migrations; initial migration generated
+  (`apps/api/drizzle/0000_init.sql`, 11 tables). Shift auto-complete via `@nestjs/schedule`.
+
+**Web cutover:**
+- Removed the Supabase browser client and SSR auth attacher; added a typed fetch API client.
+- All routes/components now use the API via React Query. **Signup removed** (invite-only).
+- `documents_url` sanitized to http(s) on write (API) and render (web).
+
+**Security / hygiene:**
+- `.env` untracked + gitignored; added `.env.example`. Redacted infra fingerprints from docs.
+- Password policy (min 12, letters+numbers), global auth guard, Traefik + Helmet security headers.
+
+**Infra:**
+- Root `docker-compose.yml` (web/api/postgres/redis) with Traefik labels + same-origin `/api`.
+
+**Verified:** `apps/api` `nest build` clean; `apps/web` `tsc --noEmit` clean.
+
+**Still to do:** apply migration to a live DB + import legacy data (Phase 3); QA end-to-end
+against the API; decommission Supabase/Lovable after cutover.
+
 ### July 7, 2026
 
 **Git (`main`, pushed):**
@@ -236,8 +288,7 @@ Use on staging after DNS + migration + Auth URLs are in place.
 - Added migration `20260707130000_ops_feedback_db_features.sql` (Staffpoint, channels, contacts, shift comments)
 
 **Staging deploy:**
-- Deployed `54faa3b` to DigitalOcean at `ops-test.intra.ca` (Traefik + Docker)
-- Server config at `/opt/projects/ops-test.intra.ca/`
+- Deployed ops MVP to the DigitalOcean staging host (Traefik + Docker); deploy details in private ops runbook
 
 **Documentation:**
 - This `PROJECT.md` update
