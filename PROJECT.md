@@ -18,9 +18,9 @@ Permanent source of truth for the **Intra Platform** (Ops Portal) — a childcar
 
 # Current Architecture
 
-> **Stack rewrite in progress** (branch `stack-rewrite`): exiting Supabase/Lovable for a
-> self-hosted NestJS + Drizzle + Postgres + Redis stack in a monorepo. `main` still runs the
-> legacy Supabase build; the new stack lives on the branch until data cutover.
+> **Stack rewrite complete on `main`.** Staging (`ops-test.intra.ca`) runs the self-hosted
+> NestJS + Drizzle + Postgres + Redis stack via Docker Compose. Supabase/Lovable are no longer
+> used at runtime on staging; decommission those services after legacy data import.
 
 **Monorepo layout**
 
@@ -63,8 +63,15 @@ provisions the first admin on startup, then it's invite-only via `POST /api/user
 
 ```
 npm run db:migrate
+# Option A — direct Postgres (Supabase dashboard connection string):
 SOURCE_DATABASE_URL="postgres://..." DATABASE_URL="postgres://..." npm run db:import
+# Option B — Supabase REST + auth admin (service role key on server only):
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... DATABASE_URL=... npm run db:import:api
 ```
+
+**Staging deploy:** copy repo to droplet, create `.env` from `.env.example`, run
+`scripts/deploy-staging.sh`. Traefik router names are prefixed `intra-ops-test-*` to avoid
+collisions with other apps on the host (e.g. `usa.intra.ca`).
 
 ---
 
@@ -97,7 +104,7 @@ SOURCE_DATABASE_URL="postgres://..." DATABASE_URL="postgres://..." npm run db:im
 
 All of the above is on **`main`** in commit `54faa3b` ("Update ops platform MVP").
 
-## July 23, 2026 — Stack rewrite (`stack-rewrite` branch)
+## July 23, 2026 — Stack rewrite + staging cutover (merged to `main`)
 
 ### Monorepo + backend
 - Restructured repo into `apps/web` + `apps/api` npm workspaces.
@@ -127,7 +134,15 @@ All of the above is on **`main`** in commit `54faa3b` ("Update ops platform MVP"
   Wired to NestJS `usersApi` (replaces Supabase server-side invite functions).
 - **`no-scrollbar` utility** and overflow/min-width fixes for touch layouts.
 
-**Verified:** `apps/api` `nest build` clean; `apps/web` `tsc --noEmit` clean.
+### Staging deploy (July 23)
+- Deployed full Compose stack to droplet at `https://ops-test.intra.ca` (web + api + postgres + redis).
+- Legacy Supabase frontend container removed; Traefik routes to new stack.
+- Bootstrap admin provisioned on empty DB (credentials on droplet only — see private ops runbook).
+- **Legacy data import pending** — add `SOURCE_DATABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` to
+  droplet `.env`, then re-run `scripts/deploy-staging.sh` import step.
+
+**Verified on staging:** `/api/health` 200, auth login + session cookie, dashboard loads, Users nav,
+401 on unauthenticated API, security headers (HSTS, nosniff, frame-deny, referrer-policy).
 
 ---
 
@@ -180,17 +195,22 @@ password hashes copied when available.
 
 | Environment | URL | Status |
 |---|---|---|
-| **Lovable / dev (`main`)** | Lovable editor + local dev | Active; syncs from `main` |
-| **Stack rewrite (`stack-rewrite`)** | Local / Docker Compose | Built; not yet deployed to staging |
-| **Staging (DO)** | `https://ops-test.intra.ca` | Legacy Supabase build deployed earlier; **needs redeploy** with new stack after cutover |
+| **Staging (DO)** | `https://ops-test.intra.ca` | **Live** — NestJS + Drizzle stack (Compose project `intra-ops-test`) |
+| **Local dev** | `npm run dev:web` + `npm run dev:api` or `docker compose up` | Active |
+| **Lovable** | Editor | **Disconnect when ready** — `main` no longer uses Supabase client |
+| **Supabase (legacy)** | Hosted Postgres + Auth | **Decommission after import** — runtime no longer depends on it |
 | **Production (ops portal)** | Not yet dedicated | Staging is the current test target |
 
-**Pending for new-stack staging:**
-1. Deploy `stack-rewrite` via Docker Compose on droplet
-2. Run Drizzle migration + Supabase import on droplet Postgres
-3. End-to-end QA (auth, users invite, mobile layout, all domain flows)
+**Staging deploy path on droplet:** `/opt/projects/intra-platform/` (private ops runbook).
 
-**Not in git:** Server-side deploy config and `.env` live on the host only (private ops runbook).
+**Post-deploy import (one-time):** set `SOURCE_DATABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` in
+droplet `.env`, then:
+
+```
+docker compose -p intra-ops-test exec -T api node dist/db/import-from-supabase-api.js
+```
+
+**Not in git:** `.env`, bootstrap credentials, Supabase service role.
 
 ---
 
@@ -198,10 +218,10 @@ password hashes copied when available.
 
 | Service | Details |
 |---|---|
-| **GitHub** | Private repo; active work on `stack-rewrite` branch |
-| **Lovable** | Still connected to `main`; UI changes merged into `stack-rewrite` |
-| **Supabase** | Legacy backend on `main` — being replaced by self-hosted Postgres + NestJS |
-| **DigitalOcean** | Droplet running Docker + Traefik; hosts staging (details in private ops runbook) |
+| **GitHub** | Private repo; `main` = NestJS monorepo stack |
+| **Lovable** | Can be disconnected — web no longer uses Supabase client |
+| **Supabase** | Legacy data source only until import completes; then pause/delete project |
+| **DigitalOcean** | Droplet: Traefik + Compose (`intra-ops-test` + other sites) |
 
 **Env vars:** see `.env.example` for the full template. Real secrets live only in local `.env` (gitignored) and on the host.
 
@@ -211,25 +231,42 @@ password hashes copied when available.
 
 | Issue | Severity | Notes |
 |---|---|---|
-| Stack rewrite not deployed to staging | **High** | Phase 5 QA blocked until droplet deploy + import |
-| Supabase → Postgres import not run on staging | **High** | Script ready; needs `SOURCE_DATABASE_URL` + empty migrated DB |
+| Legacy Supabase data not imported to staging Postgres | **High** | Empty DB except bootstrap admin; needs `SOURCE_DATABASE_URL` or service role |
 | Shift available staff ignores weekly availability | Medium | Filters role, banned, overlap — not availability windows |
 | No DB constraint for Top/Banned mutual exclusion | Low | Enforced in UI + API logic |
 | Staff filter on shift list not searchable | Low | Centre picker on shift forms is searchable |
 | Legacy free-text roles on old records | Low | Won't match ECA/ECE role filter until updated |
-| Users page: no delete / email-invite flow | Low | By design for new stack — admin sets initial password |
-| Non-admin users see Users page but cannot invite | Low | List endpoint is admin-only; may 403 for ops role |
+| Web CSP not strict (Helmet CSP disabled for API) | Low | Accepted residual — API is JSON-only; Traefik adds frame/HSTS headers |
+| Historical `.env` was once tracked | Low | Removed from git; rotate any secrets that were in the old file |
+
+---
+
+# Security Closeout (audit C1–L3)
+
+| ID | Status | Resolution |
+|---|---|---|
+| **C1** Open signup + full-table access | **Closed** | Invite-only Nest auth; signup UI removed; guards on all data routes |
+| **H1** Browser → Supabase direct | **Closed** | Supabase client deleted; web calls Nest API only |
+| **H2** Secrets in git | **Closed** | `.env` gitignored/untracked; `.env.example` only; infra fingerprints redacted |
+| **M1** Comment author spoofing | **Closed** | `authorId` set server-side from session |
+| **M2** Unsafe document URLs | **Closed** | http(s) validation on API write + web render |
+| **M3** Missing auth on routes | **Closed** | Global `SessionGuard` + `@Public()` opt-out |
+| **L1** Weak password policy | **Closed** | Min 12 chars, letters + numbers; 400 on violation |
+| **L2** Service-role footgun in web | **Closed** | Supabase integrations removed from web |
+| **L3** Missing security headers | **Closed** | Traefik middleware + Helmet on API |
+
+**Accepted residuals:** API Helmet CSP disabled (JSON API); web app sets its own CSP in future if
+needed. Historical `.env` in git history — rotate credentials if concerned.
 
 ---
 
 # Next Priorities (by importance)
 
-1. **Deploy `stack-rewrite`** to droplet staging (`ops-test.intra.ca`)
-2. **Run migration + import** — Drizzle migrate, then `npm run db:import` from Supabase
-3. **QA staging** — auth, users invite, mobile layout, Staffpoint/contacts/channels/comments
-4. **Cut over** — point staging at new stack; decommission Supabase/Lovable after sign-off
-5. **P2 polish** — searchable staff filter on shift list; availability-aware shift staff list
-6. **Production ops portal hostname** — decide prod URL when staging sign-off complete
+1. **Import legacy Supabase data** — add service role or `SOURCE_DATABASE_URL` to droplet `.env`, run import
+2. **Full QA on staging** — staff/centres/shifts flows with real data; mobile layout on device
+3. **Decommission Supabase + disconnect Lovable** after import sign-off
+4. **Production hostname** — decide prod URL and deploy path when staging sign-off complete
+5. **P2 polish** — searchable staff filter; availability-aware shift staff list
 
 ---
 
@@ -241,8 +278,9 @@ password hashes copied when available.
 | Typecheck web + API | ✅ Pass |
 | Supabase import script | ✅ Written; not yet run against live data |
 | Staging container (legacy stack) | ✅ Pass (July 7) |
-| End-to-end staging (new stack) | ⏳ Pending deploy + import |
-| Mobile layout QA | ⏳ Pending manual check on device |
+| End-to-end staging (new stack) | ✅ Auth, dashboard, API routing, security headers (July 23) |
+| Legacy data import | ⏳ Pending Supabase credentials on droplet |
+| Mobile layout QA | ⏳ Pending manual device check |
 
 ---
 
@@ -294,6 +332,13 @@ Use on staging after deploy + import.
 ---
 
 # Recent Changes
+
+### July 23, 2026 (continued) — Staging cutover + merge to `main`
+
+**Deployed** full Compose stack to `ops-test.intra.ca`; removed legacy Supabase container.
+**Fixed** Traefik router name collision with `usa.intra.ca` (`intra-ops-test-*` prefix).
+**Merged** `stack-rewrite` → `main`; `.env` remains gitignored.
+**Security closeout:** C1–L3 documented above.
 
 ### July 23, 2026 (continued) — Lovable merge + gap fixes (`stack-rewrite`)
 
