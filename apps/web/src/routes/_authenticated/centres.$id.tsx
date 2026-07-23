@@ -105,11 +105,14 @@ function CentreDetail() {
         value={activeTab}
         onValueChange={v => navigate({ to: "/centres/$id", params: { id }, search: { tab: v === "details" ? undefined : (v as "staff-lists" | "shifts") } })}
       >
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="staff-lists">Top &amp; Banned Staff</TabsTrigger>
-          <TabsTrigger value="shifts">Shifts</TabsTrigger>
-        </TabsList>
+        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar px-4 sm:px-0">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="staff-lists">Top &amp; Banned Staff</TabsTrigger>
+            <TabsTrigger value="shifts">Shifts</TabsTrigger>
+          </TabsList>
+        </div>
+
 
 
         <TabsContent value="details" className="pt-4 space-y-4">

@@ -22,6 +22,7 @@ const NAV = [
   { to: "/staff", label: "Staff", icon: Users },
   { to: "/centres", label: "Centres", icon: Building2 },
   { to: "/availability", label: "Availability", icon: CalendarDays },
+  { to: "/users", label: "Users", icon: UserCircle2 },
 ] as const;
 
 function useCurrentPath() {

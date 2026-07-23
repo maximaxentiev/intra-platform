@@ -140,6 +140,14 @@ export const authApi = {
   updateMe: (fullName: string) => api.patch<CurrentUser>("/me", { fullName }),
 };
 
+export const usersApi = {
+  list: () => api.get<CurrentUser[]>("/users"),
+  invite: (values: { email: string; fullName: string; role: UserRole; password: string }) =>
+    api.post<CurrentUser>("/users", values),
+  update: (id: string, values: Partial<Pick<CurrentUser, "fullName" | "role" | "isActive">>) =>
+    api.patch<CurrentUser>(`/users/${id}`, values),
+};
+
 export const staffApi = {
   list: () => api.get<Staff[]>("/staff"),
   get: (id: string) => api.get<Staff>(`/staff/${id}`),

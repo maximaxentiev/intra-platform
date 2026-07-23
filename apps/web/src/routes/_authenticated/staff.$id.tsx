@@ -86,12 +86,15 @@ function StaffDetail() {
 
 
       <Tabs defaultValue="details">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="centres">Top &amp; Banned Centres</TabsTrigger>
-          <TabsTrigger value="availability">Availability</TabsTrigger>
-          <TabsTrigger value="shifts">Shifts</TabsTrigger>
-        </TabsList>
+        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar px-4 sm:px-0">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="centres">Top &amp; Banned Centres</TabsTrigger>
+            <TabsTrigger value="availability">Availability</TabsTrigger>
+            <TabsTrigger value="shifts">Shifts</TabsTrigger>
+          </TabsList>
+        </div>
+
 
         <TabsContent value="details" className="pt-4 space-y-4">
           <Card>

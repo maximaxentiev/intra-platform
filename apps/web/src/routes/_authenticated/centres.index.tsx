@@ -57,7 +57,7 @@ function CentresIndex() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((c) => (
-              <Link key={c.id} to="/centres/$id" params={{ id: c.id }} className="group">
+              <Link key={c.id} to="/centres/$id" params={{ id: c.id }} className="group min-w-0">
                 <Card className="h-full p-4 border-border/70 shadow-xs transition-all group-hover:border-primary/40 group-hover:shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
