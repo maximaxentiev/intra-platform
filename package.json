@@ -15,7 +15,8 @@
     "build:api": "npm run build --workspace @intra/api",
     "lint": "npm run lint --workspaces --if-present",
     "db:generate": "npm run db:generate --workspace @intra/api",
-    "db:migrate": "npm run db:migrate --workspace @intra/api"
+    "db:migrate": "npm run db:migrate --workspace @intra/api",
+    "db:import": "npm run db:import --workspace @intra/api"
   },
   "engines": {
     "node": ">=22"

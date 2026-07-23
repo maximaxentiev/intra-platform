@@ -26,13 +26,13 @@ export class AuthController {
     this.secure = config.getOrThrow<boolean>('SESSION_COOKIE_SECURE');
   }
 
-  private cookieOptions() {
+  private cookieOptions(maxAge?: number) {
     return {
       httpOnly: true,
       secure: this.secure,
       sameSite: 'lax' as const,
       path: '/',
-      maxAge: this.sessions.ttlSeconds * 1000,
+      ...(maxAge !== undefined ? { maxAge } : {}),
     };
   }
 
@@ -40,14 +40,14 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const { sid, user } = await this.auth.login(dto.email, dto.password);
-    res.cookie(this.cookieName, sid, this.cookieOptions());
+    res.cookie(this.cookieName, sid, this.cookieOptions(this.sessions.ttlSeconds * 1000));
     return this.users.getProfile(user.userId);
   }
 
   @Post('logout')
   async logout(@Req() req: Request & { sessionId?: string }, @Res({ passthrough: true }) res: Response) {
     await this.auth.logout(req.sessionId ?? '');
-    res.clearCookie(this.cookieName, { path: '/' });
+    res.clearCookie(this.cookieName, this.cookieOptions());
     return { ok: true };
   }
 
