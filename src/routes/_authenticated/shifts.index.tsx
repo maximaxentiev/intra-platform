@@ -98,7 +98,7 @@ function ShiftsIndex() {
       />
 
       <Card className="p-4 border-border/70 shadow-xs">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">From</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
@@ -107,7 +107,7 @@ function ShiftsIndex() {
             <Label className="text-xs font-medium text-muted-foreground">To</Label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
             <Select value={centreId} onValueChange={setCentreId}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -140,7 +140,7 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className="text-xs font-medium text-muted-foreground">Staffpoint</Label>
             <Select value={staffpoint} onValueChange={(v) => setStaffpoint(v as any)}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -152,7 +152,7 @@ function ShiftsIndex() {
             </Select>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-border/70">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/70">
           <div className="text-xs text-muted-foreground">
             {isLoading ? "Loading…" : `${(data ?? []).length} shift${(data ?? []).length === 1 ? "" : "s"}`}
           </div>
@@ -167,7 +167,50 @@ function ShiftsIndex() {
         </div>
       </Card>
 
-      <Card className="border-border/70 shadow-xs overflow-hidden">
+
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-2">
+        {isLoading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+        {!isLoading && (data ?? []).length === 0 && (
+          <Card className="p-8 text-center border-dashed">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary mb-3">
+              <CalendarClock className="h-6 w-6" />
+            </div>
+            <div className="text-sm font-medium">No shifts match your filters</div>
+            <div className="text-xs text-muted-foreground mt-1">Adjust filters, or create a new shift.</div>
+          </Card>
+        )}
+        {!isLoading && (data ?? []).map((s: any) => {
+          const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < new Date();
+          return (
+            <Card
+              key={s.id}
+              className={`p-3 border-border/70 shadow-xs cursor-pointer active:bg-muted/40 ${isPastDue ? "opacity-70" : ""}`}
+              onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm truncate">{s.centre?.name}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                    {s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    {s.role_needed && <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{s.role_needed}</span>}
+                    <span className={s.staff ? "text-foreground" : "text-muted-foreground italic"}>
+                      {s.staff ? displayStaff(s.staff) : "Unassigned"}
+                    </span>
+                    {s.added_to_staffpoint && <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">· Staffpoint</span>}
+                  </div>
+                </div>
+                <StatusBadge status={s.status}>{s.status}</StatusBadge>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <Card className="hidden md:block border-border/70 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -230,6 +273,7 @@ function ShiftsIndex() {
           </Table>
         </div>
       </Card>
+
     </div>
   );
 }
