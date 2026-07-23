@@ -12,7 +12,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --import tsx src/db/migrate.ts",
     "db:import": "node --import tsx src/db/import-from-supabase.ts",
-    "db:import:api": "node --import tsx src/db/import-from-supabase-api.ts"
+    "db:import:api": "node --import tsx src/db/import-from-supabase-api.ts",
+    "db:import:centres-local": "node --import tsx src/db/import-centres-local.ts",
+    "db:import:centres-csv-local": "node --import tsx src/db/import-centres-csv-local.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

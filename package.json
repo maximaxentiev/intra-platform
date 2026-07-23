@@ -17,7 +17,9 @@
     "db:generate": "npm run db:generate --workspace @intra/api",
     "db:migrate": "npm run db:migrate --workspace @intra/api",
     "db:import": "npm run db:import --workspace @intra/api",
-    "db:import:api": "npm run db:import:api --workspace @intra/api"
+    "db:import:api": "npm run db:import:api --workspace @intra/api",
+    "db:import:centres-local": "npm run db:import:centres-local --workspace @intra/api --",
+    "db:import:centres-csv-local": "npm run db:import:centres-csv-local --workspace @intra/api --"
   },
   "engines": {
     "node": ">=22"

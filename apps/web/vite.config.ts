@@ -7,6 +7,18 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // Local dev only: same-origin /api requests (VITE_API_URL unset) proxy to NestJS on :8000.
+  // Production/staging use Traefik same-origin routing; this is not used in `vite build`.
+  vite: {
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://localhost:8000",
+          changeOrigin: true,
+        },
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
