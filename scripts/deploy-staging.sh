@@ -5,6 +5,14 @@ set -euo pipefail
 
 COMPOSE="docker compose -p intra-ops-test"
 
+# Load env for import + echo at end.
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 echo "[deploy] stopping legacy ops-test frontend (if running)…"
 docker compose -f /opt/projects/ops-test.intra.ca/app/docker-compose.prod.yml down 2>/dev/null || true
 

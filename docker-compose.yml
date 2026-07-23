@@ -66,19 +66,20 @@ services:
       - traefik.enable=true
       - traefik.docker.network=web
       # API takes priority for /api on the app host.
-      - traefik.http.routers.intra-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/api`)
-      - traefik.http.routers.intra-api.entrypoints=websecure
-      - traefik.http.routers.intra-api.tls.certresolver=letsencrypt
-      - traefik.http.routers.intra-api.priority=100
-      - traefik.http.routers.intra-api.middlewares=intra-sec@docker
-      - traefik.http.services.intra-api.loadbalancer.server.port=8000
+      - traefik.http.routers.intra-ops-test-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/api`)
+      - traefik.http.routers.intra-ops-test-api.entrypoints=websecure
+      - traefik.http.routers.intra-ops-test-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-ops-test-api.priority=100
+      - traefik.http.routers.intra-ops-test-api.middlewares=intra-ops-test-sec@docker
+      - traefik.http.routers.intra-ops-test-api.service=intra-ops-test-api
+      - traefik.http.services.intra-ops-test-api.loadbalancer.server.port=8000
       # Shared security-headers middleware (L3).
-      - traefik.http.middlewares.intra-sec.headers.stsSeconds=31536000
-      - traefik.http.middlewares.intra-sec.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.intra-sec.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.intra-sec.headers.browserXssFilter=true
-      - traefik.http.middlewares.intra-sec.headers.referrerPolicy=no-referrer
-      - traefik.http.middlewares.intra-sec.headers.frameDeny=true
+      - traefik.http.middlewares.intra-ops-test-sec.headers.stsSeconds=31536000
+      - traefik.http.middlewares.intra-ops-test-sec.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.intra-ops-test-sec.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.intra-ops-test-sec.headers.browserXssFilter=true
+      - traefik.http.middlewares.intra-ops-test-sec.headers.referrerPolicy=no-referrer
+      - traefik.http.middlewares.intra-ops-test-sec.headers.frameDeny=true
 
   web:
     build:
@@ -100,12 +101,13 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.intra-web.rule=Host(`${APP_HOST}`)
-      - traefik.http.routers.intra-web.entrypoints=websecure
-      - traefik.http.routers.intra-web.tls.certresolver=letsencrypt
-      - traefik.http.routers.intra-web.priority=1
-      - traefik.http.routers.intra-web.middlewares=intra-sec@docker
-      - traefik.http.services.intra-web.loadbalancer.server.port=3000
+      - traefik.http.routers.intra-ops-test-web.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.intra-ops-test-web.entrypoints=websecure
+      - traefik.http.routers.intra-ops-test-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-ops-test-web.priority=1
+      - traefik.http.routers.intra-ops-test-web.middlewares=intra-ops-test-sec@docker
+      - traefik.http.routers.intra-ops-test-web.service=intra-ops-test-web
+      - traefik.http.services.intra-ops-test-web.loadbalancer.server.port=3000
 
 volumes:
   pgdata:
