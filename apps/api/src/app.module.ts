@@ -15,6 +15,8 @@ import { CentresModule } from './centres/centres.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -33,6 +35,8 @@ import { HealthController } from './health.controller';
     AvailabilityModule,
     ShiftsModule,
     DashboardModule,
+    ApplicationsModule,
+    StorageModule,
   ],
   controllers: [HealthController],
   providers: [

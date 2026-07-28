@@ -1,0 +1,2 @@
+# Shell scripts must use LF so bash on Linux droplets can run them.
+*.sh text eol=lf

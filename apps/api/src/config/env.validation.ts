@@ -14,6 +14,12 @@ export interface AppEnv {
   BOOTSTRAP_ADMIN_EMAIL?: string;
   BOOTSTRAP_ADMIN_PASSWORD?: string;
   BOOTSTRAP_ADMIN_NAME?: string;
+  OBJECT_STORAGE_ENDPOINT?: string;
+  OBJECT_STORAGE_BUCKET?: string;
+  OBJECT_STORAGE_ACCESS_KEY?: string;
+  OBJECT_STORAGE_SECRET_KEY?: string;
+  OBJECT_STORAGE_REGION?: string;
+  NETWORK_APPLICATION_API_KEY?: string;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -45,5 +51,16 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     BOOTSTRAP_ADMIN_EMAIL: config.BOOTSTRAP_ADMIN_EMAIL as string | undefined,
     BOOTSTRAP_ADMIN_PASSWORD: config.BOOTSTRAP_ADMIN_PASSWORD as string | undefined,
     BOOTSTRAP_ADMIN_NAME: config.BOOTSTRAP_ADMIN_NAME as string | undefined,
+    OBJECT_STORAGE_ENDPOINT: trimOptional(config.OBJECT_STORAGE_ENDPOINT),
+    OBJECT_STORAGE_BUCKET: trimOptional(config.OBJECT_STORAGE_BUCKET),
+    OBJECT_STORAGE_ACCESS_KEY: trimOptional(config.OBJECT_STORAGE_ACCESS_KEY),
+    OBJECT_STORAGE_SECRET_KEY: trimOptional(config.OBJECT_STORAGE_SECRET_KEY),
+    OBJECT_STORAGE_REGION: trimOptional(config.OBJECT_STORAGE_REGION),
+    NETWORK_APPLICATION_API_KEY: trimOptional(config.NETWORK_APPLICATION_API_KEY),
   };
+}
+
+function trimOptional(value: unknown): string | undefined {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed || undefined;
 }

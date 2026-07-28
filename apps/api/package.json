@@ -14,9 +14,12 @@
     "db:import": "node --import tsx src/db/import-from-supabase.ts",
     "db:import:api": "node --import tsx src/db/import-from-supabase-api.ts",
     "db:import:centres-local": "node --import tsx src/db/import-centres-local.ts",
-    "db:import:centres-csv-local": "node --import tsx src/db/import-centres-csv-local.ts"
+    "db:import:centres-csv-local": "node --import tsx src/db/import-centres-csv-local.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1097.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -41,6 +44,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
     "drizzle-kit": "^0.30.0",

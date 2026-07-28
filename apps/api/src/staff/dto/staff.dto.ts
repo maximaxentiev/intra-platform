@@ -34,7 +34,7 @@ export class UpsertStaffDto {
   email?: string;
 
   @IsOptional()
-  @IsIn(['ECA', 'ECE', ''])
+  @IsIn(['ECA', 'ECE', 'Nanny', ''])
   role?: string;
 
   @IsOptional()
