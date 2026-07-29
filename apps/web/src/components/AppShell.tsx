@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   CalendarClock,
+  ClipboardList,
   Users,
   Building2,
   CalendarDays,
