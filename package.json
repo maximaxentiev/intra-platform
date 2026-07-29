@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "npm run dev --workspace @intra/web",
     "dev:web": "npm run dev --workspace @intra/web",
     "dev:api": "npm run start:dev --workspace @intra/api",
     "build": "npm run build --workspaces --if-present",

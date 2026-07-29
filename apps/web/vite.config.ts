@@ -11,6 +11,8 @@ export default defineConfig({
   // Production/staging use Traefik same-origin routing; this is not used in `vite build`.
   vite: {
     server: {
+      port: 8080,
+      host: true,
       proxy: {
         "/api": {
           target: "http://localhost:8000",
