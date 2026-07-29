@@ -8,6 +8,8 @@ import {
 import { safeCompareSecret } from './network-submit.util';
 import {
   assertRequiredDocumentsPresent,
+  complianceToDbFields,
+  mapCovidVaccinationStatus,
   matchSubmitFiles,
   parseNetworkApplicationJson,
 } from './network-submit.validation';
@@ -94,6 +96,42 @@ describe('network submit validation', () => {
   it('compares secrets in constant time', () => {
     expect(safeCompareSecret('secret-a', 'secret-a')).toBe(true);
     expect(safeCompareSecret('secret-a', 'secret-b')).toBe(false);
+  });
+
+  it('accepts null COVID vaccination as unanswered', () => {
+    const payload = buildEcaApplicationJson();
+    payload.compliance.covid19 = { vaccinated: null, proofProvided: false };
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.compliance.covid19.vaccinated).toBeNull();
+    expect(parsed.compliance.covid19.proofProvided).toBe(false);
+    expect(mapCovidVaccinationStatus(parsed.compliance.covid19)).toBe('not_provided');
+    expect(complianceToDbFields(parsed.compliance).covidVaccinationStatus).toBe('not_provided');
+  });
+
+  it('persists false COVID vaccination as not vaccinated', () => {
+    const payload = buildEcaApplicationJson();
+    payload.compliance.covid19 = { vaccinated: false, proofProvided: false };
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(complianceToDbFields(parsed.compliance).covidVaccinationStatus).toBe('not_vaccinated');
+  });
+
+  it('persists true COVID vaccination with proof', () => {
+    const payload = buildEcaApplicationJson();
+    payload.compliance.covid19 = { vaccinated: true, proofProvided: true };
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(complianceToDbFields(parsed.compliance).covidVaccinationStatus).toBe('vaccinated_with_proof');
+  });
+
+  it('rejects invalid COVID vaccination values', () => {
+    const payload = buildEcaApplicationJson();
+    payload.compliance.covid19 = { vaccinated: 'yes' as never, proofProvided: false };
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('rejects COVID proof when vaccination is unanswered', () => {
+    const payload = buildEcaApplicationJson();
+    payload.compliance.covid19 = { vaccinated: null, proofProvided: true };
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
   });
 });
 

@@ -60,7 +60,7 @@ export interface NormalizedNetworkApplication {
     vulnerableSectorCheck: { hasDocument: boolean; issueDate?: string };
     firstAidCpr: { hasDocument: boolean; expiryDate?: string };
     immunizations: { hasRequiredImmunizations: boolean };
-    covid19: { vaccinated: boolean; proofProvided?: boolean };
+    covid19: { vaccinated: boolean | null; proofProvided: boolean };
   };
   languages: {
     englishProficiency: string;
@@ -101,6 +101,14 @@ function reqBool(obj: Record<string, unknown>, key: string, label: string): bool
 function optBool(obj: Record<string, unknown>, key: string): boolean | undefined {
   const value = obj[key];
   return typeof value === 'boolean' ? value : undefined;
+}
+
+/** Optional COVID vaccination answer: true, false, or null (unanswered). */
+function parseOptionalBool(obj: Record<string, unknown>, key: string, label: string): boolean | null {
+  const value = obj[key];
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'boolean') return value;
+  throw new BadRequestException(`${label} must be true, false, or null.`);
 }
 
 function assertDate(value: string | undefined, label: string): string | undefined {
@@ -190,6 +198,23 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
 
   const vscIssueDate = assertDate(optString(vsc, 'issueDate'), 'compliance.vulnerableSectorCheck.issueDate');
   const cprExpiryDate = assertDate(optString(cpr, 'expiryDate'), 'compliance.firstAidCpr.expiryDate');
+
+  const covidVaccinated = parseOptionalBool(
+    covid19,
+    'vaccinated',
+    'compliance.covid19.vaccinated',
+  );
+  const covidProofProvided = optBool(covid19, 'proofProvided') ?? false;
+  if (covidVaccinated === null && covidProofProvided) {
+    throw new BadRequestException(
+      'compliance.covid19.proofProvided cannot be true when vaccinated is null.',
+    );
+  }
+  if (covidVaccinated === false && covidProofProvided) {
+    throw new BadRequestException(
+      'compliance.covid19.proofProvided cannot be true when vaccinated is false.',
+    );
+  }
 
   if (role === 'ECA' || role === 'ECE/RECE') {
     const qualification = assertObject(roleSpecific.qualification ?? {}, 'roleSpecific.qualification');
@@ -316,8 +341,8 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
       firstAidCpr: { hasDocument: cprHas, expiryDate: cprExpiryDate },
       immunizations: { hasRequiredImmunizations: immHas },
       covid19: {
-        vaccinated: reqBool(covid19, 'vaccinated', 'compliance.covid19.vaccinated'),
-        proofProvided: optBool(covid19, 'proofProvided'),
+        vaccinated: covidVaccinated,
+        proofProvided: covidProofProvided,
       },
     },
     languages: {
@@ -372,6 +397,14 @@ export function matchSubmitFiles(
   });
 }
 
+export function mapCovidVaccinationStatus(covid19: NormalizedNetworkApplication['compliance']['covid19']): string {
+  if (covid19.vaccinated === null) return 'not_provided';
+  if (covid19.vaccinated) {
+    return covid19.proofProvided ? 'vaccinated_with_proof' : 'vaccinated';
+  }
+  return 'not_vaccinated';
+}
+
 export function complianceToDbFields(compliance: NormalizedNetworkApplication['compliance']) {
   return {
     vscStatus: compliance.vulnerableSectorCheck.hasDocument ? 'provided' : 'missing',
@@ -379,11 +412,7 @@ export function complianceToDbFields(compliance: NormalizedNetworkApplication['c
     firstAidCprStatus: compliance.firstAidCpr.hasDocument ? 'provided' : 'missing',
     firstAidCprExpiry: compliance.firstAidCpr.expiryDate ?? null,
     immunizationStatus: compliance.immunizations.hasRequiredImmunizations ? 'provided' : 'missing',
-    covidVaccinationStatus: compliance.covid19.vaccinated
-      ? compliance.covid19.proofProvided
-        ? 'vaccinated_with_proof'
-        : 'vaccinated'
-      : 'not_vaccinated',
+    covidVaccinationStatus: mapCovidVaccinationStatus(compliance.covid19),
   };
 }
 
