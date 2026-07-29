@@ -364,7 +364,7 @@ function ApplicationsPage() {
                 <tr>
                   <th
                     scope="col"
-                    className="sticky left-0 top-0 z-30 border-b border-r border-border bg-muted/90 backdrop-blur px-3 py-2 text-left font-medium text-muted-foreground"
+                    className="sticky left-0 top-0 z-30 border-b border-r border-border bg-muted px-3 py-2 text-left font-medium text-muted-foreground"
                     style={{ minWidth: 200 }}
                   >
                     <button
@@ -377,7 +377,7 @@ function ApplicationsPage() {
                   </th>
                   <th
                     scope="col"
-                    className="sticky top-0 z-20 border-b border-border bg-muted/90 backdrop-blur px-3 py-2 text-left font-medium text-muted-foreground"
+                    className="sticky top-0 z-20 border-b border-border bg-muted px-3 py-2 text-left font-medium text-muted-foreground"
                     style={{ minWidth: 110 }}
                   >
                     <button
@@ -392,7 +392,7 @@ function ApplicationsPage() {
                     <th
                       key={c.key}
                       scope="col"
-                      className="sticky top-0 z-20 border-b border-border bg-muted/90 backdrop-blur px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap"
+                      className="sticky top-0 z-20 border-b border-border bg-muted px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap"
                       style={{ minWidth: c.minWidth }}
                     >
                       {c.sortValue ? (
@@ -410,7 +410,7 @@ function ApplicationsPage() {
                   ))}
                   <th
                     scope="col"
-                    className="sticky right-0 top-0 z-30 border-b border-l border-border bg-muted/90 backdrop-blur px-3 py-2 text-left font-medium text-muted-foreground"
+                    className="sticky right-0 top-0 z-40 border-b border-l border-border bg-muted px-3 py-2 text-left font-medium text-muted-foreground shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.12)]"
                     style={{ minWidth: 250 }}
                   >
                     Actions
@@ -428,22 +428,22 @@ function ApplicationsPage() {
                     }}
                     className="group cursor-pointer outline-none focus-visible:bg-muted/60"
                   >
-                    <td className="sticky left-0 z-10 border-b border-r border-border bg-card px-3 py-2 group-hover:bg-muted/50">
+                    <td className="sticky left-0 z-20 border-b border-r border-border bg-card px-3 py-2 group-hover:bg-muted">
                       <div className="max-w-[15rem] truncate font-medium">{fullName(r)}</div>
                     </td>
-                    <td className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted/50">
+                    <td className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted">
                       <ApplicationStatusBadge status={r.status} />
                     </td>
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted/50"
+                        className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted"
                         style={{ maxWidth: Math.max(c.minWidth, 240) }}
                       >
                         {c.cell(r, { openDoc: docs.open })}
                       </td>
                     ))}
-                    <td className="sticky right-0 z-10 border-b border-l border-border bg-card px-3 py-2 group-hover:bg-muted/50">
+                    <td className="sticky right-0 z-30 isolate border-b border-l border-border bg-card px-3 py-2 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)] group-hover:bg-muted">
                       <ApplicationActionButtons
                         status={r.status}
                         applicantName={fullName(r)}

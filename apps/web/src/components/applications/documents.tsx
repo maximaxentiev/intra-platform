@@ -1,13 +1,7 @@
-// Document review UX.
-//
-// The secure, authenticated document-content endpoint is NOT wired yet.
-// `useDocumentContentUrl` is the single integration point:
-// TODO(cursor): return a short-lived authenticated URL (or blob URL) for the
-// document, e.g. GET /api/applications/:id/documents/:docId/content.
-// Until then every preview surface renders a clean "unavailable" state.
-// No public URLs, no storage keys, no auth bypass.
-import { useState } from "react";
-import { FileText, Image as ImageIcon, FileType2, ExternalLink, Lock } from "lucide-react";
+// Document review UX — private objects are fetched via the authenticated API
+// (see useDocumentContentUrl → GET /api/applications/:id/documents/:docId/content).
+import { useCallback, useEffect, useState } from "react";
+import { FileText, Image as ImageIcon, FileType2, ExternalLink, Lock, RotateCcw } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -17,6 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  acquireDocumentBlobUrl,
+  invalidateDocumentBlob,
+  releaseDocumentBlob,
+} from "@/lib/application-document-content";
+import {
   DOCUMENT_LABELS,
   DOCUMENT_SHORT_LABELS,
   fileKind,
@@ -25,13 +24,59 @@ import {
   type ApplicationDocument,
 } from "@/lib/applications";
 
-/** Integration point for secure document retrieval (returns null until wired). */
-export function useDocumentContentUrl(_doc: ApplicationDocument | null): {
+/** Integration point for secure document retrieval via the NestJS API. */
+export function useDocumentContentUrl(doc: ApplicationDocument | null): {
   url: string | null;
   loading: boolean;
   unavailable: boolean;
+  retry: () => void;
 } {
-  return { url: null, loading: false, unavailable: true };
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const retry = useCallback(() => {
+    if (doc) invalidateDocumentBlob(doc);
+    setRetryKey((k) => k + 1);
+  }, [doc]);
+
+  useEffect(() => {
+    if (!doc) {
+      setUrl(null);
+      setLoading(false);
+      setUnavailable(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setUnavailable(false);
+    setUrl(null);
+
+    acquireDocumentBlobUrl(doc)
+      .then((blobUrl) => {
+        if (!active) {
+          releaseDocumentBlob(doc);
+          return;
+        }
+        setUrl(blobUrl);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setUrl(null);
+        setUnavailable(true);
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      releaseDocumentBlob(doc);
+    };
+  }, [doc?.applicationId, doc?.id, retryKey]);
+
+  return { url, loading, unavailable, retry };
 }
 
 function KindIcon({ doc, className }: { doc: ApplicationDocument; className?: string }) {
@@ -42,7 +87,7 @@ function KindIcon({ doc, className }: { doc: ApplicationDocument; className?: st
 
 function PreviewSurface({ doc, tall = false }: { doc: ApplicationDocument; tall?: boolean }) {
   const kind = fileKind(doc);
-  const { url, loading, unavailable } = useDocumentContentUrl(doc);
+  const { url, loading, unavailable, retry } = useDocumentContentUrl(doc);
 
   if (kind === "word") {
     return (
@@ -75,12 +120,12 @@ function PreviewSurface({ doc, tall = false }: { doc: ApplicationDocument; tall?
           tall ? "min-h-[420px]" : "h-40",
         )}
       >
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Lock className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden />
-          <div className="text-xs font-medium text-foreground">Secure preview not available yet</div>
-          <div className="text-[11px] text-muted-foreground">
-            Document access is pending the authenticated document endpoint.
-          </div>
+          <div className="text-xs font-medium text-foreground">Document preview unavailable.</div>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={retry}>
+            <RotateCcw className="h-3 w-3 mr-1" /> Retry
+          </Button>
         </div>
       </div>
     );

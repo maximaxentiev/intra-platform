@@ -1,5 +1,6 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import type { Readable } from 'stream';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
   applicationActivity,
@@ -7,7 +8,24 @@ import {
   applications,
   staff,
 } from '../db/schema';
+import {
+  StorageNotConfiguredError,
+  StorageOperationError,
+  StorageService,
+} from '../storage/storage.service';
+import {
+  buildContentDisposition,
+  isInlinePreviewContentType,
+} from './application-document-content.util';
 import type { ListApplicationsQuery } from './dto/applications.dto';
+
+export interface ApplicationDocumentStreamResult {
+  body: Readable;
+  contentType: string;
+  contentDisposition: string;
+  category: string;
+  documentId: string;
+}
 
 function documentSummary(doc: typeof applicationDocuments.$inferSelect) {
   return {
@@ -104,7 +122,10 @@ function buildDetail(row: typeof applications.$inferSelect, docs: typeof applica
 
 @Injectable()
 export class ApplicationsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly storage: StorageService,
+  ) {}
 
   async list(q: ListApplicationsQuery) {
     const limit = q.limit ?? 25;
@@ -204,6 +225,59 @@ export class ApplicationsService {
       .where(eq(applicationDocuments.applicationId, applicationId))
       .orderBy(applicationDocuments.uploadedAt);
     return rows.map(documentSummary);
+  }
+
+  async streamDocumentContent(
+    applicationId: string,
+    documentId: string,
+    actorUserId: string,
+  ): Promise<ApplicationDocumentStreamResult> {
+    await this.assertExists(applicationId);
+
+    const rows = await this.db
+      .select()
+      .from(applicationDocuments)
+      .where(
+        and(
+          eq(applicationDocuments.id, documentId),
+          eq(applicationDocuments.applicationId, applicationId),
+        ),
+      )
+      .limit(1);
+    const doc = rows[0];
+    if (!doc) throw new NotFoundException('Document not found.');
+
+    let streamResult;
+    try {
+      streamResult = await this.storage.getObjectStream(doc.storageKey);
+    } catch (err) {
+      if (err instanceof StorageNotConfiguredError || err instanceof StorageOperationError) {
+        throw new ServiceUnavailableException('Document is temporarily unavailable.');
+      }
+      throw err;
+    }
+
+    const contentType = doc.contentType || streamResult.contentType || 'application/octet-stream';
+    const inline = isInlinePreviewContentType(contentType, doc.originalFilename);
+
+    await this.db.insert(applicationActivity).values({
+      applicationId,
+      actorUserId,
+      actorType: 'ops_user',
+      eventType: 'document_viewed',
+      metadata: {
+        documentId: doc.id,
+        category: doc.category,
+      },
+    });
+
+    return {
+      body: streamResult.body,
+      contentType,
+      contentDisposition: buildContentDisposition(doc.originalFilename, inline),
+      category: doc.category,
+      documentId: doc.id,
+    };
   }
 
   private async assertExists(id: string) {

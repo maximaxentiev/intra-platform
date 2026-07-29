@@ -89,7 +89,7 @@ describe('ApplicationsService', () => {
     const mock = createMockDb();
     db = mock.db;
     chain = mock.chain;
-    service = new ApplicationsService(db as never);
+    service = new ApplicationsService(db as never, { getObjectStream: vi.fn() } as never);
   });
 
   it('lists applications with pagination defaults', async () => {
