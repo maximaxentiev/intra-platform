@@ -199,7 +199,7 @@ export function matchesSearch(r: ApplicationRow, term: string): boolean {
   if (!q) return true;
   const digits = q.replace(/\D/g, "");
   const haystack = [
-    fullName(r.applicant),
+    fullName(r),
     r.applicant.email,
     r.applicant.phone,
   ]
@@ -263,7 +263,7 @@ export function sortRows(rows: ApplicationRow[], sort: SortState, columns: AppCo
   }
   const getter: ((r: ApplicationRow) => string | number) | undefined =
     sort.key === "applicant"
-      ? (r) => fullName(r.applicant).toLowerCase()
+      ? (r) => fullName(r).toLowerCase()
       : sort.key === "status"
         ? (r) => STATUS_ORDER[r.status] ?? 9
         : columns.find((c) => c.key === sort.key)?.sortValue;

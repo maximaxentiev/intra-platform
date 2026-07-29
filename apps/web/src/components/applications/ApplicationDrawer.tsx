@@ -149,7 +149,7 @@ export function ApplicationDrawer({
 
   if (!row) return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent /></Sheet>;
 
-  const name = fullName(row.applicant);
+  const name = fullName(row);
   const isNanny = row.applicant.role === "nanny";
 
   return (

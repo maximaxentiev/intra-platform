@@ -429,7 +429,7 @@ function ApplicationsPage() {
                     className="group cursor-pointer outline-none focus-visible:bg-muted/60"
                   >
                     <td className="sticky left-0 z-10 border-b border-r border-border bg-card px-3 py-2 group-hover:bg-muted/50">
-                      <div className="max-w-[15rem] truncate font-medium">{fullName(r.applicant)}</div>
+                      <div className="max-w-[15rem] truncate font-medium">{fullName(r)}</div>
                     </td>
                     <td className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted/50">
                       <ApplicationStatusBadge status={r.status} />
@@ -446,7 +446,7 @@ function ApplicationsPage() {
                     <td className="sticky right-0 z-10 border-b border-l border-border bg-card px-3 py-2 group-hover:bg-muted/50">
                       <ApplicationActionButtons
                         status={r.status}
-                        applicantName={fullName(r.applicant)}
+                        applicantName={fullName(r)}
                         pendingAction={pending?.id === r.id ? pending.action : null}
                         onConfirm={(action) => runAction(r.id, action)}
                       />
