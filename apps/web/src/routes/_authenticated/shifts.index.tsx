@@ -181,8 +181,15 @@ function ShiftsIndex() {
             <div className="text-xs text-muted-foreground mt-1">Adjust filters, or create a new shift.</div>
           </Card>
         )}
-        {!isLoading && (data ?? []).map((s: any) => {
-          const isPastDue = new Date(`${s.shift_date}T${s.end_time}`) < new Date();
+        {!isLoading && (data ?? []).map((s) => {
+          const isPastDue = new Date(`${s.shiftDate}T${s.endTime}`) < new Date();
+          const assigned = s.assignedStaffId && s.assignedLegalName
+            ? displayStaff({
+                legalName: s.assignedLegalName,
+                displayName: s.assignedDisplayName ?? "",
+                useDisplayName: s.assignedUseDisplayName ?? false,
+              })
+            : null;
           return (
             <Card
               key={s.id}
@@ -191,16 +198,16 @@ function ShiftsIndex() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-sm truncate">{s.centre?.name}</div>
+                  <div className="font-medium text-sm truncate">{s.centreName}</div>
                   <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                    {s.shift_date} · {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                    {s.shiftDate} · {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                    {s.role_needed && <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{s.role_needed}</span>}
-                    <span className={s.staff ? "text-foreground" : "text-muted-foreground italic"}>
-                      {s.staff ? displayStaff(s.staff) : "Unassigned"}
+                    {s.roleNeeded && <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{s.roleNeeded}</span>}
+                    <span className={assigned ? "text-foreground" : "text-muted-foreground italic"}>
+                      {assigned ?? "Unassigned"}
                     </span>
-                    {s.added_to_staffpoint && <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">· Staffpoint</span>}
+                    {s.addedToStaffpoint && <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">· Staffpoint</span>}
                   </div>
                 </div>
                 <StatusBadge status={s.status}>{s.status}</StatusBadge>

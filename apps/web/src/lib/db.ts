@@ -303,7 +303,8 @@ export function fromDateStr(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-export function fmtTime(t: string): string {
+export function fmtTime(t: string | null | undefined): string {
+  if (!t) return "—";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
