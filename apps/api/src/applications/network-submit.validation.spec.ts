@@ -28,7 +28,7 @@ describe('network submit validation', () => {
     const payload = buildEcaApplicationJson({ role: 'ECE/RECE' });
     const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
     expect(parsed.role).toBe('ECE/RECE');
-    expect(parsed.roleSpecific.qualification?.status).toBe('registered');
+    expect(parsed.roleSpecific.qualification?.status).toBe('eca_canada');
   });
 
   it('parses a valid Nanny payload', () => {
@@ -91,6 +91,24 @@ describe('network submit validation', () => {
     const payload = buildEcaApplicationJson({ role: 'ECA' });
     payload.documents = payload.documents.filter((d) => d.category !== 'qualification_certificate');
     expect(() => assertRequiredDocumentsPresent(payload)).toThrow(BadRequestException);
+  });
+
+  it('does not require qualification certificate for non-Canadian certificate statuses', () => {
+    for (const status of ['eca_intl', 'ece_intl', 'studying', 'none'] as const) {
+      const payload = buildEcaApplicationJson({ role: 'ECA' });
+      payload.roleSpecific = { qualification: { status } };
+      payload.documents = payload.documents.filter((d) => d.category !== 'qualification_certificate');
+      expect(() => assertRequiredDocumentsPresent(payload)).not.toThrow();
+    }
+  });
+
+  it('requires qualification certificate only for Canadian ECA/ECE certificate statuses', () => {
+    for (const status of ['eca_canada', 'ece_canada'] as const) {
+      const payload = buildEcaApplicationJson({ role: 'ECA' });
+      payload.roleSpecific = { qualification: { status } };
+      payload.documents = payload.documents.filter((d) => d.category !== 'qualification_certificate');
+      expect(() => assertRequiredDocumentsPresent(payload)).toThrow(BadRequestException);
+    }
   });
 
   it('compares secrets in constant time', () => {

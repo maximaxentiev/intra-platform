@@ -10,6 +10,7 @@ import {
   PUBLIC_ROLE_VALUES,
   type DocumentCategoryValue,
   type PublicRoleValue,
+  qualificationStatusRequiresCertificate,
 } from './network-submit.constants';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -426,7 +427,10 @@ export function requiredDocumentCategories(
   ];
   if (payload.role === 'Nanny') required.push('training_proof');
   if (payload.role === 'ECA' || payload.role === 'ECE/RECE') {
-    required.push('qualification_certificate');
+    const status = payload.roleSpecific.qualification?.status ?? '';
+    if (qualificationStatusRequiresCertificate(status)) {
+      required.push('qualification_certificate');
+    }
   }
   if (payload.compliance.covid19.proofProvided) required.push('covid19_vaccination');
   return required;

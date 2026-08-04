@@ -54,3 +54,10 @@ export function mapPublicRoleToDb(role: PublicRoleValue): 'eca' | 'ece_rece' | '
 }
 
 export const DOC_FIELD_PREFIX = 'doc_';
+
+/** Qualification statuses from the public Join the Network form (website). */
+export const QUALIFICATION_STATUS_CANADIAN_CERTIFICATE = ['eca_canada', 'ece_canada'] as const;
+
+export function qualificationStatusRequiresCertificate(status: string): boolean {
+  return (QUALIFICATION_STATUS_CANADIAN_CERTIFICATE as readonly string[]).includes(status);
+}

@@ -51,7 +51,7 @@ export function buildEcaApplicationJson(
     roleSpecific:
       role === 'Nanny'
         ? { training: { completed: true, description: 'Infant CPR workshop' } }
-        : { qualification: { status: 'registered' } },
+        : { qualification: { status: 'eca_canada' } },
     compliance: {
       vulnerableSectorCheck: { hasDocument: true, issueDate: '2026-01-15' },
       firstAidCpr: { hasDocument: true, expiryDate: '2027-06-01' },
