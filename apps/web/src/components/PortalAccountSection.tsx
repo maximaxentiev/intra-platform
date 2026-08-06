@@ -122,7 +122,7 @@ export function PortalAccountSection({
           </div>
         </dl>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
           {canInvite && status === "no_account" ? (
             <ConfirmAction
               title="Send portal invitation?"
@@ -131,7 +131,10 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(false)}
               loading={inviteMut.isPending}
             >
-              <Button className="h-11 w-full sm:w-auto">Send portal invitation</Button>
+              <Button className="h-11 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
+                Send portal invitation
+              </Button>
             </ConfirmAction>
           ) : null}
 
@@ -143,7 +146,8 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(true)}
               loading={inviteMut.isPending}
             >
-              <Button variant="secondary" className="h-11 w-full sm:w-auto">
+              <Button variant="secondary" className="h-11 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
                 Resend invitation
               </Button>
             </ConfirmAction>
@@ -157,11 +161,17 @@ export function PortalAccountSection({
               onConfirm={() => disableMut.mutate()}
               loading={disableMut.isPending}
             >
-              <Button variant="outline" className="h-11 w-full sm:w-auto">
+              <Button
+                variant="ghost"
+                className="h-11 w-full text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto sm:w-auto"
+                disabled={busy}
+              >
+                {disableMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
                 Disable portal access
               </Button>
             </ConfirmAction>
           ) : null}
+
 
           {status === "disabled" ? (
             <ConfirmAction
