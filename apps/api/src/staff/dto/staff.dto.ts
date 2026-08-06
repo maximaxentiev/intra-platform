@@ -16,8 +16,28 @@ export class UpsertStaffDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  legalFirstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  legalLastName?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(200)
   displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  city?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -2,6 +2,7 @@ import {
   ArrayUnique,
   IsArray,
   IsIn,
+  IsNumberString,
   IsOptional,
   IsString,
   IsUUID,
@@ -20,6 +21,16 @@ export class UpsertCentreDto {
   @IsString()
   @MaxLength(500)
   address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  city?: string;
+
+  // Agreed hourly charge for this centre, e.g. "28.50".
+  @IsOptional()
+  @IsNumberString()
+  hourlyRate?: string;
 
   @IsIn(CHANNELS)
   primaryChannel!: Channel;

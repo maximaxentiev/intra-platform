@@ -16,6 +16,7 @@ import { AvailabilityModule } from './availability/availability.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ApplicationsModule } from './applications/applications.module';
+import { StaffPortalModule } from './staff-portal/staff-portal.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
 
@@ -31,6 +32,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     UsersModule,
     StaffModule,
+    StaffPortalModule,
     CentresModule,
     AvailabilityModule,
     ShiftsModule,

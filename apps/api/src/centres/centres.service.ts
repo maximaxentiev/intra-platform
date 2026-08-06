@@ -53,6 +53,8 @@ export class CentresService {
       .values({
         name: dto.name,
         address: dto.address ?? '',
+        city: dto.city ?? '',
+        hourlyRate: dto.hourlyRate ?? null,
         primaryChannel: dto.primaryChannel,
         notes: dto.notes ?? '',
       })
@@ -66,6 +68,8 @@ export class CentresService {
       .set({
         name: dto.name,
         address: dto.address ?? '',
+        city: dto.city ?? '',
+        hourlyRate: dto.hourlyRate ?? null,
         primaryChannel: dto.primaryChannel,
         notes: dto.notes ?? '',
         updatedAt: new Date(),
