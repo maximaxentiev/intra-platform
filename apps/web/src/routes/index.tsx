@@ -1,7 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ArrowRight, Building2, UserRound } from "lucide-react";
+import { isCarerPortalEnabled } from "@/lib/carer-portal-flag";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    if (!isCarerPortalEnabled()) {
+      throw redirect({ to: "/auth", replace: true });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Intra — Sign in" },
@@ -57,7 +63,9 @@ function RoleChoicePage() {
         </div>
 
         <div className="grid gap-4">
-          {OPTIONS.map((option) => (
+          {OPTIONS.filter((option) =>
+            option.to === "/auth" || isCarerPortalEnabled(),
+          ).map((option) => (
             <Link
               key={option.to}
               to={option.to}

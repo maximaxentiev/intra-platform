@@ -60,6 +60,7 @@ services:
       LEGACY_APP_HOST: ${LEGACY_APP_HOST}
       CORS_ORIGINS: https://${APP_HOST},https://${LEGACY_APP_HOST}
       SESSION_COOKIE_SECURE: "true"
+      CARER_PORTAL_ENABLED: ${CARER_PORTAL_ENABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,6 +96,7 @@ services:
         NITRO_PRESET: node-server
         # Empty => same-origin /api calls (routed to api by Traefik).
         VITE_API_URL: ""
+        VITE_CARER_PORTAL_ENABLED: ${VITE_CARER_PORTAL_ENABLED:-false}
     restart: unless-stopped
     environment:
       NODE_ENV: production

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import { assertStrongPassword, hashPassword, verifyPassword } from '../auth/password.util';
@@ -15,8 +15,6 @@ export function hashToken(token: string): string {
 
 @Injectable()
 export class StaffAuthService {
-  private readonly logger = new Logger(StaffAuthService.name);
-
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly sessions: StaffSessionService,
@@ -143,18 +141,15 @@ export class StaffAuthService {
 
   /**
    * Always resolves so the endpoint cannot be used to enumerate accounts.
-   * Returns the reset token when an account exists so the caller can email it.
+   * Raw tokens are never logged; email delivery is Phase 7.
    */
-  async requestPasswordReset(email: string): Promise<string | null> {
+  async requestPasswordReset(email: string): Promise<void> {
     const rows = await this.db
       .select()
       .from(staffAccounts)
       .where(eq(staffAccounts.email, email.trim().toLowerCase()));
     const account = rows[0];
-    if (!account) return null;
-    const token = await this.issueInviteToken(account.id);
-    // Email delivery is wired up in the automated-communications phase.
-    this.logger.log(`Password reset token issued for staff account ${account.id}`);
-    return token;
+    if (!account) return;
+    await this.issueInviteToken(account.id);
   }
 }

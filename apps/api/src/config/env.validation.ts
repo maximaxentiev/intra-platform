@@ -1,3 +1,4 @@
+import { parseCarerPortalEnabled } from './carer-portal.config';
 import { mergeProductionCorsOrigins, resolvePublicPlatformUrl } from './platform-url';
 
 /**
@@ -25,6 +26,7 @@ export interface AppEnv {
   OBJECT_STORAGE_SECRET_KEY?: string;
   OBJECT_STORAGE_REGION?: string;
   NETWORK_APPLICATION_API_KEY?: string;
+  CARER_PORTAL_ENABLED: boolean;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -83,6 +85,7 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     OBJECT_STORAGE_SECRET_KEY: trimOptional(config.OBJECT_STORAGE_SECRET_KEY),
     OBJECT_STORAGE_REGION: trimOptional(config.OBJECT_STORAGE_REGION),
     NETWORK_APPLICATION_API_KEY: trimOptional(config.NETWORK_APPLICATION_API_KEY),
+    CARER_PORTAL_ENABLED: parseCarerPortalEnabled(config.CARER_PORTAL_ENABLED),
   };
 }
 

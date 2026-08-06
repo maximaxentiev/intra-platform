@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { Public } from '../auth/session.guard';
@@ -12,6 +13,7 @@ import { StaffSessionService, type StaffSessionPayload } from './staff-session.s
  * guard steps aside; the staff session guard protects the routes that need it.
  */
 @Public()
+@UseGuards(CarerPortalEnabledGuard)
 @ApiTags('staff-portal')
 @Controller('staff-auth')
 export class StaffAuthController {

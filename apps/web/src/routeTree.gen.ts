@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CarerRouteRouteImport } from './routes/carer/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
@@ -40,6 +41,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CarerRouteRoute = CarerRouteRouteImport.update({
+  id: '/carer',
+  path: '/carer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -50,24 +56,24 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const CarerIndexRoute = CarerIndexRouteImport.update({
-  id: '/carer/',
-  path: '/carer/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const CarerOnboardingRoute = CarerOnboardingRouteImport.update({
-  id: '/carer/onboarding',
-  path: '/carer/onboarding',
-  getParentRoute: () => rootRouteImport,
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const CarerLoginRoute = CarerLoginRouteImport.update({
-  id: '/carer/login',
-  path: '/carer/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const CarerForgotPasswordRoute = CarerForgotPasswordRouteImport.update({
-  id: '/carer/forgot-password',
-  path: '/carer/forgot-password',
-  getParentRoute: () => rootRouteImport,
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
@@ -129,9 +135,9 @@ const AuthenticatedCentresIndexRoute =
     getParentRoute: () => AuthenticatedCentresRoute,
   } as any)
 const CarerInviteTokenRoute = CarerInviteTokenRouteImport.update({
-  id: '/carer/invite/$token',
-  path: '/carer/invite/$token',
-  getParentRoute: () => rootRouteImport,
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const AuthenticatedStaffNewRoute = AuthenticatedStaffNewRouteImport.update({
   id: '/new',
@@ -166,6 +172,7 @@ const AuthenticatedCentresIdRoute = AuthenticatedCentresIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/carer': typeof CarerRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
@@ -217,6 +224,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/carer': typeof CarerRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/applications': typeof AuthenticatedApplicationsRoute
   '/_authenticated/availability': typeof AuthenticatedAvailabilityRoute
@@ -245,6 +253,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/carer'
     | '/auth'
     | '/applications'
     | '/availability'
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/carer'
     | '/auth'
     | '/_authenticated/applications'
     | '/_authenticated/availability'
@@ -323,12 +333,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  CarerRouteRoute: typeof CarerRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
-  CarerLoginRoute: typeof CarerLoginRoute
-  CarerOnboardingRoute: typeof CarerOnboardingRoute
-  CarerIndexRoute: typeof CarerIndexRoute
-  CarerInviteTokenRoute: typeof CarerInviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -338,6 +344,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carer': {
+      id: '/carer'
+      path: '/carer'
+      fullPath: '/carer'
+      preLoaderRoute: typeof CarerRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -356,31 +369,31 @@ declare module '@tanstack/react-router' {
     }
     '/carer/': {
       id: '/carer/'
-      path: '/carer'
+      path: '/'
       fullPath: '/carer/'
       preLoaderRoute: typeof CarerIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/carer/onboarding': {
       id: '/carer/onboarding'
-      path: '/carer/onboarding'
+      path: '/onboarding'
       fullPath: '/carer/onboarding'
       preLoaderRoute: typeof CarerOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/carer/login': {
       id: '/carer/login'
-      path: '/carer/login'
+      path: '/login'
       fullPath: '/carer/login'
       preLoaderRoute: typeof CarerLoginRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/carer/forgot-password': {
       id: '/carer/forgot-password'
-      path: '/carer/forgot-password'
+      path: '/forgot-password'
       fullPath: '/carer/forgot-password'
       preLoaderRoute: typeof CarerForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/_authenticated/users': {
       id: '/_authenticated/users'
@@ -461,10 +474,10 @@ declare module '@tanstack/react-router' {
     }
     '/carer/invite/$token': {
       id: '/carer/invite/$token'
-      path: '/carer/invite/$token'
+      path: '/invite/$token'
       fullPath: '/carer/invite/$token'
       preLoaderRoute: typeof CarerInviteTokenRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/_authenticated/staff/new': {
       id: '/_authenticated/staff/new'
@@ -581,15 +594,31 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
+interface CarerRouteRouteChildren {
+  CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
+  CarerLoginRoute: typeof CarerLoginRoute
+  CarerOnboardingRoute: typeof CarerOnboardingRoute
+  CarerIndexRoute: typeof CarerIndexRoute
+  CarerInviteTokenRoute: typeof CarerInviteTokenRoute
+}
+
+const CarerRouteRouteChildren: CarerRouteRouteChildren = {
   CarerForgotPasswordRoute: CarerForgotPasswordRoute,
   CarerLoginRoute: CarerLoginRoute,
   CarerOnboardingRoute: CarerOnboardingRoute,
   CarerIndexRoute: CarerIndexRoute,
   CarerInviteTokenRoute: CarerInviteTokenRoute,
+}
+
+const CarerRouteRouteWithChildren = CarerRouteRoute._addFileChildren(
+  CarerRouteRouteChildren,
+)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  CarerRouteRoute: CarerRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -8,20 +8,20 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace @intra/web",
-    "dev:web": "npm run dev --workspace @intra/web",
-    "dev:api": "npm run start:dev --workspace @intra/api",
+    "dev": "npm --prefix apps/web run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "npm --prefix apps/api run start:dev",
     "build": "npm run build --workspaces --if-present",
-    "build:dev": "npm run build:dev --workspace @intra/web",
-    "build:web": "npm run build --workspace @intra/web",
-    "build:api": "npm run build --workspace @intra/api",
+    "build:dev": "npm --prefix apps/web run build:dev",
+    "build:web": "npm --prefix apps/web run build",
+    "build:api": "npm --prefix apps/api run build",
     "lint": "npm run lint --workspaces --if-present",
-    "db:generate": "npm run db:generate --workspace @intra/api",
-    "db:migrate": "npm run db:migrate --workspace @intra/api",
-    "db:import": "npm run db:import --workspace @intra/api",
-    "db:import:api": "npm run db:import:api --workspace @intra/api",
-    "db:import:centres-local": "npm run db:import:centres-local --workspace @intra/api --",
-    "db:import:centres-csv-local": "npm run db:import:centres-csv-local --workspace @intra/api --"
+    "db:generate": "npm --prefix apps/api run db:generate",
+    "db:migrate": "npm --prefix apps/api run db:migrate",
+    "db:import": "npm --prefix apps/api run db:import",
+    "db:import:api": "npm --prefix apps/api run db:import:api",
+    "db:import:centres-local": "npm --prefix apps/api run db:import:centres-local --",
+    "db:import:centres-csv-local": "npm --prefix apps/api run db:import:centres-csv-local --"
   },
   "engines": {
     "node": ">=22"
