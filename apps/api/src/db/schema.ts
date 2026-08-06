@@ -68,7 +68,12 @@ export const centres = pgTable('centres', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   address: text('address').notNull().default(''),
+  city: text('city').notNull().default(''),
+  // Agreed hourly charge for the centre (used by future invoicing).
+  hourlyRate: numeric('hourly_rate', { precision: 10, scale: 2 }),
   primaryChannel: centreChannel('primary_channel').notNull().default('email'),
+  // Labelled "Rules, Policies, and Other Notes" in the UI; included verbatim
+  // in shift assignment + reminder emails to staff.
   notes: text('notes').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
