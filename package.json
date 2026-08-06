@@ -12,6 +12,7 @@
     "dev:web": "npm run dev --workspace @intra/web",
     "dev:api": "npm run start:dev --workspace @intra/api",
     "build": "npm run build --workspaces --if-present",
+    "build:dev": "npm run build:dev --workspace @intra/web",
     "build:web": "npm run build --workspace @intra/web",
     "build:api": "npm run build --workspace @intra/api",
     "lint": "npm run lint --workspaces --if-present",
