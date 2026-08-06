@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd /opt/projects/intra-platform
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+PLATFORM_BASE="https://${APP_HOST:-platform.intra.ca}"
 API_KEY=$(grep '^NETWORK_APPLICATION_API_KEY=' .env | cut -d= -f2-)
 EXT_ID=$(python3 - <<'PY'
 import uuid; print(uuid.uuid4())
@@ -41,7 +48,7 @@ print(json.dumps({
     "externalApplicationId": "$EXT_ID",
     "submittedAt": "2026-07-28T20:35:00.000Z",
     "sourcePage": "/join-the-network",
-    "sourceUrl": "https://ops-test.intra.ca/join-the-network",
+    "sourceUrl": "${PLATFORM_BASE}/join-the-network",
     "consentAccepted": True,
     "consentPolicyVersion": "2026-07-01"
   },
@@ -80,7 +87,7 @@ HTTP=$(curl -sS -o /tmp/intra-staging-submit.out -w '%{http_code}' \
   -F "doc_${CPR}=@${TMP}/cpr.pdf;type=application/pdf" \
   -F "doc_${IMM}=@${TMP}/imm.pdf;type=application/pdf" \
   -F "doc_${QUAL}=@${TMP}/qual.pdf;type=application/pdf" \
-  https://ops-test.intra.ca/api/v1/public/applications/network)
+  "${PLATFORM_BASE}/api/v1/public/applications/network")
 echo "submit_http=${HTTP}"
 cat /tmp/intra-staging-submit.out
 echo

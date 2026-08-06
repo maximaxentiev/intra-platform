@@ -1,3 +1,5 @@
+import { mergeProductionCorsOrigins, resolvePublicPlatformUrl } from './platform-url';
+
 /**
  * Runtime env validation. Fails fast on boot if required vars are missing.
  */
@@ -7,6 +9,9 @@ export interface AppEnv {
   DATABASE_URL: string;
   REDIS_URL: string;
   CORS_ORIGINS: string[];
+  APP_PUBLIC_URL?: string;
+  APP_HOST?: string;
+  LEGACY_APP_HOST?: string;
   SESSION_SECRET: string;
   SESSION_COOKIE_NAME: string;
   SESSION_COOKIE_SECURE: boolean;
@@ -35,15 +40,36 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     throw new Error('SESSION_SECRET must be at least 16 characters.');
   }
 
+  const nodeEnv = (config.NODE_ENV as string) ?? 'development';
+  const appHost = trimOptional(config.APP_HOST);
+  const legacyAppHost = trimOptional(config.LEGACY_APP_HOST);
+  const platformEnv = {
+    APP_PUBLIC_URL: trimOptional(config.APP_PUBLIC_URL),
+    APP_HOST: appHost,
+    LEGACY_APP_HOST: legacyAppHost,
+    NODE_ENV: nodeEnv,
+  };
+  const appPublicUrl =
+    nodeEnv === 'production' ? resolvePublicPlatformUrl(platformEnv) : trimOptional(config.APP_PUBLIC_URL);
+
+  const corsConfigured = String(config.CORS_ORIGINS ?? 'http://localhost:3000')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const corsOrigins =
+    nodeEnv === 'production'
+      ? mergeProductionCorsOrigins(corsConfigured, platformEnv)
+      : corsConfigured;
+
   return {
-    NODE_ENV: (config.NODE_ENV as string) ?? 'development',
+    NODE_ENV: nodeEnv,
     API_PORT: Number(config.API_PORT ?? 8000),
     DATABASE_URL: required('DATABASE_URL', config.DATABASE_URL as string),
     REDIS_URL: required('REDIS_URL', config.REDIS_URL as string),
-    CORS_ORIGINS: String(config.CORS_ORIGINS ?? 'http://localhost:3000')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean),
+    CORS_ORIGINS: corsOrigins,
+    APP_PUBLIC_URL: appPublicUrl,
+    APP_HOST: appHost,
+    LEGACY_APP_HOST: legacyAppHost,
     SESSION_SECRET: sessionSecret,
     SESSION_COOKIE_NAME: (config.SESSION_COOKIE_NAME as string) ?? 'intra_session',
     SESSION_COOKIE_SECURE: String(config.SESSION_COOKIE_SECURE ?? 'false') === 'true',

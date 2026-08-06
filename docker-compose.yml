@@ -7,6 +7,9 @@
 #
 # Requires Traefik already running with an external network named `web`,
 # an entrypoint `websecure`, and a cert resolver `letsencrypt`.
+#
+# Production host: set APP_HOST=platform.intra.ca and LEGACY_APP_HOST=ops-test.intra.ca
+# on the server .env (same Compose project `intra-ops-test` — one DB/volume set).
 
 services:
   postgres:
@@ -52,7 +55,10 @@ services:
       API_PORT: "8000"
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379
-      CORS_ORIGINS: https://${APP_HOST}
+      APP_HOST: ${APP_HOST}
+      APP_PUBLIC_URL: https://${APP_HOST}
+      LEGACY_APP_HOST: ${LEGACY_APP_HOST}
+      CORS_ORIGINS: https://${APP_HOST},https://${LEGACY_APP_HOST}
       SESSION_COOKIE_SECURE: "true"
     depends_on:
       postgres:
@@ -65,21 +71,21 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      # API takes priority for /api on the app host.
-      - traefik.http.routers.intra-ops-test-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/api`)
-      - traefik.http.routers.intra-ops-test-api.entrypoints=websecure
-      - traefik.http.routers.intra-ops-test-api.tls.certresolver=letsencrypt
-      - traefik.http.routers.intra-ops-test-api.priority=100
-      - traefik.http.routers.intra-ops-test-api.middlewares=intra-ops-test-sec@docker
-      - traefik.http.routers.intra-ops-test-api.service=intra-ops-test-api
-      - traefik.http.services.intra-ops-test-api.loadbalancer.server.port=8000
+      # API takes priority for /api on the primary app host.
+      - traefik.http.routers.intra-platform-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/api`)
+      - traefik.http.routers.intra-platform-api.entrypoints=websecure
+      - traefik.http.routers.intra-platform-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-platform-api.priority=100
+      - traefik.http.routers.intra-platform-api.middlewares=intra-platform-sec@docker
+      - traefik.http.routers.intra-platform-api.service=intra-platform-api
+      - traefik.http.services.intra-platform-api.loadbalancer.server.port=8000
       # Shared security-headers middleware (L3).
-      - traefik.http.middlewares.intra-ops-test-sec.headers.stsSeconds=31536000
-      - traefik.http.middlewares.intra-ops-test-sec.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.intra-ops-test-sec.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.intra-ops-test-sec.headers.browserXssFilter=true
-      - traefik.http.middlewares.intra-ops-test-sec.headers.referrerPolicy=no-referrer
-      - traefik.http.middlewares.intra-ops-test-sec.headers.frameDeny=true
+      - traefik.http.middlewares.intra-platform-sec.headers.stsSeconds=31536000
+      - traefik.http.middlewares.intra-platform-sec.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.intra-platform-sec.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.intra-platform-sec.headers.browserXssFilter=true
+      - traefik.http.middlewares.intra-platform-sec.headers.referrerPolicy=no-referrer
+      - traefik.http.middlewares.intra-platform-sec.headers.frameDeny=true
 
   web:
     build:
@@ -101,13 +107,23 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.intra-ops-test-web.rule=Host(`${APP_HOST}`)
-      - traefik.http.routers.intra-ops-test-web.entrypoints=websecure
-      - traefik.http.routers.intra-ops-test-web.tls.certresolver=letsencrypt
-      - traefik.http.routers.intra-ops-test-web.priority=1
-      - traefik.http.routers.intra-ops-test-web.middlewares=intra-ops-test-sec@docker
-      - traefik.http.routers.intra-ops-test-web.service=intra-ops-test-web
-      - traefik.http.services.intra-ops-test-web.loadbalancer.server.port=3000
+      - traefik.http.routers.intra-platform-web.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.intra-platform-web.entrypoints=websecure
+      - traefik.http.routers.intra-platform-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-platform-web.priority=1
+      - traefik.http.routers.intra-platform-web.middlewares=intra-platform-sec@docker
+      - traefik.http.routers.intra-platform-web.service=intra-platform-web
+      - traefik.http.services.intra-platform-web.loadbalancer.server.port=3000
+      # Permanent redirect from legacy host (ops-test.intra.ca) to APP_HOST; TLS via letsencrypt.
+      - traefik.http.middlewares.intra-platform-legacy-redirect.redirectregex.regex=^https?://[^/]+/?(.*)$
+      - traefik.http.middlewares.intra-platform-legacy-redirect.redirectregex.replacement=https://${APP_HOST}/$${1}
+      - traefik.http.middlewares.intra-platform-legacy-redirect.redirectregex.permanent=true
+      - traefik.http.routers.intra-platform-legacy.rule=Host(`${LEGACY_APP_HOST}`)
+      - traefik.http.routers.intra-platform-legacy.entrypoints=websecure
+      - traefik.http.routers.intra-platform-legacy.tls.certresolver=letsencrypt
+      - traefik.http.routers.intra-platform-legacy.priority=200
+      - traefik.http.routers.intra-platform-legacy.middlewares=intra-platform-legacy-redirect@docker
+      - traefik.http.routers.intra-platform-legacy.service=intra-platform-web
 
 volumes:
   pgdata:

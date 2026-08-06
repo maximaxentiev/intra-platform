@@ -18,7 +18,8 @@ Permanent source of truth for the **Intra Platform** (Ops Portal) — a childcar
 
 # Current Architecture
 
-> **Stack rewrite complete on `main`.** Staging (`ops-test.intra.ca`) runs the self-hosted
+> **Stack rewrite complete on `main`.** Production URL **`https://platform.intra.ca`**
+> (formerly `ops-test.intra.ca`, which 301-redirects during cutover) runs the self-hosted
 > NestJS + Drizzle + Postgres + Redis stack via Docker Compose. Supabase/Lovable are no longer
 > used at runtime on staging; decommission those services after legacy data import.
 
@@ -94,9 +95,10 @@ SOURCE_DATABASE_URL="postgres://..." DATABASE_URL="postgres://..." npm run db:im
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... DATABASE_URL=... npm run db:import:api
 ```
 
-**Staging deploy:** copy repo to droplet, create `.env` from `.env.example`, run
-`scripts/deploy-staging.sh`. Traefik router names are prefixed `intra-ops-test-*` to avoid
-collisions with other apps on the host (e.g. `usa.intra.ca`).
+**Staging/production deploy:** copy repo to droplet, set `APP_HOST=platform.intra.ca`,
+`LEGACY_APP_HOST=ops-test.intra.ca`, and secrets in `.env`, run `scripts/deploy-staging.sh`.
+Traefik router names are prefixed `intra-platform-*` (Compose project remains `intra-ops-test`
+for the same Postgres/Redis volumes).
 
 ---
 
@@ -234,7 +236,7 @@ bcrypt password hashes copied when available.
 
 | Environment | URL | Status |
 |---|---|---|
-| **Staging (DO)** | `https://ops-test.intra.ca` | **Live** — NestJS + Drizzle stack (Compose project `intra-ops-test`) |
+| **Production (DO)** | `https://platform.intra.ca` | **Target** — same stack (`intra-ops-test`); `ops-test.intra.ca` → 301 redirect |
 | **Local dev** | `dev\runservers.bat` (Windows) or `npm run dev:web` + `npm run dev:api` | Active |
 | **Lovable** | Editor | **Disconnect when ready** — `main` no longer uses Supabase client |
 | **Supabase (legacy)** | Hosted Postgres + Auth | **Decommission after import** — runtime no longer depends on it |

@@ -1,0 +1,36 @@
+import {
+  assertProductionOutboundUrl,
+  buildAuthRedirectUrl,
+  buildPlatformLink,
+  resolvePublicPlatformUrl,
+  type PlatformUrlEnv,
+} from './platform-url';
+
+/** Links for outbound email — always rooted at the canonical public URL in production. */
+export function buildEmailVerificationLink(token: string, env: PlatformUrlEnv): string {
+  const base = resolvePublicPlatformUrl(env);
+  const url = `${buildAuthRedirectUrl(base, 'verifyEmail')}?token=${encodeURIComponent(token)}`;
+  assertProductionOutboundUrl(url, env);
+  return url;
+}
+
+export function buildPasswordResetEmailLink(token: string, env: PlatformUrlEnv): string {
+  const base = resolvePublicPlatformUrl(env);
+  const url = `${buildAuthRedirectUrl(base, 'resetPassword')}?token=${encodeURIComponent(token)}`;
+  assertProductionOutboundUrl(url, env);
+  return url;
+}
+
+export function buildStaffInviteEmailLink(inviteToken: string, env: PlatformUrlEnv): string {
+  const base = resolvePublicPlatformUrl(env);
+  const url = `${buildAuthRedirectUrl(base, 'acceptInvite')}?token=${encodeURIComponent(inviteToken)}`;
+  assertProductionOutboundUrl(url, env);
+  return url;
+}
+
+export function buildGenericPlatformEmailLink(path: string, env: PlatformUrlEnv): string {
+  const base = resolvePublicPlatformUrl(env);
+  const url = buildPlatformLink(base, path);
+  assertProductionOutboundUrl(url, env);
+  return url;
+}

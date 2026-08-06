@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy Intra Platform (stack-rewrite) to staging on the DigitalOcean droplet.
+# Deploy Intra Platform to the DigitalOcean droplet (Compose project intra-ops-test).
+# Set APP_HOST=platform.intra.ca and LEGACY_APP_HOST=ops-test.intra.ca in .env before deploy.
 # Run ON THE DROPLET from the repo root after copying .env (see .env.example).
 # Shell scripts in this repo use LF line endings (.gitattributes).
 set -euo pipefail
