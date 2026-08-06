@@ -396,3 +396,4 @@ export type ShiftComment = typeof shiftComments.$inferSelect;
 export type Application = typeof applications.$inferSelect;
 export type ApplicationDocument = typeof applicationDocuments.$inferSelect;
 export type ApplicationActivity = typeof applicationActivity.$inferSelect;
+export type StaffAccount = typeof staffAccounts.$inferSelect;
