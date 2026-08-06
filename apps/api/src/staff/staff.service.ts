@@ -13,6 +13,7 @@ import {
   staffAccounts,
   staffCentreBanned,
   staffCentreTop,
+  staffPortalAuditEvents,
 } from '../db/schema';
 import { sanitizeOptionalHttpUrl } from '../common/url.util';
 import { CreateManualStaffDto } from './dto/create-manual-staff.dto';
@@ -190,6 +191,28 @@ export class StaffService {
   }
 
   async remove(id: string) {
+    const account = (
+      await this.db.select().from(staffAccounts).where(eq(staffAccounts.staffId, id))
+    )[0];
+    if (account) {
+      throw new ConflictException(
+        'This staff member has a carer portal account. Set employment to inactive and disable portal access instead of deleting.',
+      );
+    }
+
+    const auditRows = await this.db
+      .select({ eventType: staffPortalAuditEvents.eventType })
+      .from(staffPortalAuditEvents)
+      .where(eq(staffPortalAuditEvents.staffId, id));
+    const hasPortalLifecycleAudit = auditRows.some(
+      (row) => row.eventType !== STAFF_PORTAL_AUDIT_EVENTS.staffCreated,
+    );
+    if (hasPortalLifecycleAudit) {
+      throw new ConflictException(
+        'This staff member has portal invitation or access history. Deactivate them instead of deleting.',
+      );
+    }
+
     await this.db.delete(staff).where(eq(staff.id, id));
     return { ok: true };
   }

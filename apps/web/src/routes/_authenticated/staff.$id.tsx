@@ -74,7 +74,12 @@ function StaffDetail() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
-                <AlertDialogDescription>This removes their profile, availability, and Top/Banned associations. Assigned shifts stay but the assignment becomes empty.</AlertDialogDescription>
+                <AlertDialogDescription>
+                  Deletion is only available before a carer portal account or invitation history exists.
+                  If they have portal access, disable it and set employment to inactive instead.
+                  Otherwise this removes their profile, availability, and centre preferences. Assigned
+                  shifts remain but lose this assignment.
+                </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>

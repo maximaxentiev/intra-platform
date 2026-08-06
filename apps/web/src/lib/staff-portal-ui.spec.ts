@@ -29,4 +29,12 @@ describe("ops staff portal UI layout", () => {
     expect(src).toContain("Resend invitation");
     expect(src).not.toMatch(/inviteToken|invite_token/i);
   });
+
+  it("disabled carer routes use unavailable screen instead of ops auth redirect", () => {
+    const route = readSrc("routes/carer/route.tsx");
+    expect(route).toContain("CarerPortalUnavailable");
+    expect(route).not.toContain('to: "/auth"');
+    const routing = readSrc("lib/carer-portal-routing.ts");
+    expect(routing).toContain("show-unavailable");
+  });
 });
