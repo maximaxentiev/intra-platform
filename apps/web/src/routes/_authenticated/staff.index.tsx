@@ -135,19 +135,23 @@ function StaffIndex() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground">
-                    {s.phone && (
-                      <span className="inline-flex items-center gap-1 truncate">
-                        <Phone className="h-3.5 w-3.5" />{s.phone}
-                      </span>
-                    )}
-                    {s.email && !s.phone && (
-                      <span className="inline-flex items-center gap-1 truncate">
-                        <Mail className="h-3.5 w-3.5" />{s.email}
-                      </span>
-                    )}
-                    {!s.phone && !s.email && <span className="italic">No contact info</span>}
-                    <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground min-w-0">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {s.phone && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{s.phone}</span>
+                        </span>
+                      )}
+                      {s.email && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{s.email}</span>
+                        </span>
+                      )}
+                      {!s.phone && !s.email && <span className="italic">No contact info</span>}
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
                 </Card>
               </Link>
