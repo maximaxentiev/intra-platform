@@ -2,10 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { staffApi, displayStaff, type Staff, type PortalAccountDisplayStatus } from "@/lib/db";
-import {
-  PORTAL_ACCOUNT_STATUS_LABELS,
-  portalStatusBadgeVariant,
-} from "@/lib/portal-account-status";
+import { PORTAL_ACCOUNT_STATUS_LABELS } from "@/lib/portal-account-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
