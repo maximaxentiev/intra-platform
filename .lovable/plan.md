@@ -10,15 +10,27 @@ Confirmed on disk and in the generated route tree:
 
 So nothing is missing in the app code. The reason you don't see it is the dev server is not running.
 
-## Actual cause
+## Actual cause (confirmed by reproducing it)
 
-The dev server process is stuck in infinite self-recursion and never binds a port. Nothing is listening on 8080, so the preview shows a stale page (currently `/auth`).
+Root `package.json` scripts call themselves recursively. Running `bun run build:dev` at the root prints an endless chain:
+
+```text
+$ bun run build:dev --workspace @intra/web
+$ bun run build:dev --workspace @intra/web --workspace @intra/web
+$ bun run build:dev --workspace @intra/web --workspace @intra/web --workspace @intra/web
+... forever
+```
+
+This is exactly the `deadline_exceeded` build failure. The dev server has the same problem: nothing is listening on port 8080, so the preview shows a stale page (currently `/auth`).
 
 Root `package.json` has:
 
 ```
 "dev": "npm run dev --workspace @intra/web"
 ```
+
+The runner launches this with bun, which resolves `run dev` back to the **root** package's own `dev` script instead of the web workspace's `vite dev`. Each pass appends another `--workspace @intra/web` and spawns a child, producing an unbounded process chain and no build or Vite server.
+
 
 The runner launches this with bun, which resolves `run dev` back to the **root** package's own `dev` script instead of the web workspace's `vite dev`. Each pass appends another `--workspace @intra/web` and spawns a child, producing a chain of dozens of processes and no Vite server.
 
