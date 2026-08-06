@@ -90,8 +90,8 @@ services:
 
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/web/Dockerfile
       args:
         NITRO_PRESET: node-server
         # Empty => same-origin /api calls (routed to api by Traefik).

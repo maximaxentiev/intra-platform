@@ -1,11 +1,18 @@
 # --- Build stage (TanStack Start + Nitro node-server) ---
-FROM node:22-alpine AS builder
+# Use glibc (Debian) — Vite/Rolldown/Tailwind native bindings target linux-gnu, not Alpine musl.
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+# Monorepo install from the committed lockfile (reproducible; no accidental platform-only direct deps).
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/
+COPY apps/api/package.json apps/api/
 
-COPY . .
+RUN npm ci --workspace=@intra/web --include-workspace-root=false --no-audit --no-fund
+
+COPY apps/web ./apps/web
+
+WORKDIR /app/apps/web
 
 ARG NITRO_PRESET=node-server
 # Same-origin API by default ("" => browser calls /api on the same host).
@@ -17,14 +24,14 @@ ENV VITE_CARER_PORTAL_ENABLED=${VITE_CARER_PORTAL_ENABLED}
 
 RUN npm run build
 
-# --- Runtime stage ---
-FROM node:22-alpine AS runner
+# --- Runtime stage (bundled Nitro output — no Rolldown at runtime) ---
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
-COPY --from=builder /app/.output ./.output
+COPY --from=builder /app/apps/web/.output ./.output
 
 EXPOSE 3000
 

@@ -1,0 +1,17 @@
+# Web (and future root-context) Docker builds — keep context small.
+.git
+**/.git
+**/node_modules
+**/.output
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/coverage
+**/*.log
+apps/api/src
+apps/api/drizzle
+apps/api/dist
+.cursor
+dev
+supabase
