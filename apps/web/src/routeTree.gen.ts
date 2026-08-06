@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CarerIndexRouteImport } from './routes/carer/index'
+import { Route as CarerOnboardingRouteImport } from './routes/carer/onboarding'
+import { Route as CarerLoginRouteImport } from './routes/carer/login'
+import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
@@ -23,6 +27,7 @@ import { Route as AuthenticatedApplicationsRouteImport } from './routes/_authent
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
 import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenticated/shifts.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
+import { Route as CarerInviteTokenRouteImport } from './routes/carer/invite.$token'
 import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
 import { Route as AuthenticatedStaffIdRouteImport } from './routes/_authenticated/staff.$id'
 import { Route as AuthenticatedShiftsNewRouteImport } from './routes/_authenticated/shifts.new'
@@ -42,6 +47,26 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarerIndexRoute = CarerIndexRouteImport.update({
+  id: '/carer/',
+  path: '/carer/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarerOnboardingRoute = CarerOnboardingRouteImport.update({
+  id: '/carer/onboarding',
+  path: '/carer/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarerLoginRoute = CarerLoginRouteImport.update({
+  id: '/carer/login',
+  path: '/carer/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarerForgotPasswordRoute = CarerForgotPasswordRouteImport.update({
+  id: '/carer/forgot-password',
+  path: '/carer/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
@@ -103,6 +128,11 @@ const AuthenticatedCentresIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedCentresRoute,
   } as any)
+const CarerInviteTokenRoute = CarerInviteTokenRouteImport.update({
+  id: '/carer/invite/$token',
+  path: '/carer/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStaffNewRoute = AuthenticatedStaffNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -145,12 +175,17 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/staff': typeof AuthenticatedStaffRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/carer/forgot-password': typeof CarerForgotPasswordRoute
+  '/carer/login': typeof CarerLoginRoute
+  '/carer/onboarding': typeof CarerOnboardingRoute
+  '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
+  '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
   '/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
@@ -163,12 +198,17 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/carer/forgot-password': typeof CarerForgotPasswordRoute
+  '/carer/login': typeof CarerLoginRoute
+  '/carer/onboarding': typeof CarerOnboardingRoute
+  '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
+  '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
   '/shifts': typeof AuthenticatedShiftsIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
@@ -186,12 +226,17 @@ export interface FileRoutesById {
   '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/carer/forgot-password': typeof CarerForgotPasswordRoute
+  '/carer/login': typeof CarerLoginRoute
+  '/carer/onboarding': typeof CarerOnboardingRoute
+  '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
   '/_authenticated/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/_authenticated/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/_authenticated/staff/$id': typeof AuthenticatedStaffIdRoute
   '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
+  '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
   '/_authenticated/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
@@ -209,12 +254,17 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/staff'
     | '/users'
+    | '/carer/forgot-password'
+    | '/carer/login'
+    | '/carer/onboarding'
+    | '/carer/'
     | '/centres/$id'
     | '/centres/new'
     | '/shifts/$id'
     | '/shifts/new'
     | '/staff/$id'
     | '/staff/new'
+    | '/carer/invite/$token'
     | '/centres/'
     | '/shifts/'
     | '/staff/'
@@ -227,12 +277,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/users'
+    | '/carer/forgot-password'
+    | '/carer/login'
+    | '/carer/onboarding'
+    | '/carer'
     | '/centres/$id'
     | '/centres/new'
     | '/shifts/$id'
     | '/shifts/new'
     | '/staff/$id'
     | '/staff/new'
+    | '/carer/invite/$token'
     | '/centres'
     | '/shifts'
     | '/staff'
@@ -249,12 +304,17 @@ export interface FileRouteTypes {
     | '/_authenticated/shifts'
     | '/_authenticated/staff'
     | '/_authenticated/users'
+    | '/carer/forgot-password'
+    | '/carer/login'
+    | '/carer/onboarding'
+    | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
     | '/_authenticated/shifts/$id'
     | '/_authenticated/shifts/new'
     | '/_authenticated/staff/$id'
     | '/_authenticated/staff/new'
+    | '/carer/invite/$token'
     | '/_authenticated/centres/'
     | '/_authenticated/shifts/'
     | '/_authenticated/staff/'
@@ -264,6 +324,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
+  CarerLoginRoute: typeof CarerLoginRoute
+  CarerOnboardingRoute: typeof CarerOnboardingRoute
+  CarerIndexRoute: typeof CarerIndexRoute
+  CarerInviteTokenRoute: typeof CarerInviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -287,6 +352,34 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carer/': {
+      id: '/carer/'
+      path: '/carer'
+      fullPath: '/carer/'
+      preLoaderRoute: typeof CarerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carer/onboarding': {
+      id: '/carer/onboarding'
+      path: '/carer/onboarding'
+      fullPath: '/carer/onboarding'
+      preLoaderRoute: typeof CarerOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carer/login': {
+      id: '/carer/login'
+      path: '/carer/login'
+      fullPath: '/carer/login'
+      preLoaderRoute: typeof CarerLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carer/forgot-password': {
+      id: '/carer/forgot-password'
+      path: '/carer/forgot-password'
+      fullPath: '/carer/forgot-password'
+      preLoaderRoute: typeof CarerForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/users': {
@@ -365,6 +458,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/centres/'
       preLoaderRoute: typeof AuthenticatedCentresIndexRouteImport
       parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/carer/invite/$token': {
+      id: '/carer/invite/$token'
+      path: '/carer/invite/$token'
+      fullPath: '/carer/invite/$token'
+      preLoaderRoute: typeof CarerInviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/staff/new': {
       id: '/_authenticated/staff/new'
@@ -485,6 +585,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CarerForgotPasswordRoute: CarerForgotPasswordRoute,
+  CarerLoginRoute: CarerLoginRoute,
+  CarerOnboardingRoute: CarerOnboardingRoute,
+  CarerIndexRoute: CarerIndexRoute,
+  CarerInviteTokenRoute: CarerInviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
