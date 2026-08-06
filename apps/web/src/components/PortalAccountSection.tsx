@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { staffApi, type PortalAccountInfo, type PortalInvitationResult } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
