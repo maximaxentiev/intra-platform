@@ -19,6 +19,14 @@ import {
 // Enums (mirror the legacy Supabase schema)
 // ---------------------------------------------------------------------------
 export const staffStatus = pgEnum('staff_status', ['active', 'inactive']);
+// Staff portal account lifecycle: invited (link sent) → incomplete (account
+// created, onboarding unfinished) → active (onboarding complete).
+export const staffAccountStatus = pgEnum('staff_account_status', [
+  'invited',
+  'incomplete',
+  'active',
+  'disabled',
+]);
 export const centreChannel = pgEnum('centre_channel', ['whatsapp', 'goto', 'email']);
 export const shiftStatus = pgEnum('shift_status', ['pending', 'filled', 'cancelled', 'completed']);
 export const userRole = pgEnum('user_role', ['admin', 'ops']);
