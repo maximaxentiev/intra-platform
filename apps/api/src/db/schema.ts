@@ -114,15 +114,23 @@ export const centreSecondaryChannels = pgTable(
 // ---------------------------------------------------------------------------
 export const staff = pgTable('staff', {
   id: uuid('id').primaryKey().defaultRandom(),
+  // Kept as the canonical full legal name (first + last) for existing code
+  // and reporting; maintained in sync with the split fields below.
   legalName: text('legal_name').notNull(),
+  legalFirstName: text('legal_first_name').notNull().default(''),
+  legalLastName: text('legal_last_name').notNull().default(''),
   displayName: text('display_name').notNull().default(''),
   useDisplayName: boolean('use_display_name').notNull().default(false),
   phone: text('phone').notNull().default(''),
   email: text('email').notNull().default(''),
+  address: text('address').notNull().default(''),
+  city: text('city').notNull().default(''),
   role: text('role').notNull().default(''),
   status: staffStatus('status').notNull().default('active'),
   notes: text('notes').notNull().default(''),
   documentsUrl: text('documents_url').notNull().default(''),
+  // Public slug for the shareable documents page: /documents/<slug>
+  documentSlug: text('document_slug').unique(),
   sourceApplicationId: uuid('source_application_id')
     .references((): AnyPgColumn => applications.id, {
       onDelete: 'set null',
@@ -131,6 +139,36 @@ export const staff = pgTable('staff', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('staff_source_application_id_idx').on(t.sourceApplicationId)]);
+
+// ---------------------------------------------------------------------------
+// Staff portal accounts — separate credential store from ops `users`.
+// Created by ops when a staff member is invited; the staff member sets their
+// own password via the invite link.
+// ---------------------------------------------------------------------------
+export const staffAccounts = pgTable(
+  'staff_accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .unique()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash'),
+    status: staffAccountStatus('status').notNull().default('invited'),
+    // Invite / password-reset token (stored hashed).
+    inviteTokenHash: text('invite_token_hash'),
+    inviteTokenExpiresAt: timestamp('invite_token_expires_at', { withTimezone: true }),
+    inviteSentAt: timestamp('invite_sent_at', { withTimezone: true }),
+    // Mandatory onboarding: 1 = personal info, 2 = documents, 3 = availability.
+    onboardingStep: smallint('onboarding_step').notNull().default(1),
+    onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('staff_accounts_email_idx').on(t.email)],
+);
 
 // Top / Banned link tables (shared source of truth for two-way sync in UI)
 export const staffCentreTop = pgTable(
