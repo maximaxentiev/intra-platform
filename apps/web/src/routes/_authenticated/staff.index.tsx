@@ -138,13 +138,13 @@ function StaffIndex() {
                   <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground min-w-0">
                     <div className="min-w-0 flex-1 space-y-1">
                       {s.phone && (
-                        <span className="flex items-center gap-1.5 truncate">
+                        <span className="flex items-center gap-1.5 truncate" title={s.phone}>
                           <Phone className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{s.phone}</span>
                         </span>
                       )}
                       {s.email && (
-                        <span className="flex items-center gap-1.5 truncate">
+                        <span className="flex items-center gap-1.5 truncate" title={s.email}>
                           <Mail className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{s.email}</span>
                         </span>

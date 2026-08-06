@@ -119,7 +119,7 @@ export function ManualStaffCreateForm({
       </section>
 
       <div className="flex flex-col gap-2 border-t border-border/70 pt-6 sm:flex-row">
-        <Button type="submit" className="h-11 w-full sm:w-auto" disabled={saving}>
+        <Button type="submit" className="h-11 w-full sm:w-auto" disabled={saving} aria-busy={saving}>
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
           {saving ? "Creating…" : "Create staff member"}
         </Button>

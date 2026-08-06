@@ -183,7 +183,10 @@ export function PortalAccountSection({
               onConfirm={() => enableMut.mutate()}
               loading={enableMut.isPending}
             >
-              <Button className="h-11 w-full sm:w-auto">Re-enable portal access</Button>
+              <Button className="h-11 w-full sm:w-auto" disabled={busy}>
+                {enableMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
+                Re-enable portal access
+              </Button>
             </ConfirmAction>
           ) : null}
         </div>
