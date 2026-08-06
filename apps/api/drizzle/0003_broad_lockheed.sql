@@ -26,4 +26,9 @@ ALTER TABLE "staff" ADD COLUMN "city" text DEFAULT '' NOT NULL;--> statement-bre
 ALTER TABLE "staff" ADD COLUMN "document_slug" text;--> statement-breakpoint
 ALTER TABLE "staff_accounts" ADD CONSTRAINT "staff_accounts_staff_id_staff_id_fk" FOREIGN KEY ("staff_id") REFERENCES "public"."staff"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "staff_accounts_email_idx" ON "staff_accounts" USING btree ("email");--> statement-breakpoint
-ALTER TABLE "staff" ADD CONSTRAINT "staff_document_slug_unique" UNIQUE("document_slug");
+ALTER TABLE "staff" ADD CONSTRAINT "staff_document_slug_unique" UNIQUE("document_slug");--> statement-breakpoint
+-- Backfill split legal names from the existing single legal_name column.
+UPDATE "staff"
+SET "legal_first_name" = split_part(trim("legal_name"), ' ', 1),
+    "legal_last_name"  = NULLIF(regexp_replace(trim("legal_name"), '^\S+\s*', ''), '')
+WHERE "legal_first_name" = '' AND trim("legal_name") <> '';
