@@ -36,20 +36,25 @@ The runner launches this with bun, which resolves `run dev` back to the **root**
 
 ## Fix
 
-One-line change in root `package.json`: make `dev` (and `dev:web`) invoke the web app directly instead of re-entering the root script.
+Rewrite every root `package.json` script that currently uses `npm run X --workspace <pkg>` so it targets the workspace directory directly and cannot re-enter the root script. For example:
 
 ```
-"dev":     "npm --prefix apps/web run dev --",
-"dev:web": "npm --prefix apps/web run dev --",
+"dev":       "npm --prefix apps/web run dev --",
+"dev:web":   "npm --prefix apps/web run dev --",
+"dev:api":   "npm --prefix apps/api run start:dev --",
+"build:dev": "npm --prefix apps/web run build:dev --",
+"build:web": "npm --prefix apps/web run build --",
+"build:api": "npm --prefix apps/api run build --",
 ```
 
-Same recursion risk applies to `build:dev`, `build:web`, `build:api`, and the `db:*` scripts, which all use `npm run X --workspace ...`. Only `dev` is breaking the preview today; the others should be switched to the `--prefix` form in the same pass so a future build doesn't hit the identical loop.
+The `db:*` scripts get the same treatment. `build` (`--workspaces --if-present`) is left as is — it doesn't re-invoke a same-named root script.
 
 ## Verification
 
-1. Kill the runaway `bun run dev` process chain.
-2. Restart the dev server and confirm something is listening on 8080.
+1. Run `bun run build:dev` at the root and confirm it completes instead of looping.
+2. Kill the runaway `bun run dev` process chain and restart the dev server.
 3. `curl http://localhost:8080/` and confirm the HTML contains "Welcome to Intra" / "Independent Carer".
 4. Screenshot `/` to confirm the two role cards render.
+
 
 No app/route/UI code changes are needed for this.
