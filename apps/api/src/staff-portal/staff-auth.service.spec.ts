@@ -78,7 +78,8 @@ describe('StaffAuthService', () => {
   beforeEach(() => {
     dbMock = mockDb();
     sessions = mockSessions();
-    service = new StaffAuthService(dbMock.db, sessions);
+    const audit = { record: vi.fn().mockResolvedValue(undefined) };
+    service = new StaffAuthService(dbMock.db, sessions, audit as never);
   });
 
   describe('login', () => {
@@ -217,7 +218,20 @@ describe('StaffAuthService', () => {
       expect(dbMock.updateSets[0]).toMatchObject({
         inviteTokenHash: null,
         inviteTokenExpiresAt: null,
+        status: 'incomplete',
       });
+    });
+
+    it('rejects reused invite after token cleared', async () => {
+      const select = dbMock.db.select as ReturnType<typeof vi.fn>;
+      select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      await expect(service.acceptInvite('used-token', 'NewPassword12')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('enforces password policy', async () => {

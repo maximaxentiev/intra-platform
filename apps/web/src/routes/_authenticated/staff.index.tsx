@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { staffApi, displayStaff, type Staff } from "@/lib/db";
+import { staffApi, displayStaff, type Staff, type PortalAccountDisplayStatus } from "@/lib/db";
+import {
+  PORTAL_ACCOUNT_STATUS_LABELS,
+  portalStatusBadgeVariant,
+} from "@/lib/portal-account-status";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -117,7 +122,21 @@ function StaffIndex() {
                       <div className="font-semibold text-[15px] truncate">{displayStaff(s)}</div>
                       <div className="mt-0.5 text-xs text-muted-foreground truncate">{s.role || "No role assigned"}</div>
                     </div>
-                    <StatusBadge status={s.status === "active" ? "active" : "inactive"}>{s.status}</StatusBadge>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <StatusBadge status={s.status === "active" ? "active" : "inactive"}>{s.status}</StatusBadge>
+                      <Badge
+                        variant={portalStatusBadgeVariant(
+                          (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus,
+                        )}
+                        className="text-[10px]"
+                      >
+                        {
+                          PORTAL_ACCOUNT_STATUS_LABELS[
+                            (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus
+                          ]
+                        }
+                      </Badge>
+                    </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground">
                     {s.phone && (

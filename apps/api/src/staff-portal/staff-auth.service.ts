@@ -5,6 +5,10 @@ import { assertStrongPassword, hashPassword, verifyPassword } from '../auth/pass
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { staff, staffAccounts } from '../db/schema';
 import { StaffSessionService, type StaffSessionPayload } from './staff-session.service';
+import {
+  STAFF_PORTAL_AUDIT_EVENTS,
+  StaffPortalAuditService,
+} from './staff-portal-audit.service';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DUMMY_HASH = '$2a$12$0000000000000000000000000000000000000000000000000000';
@@ -18,6 +22,7 @@ export class StaffAuthService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly sessions: StaffSessionService,
+    private readonly audit: StaffPortalAuditService,
   ) {}
 
   /** Mints a fresh invite/reset token, stores its hash, returns the raw token. */
@@ -77,6 +82,13 @@ export class StaffAuthService {
         updatedAt: new Date(),
       })
       .where(eq(staffAccounts.id, account.id));
+
+    await this.audit.record({
+      staffId: account.staffId,
+      staffAccountId: account.id,
+      eventType: STAFF_PORTAL_AUDIT_EVENTS.invitationAccepted,
+      detail: { firstSetup: isFirstSetup },
+    });
 
     return this.startSession({
       id: account.id,

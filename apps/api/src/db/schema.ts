@@ -385,6 +385,24 @@ export const applicationActivity = pgTable(
   (t) => [index('application_activity_application_idx').on(t.applicationId, t.createdAt)],
 );
 
+export const staffPortalAuditEvents = pgTable(
+  'staff_portal_audit_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    staffAccountId: uuid('staff_account_id').references(() => staffAccounts.id, {
+      onDelete: 'set null',
+    }),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    eventType: text('event_type').notNull(),
+    detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('staff_portal_audit_staff_idx').on(t.staffId, t.createdAt)],
+);
+
 // Convenience type aliases -----------------------------------------------------
 export type User = typeof users.$inferSelect;
 export type Centre = typeof centres.$inferSelect;
@@ -397,3 +415,4 @@ export type Application = typeof applications.$inferSelect;
 export type ApplicationDocument = typeof applicationDocuments.$inferSelect;
 export type ApplicationActivity = typeof applicationActivity.$inferSelect;
 export type StaffAccount = typeof staffAccounts.$inferSelect;
+export type StaffPortalAuditEvent = typeof staffPortalAuditEvents.$inferSelect;

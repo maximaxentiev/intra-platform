@@ -3,6 +3,12 @@
 import { api } from "@/lib/api";
 
 export type StaffStatus = "active" | "inactive";
+export type PortalAccountDisplayStatus =
+  | "no_account"
+  | "invited"
+  | "incomplete"
+  | "active"
+  | "disabled";
 export type CentreChannel = "whatsapp" | "goto" | "email";
 export type ShiftStatus = "pending" | "filled" | "cancelled" | "completed";
 export type UserRole = "admin" | "ops";
@@ -33,17 +39,56 @@ export interface CurrentUser {
 export interface Staff {
   id: string;
   legalName: string;
+  legalFirstName: string;
+  legalLastName: string;
   displayName: string;
   useDisplayName: boolean;
   phone: string;
   email: string;
+  address: string;
+  city: string;
   role: string;
   status: StaffStatus;
   notes: string;
   documentsUrl: string;
   createdAt: string;
   updatedAt: string;
+  portalAccountStatus?: PortalAccountDisplayStatus;
 }
+
+export interface PortalAccountInfo {
+  accountStatus: PortalAccountDisplayStatus;
+  email: string | null;
+  inviteSentAt: string | null;
+  inviteExpiresAt: string | null;
+  lastLoginAt: string | null;
+  onboardingCompletedAt: string | null;
+  onboardingStep: number | null;
+}
+
+export interface StaffDetail extends Staff {
+  portalAccount: PortalAccountInfo | null;
+}
+
+export interface PortalInvitationResult {
+  ok: boolean;
+  emailSent: boolean;
+  resend: boolean;
+  accountStatus: PortalAccountDisplayStatus;
+  inviteSentAt: string | null;
+  inviteExpiresAt: string | null;
+  message?: string;
+}
+
+export type ManualStaffCreateInput = {
+  displayName: string;
+  legalFirstName: string;
+  legalLastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+};
 
 export interface Centre {
   id: string;
@@ -150,10 +195,17 @@ export const usersApi = {
 
 export const staffApi = {
   list: () => api.get<Staff[]>("/staff"),
-  get: (id: string) => api.get<Staff>(`/staff/${id}`),
+  get: (id: string) => api.get<StaffDetail>(`/staff/${id}`),
+  createManual: (values: ManualStaffCreateInput) => api.post<Staff>("/staff", values),
   create: (values: Partial<Staff>) => api.post<Staff>("/staff", values),
   update: (id: string, values: Partial<Staff>) => api.patch<Staff>(`/staff/${id}`, values),
   remove: (id: string) => api.del<{ ok: true }>(`/staff/${id}`),
+  sendPortalInvitation: (id: string, body: { resend?: boolean }) =>
+    api.post<PortalInvitationResult>(`/staff/${id}/portal-invitations`, body),
+  disablePortalAccess: (id: string) =>
+    api.post<PortalAccountInfo>(`/staff/${id}/portal-access/disable`),
+  enablePortalAccess: (id: string) =>
+    api.post<PortalAccountInfo>(`/staff/${id}/portal-access/enable`),
   topCentres: (id: string) => api.get<string[]>(`/staff/${id}/top-centres`),
   bannedCentres: (id: string) => api.get<string[]>(`/staff/${id}/banned-centres`),
   setTopCentres: (id: string, centreIds: string[]) =>

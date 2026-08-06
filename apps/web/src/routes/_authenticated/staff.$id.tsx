@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffApi, displayStaff, fmtTime, safeDocumentHref } from "@/lib/db";
+import { PortalAccountSection } from "@/components/PortalAccountSection";
 import { StaffForm } from "@/components/StaffForm";
 import { MultiCentreSelect } from "@/components/MultiCentreSelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,7 @@ function StaffDetail() {
 
 
         <TabsContent value="details" className="pt-4 space-y-4">
+          <PortalAccountSection staffId={id} portalAccount={staff.portalAccount ?? null} />
           <Card>
             <CardHeader><CardTitle>Contact &amp; role</CardTitle></CardHeader>
             <CardContent>

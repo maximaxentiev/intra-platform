@@ -27,6 +27,8 @@ export interface AppEnv {
   OBJECT_STORAGE_REGION?: string;
   NETWORK_APPLICATION_API_KEY?: string;
   CARER_PORTAL_ENABLED: boolean;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -86,6 +88,8 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     OBJECT_STORAGE_REGION: trimOptional(config.OBJECT_STORAGE_REGION),
     NETWORK_APPLICATION_API_KEY: trimOptional(config.NETWORK_APPLICATION_API_KEY),
     CARER_PORTAL_ENABLED: parseCarerPortalEnabled(config.CARER_PORTAL_ENABLED),
+    RESEND_API_KEY: trimOptional(config.RESEND_API_KEY),
+    EMAIL_FROM: trimOptional(config.EMAIL_FROM),
   };
 }
 

@@ -26,7 +26,7 @@ describe('production email links', () => {
 
   it('uses platform.intra.ca for staff invite', () => {
     expect(buildStaffInviteEmailLink('inv', prodEnv)).toBe(
-      'https://platform.intra.ca/auth/accept-invite?token=inv',
+      'https://platform.intra.ca/carer/invite/inv',
     );
   });
 

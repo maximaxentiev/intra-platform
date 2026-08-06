@@ -16,6 +16,7 @@ import { AvailabilityModule } from './availability/availability.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ApplicationsModule } from './applications/applications.module';
+import { EmailModule } from './email/email.module';
 import { StaffPortalModule } from './staff-portal/staff-portal.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
@@ -26,6 +27,7 @@ import { HealthController } from './health.controller';
     // regardless of the workspace-scoped cwd `npm run dev:api` runs with).
     // Docker/production inject real env vars directly, so this is a no-op there.
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv, envFilePath: findRepoRootEnvFile() }),
+    EmailModule,
     ScheduleModule.forRoot(),
     DrizzleModule,
     RedisModule,

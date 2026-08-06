@@ -2,6 +2,7 @@ import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { describe, expect, it, vi } from 'vitest';
 import { SessionGuard } from '../auth/session.guard';
+import { SessionService } from '../auth/session.service';
 import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
 import { StaffSessionGuard } from './staff-session.guard';
 import { StaffSessionService } from './staff-session.service';

@@ -1,0 +1,103 @@
+import { ConflictException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { staff, staffAccounts } from '../db/schema';
+import { STAFF_PORTAL_AUDIT_EVENTS } from '../staff-portal/staff-portal-audit.service';
+import { StaffService } from './staff.service';
+
+describe('StaffService.createManual', () => {
+  let staffRows: { id: string; email: string }[];
+  let accountRows: { email: string; staffId: string }[];
+  let auditEvents: unknown[];
+  let service: StaffService;
+
+  beforeEach(() => {
+    staffRows = [];
+    accountRows = [];
+    auditEvents = [];
+
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockImplementation((table: unknown) => ({
+          where: vi.fn().mockImplementation(async () => {
+            if (table === staffAccounts) return [...accountRows];
+            if (table === staff) return [...staffRows];
+            return [];
+          }),
+          orderBy: vi.fn().mockResolvedValue([]),
+        })),
+      }),
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockImplementation((row: { email: string }) => ({
+          returning: vi.fn().mockImplementation(async () => {
+            const created = {
+              id: 'staff-new',
+              legalName: 'Alex Carer',
+              legalFirstName: 'Alex',
+              legalLastName: 'Carer',
+              displayName: 'Alex C',
+              useDisplayName: true,
+              phone: '555',
+              email: row.email,
+              address: '1 Main',
+              city: 'Toronto',
+              role: '',
+              status: 'active',
+              notes: '',
+              documentsUrl: '',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            staffRows.push({ id: created.id, email: created.email });
+            return [created];
+          }),
+        })),
+      }),
+    } as never;
+
+    const audit = {
+      record: vi.fn().mockImplementation(async (e: unknown) => {
+        auditEvents.push(e);
+      }),
+    };
+
+    service = new StaffService(db, audit as never);
+  });
+
+  it('creates staff with normalized email and audit event', async () => {
+    const created = await service.createManual(
+      {
+        displayName: 'Alex C',
+        legalFirstName: 'Alex',
+        legalLastName: 'Carer',
+        email: '  Carer@Example.TEST ',
+        phone: '555',
+        address: '1 Main',
+        city: 'Toronto',
+      },
+      'ops-1',
+    );
+    expect(created.email).toBe('carer@example.test');
+    expect(created.portalAccountStatus).toBe('no_account');
+    expect(auditEvents[0]).toMatchObject({
+      eventType: STAFF_PORTAL_AUDIT_EVENTS.staffCreated,
+    });
+  });
+
+  it('rejects duplicate staff email', async () => {
+    staffRows.push({ id: 'existing', email: 'carer@example.test' });
+    await expect(
+      service.createManual(
+        {
+          displayName: 'X',
+          legalFirstName: 'X',
+          legalLastName: 'Y',
+          email: 'carer@example.test',
+          phone: '1',
+          address: 'a',
+          city: 'c',
+        },
+        'ops-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});

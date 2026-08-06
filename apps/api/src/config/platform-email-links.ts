@@ -23,7 +23,8 @@ export function buildPasswordResetEmailLink(token: string, env: PlatformUrlEnv):
 
 export function buildStaffInviteEmailLink(inviteToken: string, env: PlatformUrlEnv): string {
   const base = resolvePublicPlatformUrl(env);
-  const url = `${buildAuthRedirectUrl(base, 'acceptInvite')}?token=${encodeURIComponent(inviteToken)}`;
+  const path = `/carer/invite/${encodeURIComponent(inviteToken)}`;
+  const url = buildPlatformLink(base, path);
   assertProductionOutboundUrl(url, env);
   return url;
 }
