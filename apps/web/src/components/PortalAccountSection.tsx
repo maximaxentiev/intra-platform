@@ -17,11 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  PORTAL_ACCOUNT_STATUS_LABELS,
-  portalStatusBadgeVariant,
-  type PortalAccountDisplayStatus,
-} from "@/lib/portal-account-status";
+import { type PortalAccountDisplayStatus } from "@/lib/portal-account-status";
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
