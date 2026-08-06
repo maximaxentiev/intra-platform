@@ -81,10 +81,19 @@ export function PortalAccountSection({
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
           Portal account
-          <Badge variant={portalStatusBadgeVariant(status)}>
-            {PORTAL_ACCOUNT_STATUS_LABELS[status]}
-          </Badge>
+          <PortalStatusBadge status={status} />
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {status === "no_account"
+            ? "No carer portal account yet. Send an invitation so they can complete onboarding."
+            : status === "invited"
+              ? "Invitation sent — waiting for them to set a password."
+              : status === "incomplete"
+                ? "Signed in, but onboarding is not finished yet."
+                : status === "disabled"
+                  ? "Portal access is currently disabled."
+                  : "Portal account is active."}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <dl className="grid gap-2 sm:grid-cols-2 min-w-0">
