@@ -22,6 +22,10 @@ export class StaffService {
   private toValues(dto: UpsertStaffDto) {
     return {
       legalName: dto.legalName,
+      legalFirstName: dto.legalFirstName ?? '',
+      legalLastName: dto.legalLastName ?? '',
+      address: dto.address ?? '',
+      city: dto.city ?? '',
       displayName: dto.displayName ?? '',
       useDisplayName: dto.useDisplayName ?? false,
       phone: dto.phone ?? '',
