@@ -1,4 +1,4 @@
-# Fix: preview never loads (role-choice screen not showing)
+# Fix: build times out and preview never loads (role-choice screen not showing)
 
 ## Answer first: the role-choice screen IS implemented
 
