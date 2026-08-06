@@ -72,6 +72,7 @@ export function PortalAccountSection({
 
   const canInvite = status === "no_account" || status === "invited" || status === "incomplete" || status === "active";
   const canResend = status !== "no_account" && status !== "disabled";
+  const busy = inviteMut.isPending || disableMut.isPending || enableMut.isPending;
 
   return (
     <Card className="border-border/70 shadow-xs overflow-hidden">
