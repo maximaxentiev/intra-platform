@@ -2,11 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { staffApi, displayStaff, type Staff, type PortalAccountDisplayStatus } from "@/lib/db";
-import {
-  PORTAL_ACCOUNT_STATUS_LABELS,
-  portalStatusBadgeVariant,
-} from "@/lib/portal-account-status";
-import { Badge } from "@/components/ui/badge";
+import { PORTAL_ACCOUNT_STATUS_LABELS } from "@/lib/portal-account-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { Plus, Users, Search, Phone, Mail, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/staff/")({
@@ -124,33 +121,37 @@ function StaffIndex() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <StatusBadge status={s.status === "active" ? "active" : "inactive"}>{s.status}</StatusBadge>
-                      <Badge
-                        variant={portalStatusBadgeVariant(
-                          (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus,
-                        )}
-                        className="text-[10px]"
-                      >
-                        {
+                      <span
+                        aria-label={`Portal account: ${
                           PORTAL_ACCOUNT_STATUS_LABELS[
                             (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus
                           ]
-                        }
-                      </Badge>
+                        }`}
+                      >
+                        <PortalStatusBadge
+                          status={(s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus}
+                          size="xs"
+                        />
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground">
-                    {s.phone && (
-                      <span className="inline-flex items-center gap-1 truncate">
-                        <Phone className="h-3.5 w-3.5" />{s.phone}
-                      </span>
-                    )}
-                    {s.email && !s.phone && (
-                      <span className="inline-flex items-center gap-1 truncate">
-                        <Mail className="h-3.5 w-3.5" />{s.email}
-                      </span>
-                    )}
-                    {!s.phone && !s.email && <span className="italic">No contact info</span>}
-                    <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground min-w-0">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {s.phone && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{s.phone}</span>
+                        </span>
+                      )}
+                      {s.email && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{s.email}</span>
+                        </span>
+                      )}
+                      {!s.phone && !s.email && <span className="italic">No contact info</span>}
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
                 </Card>
               </Link>

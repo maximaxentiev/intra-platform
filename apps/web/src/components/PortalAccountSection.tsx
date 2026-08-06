@@ -4,7 +4,9 @@ import { toast } from "sonner";
 import { staffApi, type PortalAccountInfo, type PortalInvitationResult } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PortalStatusBadge } from "@/components/PortalStatusBadge";
+import { Loader2 } from "lucide-react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  PORTAL_ACCOUNT_STATUS_LABELS,
-  portalStatusBadgeVariant,
-  type PortalAccountDisplayStatus,
-} from "@/lib/portal-account-status";
+import { type PortalAccountDisplayStatus } from "@/lib/portal-account-status";
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
@@ -75,16 +73,26 @@ export function PortalAccountSection({
 
   const canInvite = status === "no_account" || status === "invited" || status === "incomplete" || status === "active";
   const canResend = status !== "no_account" && status !== "disabled";
+  const busy = inviteMut.isPending || disableMut.isPending || enableMut.isPending;
 
   return (
     <Card className="border-border/70 shadow-xs overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
           Portal account
-          <Badge variant={portalStatusBadgeVariant(status)}>
-            {PORTAL_ACCOUNT_STATUS_LABELS[status]}
-          </Badge>
+          <PortalStatusBadge status={status} />
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {status === "no_account"
+            ? "No carer portal account yet. Send an invitation so they can complete onboarding."
+            : status === "invited"
+              ? "Invitation sent — waiting for them to set a password."
+              : status === "incomplete"
+                ? "Signed in, but onboarding is not finished yet."
+                : status === "disabled"
+                  ? "Portal access is currently disabled."
+                  : "Portal account is active."}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <dl className="grid gap-2 sm:grid-cols-2 min-w-0">
@@ -116,7 +124,7 @@ export function PortalAccountSection({
           </div>
         </dl>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
           {canInvite && status === "no_account" ? (
             <ConfirmAction
               title="Send portal invitation?"
@@ -125,7 +133,10 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(false)}
               loading={inviteMut.isPending}
             >
-              <Button className="h-11 w-full sm:w-auto">Send portal invitation</Button>
+              <Button className="h-11 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
+                Send portal invitation
+              </Button>
             </ConfirmAction>
           ) : null}
 
@@ -137,7 +148,8 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(true)}
               loading={inviteMut.isPending}
             >
-              <Button variant="secondary" className="h-11 w-full sm:w-auto">
+              <Button variant="secondary" className="h-11 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
                 Resend invitation
               </Button>
             </ConfirmAction>
@@ -151,11 +163,17 @@ export function PortalAccountSection({
               onConfirm={() => disableMut.mutate()}
               loading={disableMut.isPending}
             >
-              <Button variant="outline" className="h-11 w-full sm:w-auto">
+              <Button
+                variant="ghost"
+                className="h-11 w-full text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto sm:w-auto"
+                disabled={busy}
+              >
+                {disableMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
                 Disable portal access
               </Button>
             </ConfirmAction>
           ) : null}
+
 
           {status === "disabled" ? (
             <ConfirmAction
