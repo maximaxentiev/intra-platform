@@ -124,18 +124,18 @@ function StaffIndex() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <StatusBadge status={s.status === "active" ? "active" : "inactive"}>{s.status}</StatusBadge>
-                      <Badge
-                        variant={portalStatusBadgeVariant(
-                          (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus,
-                        )}
-                        className="text-[10px]"
-                      >
-                        {
+                      <span
+                        aria-label={`Portal account: ${
                           PORTAL_ACCOUNT_STATUS_LABELS[
                             (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus
                           ]
-                        }
-                      </Badge>
+                        }`}
+                      >
+                        <PortalStatusBadge
+                          status={(s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus}
+                          size="xs"
+                        />
+                      </span>
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-3 text-xs text-muted-foreground">
