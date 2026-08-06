@@ -30,5 +30,5 @@ ALTER TABLE "staff" ADD CONSTRAINT "staff_document_slug_unique" UNIQUE("document
 -- Backfill split legal names from the existing single legal_name column.
 UPDATE "staff"
 SET "legal_first_name" = split_part(trim("legal_name"), ' ', 1),
-    "legal_last_name"  = NULLIF(regexp_replace(trim("legal_name"), '^\S+\s*', ''), '')
+    "legal_last_name"  = COALESCE(regexp_replace(trim("legal_name"), '^\S+\s*', ''), '')
 WHERE "legal_first_name" = '' AND trim("legal_name") <> '';
