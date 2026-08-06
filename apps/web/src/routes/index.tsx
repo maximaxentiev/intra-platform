@@ -29,7 +29,7 @@ const OPTIONS = [
     icon: Building2,
     title: "Ops Team",
     description: "Manage centres, carers, shifts, and applications.",
-    tone: "bg-[color:var(--brand-soft-blue,theme(colors.secondary.DEFAULT))]",
+    tone: "bg-secondary",
   },
   {
     to: "/carer/login" as const,
