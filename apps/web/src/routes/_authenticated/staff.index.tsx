@@ -6,7 +6,6 @@ import {
   PORTAL_ACCOUNT_STATUS_LABELS,
   portalStatusBadgeVariant,
 } from "@/lib/portal-account-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { Plus, Users, Search, Phone, Mail, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/staff/")({
