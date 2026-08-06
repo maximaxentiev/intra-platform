@@ -5,7 +5,7 @@ import { staffApi, type PortalAccountInfo, type PortalInvitationResult } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
-import { Badge } from "@/components/ui/badge";
+
 import {
   AlertDialog,
   AlertDialogAction,
