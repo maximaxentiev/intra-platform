@@ -82,6 +82,7 @@ describe('StaffCsvImportService', () => {
     expect(staffCreate).toHaveBeenCalledTimes(1);
     expect(staffCreate.mock.calls[0]![0]).toMatchObject({ role: 'ECA' });
     expect(result.summary.staffCreated).toBe(1);
+    expect(result.rows[0]!.phone).toBe('555');
     expect(result.summary.skipped).toBeGreaterThan(0);
   });
 

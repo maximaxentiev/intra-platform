@@ -153,16 +153,17 @@ function StaffImportPage() {
             ))}
           </div>
 
-          <div className="rounded-lg border border-border/70 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+          <div className="rounded-lg border border-border/70 overflow-x-auto max-w-full">
+            <table className="w-full table-fixed sm:table-auto text-sm">
               <thead className="bg-muted/50 text-left">
                 <tr>
-                  <th className="p-2 font-medium">Row</th>
-                  <th className="p-2 font-medium">Name</th>
-                  <th className="p-2 font-medium">Role</th>
-                  <th className="p-2 font-medium">Email</th>
-                  <th className="p-2 font-medium">Status</th>
-                  <th className="p-2 font-medium">Issues</th>
+                  <th className="p-2 font-medium w-12">Row</th>
+                  <th className="p-2 font-medium min-w-0">Name</th>
+                  <th className="p-2 font-medium w-16">Role</th>
+                  <th className="p-2 font-medium min-w-0">Email</th>
+                  <th className="p-2 font-medium min-w-0">Phone</th>
+                  <th className="p-2 font-medium w-24">Status</th>
+                  <th className="p-2 font-medium min-w-0">Issues</th>
                 </tr>
               </thead>
               <tbody>
@@ -212,14 +213,15 @@ function StaffImportPage() {
               <Stat label="Invites sent" value={results.summary.invitationsSent} />
               <Stat label="Invite email failures" value={results.summary.invitationEmailFailures} />
             </dl>
-            <div className="rounded-lg border border-border/70 overflow-x-auto max-h-80 overflow-y-auto">
-              <table className="w-full min-w-[520px] text-sm">
+            <div className="rounded-lg border border-border/70 overflow-x-auto max-w-full max-h-80 overflow-y-auto">
+              <table className="w-full table-fixed sm:table-auto text-sm">
                 <thead className="bg-muted/50 text-left sticky top-0">
                   <tr>
-                    <th className="p-2">Row</th>
-                    <th className="p-2">Email</th>
-                    <th className="p-2">Outcome</th>
-                    <th className="p-2">Notes</th>
+                    <th className="p-2 w-12">Row</th>
+                    <th className="p-2 min-w-0">Email</th>
+                    <th className="p-2 min-w-0">Phone</th>
+                    <th className="p-2 w-28">Outcome</th>
+                    <th className="p-2 min-w-0">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -227,6 +229,7 @@ function StaffImportPage() {
                     <tr key={`${row.rowNumber}-${row.email}`} className="border-t border-border/60">
                       <td className="p-2">{row.rowNumber}</td>
                       <td className="p-2 break-all">{row.email}</td>
+                      <td className="p-2 break-all whitespace-normal">{row.phone || "—"}</td>
                       <td className="p-2">{row.outcome.replace(/_/g, " ")}</td>
                       <td className="p-2 text-muted-foreground">{row.message ?? "—"}</td>
                     </tr>
@@ -292,9 +295,10 @@ function PreviewRow({ row }: { row: StaffCsvPreviewRow }) {
   return (
     <tr className="border-t border-border/60">
       <td className="p-2">{row.rowNumber}</td>
-      <td className="p-2">{row.displayName || "—"}</td>
+      <td className="p-2 min-w-0 break-words">{row.displayName || "—"}</td>
       <td className="p-2">{row.role || "—"}</td>
-      <td className="p-2 break-all">{row.email || "—"}</td>
+      <td className="p-2 min-w-0 break-all">{row.email || "—"}</td>
+      <td className="p-2 min-w-0 break-all whitespace-normal">{row.phone || "—"}</td>
       <td className="p-2">
         <Badge variant={variant}>{row.status}</Badge>
       </td>

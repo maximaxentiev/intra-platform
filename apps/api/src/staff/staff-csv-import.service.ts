@@ -37,6 +37,7 @@ export type StaffCsvImportRowResult = {
   rowNumber: number;
   email: string;
   displayName: string;
+  phone: string;
   outcome:
     | 'created'
     | 'skipped_duplicate'
@@ -126,6 +127,7 @@ export class StaffCsvImportService {
           rowNumber: row.rowNumber,
           email: row.email,
           displayName: row.displayName,
+          phone: row.phone,
           outcome,
           message: row.issues.join(' '),
         });
@@ -172,6 +174,7 @@ export class StaffCsvImportService {
           rowNumber: row.rowNumber,
           email: row.email,
           displayName: row.displayName,
+          phone: row.phone,
           outcome,
           staffId: created.id,
           message,
@@ -186,6 +189,7 @@ export class StaffCsvImportService {
             rowNumber: row.rowNumber,
             email: row.email,
             displayName: row.displayName,
+            phone: row.phone,
             outcome: 'skipped_duplicate',
             message,
           });
@@ -194,6 +198,7 @@ export class StaffCsvImportService {
             rowNumber: row.rowNumber,
             email: row.email,
             displayName: row.displayName,
+            phone: row.phone,
             outcome: 'failed',
             message,
           });

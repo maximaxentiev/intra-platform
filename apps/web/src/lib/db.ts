@@ -220,6 +220,7 @@ export type StaffCsvImportRowResult = {
   rowNumber: number;
   email: string;
   displayName: string;
+  phone: string;
   outcome: string;
   staffId?: string;
   message?: string;

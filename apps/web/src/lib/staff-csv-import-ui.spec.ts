@@ -34,6 +34,7 @@ describe("staff CSV import UI", () => {
     const src = readSrc("routes/_authenticated/staff.import.tsx");
     expect(src).toContain("overflow-x-hidden");
     expect(src).toContain("overflow-x-auto");
+    expect(src).toContain("max-w-full");
   });
 
   it("renders preview values as React text without dangerous HTML", () => {
@@ -42,5 +43,26 @@ describe("staff CSV import UI", () => {
     expect(src).toContain("{row.displayName");
     expect(src).toContain("{row.role");
     expect(src).toContain("{row.email");
+    expect(src).toContain("{row.phone");
+  });
+
+  it("shows phone in preview table header and renders normalized values literally", () => {
+    const src = readSrc("routes/_authenticated/staff.import.tsx");
+    expect(src).toContain(">Phone</th>");
+    expect(src).toMatch(/\{row\.phone \|\| "—"\}/);
+    expect(src).not.toMatch(/row\.phone\.(replace|trim|slice)/);
+  });
+
+  it("shows phone in import results row table", () => {
+    const src = readSrc("routes/_authenticated/staff.import.tsx");
+    expect(src).toContain("results.rows.map");
+    expect(src).toContain("{row.phone ||");
+  });
+
+  it("keeps preview row status filters unchanged", () => {
+    const src = readSrc("routes/_authenticated/staff.import.tsx");
+    expect(src).toContain('filter === "valid"');
+    expect(src).toContain('filter === "invalid"');
+    expect(src).toContain('row.status === "duplicate"');
   });
 });
