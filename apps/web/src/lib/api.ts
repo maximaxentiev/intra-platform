@@ -65,4 +65,30 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),
+  postForm: async <T>(path: string, formData: FormData): Promise<T> => {
+    const res = await fetch(buildUrl(path), {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+    const text = await res.text();
+    let payload: unknown = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = text;
+      }
+    }
+    if (!res.ok) {
+      const message =
+        payload && typeof payload === "object" && "message" in payload
+          ? Array.isArray((payload as { message: unknown }).message)
+            ? (payload as { message: string[] }).message.join(", ")
+            : String((payload as { message: unknown }).message)
+          : `Request failed (${res.status})`;
+      throw new ApiError(res.status, message);
+    }
+    return payload as T;
+  },
 };

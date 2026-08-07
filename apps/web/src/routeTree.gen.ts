@@ -30,6 +30,7 @@ import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
 import { Route as CarerInviteTokenRouteImport } from './routes/carer/invite.$token'
 import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
+import { Route as AuthenticatedStaffImportRouteImport } from './routes/_authenticated/staff.import'
 import { Route as AuthenticatedStaffIdRouteImport } from './routes/_authenticated/staff.$id'
 import { Route as AuthenticatedShiftsNewRouteImport } from './routes/_authenticated/shifts.new'
 import { Route as AuthenticatedShiftsIdRouteImport } from './routes/_authenticated/shifts.$id'
@@ -144,6 +145,12 @@ const AuthenticatedStaffNewRoute = AuthenticatedStaffNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedStaffRoute,
 } as any)
+const AuthenticatedStaffImportRoute =
+  AuthenticatedStaffImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => AuthenticatedStaffRoute,
+  } as any)
 const AuthenticatedStaffIdRoute = AuthenticatedStaffIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/import': typeof AuthenticatedStaffImportRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
@@ -214,6 +222,7 @@ export interface FileRoutesByTo {
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/staff/import': typeof AuthenticatedStaffImportRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/shifts/$id': typeof AuthenticatedShiftsIdRoute
   '/_authenticated/shifts/new': typeof AuthenticatedShiftsNewRoute
   '/_authenticated/staff/$id': typeof AuthenticatedStaffIdRoute
+  '/_authenticated/staff/import': typeof AuthenticatedStaffImportRoute
   '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/shifts/$id'
     | '/shifts/new'
     | '/staff/$id'
+    | '/staff/import'
     | '/staff/new'
     | '/carer/invite/$token'
     | '/centres/'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/shifts/$id'
     | '/shifts/new'
     | '/staff/$id'
+    | '/staff/import'
     | '/staff/new'
     | '/carer/invite/$token'
     | '/centres'
@@ -323,6 +335,7 @@ export interface FileRouteTypes {
     | '/_authenticated/shifts/$id'
     | '/_authenticated/shifts/new'
     | '/_authenticated/staff/$id'
+    | '/_authenticated/staff/import'
     | '/_authenticated/staff/new'
     | '/carer/invite/$token'
     | '/_authenticated/centres/'
@@ -486,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffNewRouteImport
       parentRoute: typeof AuthenticatedStaffRoute
     }
+    '/_authenticated/staff/import': {
+      id: '/_authenticated/staff/import'
+      path: '/import'
+      fullPath: '/staff/import'
+      preLoaderRoute: typeof AuthenticatedStaffImportRouteImport
+      parentRoute: typeof AuthenticatedStaffRoute
+    }
     '/_authenticated/staff/$id': {
       id: '/_authenticated/staff/$id'
       path: '/$id'
@@ -556,12 +576,14 @@ const AuthenticatedShiftsRouteWithChildren =
 
 interface AuthenticatedStaffRouteChildren {
   AuthenticatedStaffIdRoute: typeof AuthenticatedStaffIdRoute
+  AuthenticatedStaffImportRoute: typeof AuthenticatedStaffImportRoute
   AuthenticatedStaffNewRoute: typeof AuthenticatedStaffNewRoute
   AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
 }
 
 const AuthenticatedStaffRouteChildren: AuthenticatedStaffRouteChildren = {
   AuthenticatedStaffIdRoute: AuthenticatedStaffIdRoute,
+  AuthenticatedStaffImportRoute: AuthenticatedStaffImportRoute,
   AuthenticatedStaffNewRoute: AuthenticatedStaffNewRoute,
   AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,
 }

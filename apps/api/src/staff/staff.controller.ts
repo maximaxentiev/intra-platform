@@ -1,12 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
 import { PortalInvitationRequestDto } from './dto/create-manual-staff.dto';
 import { CreateManualStaffDto } from './dto/create-manual-staff.dto';
+import { StaffCsvImportConfirmDto } from './dto/staff-csv-import.dto';
 import { SetCentreLinksDto, UpsertStaffDto } from './dto/staff.dto';
+import { STAFF_CSV_MAX_BYTES } from './staff-csv-import.config';
+import { StaffCsvImportService } from './staff-csv-import.service';
 import { StaffPortalInvitationsService } from '../staff-portal/staff-portal-invitations.service';
 import { StaffService } from './staff.service';
+
+const csvUpload = FileInterceptor('file', {
+  storage: memoryStorage(),
+  limits: { fileSize: STAFF_CSV_MAX_BYTES },
+});
 
 @ApiTags('staff')
 @Controller('staff')
@@ -14,7 +24,24 @@ export class StaffController {
   constructor(
     private readonly staff: StaffService,
     private readonly portalInvites: StaffPortalInvitationsService,
+    private readonly csvImport: StaffCsvImportService,
   ) {}
+
+  @Post('import/preview')
+  @UseInterceptors(csvUpload)
+  previewCsvImport(@UploadedFile() file: Express.Multer.File) {
+    return this.csvImport.previewFromUpload(file);
+  }
+
+  @Post('import')
+  @UseInterceptors(csvUpload)
+  confirmCsvImport(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: StaffCsvImportConfirmDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.csvImport.executeImport(file, user.userId, Boolean(body.sendPortalInvitations));
+  }
 
   @Get()
   list() {

@@ -46,9 +46,14 @@ function StaffIndex() {
         title="Staff"
         subtitle="Childcare staff directory."
         actions={
-          <Button asChild>
-            <Link to="/staff/new"><Plus className="h-4 w-4 mr-1.5" /> Add staff</Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link to="/staff/import">Import CSV</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/staff/new"><Plus className="h-4 w-4 mr-1.5" /> Add staff</Link>
+            </Button>
+          </div>
         }
       />
 

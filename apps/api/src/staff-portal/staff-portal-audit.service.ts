@@ -11,6 +11,7 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   invitationAccepted: 'invitation_accepted',
   portalDisabled: 'portal_access_disabled',
   portalReEnabled: 'portal_access_re_enabled',
+  staffBulkImportCompleted: 'staff_bulk_import_completed',
 } as const;
 
 export type StaffPortalAuditEventType =

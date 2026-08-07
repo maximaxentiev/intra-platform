@@ -193,6 +193,50 @@ export const usersApi = {
     api.patch<CurrentUser>(`/users/${id}`, values),
 };
 
+export type StaffCsvPreviewRowStatus = "valid" | "invalid" | "duplicate";
+
+export type StaffCsvPreviewRow = {
+  rowNumber: number;
+  displayName: string;
+  legalFirstName: string;
+  legalLastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  status: StaffCsvPreviewRowStatus;
+  issues: string[];
+};
+
+export type StaffCsvPreviewResult = {
+  summary: { total: number; valid: number; invalid: number; duplicate: number };
+  rows: StaffCsvPreviewRow[];
+  limits: { maxBytes: number; maxRows: number };
+};
+
+export type StaffCsvImportRowResult = {
+  rowNumber: number;
+  email: string;
+  displayName: string;
+  outcome: string;
+  staffId?: string;
+  message?: string;
+};
+
+export type StaffCsvImportResult = {
+  batchId: string;
+  summary: {
+    totalProcessed: number;
+    staffCreated: number;
+    skipped: number;
+    duplicates: number;
+    failed: number;
+    invitationsSent: number;
+    invitationEmailFailures: number;
+  };
+  rows: StaffCsvImportRowResult[];
+};
+
 export const staffApi = {
   list: () => api.get<Staff[]>("/staff"),
   get: (id: string) => api.get<StaffDetail>(`/staff/${id}`),
@@ -206,6 +250,17 @@ export const staffApi = {
     api.post<PortalAccountInfo>(`/staff/${id}/portal-access/disable`),
   enablePortalAccess: (id: string) =>
     api.post<PortalAccountInfo>(`/staff/${id}/portal-access/enable`),
+  previewCsvImport: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return api.postForm<StaffCsvPreviewResult>("/staff/import/preview", fd);
+  },
+  confirmCsvImport: (file: File, sendPortalInvitations: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("sendPortalInvitations", sendPortalInvitations ? "true" : "false");
+    return api.postForm<StaffCsvImportResult>("/staff/import", fd);
+  },
   topCentres: (id: string) => api.get<string[]>(`/staff/${id}/top-centres`),
   bannedCentres: (id: string) => api.get<string[]>(`/staff/${id}/banned-centres`),
   setTopCentres: (id: string, centreIds: string[]) =>

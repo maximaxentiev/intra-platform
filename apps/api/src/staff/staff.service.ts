@@ -53,7 +53,11 @@ export class StaffService {
     };
   }
 
-  async createManual(dto: CreateManualStaffDto, actorUserId: string) {
+  async createManual(
+    dto: CreateManualStaffDto,
+    actorUserId: string,
+    auditMeta?: { source?: 'manual' | 'csv_import'; importBatchId?: string },
+  ) {
     const email = normalizeStaffEmail(dto.email);
     await this.assertStaffEmailAvailable(email);
     await this.assertPortalEmailAvailable(email);
@@ -83,7 +87,11 @@ export class StaffService {
       staffId: rows[0]!.id,
       actorUserId,
       eventType: STAFF_PORTAL_AUDIT_EVENTS.staffCreated,
-      detail: { email },
+      detail: {
+        email,
+        source: auditMeta?.source ?? 'manual',
+        ...(auditMeta?.importBatchId ? { importBatchId: auditMeta.importBatchId } : {}),
+      },
     });
 
     return this.withPortalSummary(rows[0]!, undefined);
