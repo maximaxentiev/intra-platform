@@ -25,6 +25,7 @@ import {
 import {
   STAFF_PORTAL_AUDIT_EVENTS,
   StaffPortalAuditService,
+  staffPortalAuditBlocksDeletion,
 } from '../staff-portal/staff-portal-audit.service';
 
 @Injectable()
@@ -212,8 +213,8 @@ export class StaffService {
       .select({ eventType: staffPortalAuditEvents.eventType })
       .from(staffPortalAuditEvents)
       .where(eq(staffPortalAuditEvents.staffId, id));
-    const hasPortalLifecycleAudit = auditRows.some(
-      (row) => row.eventType !== STAFF_PORTAL_AUDIT_EVENTS.staffCreated,
+    const hasPortalLifecycleAudit = auditRows.some((row) =>
+      staffPortalAuditBlocksDeletion(row.eventType),
     );
     if (hasPortalLifecycleAudit) {
       throw new ConflictException(

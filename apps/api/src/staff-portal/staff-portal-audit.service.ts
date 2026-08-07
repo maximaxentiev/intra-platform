@@ -17,6 +17,21 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
 export type StaffPortalAuditEventType =
   (typeof STAFF_PORTAL_AUDIT_EVENTS)[keyof typeof STAFF_PORTAL_AUDIT_EVENTS];
 
+/**
+ * Ops/import audit events stored on a staff row but not portal invitation/access lifecycle.
+ * Deletion must not be blocked by these alone (see staffPortalAuditBlocksDeletion).
+ */
+export const STAFF_PORTAL_NON_BLOCKING_AUDIT_EVENTS: ReadonlySet<StaffPortalAuditEventType> =
+  new Set([
+    STAFF_PORTAL_AUDIT_EVENTS.staffCreated,
+    STAFF_PORTAL_AUDIT_EVENTS.staffBulkImportCompleted,
+  ]);
+
+/** True when an audit event is genuine portal invitation/access history that blocks staff delete. */
+export function staffPortalAuditBlocksDeletion(eventType: string): boolean {
+  return !STAFF_PORTAL_NON_BLOCKING_AUDIT_EVENTS.has(eventType as StaffPortalAuditEventType);
+}
+
 const FORBIDDEN_DETAIL_KEYS = /token|password|secret|hash/i;
 
 @Injectable()

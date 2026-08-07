@@ -207,6 +207,8 @@ export class StaffCsvImportService {
     }
 
     if (firstCreatedStaffId) {
+      // Batch summary is tied to the first imported staff for schema reasons (staff_id NOT NULL).
+      // It is ops/import metadata, not portal lifecycle — must not block deletion.
       await this.audit.record({
         staffId: firstCreatedStaffId,
         actorUserId,
