@@ -5,13 +5,9 @@ import {
 } from './staff-csv-import.config';
 import { normalizeStaffEmail } from '../staff-portal/portal-account-status.util';
 
-/** Strip spreadsheet formula injection prefixes from untrusted cell text. */
-export function sanitizeCsvCellValue(raw: string): string {
-  let value = raw.replace(/^\uFEFF/, '').trim();
-  while (/^[=+\-@\t\r|]/.test(value)) {
-    value = value.slice(1).trimStart();
-  }
-  return value;
+/** Normalize imported CSV cell text: BOM removal and trim only (preserve +, -, @, =, etc.). */
+export function normalizeImportedCsvCell(raw: string): string {
+  return raw.replace(/^\uFEFF/, '').trim();
 }
 
 const HEADER_ALIASES: Record<StaffCsvCanonicalField, readonly string[]> = {
@@ -96,7 +92,7 @@ export function parseCsvRows(content: string): string[][] {
       row.push(field);
       field = '';
       if (row.some((c) => c.trim() !== '') || rows.length === 0) {
-        rows.push(row.map(sanitizeCsvCellValue));
+        rows.push(row.map(normalizeImportedCsvCell));
       }
       row = [];
       if (ch === '\r') i++;
@@ -105,7 +101,7 @@ export function parseCsvRows(content: string): string[][] {
     if (ch === '\r') {
       row.push(field);
       field = '';
-      rows.push(row.map(sanitizeCsvCellValue));
+      rows.push(row.map(normalizeImportedCsvCell));
       row = [];
       continue;
     }
@@ -113,7 +109,7 @@ export function parseCsvRows(content: string): string[][] {
   }
   row.push(field);
   if (row.some((c) => c.trim() !== '') || rows.length === 0) {
-    rows.push(row.map(sanitizeCsvCellValue));
+    rows.push(row.map(normalizeImportedCsvCell));
   }
   return rows;
 }
@@ -145,7 +141,7 @@ function fieldFromRow(
 ): string {
   const idx = mapping[field];
   if (idx === undefined) return '';
-  return sanitizeCsvCellValue(cells[idx] ?? '');
+  return normalizeImportedCsvCell(cells[idx] ?? '');
 }
 
 export function buildPreviewRows(

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPreviewRows,
   mapCsvHeaders,
+  normalizeImportedCsvCell,
   parseCsvRows,
-  sanitizeCsvCellValue,
   summarizePreview,
 } from './staff-csv-import.util';
 import { STAFF_CSV_MAX_ROWS } from './staff-csv-import.config';
@@ -15,10 +15,13 @@ function csv(...dataRows: string[]) {
   return [HEADER, ...dataRows].join('\n');
 }
 
-describe('sanitizeCsvCellValue', () => {
-  it('neutralizes formula injection prefixes', () => {
-    expect(sanitizeCsvCellValue('=1+1')).toBe('1+1');
-    expect(sanitizeCsvCellValue('+123')).toBe('123');
+describe('normalizeImportedCsvCell', () => {
+  it('trims whitespace and BOM without stripping formula-like prefixes', () => {
+    expect(normalizeImportedCsvCell('  +1 416 555 0123  ')).toBe('+1 416 555 0123');
+    expect(normalizeImportedCsvCell('-123 Example Road')).toBe('-123 Example Road');
+    expect(normalizeImportedCsvCell('+Plus Childcare')).toBe('+Plus Childcare');
+    expect(normalizeImportedCsvCell('@Example')).toBe('@Example');
+    expect(normalizeImportedCsvCell('=SUM(1,2)')).toBe('=SUM(1,2)');
   });
 });
 
@@ -37,8 +40,30 @@ describe('mapCsvHeaders', () => {
   });
 });
 
-describe('buildPreviewRows', () => {
+describe('buildPreviewRows preserved field values', () => {
   const empty = new Set<string>();
+
+  it('preserves phone numbers beginning with +', () => {
+    const { rows } = buildPreviewRows(
+      csv('+Plus Childcare,@Example,Carer,ok@example.test,+1 416 555 0123,-123 Example Road,Toronto'),
+      empty,
+      empty,
+    );
+    expect(rows[0]!.phone).toBe('+1 416 555 0123');
+    expect(rows[0]!.address).toBe('-123 Example Road');
+    expect(rows[0]!.displayName).toBe('+Plus Childcare');
+    expect(rows[0]!.legalFirstName).toBe('@Example');
+  });
+
+  it('stores formula-like display names as literal text without execution', () => {
+    const { rows } = buildPreviewRows(
+      csv('"=SUM(1,2)",Alex,Carer,formula@example.test,555,1 Main,Toronto'),
+      empty,
+      empty,
+    );
+    expect(rows[0]!.displayName).toBe('=SUM(1,2)');
+    expect(rows[0]!.status).toBe('valid');
+  });
 
   it('validates a valid row', () => {
     const { rows } = buildPreviewRows(
@@ -50,7 +75,7 @@ describe('buildPreviewRows', () => {
     expect(rows[0]!.email).toBe('carer@example.test');
   });
 
-  it('lowercases and trims email', () => {
+  it('lowercases and trims email only', () => {
     const { rows } = buildPreviewRows(
       csv('Alex C,Alex,Carer,  Carer@Example.TEST ,555,1 Main,Toronto'),
       empty,

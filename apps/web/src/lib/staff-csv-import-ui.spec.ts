@@ -35,4 +35,11 @@ describe("staff CSV import UI", () => {
     expect(src).toContain("overflow-x-hidden");
     expect(src).toContain("overflow-x-auto");
   });
+
+  it("renders preview values as React text without dangerous HTML", () => {
+    const src = readSrc("routes/_authenticated/staff.import.tsx");
+    expect(src).not.toContain("dangerouslySetInnerHTML");
+    expect(src).toContain("{row.displayName");
+    expect(src).toContain("{row.email");
+  });
 });
