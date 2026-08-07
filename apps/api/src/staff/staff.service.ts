@@ -78,7 +78,7 @@ export class StaffService {
         email,
         address: dto.address.trim(),
         city: dto.city.trim(),
-        role: '',
+        role: dto.role,
         status: 'active',
       })
       .returning();

@@ -84,6 +84,7 @@ export type ManualStaffCreateInput = {
   displayName: string;
   legalFirstName: string;
   legalLastName: string;
+  role: "ECA" | "ECE" | "Nanny";
   email: string;
   phone: string;
   address: string;
@@ -200,6 +201,7 @@ export type StaffCsvPreviewRow = {
   displayName: string;
   legalFirstName: string;
   legalLastName: string;
+  role: string;
   email: string;
   phone: string;
   address: string;

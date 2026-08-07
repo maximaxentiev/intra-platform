@@ -98,6 +98,7 @@ export function StaffForm({
             <SelectContent>
               <SelectItem value="ECA">ECA</SelectItem>
               <SelectItem value="ECE">ECE</SelectItem>
+              <SelectItem value="Nanny">Nanny</SelectItem>
             </SelectContent>
           </Select>
         </div>

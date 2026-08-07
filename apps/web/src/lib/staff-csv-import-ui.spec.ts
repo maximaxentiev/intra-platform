@@ -40,6 +40,7 @@ describe("staff CSV import UI", () => {
     const src = readSrc("routes/_authenticated/staff.import.tsx");
     expect(src).not.toContain("dangerouslySetInnerHTML");
     expect(src).toContain("{row.displayName");
+    expect(src).toContain("{row.role");
     expect(src).toContain("{row.email");
   });
 });

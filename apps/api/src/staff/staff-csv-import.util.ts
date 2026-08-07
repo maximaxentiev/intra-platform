@@ -1,9 +1,15 @@
 import {
   STAFF_CSV_CANONICAL_HEADERS,
   STAFF_CSV_MAX_ROWS,
+  STAFF_CSV_HEADER_LABELS,
   type StaffCsvCanonicalField,
 } from './staff-csv-import.config';
 import { normalizeStaffEmail } from '../staff-portal/portal-account-status.util';
+import {
+  normalizeStaffRoleFromCsv,
+  STAFF_ROLE_ERROR_MESSAGE,
+  type StaffCanonicalRole,
+} from './staff-role.util';
 
 /** Normalize imported CSV cell text: BOM removal and trim only (preserve +, -, @, =, etc.). */
 export function normalizeImportedCsvCell(raw: string): string {
@@ -14,6 +20,7 @@ const HEADER_ALIASES: Record<StaffCsvCanonicalField, readonly string[]> = {
   display_name: ['display name', 'display_name', 'displayname'],
   legal_first_name: ['legal first name', 'legal_first_name', 'legal firstname'],
   legal_last_name: ['legal last name', 'legal_last_name', 'legal lastname'],
+  role: ['role', 'staff role', 'staff_role', 'staff type', 'staff_type'],
   email_address: ['email address', 'email_address', 'email', 'e-mail'],
   phone_number: ['phone number', 'phone_number', 'phone', 'mobile', 'telephone'],
   home_address: ['home address', 'home_address', 'address', 'street address'],
@@ -119,6 +126,7 @@ export type StaffCsvRowDraft = {
   displayName: string;
   legalFirstName: string;
   legalLastName: string;
+  role: StaffCanonicalRole | '';
   email: string;
   phone: string;
   address: string;
@@ -162,7 +170,7 @@ export function buildPreviewRows(
   if (missing.length) {
     return {
       rows: [],
-      headerError: `Missing required column(s): ${missing.map((m) => m.replace(/_/g, ' ')).join(', ')}.`,
+      headerError: `Missing required column(s): ${missing.map((m) => STAFF_CSV_HEADER_LABELS[m]).join(', ')}.`,
       rowLimitExceeded: false,
     };
   }
@@ -178,11 +186,14 @@ export function buildPreviewRows(
   for (let i = 0; i < dataRows.length; i++) {
     const cells = dataRows[i]!;
     const rowNumber = i + 2;
+    const rawRole = fieldFromRow(cells, mapping, 'role');
+    const normalizedRole = normalizeStaffRoleFromCsv(rawRole);
     const draft: StaffCsvRowDraft = {
       rowNumber,
       displayName: fieldFromRow(cells, mapping, 'display_name').trim(),
       legalFirstName: fieldFromRow(cells, mapping, 'legal_first_name').trim(),
       legalLastName: fieldFromRow(cells, mapping, 'legal_last_name').trim(),
+      role: normalizedRole ?? '',
       email: normalizeStaffEmail(fieldFromRow(cells, mapping, 'email_address')),
       phone: fieldFromRow(cells, mapping, 'phone_number').trim(),
       address: fieldFromRow(cells, mapping, 'home_address').trim(),
@@ -193,6 +204,8 @@ export function buildPreviewRows(
     if (!draft.displayName) issues.push('Display name is required.');
     if (!draft.legalFirstName) issues.push('Legal first name is required.');
     if (!draft.legalLastName) issues.push('Legal last name is required.');
+    if (!rawRole.trim()) issues.push('Role is required.');
+    else if (!normalizedRole) issues.push(STAFF_ROLE_ERROR_MESSAGE);
     if (!draft.email) issues.push('Email address is required.');
     else if (!EMAIL_RE.test(draft.email)) issues.push('Email address is invalid.');
     if (!draft.phone) issues.push('Phone number is required.');

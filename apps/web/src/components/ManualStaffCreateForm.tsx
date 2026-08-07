@@ -4,8 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  MANUAL_STAFF_ROLES,
   validateManualStaffForm,
   type ManualStaffFormValues,
+  type ManualStaffRole,
 } from "@/lib/manual-staff-form.validation";
 
 export function ManualStaffCreateForm({
@@ -17,6 +26,7 @@ export function ManualStaffCreateForm({
     displayName: "",
     legalFirstName: "",
     legalLastName: "",
+    role: "",
     email: "",
     phone: "",
     address: "",
@@ -39,6 +49,7 @@ export function ManualStaffCreateForm({
         displayName: values.displayName.trim(),
         legalFirstName: values.legalFirstName.trim(),
         legalLastName: values.legalLastName.trim(),
+        role: values.role as ManualStaffRole,
         email: values.email.trim().toLowerCase(),
         phone: values.phone.trim(),
         address: values.address.trim(),
@@ -99,6 +110,31 @@ export function ManualStaffCreateForm({
         <div className="grid gap-4 sm:grid-cols-2">
           {field("legalFirstName", "Legal first name", "text", "given-name")}
           {field("legalLastName", "Legal last name", "text", "family-name")}
+        </div>
+        <div className="space-y-1.5 min-w-0">
+          <Label htmlFor="role" className="text-sm">
+            Role <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={values.role || undefined}
+            onValueChange={(v) => set("role", v)}
+          >
+            <SelectTrigger id="role" className="h-11" aria-invalid={Boolean(errors.role)}>
+              <SelectValue placeholder="Choose role…" />
+            </SelectTrigger>
+            <SelectContent>
+              {MANUAL_STAFF_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.role ? (
+            <p id="role-error" className="text-sm text-destructive">
+              {errors.role}
+            </p>
+          ) : null}
         </div>
       </section>
 

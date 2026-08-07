@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { STAFF_CANONICAL_ROLES } from '../staff-role.util';
 
 /** Phase 1A — ops manual staff creation (no portal account until invite). */
 export class CreateManualStaffDto {
@@ -16,6 +17,11 @@ export class CreateManualStaffDto {
   @IsNotEmpty()
   @MaxLength(100)
   legalLastName!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsIn([...STAFF_CANONICAL_ROLES])
+  role!: (typeof STAFF_CANONICAL_ROLES)[number];
 
   @IsEmail()
   @MaxLength(200)

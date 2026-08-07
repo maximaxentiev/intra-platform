@@ -21,7 +21,9 @@ function file(content: string, name = 'staff.csv'): Express.Multer.File {
 }
 
 const HEADER =
-  'Display Name,Legal First Name,Legal Last Name,Email Address,Phone Number,Home Address,City';
+  'Display Name,Legal First Name,Legal Last Name,Role,Email Address,Phone Number,Home Address,City';
+
+const VALID_ROW = 'Alex C,Alex,Carer,ECA,new@example.test,555,1 Main,Toronto';
 
 describe('StaffCsvImportService', () => {
   let service: StaffCsvImportService;
@@ -62,7 +64,7 @@ describe('StaffCsvImportService', () => {
   });
 
   it('preview performs no staff creation', async () => {
-    const content = `${HEADER}\nAlex C,Alex,Carer,new@example.test,555,1 Main,Toronto`;
+    const content = `${HEADER}\n${VALID_ROW}`;
     await service.previewFromUpload(file(content));
     expect(staffCreate).not.toHaveBeenCalled();
     expect(inviteSend).not.toHaveBeenCalled();
@@ -75,16 +77,24 @@ describe('StaffCsvImportService', () => {
 
   it('imports valid rows only', async () => {
     staffCreate.mockResolvedValue({ id: 'staff-1', email: 'new@example.test' });
-    const content = `${HEADER}\nAlex C,Alex,Carer,new@example.test,555,1 Main,Toronto\nBad,,X,bad,555,1 Main,`;
+    const content = `${HEADER}\n${VALID_ROW}\nBad,,X,ECA,bad,555,1 Main,`;
     const result = await service.executeImport(file(content), 'ops-1', false);
     expect(staffCreate).toHaveBeenCalledTimes(1);
+    expect(staffCreate.mock.calls[0]![0]).toMatchObject({ role: 'ECA' });
     expect(result.summary.staffCreated).toBe(1);
     expect(result.summary.skipped).toBeGreaterThan(0);
   });
 
+  it('imports normalized RECE role as ECE', async () => {
+    staffCreate.mockResolvedValue({ id: 'staff-1', email: 'ece@example.test' });
+    const content = `${HEADER}\nAlex C,Alex,Carer,RECE,ece@example.test,555,1 Main,Toronto`;
+    await service.executeImport(file(content), 'ops-1', false);
+    expect(staffCreate.mock.calls[0]![0].role).toBe('ECE');
+  });
+
   it('retries without duplicating staff when email already exists at import time', async () => {
     dbSelectRows.staff = [{ email: 'taken@example.test' }];
-    const content = `${HEADER}\nAlex C,Alex,Carer,taken@example.test,555,1 Main,Toronto`;
+    const content = `${HEADER}\nAlex C,Alex,Carer,RECE,taken@example.test,555,1 Main,Toronto`;
     const result = await service.executeImport(file(content), 'ops-1', false);
     expect(staffCreate).not.toHaveBeenCalled();
     expect(result.summary.duplicates).toBe(1);
@@ -97,7 +107,7 @@ describe('StaffCsvImportService', () => {
       ok: false,
       message: 'SMTP failed',
     });
-    const content = `${HEADER}\nAlex C,Alex,Carer,new@example.test,555,1 Main,Toronto`;
+    const content = `${HEADER}\n${VALID_ROW}`;
     const result = await service.executeImport(file(content), 'ops-1', true);
     expect(result.summary.staffCreated).toBe(1);
     expect(result.summary.invitationEmailFailures).toBe(1);
@@ -107,7 +117,7 @@ describe('StaffCsvImportService', () => {
   it('does not include raw tokens in import results', async () => {
     staffCreate.mockResolvedValue({ id: 'staff-1', email: 'new@example.test' });
     inviteSend.mockResolvedValue({ emailSent: true, ok: true });
-    const content = `${HEADER}\nAlex C,Alex,Carer,new@example.test,555,1 Main,Toronto`;
+    const content = `${HEADER}\n${VALID_ROW}`;
     const result = await service.executeImport(file(content), 'ops-1', true);
     const blob = JSON.stringify(result);
     expect(blob.toLowerCase()).not.toContain('invite_token');
@@ -116,7 +126,7 @@ describe('StaffCsvImportService', () => {
 
   it('records bulk import audit without sensitive fields', async () => {
     staffCreate.mockResolvedValue({ id: 'staff-1', email: 'new@example.test' });
-    const content = `${HEADER}\nAlex C,Alex,Carer,new@example.test,555,1 Main,Toronto`;
+    const content = `${HEADER}\n${VALID_ROW}`;
     await service.executeImport(file(content), 'ops-1', false);
     expect(auditRecord).toHaveBeenCalledWith(
       expect.objectContaining({

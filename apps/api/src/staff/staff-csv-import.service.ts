@@ -25,6 +25,7 @@ import {
   type StaffCsvPreviewRow,
 } from './staff-csv-import.util';
 import { StaffService } from './staff.service';
+import type { StaffCanonicalRole } from './staff-role.util';
 
 export type StaffCsvPreviewResponse = {
   summary: ReturnType<typeof summarizePreview>;
@@ -141,6 +142,7 @@ export class StaffCsvImportService {
             phone: row.phone,
             address: row.address,
             city: row.city,
+            role: row.role as StaffCanonicalRole,
           },
           actorUserId,
           { source: 'csv_import', importBatchId: batchId },

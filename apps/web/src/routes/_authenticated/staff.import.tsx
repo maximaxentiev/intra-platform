@@ -98,8 +98,8 @@ function StaffImportPage() {
         </CardHeader>
         <CardContent className="space-y-3 min-w-0">
           <p className="text-sm text-muted-foreground">
-            Required columns: Display Name, Legal First Name, Legal Last Name, Email Address, Phone
-            Number, Home Address, City.
+            Required columns: Display Name, Legal First Name, Legal Last Name, Role, Email Address,
+            Phone Number, Home Address, City.
           </p>
           <input
             ref={fileRef}
@@ -159,6 +159,7 @@ function StaffImportPage() {
                 <tr>
                   <th className="p-2 font-medium">Row</th>
                   <th className="p-2 font-medium">Name</th>
+                  <th className="p-2 font-medium">Role</th>
                   <th className="p-2 font-medium">Email</th>
                   <th className="p-2 font-medium">Status</th>
                   <th className="p-2 font-medium">Issues</th>
@@ -292,6 +293,7 @@ function PreviewRow({ row }: { row: StaffCsvPreviewRow }) {
     <tr className="border-t border-border/60">
       <td className="p-2">{row.rowNumber}</td>
       <td className="p-2">{row.displayName || "—"}</td>
+      <td className="p-2">{row.role || "—"}</td>
       <td className="p-2 break-all">{row.email || "—"}</td>
       <td className="p-2">
         <Badge variant={variant}>{row.status}</Badge>
