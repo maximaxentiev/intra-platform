@@ -25,7 +25,10 @@ function NewStaff() {
           <ManualStaffCreateForm
             onSubmit={async (values) => {
               try {
-                const created = await staffApi.createManual(values);
+                const created = await staffApi.createManual({
+                  ...values,
+                  role: values.role as "ECA" | "ECE" | "Nanny",
+                });
                 toast.success("Staff member created");
                 navigate({ to: "/staff/$id", params: { id: created.id } });
               } catch (err) {
