@@ -57,6 +57,7 @@ describe("staff CSV import UI", () => {
     const src = readSrc("routes/_authenticated/staff.import.tsx");
     expect(src).toContain("results.rows.map");
     expect(src).toContain("{row.phone ||");
+    expect(src).toContain("md:hidden");
   });
 
   it("keeps preview row status filters unchanged", () => {

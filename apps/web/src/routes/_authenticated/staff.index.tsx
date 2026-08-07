@@ -39,7 +39,7 @@ function StaffIndex() {
     queryFn: () => staffApi.list(),
   });
   const list: Staff[] = data ?? [];
-  const roles = Array.from(new Set(list.map((s) => s.role).filter(Boolean)));
+  const roles = Array.from(new Set(list.map((s) => s.role).filter(Boolean))).sort();
   const filtered = list.filter((s) => {
     if (status !== "all" && s.status !== status) return false;
     if (role !== "all" && s.role !== role) return false;
@@ -145,8 +145,8 @@ function StaffIndex() {
             Showing {filtered.length} of {list.length} staff
           </div>
 
-          {/* Desktop / tablet table */}
-          <Card className="hidden md:block border-border/70 shadow-xs overflow-hidden p-0">
+          {/* Desktop table — lg+ only; seven columns are too dense below that width */}
+          <Card className="hidden lg:block border-border/70 shadow-xs overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -196,7 +196,11 @@ function StaffIndex() {
                       </StatusBadge>
                     </td>
                     <td className="px-3 py-2">
-                      <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
+                      <span
+                        aria-label={`Portal account: ${PORTAL_ACCOUNT_STATUS_LABELS[portalStatusOf(s)]}`}
+                      >
+                        <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Button asChild size="sm" variant="ghost" className="h-8 px-2">
@@ -209,8 +213,8 @@ function StaffIndex() {
             </table>
           </Card>
 
-          {/* Mobile list */}
-          <div className="md:hidden space-y-2">
+          {/* Mobile / tablet list */}
+          <div className="lg:hidden space-y-2">
             {filtered.map((s) => (
               <Card key={s.id} className="p-3 border-border/70 shadow-xs">
                 <div className="flex items-start justify-between gap-3 min-w-0">

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { staffApi } from "@/lib/db";
+import { staffApi, type ManualStaffCreateInput } from "@/lib/db";
 import { ManualStaffCreateForm } from "@/components/ManualStaffCreateForm";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,10 +25,7 @@ function NewStaff() {
           <ManualStaffCreateForm
             onSubmit={async (values) => {
               try {
-                const created = await staffApi.createManual({
-                  ...values,
-                  role: values.role as "ECA" | "ECE" | "Nanny",
-                });
+                const created = await staffApi.createManual(values);
                 toast.success("Staff member created");
                 navigate({ to: "/staff/$id", params: { id: created.id } });
               } catch (err) {

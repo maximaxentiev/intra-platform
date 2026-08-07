@@ -6,6 +6,7 @@ import {
   type StaffCsvImportResult,
   type StaffCsvPreviewResult,
   type StaffCsvPreviewRow,
+  type StaffCsvImportRowResult,
 } from "@/lib/db";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -368,30 +369,62 @@ function StaffImportPage() {
                 tone={results.summary.invitationEmailFailures > 0 ? "destructive" : undefined}
               />
             </dl>
-            <div className="rounded-lg border border-border/70 overflow-x-auto max-w-full max-h-80 overflow-y-auto">
-              <table className="w-full table-fixed sm:table-auto text-sm">
+            <div className="hidden md:block rounded-lg border border-border/70 overflow-x-auto max-w-full max-h-80 overflow-y-auto">
+              <table className="w-full table-fixed md:table-auto text-sm">
                 <thead className="bg-muted/50 text-left sticky top-0 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="p-2 w-12">Row</th>
-                    <th className="p-2 min-w-0">Email</th>
-                    <th className="p-2 min-w-0">Phone</th>
-                    <th className="p-2 w-28">Outcome</th>
-                    <th className="p-2 min-w-0">Notes</th>
+                    <th scope="col" className="p-2 w-12">
+                      Row
+                    </th>
+                    <th scope="col" className="p-2 min-w-0">
+                      Email
+                    </th>
+                    <th scope="col" className="p-2 min-w-0">
+                      Phone
+                    </th>
+                    <th scope="col" className="p-2 w-28">
+                      Outcome
+                    </th>
+                    <th scope="col" className="p-2 min-w-0">
+                      Notes
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.rows.map((row) => (
-                    <tr key={`${row.rowNumber}-${row.email}`} className="border-t border-border/60">
-                      <td className="p-2">{row.rowNumber}</td>
-                      <td className="p-2 break-all">{row.email}</td>
-                      <td className="p-2 break-all whitespace-normal">{row.phone || "—"}</td>
-                      <td className="p-2 capitalize">{row.outcome.replace(/_/g, " ")}</td>
-                      <td className="p-2 text-muted-foreground break-words">{row.message ?? "—"}</td>
-                    </tr>
+                    <ImportResultRow key={`${row.rowNumber}-${row.email}`} row={row} />
                   ))}
                 </tbody>
               </table>
             </div>
+            <ul className="md:hidden space-y-2 max-h-80 overflow-y-auto">
+              {results.rows.map((row) => (
+                <li
+                  key={`${row.rowNumber}-${row.email}-mobile`}
+                  className="rounded-lg border border-border/70 p-3 text-sm space-y-1 min-w-0"
+                >
+                  <div className="font-medium tabular-nums">Row {row.rowNumber}</div>
+                  <div className="break-all">
+                    <span className="text-muted-foreground">Email: </span>
+                    {row.email}
+                  </div>
+                  <div className="break-all whitespace-normal">
+                    <span className="text-muted-foreground">Phone: </span>
+                    {row.phone || "—"}
+                  </div>
+                  <div className="capitalize">
+                    <span className="text-muted-foreground">Outcome: </span>
+                    {row.outcome.replace(/_/g, " ")}
+                  </div>
+                  {row.message ? (
+                    <div className="text-muted-foreground break-words">
+                      <span className="text-foreground/80">Notes: </span>
+                      {row.message}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild variant="outline">
                 <Link to="/staff">Return to staff list</Link>
@@ -498,6 +531,18 @@ function Metric({
       <dd className={cn("font-semibold text-2xl tabular-nums", toneCls)}>{value}</dd>
       {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
+  );
+}
+
+function ImportResultRow({ row }: { row: StaffCsvImportRowResult }) {
+  return (
+    <tr className="border-t border-border/60">
+      <td className="p-2 tabular-nums">{row.rowNumber}</td>
+      <td className="p-2 break-all">{row.email}</td>
+      <td className="p-2 break-all whitespace-normal">{row.phone || "—"}</td>
+      <td className="p-2 capitalize">{row.outcome.replace(/_/g, " ")}</td>
+      <td className="p-2 text-muted-foreground break-words">{row.message ?? "—"}</td>
+    </tr>
   );
 }
 

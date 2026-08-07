@@ -16,11 +16,12 @@ import {
   type ManualStaffFormValues,
   type ManualStaffRole,
 } from "@/lib/manual-staff-form.validation";
+import type { ManualStaffCreateInput } from "@/lib/db";
 
 export function ManualStaffCreateForm({
   onSubmit,
 }: {
-  onSubmit: (values: ManualStaffFormValues) => Promise<void>;
+  onSubmit: (values: ManualStaffCreateInput) => Promise<void>;
 }) {
   const [values, setValues] = useState<ManualStaffFormValues>({
     displayName: "",
@@ -54,7 +55,7 @@ export function ManualStaffCreateForm({
         phone: values.phone.trim(),
         address: values.address.trim(),
         city: values.city.trim(),
-      });
+      } satisfies ManualStaffCreateInput);
     } finally {
       setSaving(false);
     }
