@@ -114,6 +114,7 @@ export class StaffService {
       lastLoginAt: account.lastLoginAt?.toISOString() ?? null,
       onboardingCompletedAt: account.onboardingCompletedAt?.toISOString() ?? null,
       onboardingStep: account.onboardingStep,
+      profileCompletedAt: account.profileCompletedAt?.toISOString() ?? null,
     };
   }
 

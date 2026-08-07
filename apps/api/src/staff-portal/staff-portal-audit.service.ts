@@ -12,6 +12,8 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   portalDisabled: 'portal_access_disabled',
   portalReEnabled: 'portal_access_re_enabled',
   staffBulkImportCompleted: 'staff_bulk_import_completed',
+  carerProfileUpdated: 'carer_profile_updated',
+  onboardingStep1Completed: 'onboarding_step_1_completed',
 } as const;
 
 export type StaffPortalAuditEventType =

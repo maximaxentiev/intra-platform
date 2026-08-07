@@ -163,6 +163,7 @@ export const staffAccounts = pgTable(
     inviteSentAt: timestamp('invite_sent_at', { withTimezone: true }),
     // Mandatory onboarding: 1 = personal info, 2 = documents, 3 = availability.
     onboardingStep: smallint('onboarding_step').notNull().default(1),
+    profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

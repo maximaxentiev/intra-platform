@@ -64,6 +64,7 @@ export interface PortalAccountInfo {
   lastLoginAt: string | null;
   onboardingCompletedAt: string | null;
   onboardingStep: number | null;
+  profileCompletedAt: string | null;
 }
 
 export interface StaffDetail extends Staff {

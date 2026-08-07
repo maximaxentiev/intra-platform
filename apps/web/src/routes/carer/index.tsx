@@ -1,7 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { carerAuthApi, carerFullName } from "@/lib/carer";
+import { carerAuthApi } from "@/lib/carer";
+import { carerOnboardingResumePath, onboardingComplete } from "@/lib/carer-onboarding";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { carerFullName } from "@/lib/carer";
 
 export const Route = createFileRoute("/carer/")({
   ssr: false,
@@ -12,8 +14,8 @@ export const Route = createFileRoute("/carer/")({
     } catch {
       throw redirect({ to: "/carer/login", replace: true });
     }
-    if (!session.onboardingCompletedAt) {
-      throw redirect({ to: "/carer/onboarding", replace: true });
+    if (!onboardingComplete(session)) {
+      throw redirect({ to: carerOnboardingResumePath(session), replace: true });
     }
     return { carer: session };
   },

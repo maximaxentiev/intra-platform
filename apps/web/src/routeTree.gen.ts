@@ -14,7 +14,6 @@ import { Route as CarerRouteRouteImport } from './routes/carer/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
-import { Route as CarerOnboardingRouteImport } from './routes/carer/onboarding'
 import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
@@ -25,9 +24,14 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCentresRouteImport } from './routes/_authenticated/centres'
 import { Route as AuthenticatedAvailabilityRouteImport } from './routes/_authenticated/availability'
 import { Route as AuthenticatedApplicationsRouteImport } from './routes/_authenticated/applications'
+import { Route as CarerOnboardingRouteRouteImport } from './routes/carer/onboarding/route'
+import { Route as CarerOnboardingIndexRouteImport } from './routes/carer/onboarding/index'
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
 import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenticated/shifts.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
+import { Route as CarerOnboardingProfileRouteImport } from './routes/carer/onboarding/profile'
+import { Route as CarerOnboardingDocumentsRouteImport } from './routes/carer/onboarding/documents'
+import { Route as CarerOnboardingAvailabilityRouteImport } from './routes/carer/onboarding/availability'
 import { Route as CarerInviteTokenRouteImport } from './routes/carer/invite.$token'
 import { Route as AuthenticatedStaffNewRouteImport } from './routes/_authenticated/staff.new'
 import { Route as AuthenticatedStaffImportRouteImport } from './routes/_authenticated/staff.import'
@@ -59,11 +63,6 @@ const IndexRoute = IndexRouteImport.update({
 const CarerIndexRoute = CarerIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => CarerRouteRoute,
-} as any)
-const CarerOnboardingRoute = CarerOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
   getParentRoute: () => CarerRouteRoute,
 } as any)
 const CarerLoginRoute = CarerLoginRouteImport.update({
@@ -118,6 +117,16 @@ const AuthenticatedApplicationsRoute =
     path: '/applications',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const CarerOnboardingRouteRoute = CarerOnboardingRouteRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => CarerRouteRoute,
+} as any)
+const CarerOnboardingIndexRoute = CarerOnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CarerOnboardingRouteRoute,
+} as any)
 const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -134,6 +143,23 @@ const AuthenticatedCentresIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedCentresRoute,
+  } as any)
+const CarerOnboardingProfileRoute = CarerOnboardingProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => CarerOnboardingRouteRoute,
+} as any)
+const CarerOnboardingDocumentsRoute =
+  CarerOnboardingDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => CarerOnboardingRouteRoute,
+  } as any)
+const CarerOnboardingAvailabilityRoute =
+  CarerOnboardingAvailabilityRouteImport.update({
+    id: '/availability',
+    path: '/availability',
+    getParentRoute: () => CarerOnboardingRouteRoute,
   } as any)
 const CarerInviteTokenRoute = CarerInviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -181,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carer': typeof CarerRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
   '/centres': typeof AuthenticatedCentresRouteWithChildren
@@ -191,7 +218,6 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
-  '/carer/onboarding': typeof CarerOnboardingRoute
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -201,9 +227,13 @@ export interface FileRoutesByFullPath {
   '/staff/import': typeof AuthenticatedStaffImportRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
+  '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
+  '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
   '/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
+  '/carer/onboarding/': typeof CarerOnboardingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -215,7 +245,6 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
-  '/carer/onboarding': typeof CarerOnboardingRoute
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -225,9 +254,13 @@ export interface FileRoutesByTo {
   '/staff/import': typeof AuthenticatedStaffImportRoute
   '/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
+  '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
+  '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
   '/shifts': typeof AuthenticatedShiftsIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
+  '/carer/onboarding': typeof CarerOnboardingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -235,6 +268,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/carer': typeof CarerRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/_authenticated/applications': typeof AuthenticatedApplicationsRoute
   '/_authenticated/availability': typeof AuthenticatedAvailabilityRoute
   '/_authenticated/centres': typeof AuthenticatedCentresRouteWithChildren
@@ -245,7 +279,6 @@ export interface FileRoutesById {
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
-  '/carer/onboarding': typeof CarerOnboardingRoute
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
@@ -255,9 +288,13 @@ export interface FileRoutesById {
   '/_authenticated/staff/import': typeof AuthenticatedStaffImportRoute
   '/_authenticated/staff/new': typeof AuthenticatedStaffNewRoute
   '/carer/invite/$token': typeof CarerInviteTokenRoute
+  '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
+  '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
   '/_authenticated/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
+  '/carer/onboarding/': typeof CarerOnboardingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -265,6 +302,7 @@ export interface FileRouteTypes {
     | '/'
     | '/carer'
     | '/auth'
+    | '/carer/onboarding'
     | '/applications'
     | '/availability'
     | '/centres'
@@ -275,7 +313,6 @@ export interface FileRouteTypes {
     | '/users'
     | '/carer/forgot-password'
     | '/carer/login'
-    | '/carer/onboarding'
     | '/carer/'
     | '/centres/$id'
     | '/centres/new'
@@ -285,9 +322,13 @@ export interface FileRouteTypes {
     | '/staff/import'
     | '/staff/new'
     | '/carer/invite/$token'
+    | '/carer/onboarding/availability'
+    | '/carer/onboarding/documents'
+    | '/carer/onboarding/profile'
     | '/centres/'
     | '/shifts/'
     | '/staff/'
+    | '/carer/onboarding/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -299,7 +340,6 @@ export interface FileRouteTypes {
     | '/users'
     | '/carer/forgot-password'
     | '/carer/login'
-    | '/carer/onboarding'
     | '/carer'
     | '/centres/$id'
     | '/centres/new'
@@ -309,15 +349,20 @@ export interface FileRouteTypes {
     | '/staff/import'
     | '/staff/new'
     | '/carer/invite/$token'
+    | '/carer/onboarding/availability'
+    | '/carer/onboarding/documents'
+    | '/carer/onboarding/profile'
     | '/centres'
     | '/shifts'
     | '/staff'
+    | '/carer/onboarding'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/carer'
     | '/auth'
+    | '/carer/onboarding'
     | '/_authenticated/applications'
     | '/_authenticated/availability'
     | '/_authenticated/centres'
@@ -328,7 +373,6 @@ export interface FileRouteTypes {
     | '/_authenticated/users'
     | '/carer/forgot-password'
     | '/carer/login'
-    | '/carer/onboarding'
     | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
@@ -338,9 +382,13 @@ export interface FileRouteTypes {
     | '/_authenticated/staff/import'
     | '/_authenticated/staff/new'
     | '/carer/invite/$token'
+    | '/carer/onboarding/availability'
+    | '/carer/onboarding/documents'
+    | '/carer/onboarding/profile'
     | '/_authenticated/centres/'
     | '/_authenticated/shifts/'
     | '/_authenticated/staff/'
+    | '/carer/onboarding/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -385,13 +433,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/carer/'
       preLoaderRoute: typeof CarerIndexRouteImport
-      parentRoute: typeof CarerRouteRoute
-    }
-    '/carer/onboarding': {
-      id: '/carer/onboarding'
-      path: '/onboarding'
-      fullPath: '/carer/onboarding'
-      preLoaderRoute: typeof CarerOnboardingRouteImport
       parentRoute: typeof CarerRouteRoute
     }
     '/carer/login': {
@@ -464,6 +505,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApplicationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/carer/onboarding': {
+      id: '/carer/onboarding'
+      path: '/onboarding'
+      fullPath: '/carer/onboarding'
+      preLoaderRoute: typeof CarerOnboardingRouteRouteImport
+      parentRoute: typeof CarerRouteRoute
+    }
+    '/carer/onboarding/': {
+      id: '/carer/onboarding/'
+      path: '/'
+      fullPath: '/carer/onboarding/'
+      preLoaderRoute: typeof CarerOnboardingIndexRouteImport
+      parentRoute: typeof CarerOnboardingRouteRoute
+    }
     '/_authenticated/staff/': {
       id: '/_authenticated/staff/'
       path: '/'
@@ -484,6 +539,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/centres/'
       preLoaderRoute: typeof AuthenticatedCentresIndexRouteImport
       parentRoute: typeof AuthenticatedCentresRoute
+    }
+    '/carer/onboarding/profile': {
+      id: '/carer/onboarding/profile'
+      path: '/profile'
+      fullPath: '/carer/onboarding/profile'
+      preLoaderRoute: typeof CarerOnboardingProfileRouteImport
+      parentRoute: typeof CarerOnboardingRouteRoute
+    }
+    '/carer/onboarding/documents': {
+      id: '/carer/onboarding/documents'
+      path: '/documents'
+      fullPath: '/carer/onboarding/documents'
+      preLoaderRoute: typeof CarerOnboardingDocumentsRouteImport
+      parentRoute: typeof CarerOnboardingRouteRoute
+    }
+    '/carer/onboarding/availability': {
+      id: '/carer/onboarding/availability'
+      path: '/availability'
+      fullPath: '/carer/onboarding/availability'
+      preLoaderRoute: typeof CarerOnboardingAvailabilityRouteImport
+      parentRoute: typeof CarerOnboardingRouteRoute
     }
     '/carer/invite/$token': {
       id: '/carer/invite/$token'
@@ -616,18 +692,35 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface CarerOnboardingRouteRouteChildren {
+  CarerOnboardingAvailabilityRoute: typeof CarerOnboardingAvailabilityRoute
+  CarerOnboardingDocumentsRoute: typeof CarerOnboardingDocumentsRoute
+  CarerOnboardingProfileRoute: typeof CarerOnboardingProfileRoute
+  CarerOnboardingIndexRoute: typeof CarerOnboardingIndexRoute
+}
+
+const CarerOnboardingRouteRouteChildren: CarerOnboardingRouteRouteChildren = {
+  CarerOnboardingAvailabilityRoute: CarerOnboardingAvailabilityRoute,
+  CarerOnboardingDocumentsRoute: CarerOnboardingDocumentsRoute,
+  CarerOnboardingProfileRoute: CarerOnboardingProfileRoute,
+  CarerOnboardingIndexRoute: CarerOnboardingIndexRoute,
+}
+
+const CarerOnboardingRouteRouteWithChildren =
+  CarerOnboardingRouteRoute._addFileChildren(CarerOnboardingRouteRouteChildren)
+
 interface CarerRouteRouteChildren {
+  CarerOnboardingRouteRoute: typeof CarerOnboardingRouteRouteWithChildren
   CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
   CarerLoginRoute: typeof CarerLoginRoute
-  CarerOnboardingRoute: typeof CarerOnboardingRoute
   CarerIndexRoute: typeof CarerIndexRoute
   CarerInviteTokenRoute: typeof CarerInviteTokenRoute
 }
 
 const CarerRouteRouteChildren: CarerRouteRouteChildren = {
+  CarerOnboardingRouteRoute: CarerOnboardingRouteRouteWithChildren,
   CarerForgotPasswordRoute: CarerForgotPasswordRoute,
   CarerLoginRoute: CarerLoginRoute,
-  CarerOnboardingRoute: CarerOnboardingRoute,
   CarerIndexRoute: CarerIndexRoute,
   CarerInviteTokenRoute: CarerInviteTokenRoute,
 }

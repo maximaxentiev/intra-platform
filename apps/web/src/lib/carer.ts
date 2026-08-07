@@ -11,6 +11,7 @@ export interface CarerSession {
   email: string;
   status: CarerAccountStatus;
   onboardingStep: number;
+  profileCompletedAt: string | null;
   onboardingCompletedAt: string | null;
   legalFirstName: string;
   legalLastName: string;
@@ -38,6 +39,25 @@ export const carerAuthApi = {
   logout: () => api.post<{ ok: true }>("/staff-auth/logout"),
 };
 
+export type CarerPersonalProfile = {
+  legalFirstName: string;
+  legalLastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  profileCompletedAt: string | null;
+  onboardingStep: number;
+  onboardingCompletedAt: string | null;
+};
+
+export const carerProfileApi = {
+  get: () => api.get<CarerPersonalProfile>("/staff-portal/profile"),
+  save: (body: Omit<CarerPersonalProfile, "profileCompletedAt" | "onboardingStep" | "onboardingCompletedAt">) =>
+    api.patch<CarerPersonalProfile>("/staff-portal/profile", body),
+  completeStep1: () => api.post<CarerPersonalProfile>("/staff-portal/profile/complete-step-1"),
+};
+
 export function carerFullName(session: {
   legalFirstName: string;
   legalLastName: string;
@@ -45,14 +65,7 @@ export function carerFullName(session: {
   return [session.legalFirstName, session.legalLastName].filter(Boolean).join(" ");
 }
 
-export function onboardingComplete(session: CarerSession): boolean {
-  return Boolean(session.onboardingCompletedAt);
-}
-
-/** Where a signed-in carer belongs right now. */
-export function carerLandingPath(session: CarerSession): "/carer" | "/carer/onboarding" {
-  return onboardingComplete(session) ? "/carer" : "/carer/onboarding";
-}
+export { carerLandingPath, onboardingComplete } from "./carer-onboarding";
 
 /** Client-side mirror of the API's password policy, for instant feedback. */
 export function passwordProblem(password: string): string | null {

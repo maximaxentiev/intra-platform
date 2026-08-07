@@ -118,7 +118,9 @@ export function PortalAccountSection({
               {portalAccount?.onboardingCompletedAt
                 ? `Completed ${fmtDate(portalAccount.onboardingCompletedAt)}`
                 : portalAccount
-                  ? `Step ${portalAccount.onboardingStep} of 3`
+                  ? portalAccount.profileCompletedAt
+                    ? `Personal info completed ${fmtDate(portalAccount.profileCompletedAt)} — step ${portalAccount.onboardingStep ?? 1} of 3`
+                    : `Step ${portalAccount.onboardingStep} of 3`
                   : "Not started"}
             </dd>
           </div>

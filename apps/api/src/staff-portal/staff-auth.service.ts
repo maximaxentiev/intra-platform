@@ -143,6 +143,7 @@ export class StaffAuthService {
       status: account.status,
       onboardingStep: account.onboardingStep,
       onboardingCompletedAt: account.onboardingCompletedAt,
+      profileCompletedAt: account.profileCompletedAt,
       legalFirstName: person?.legalFirstName ?? '',
       legalLastName: person?.legalLastName ?? '',
       phone: person?.phone ?? '',

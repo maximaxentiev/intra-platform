@@ -1,0 +1,1 @@
+ALTER TABLE "staff_accounts" ADD COLUMN "profile_completed_at" timestamp with time zone;

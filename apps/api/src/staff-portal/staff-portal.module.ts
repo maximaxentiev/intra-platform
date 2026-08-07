@@ -7,10 +7,12 @@ import { StaffSessionGuard } from './staff-session.guard';
 import { StaffSessionService } from './staff-session.service';
 import { StaffPortalAuditService } from './staff-portal-audit.service';
 import { StaffPortalInvitationsService } from './staff-portal-invitations.service';
+import { StaffPortalProfileController } from './staff-portal-profile.controller';
+import { StaffPortalProfileService } from './staff-portal-profile.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [StaffAuthController],
+  controllers: [StaffAuthController, StaffPortalProfileController],
   providers: [
     StaffAuthService,
     StaffSessionService,
@@ -18,6 +20,7 @@ import { StaffPortalInvitationsService } from './staff-portal-invitations.servic
     CarerPortalEnabledGuard,
     StaffPortalAuditService,
     StaffPortalInvitationsService,
+    StaffPortalProfileService,
   ],
   exports: [
     StaffAuthService,
@@ -25,6 +28,7 @@ import { StaffPortalInvitationsService } from './staff-portal-invitations.servic
     StaffSessionGuard,
     StaffPortalAuditService,
     StaffPortalInvitationsService,
+    StaffPortalProfileService,
   ],
 })
 export class StaffPortalModule {}
