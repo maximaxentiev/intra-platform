@@ -1,60 +1,47 @@
-# Fix: build times out and preview never loads (role-choice screen not showing)
+# Polish Staff directory and CSV import UI
 
-## Answer first: the role-choice screen IS implemented
+Frontend-only refinement. No API, CSV parsing, validation, duplicate, invitation, auth, or audit changes.
 
-Confirmed on disk and in the generated route tree:
+## 1. Staff directory (`staff.index.tsx`)
 
-- `apps/web/src/routes/index.tsx` — role-choice screen with "Ops Team" (`/auth`) and "Independent Carer" (`/carer/login`) cards.
-- `apps/web/src/routes/carer/login.tsx`, `forgot-password.tsx`, `invite.$token.tsx`, `onboarding.tsx`, `index.tsx`.
-- All of the above are registered in `apps/web/src/routeTree.gen.ts`.
+Replace the card grid with an operational list.
 
-So nothing is missing in the app code. The reason you don't see it is the dev server is not running.
+- Keep heading, subtitle, Import CSV and Add Staff buttons unchanged.
+- Filter bar: Search, Employment Status, Role (existing), plus a new **Portal Account** filter built purely from the `portalAccountStatus` field already returned by `staffApi.list()` (options: All, No Account, Invited, Incomplete, Active, Disabled). Filtering stays client-side like the current filters.
+- Desktop/tablet (`md+`): dense table with columns Name, Role, Phone, Email, Employment Status, Portal Account, Actions.
+  - Name: bold, clickable link to `/staff/$id`.
+  - Role: normalized value; blank renders muted "No role assigned".
+  - Phone: rendered as-is (leading `+` preserved), `whitespace-nowrap` with `tabular-nums`.
+  - Email: truncated with `title` attribute for the full value plus a `sr-only` full text so it is accessible, not hover-only for keyboard users.
+  - Employment Status: existing `StatusBadge`.
+  - Portal Account: existing `PortalStatusBadge`.
+  - Actions: single "View" link-button to the profile. No new destructive actions.
+- Mobile (`< md`): the same rows render as compact stacked list items — name + role on line one, employment and portal badges on line two, phone/email on line three, View as a full-width-friendly tap target. No horizontal scroll.
+- Keep the existing "Showing X of Y staff", loading skeletons, and both empty states (no staff / no match) with the same copy behaviour.
 
-## Actual cause (confirmed by reproducing it)
+## 2. CSV import page (`staff.import.tsx`)
 
-Root `package.json` scripts call themselves recursively. Running `bun run build:dev` at the root prints an endless chain:
+Behaviour, API calls, filters, and confirmation dialogs stay exactly as they are.
 
-```text
-$ bun run build:dev --workspace @intra/web
-$ bun run build:dev --workspace @intra/web --workspace @intra/web
-$ bun run build:dev --workspace @intra/web --workspace @intra/web --workspace @intra/web
-... forever
-```
+- **Upload card**: clearer hierarchy — required columns as a compact chip/list, explicit limits (max 500 rows, 512 KB) shown before upload using the same `preview.limits` values where available and static copy otherwise, selected filename with a "Replace file" / "Remove" control that just resets the same state already used. Selecting a file still only previews.
+- **Preview summary**: four compact metric cards (Total, Valid, Invalid, Duplicate) with short helper text ("will be imported", "need attention", "already exist"). Values come from `preview.summary` unchanged.
+- **Preview table**: keeps Row, Name, Role, Email, Phone, Status, Issues. Status badges gain an icon so invalid/duplicate are distinguishable without colour; invalid/duplicate rows get a left accent border. Issues stay inline and wrapped — never a tooltip. Long email/phone wrap with `break-all`. Filters stay directly above the table with counts.
+- **Import actions**: grouped in a footer bar. "Import staff only" as primary with a note that no emails are sent; "Import and send portal invitations" as secondary with an explicit email warning and mail icon. Both keep the existing disabled condition (`preview.summary.valid === 0` or loading) and the existing confirm dialog; the confirm action shows a spinner and is disabled while processing.
+- **Results**: keep the persistent results card. Summary rendered as grouped metrics with failures/invitation failures visually flagged when non-zero. Row-level table keeps Row, Email, Phone, Outcome, Notes. Header banner reflects the real outcome — if `failed > 0` or `invitationEmailFailures > 0` it reads as partial success, not success. Keep "Return to staff list".
+- **Feedback**: preserve existing `toast.error` calls for preview/import failures, and additionally surface the error inline in the upload card so it is not lost when the toast dismisses. Success toast only when there are no failures.
 
-This is exactly the `deadline_exceeded` build failure. The dev server has the same problem: nothing is listening on port 8080, so the preview shows a stale page (currently `/auth`).
+## 3. Responsiveness
 
-Root `package.json` has:
+Verify 375 / 768 / desktop for directory, filters, upload, preview metrics, preview rows, results, dialogs. No unintended horizontal scroll; tables stay dense on desktop.
 
-```
-"dev": "npm run dev --workspace @intra/web"
-```
+## 4. Verify
 
-The runner launches this with bun, which resolves `run dev` back to the **root** package's own `dev` script instead of the web workspace's `vite dev`. Each pass appends another `--workspace @intra/web` and spawns a child, producing an unbounded process chain and no build or Vite server.
+- `vitest` for `staff-portal-ui.spec.ts` and `staff-csv-import-ui.spec.ts` (both assert strings this plan preserves).
+- TypeScript check and production build.
+- Confirm no backend/migration files touched and the carer portal flag stays off.
 
+## Technical notes
 
-The runner launches this with bun, which resolves `run dev` back to the **root** package's own `dev` script instead of the web workspace's `vite dev`. Each pass appends another `--workspace @intra/web` and spawns a child, producing a chain of dozens of processes and no Vite server.
-
-## Fix
-
-Rewrite every root `package.json` script that currently uses `npm run X --workspace <pkg>` so it targets the workspace directory directly and cannot re-enter the root script. For example:
-
-```
-"dev":       "npm --prefix apps/web run dev --",
-"dev:web":   "npm --prefix apps/web run dev --",
-"dev:api":   "npm --prefix apps/api run start:dev --",
-"build:dev": "npm --prefix apps/web run build:dev --",
-"build:web": "npm --prefix apps/web run build --",
-"build:api": "npm --prefix apps/api run build --",
-```
-
-The `db:*` scripts get the same treatment. `build` (`--workspaces --if-present`) is left as is — it doesn't re-invoke a same-named root script.
-
-## Verification
-
-1. Run `bun run build:dev` at the root and confirm it completes instead of looping.
-2. Kill the runaway `bun run dev` process chain and restart the dev server.
-3. `curl http://localhost:8080/` and confirm the HTML contains "Welcome to Intra" / "Independent Carer".
-4. Screenshot `/` to confirm the two role cards render.
-
-
-No app/route/UI code changes are needed for this.
+- Files changed: `apps/web/src/routes/_authenticated/staff.index.tsx`, `apps/web/src/routes/_authenticated/staff.import.tsx`, plus possibly a small `apps/web/src/components/StaffTable.tsx` extraction if the index file gets long. `PortalStatusBadge` and `portal-account-status.ts` are reused as-is.
+- No new dependencies. All colour comes from existing semantic tokens.
+- Git note: branch sync, commits, and pushes are handled by the platform's own version control rather than by me running git commands; I will report the file-level changes and verification output.
