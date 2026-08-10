@@ -442,10 +442,10 @@ function Field({
         type={type}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        required
         className="h-11 min-w-0 truncate"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-required="true"
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy}
       />
