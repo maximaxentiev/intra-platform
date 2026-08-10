@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
 import { carerProfileApi } from "@/lib/carer";
 import {
   personalProfileDirty,
@@ -99,7 +100,11 @@ export function CarerPersonalInformationForm({
 
   function reportError(err: unknown, fallback: string) {
     const raw = err instanceof Error ? err.message : fallback;
-    const message = /already/i.test(raw) && /email/i.test(raw)
+    const isDuplicateEmailConflict =
+      err instanceof ApiError &&
+      err.status === 409 &&
+      (/portal account/i.test(raw) || /staff member with this email/i.test(raw));
+    const message = isDuplicateEmailConflict
       ? "That email address is already used by another account. Try a different one."
       : raw;
     setSavedAt(null);
@@ -298,7 +303,7 @@ export function CarerPersonalInformationForm({
               onClick={() => void handleNext()}
             >
               {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-              Save and continue to Documents
+              {isDirty ? "Save and continue to Documents" : "Continue to Documents"}
             </Button>
           ) : null}
           <Button
