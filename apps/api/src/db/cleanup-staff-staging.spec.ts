@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import {
   assertCleanupEnvironment,
   readStaffCleanupCounts,
+  readStaffDocumentStorageKeys,
   runStaffCleanup,
 } from './cleanup-staff-staging';
 import {
@@ -148,6 +149,10 @@ describe('runStaffCleanup', () => {
                 shifts_assigned: 0,
                 applications_hired_staff: 0,
                 staff_source_application_links: 0,
+                staff_document_sets: 0,
+                staff_document_submissions: 0,
+                staff_document_files: 0,
+                staff_document_storage_keys: 0,
               },
             ],
           };
@@ -185,6 +190,10 @@ describe('runStaffCleanup', () => {
                 shifts_assigned: 0,
                 applications_hired_staff: 0,
                 staff_source_application_links: 0,
+                staff_document_sets: 0,
+                staff_document_submissions: 0,
+                staff_document_files: 0,
+                staff_document_storage_keys: 0,
               },
             ],
           };
@@ -214,6 +223,10 @@ describe('readStaffCleanupCounts', () => {
             shifts_assigned: 1,
             applications_hired_staff: 1,
             staff_source_application_links: 0,
+            staff_document_sets: 2,
+            staff_document_submissions: 3,
+            staff_document_files: 4,
+            staff_document_storage_keys: 4,
           },
         ],
       })),
@@ -222,6 +235,23 @@ describe('readStaffCleanupCounts', () => {
     const counts = await readStaffCleanupCounts(client);
     expect(counts.staff).toBe(3);
     expect(counts.staffAccounts).toBe(2);
-    expect(counts.shiftContacted).toBe(2);
+    expect(counts.staffDocumentFiles).toBe(4);
+    expect(counts.staffDocumentStorageKeys).toBe(4);
+  });
+});
+
+describe('readStaffDocumentStorageKeys', () => {
+  it('returns staff/ keys from staff_document_files', async () => {
+    const client = {
+      query: vi.fn(async () => ({
+        rows: [
+          { storage_key: 'staff/a/b/c/file.pdf' },
+          { storage_key: 'applications/x/y/file.pdf' },
+        ],
+      })),
+    } as unknown as PoolClient;
+
+    const keys = await readStaffDocumentStorageKeys(client);
+    expect(keys).toEqual(['staff/a/b/c/file.pdf']);
   });
 });

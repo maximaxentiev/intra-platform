@@ -43,6 +43,13 @@
       "when": 1786200000000,
       "tag": "0005_staff_profile_completed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786300000000,
+      "tag": "0006_staff_documents_foundation",
+      "breakpoints": true
     }
   ]
 }

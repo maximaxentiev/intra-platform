@@ -13,8 +13,10 @@ import {
   time,
   timestamp,
   uuid,
+  uniqueIndex,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Enums (mirror the legacy Supabase schema)
@@ -46,6 +48,21 @@ export const applicationDocumentCategory = pgEnum('application_document_category
   'immunization_records',
   'covid19_vaccination',
 ]);
+
+export const staffDocumentType = pgEnum('staff_document_type', [
+  'vulnerable_sector_check',
+  'first_aid_cpr',
+  'immunizations',
+  'covid19_vaccination',
+]);
+
+export const staffDocumentReviewStatus = pgEnum('staff_document_review_status', [
+  'pending_review',
+  'approved',
+  'issue_flagged',
+]);
+
+export const staffDocumentActorType = pgEnum('staff_document_actor_type', ['carer', 'ops_user']);
 
 // ---------------------------------------------------------------------------
 // Users — ops team accounts (replaces Supabase auth.users + profiles).
@@ -130,8 +147,12 @@ export const staff = pgTable('staff', {
   status: staffStatus('status').notNull().default('active'),
   notes: text('notes').notNull().default(''),
   documentsUrl: text('documents_url').notNull().default(''),
-  // Public slug for the shareable documents page: /documents/<slug>
+  // Cosmetic slug for shareable documents page — NOT authorization (see share token hash).
   documentSlug: text('document_slug').unique(),
+  // SHA-256 of opaque share token; raw token is never persisted.
+  documentShareTokenHash: text('document_share_token_hash'),
+  documentShareTokenCreatedAt: timestamp('document_share_token_created_at', { withTimezone: true }),
+  documentShareTokenRevokedAt: timestamp('document_share_token_revoked_at', { withTimezone: true }),
   sourceApplicationId: uuid('source_application_id')
     .references((): AnyPgColumn => applications.id, {
       onDelete: 'set null',
@@ -164,6 +185,8 @@ export const staffAccounts = pgTable(
     // Mandatory onboarding: 1 = personal info, 2 = documents, 3 = availability.
     onboardingStep: smallint('onboarding_step').notNull().default(1),
     profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),
+    // Step 2 onboarding complete (historical); not cleared when documents expire later.
+    documentsCompletedAt: timestamp('documents_completed_at', { withTimezone: true }),
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -404,6 +427,85 @@ export const staffPortalAuditEvents = pgTable(
   (t) => [index('staff_portal_audit_staff_idx').on(t.staffId, t.createdAt)],
 );
 
+// ---------------------------------------------------------------------------
+// Staff documents — one set per staff + type; versioned submissions + files.
+// ---------------------------------------------------------------------------
+export const staffDocumentSets = pgTable(
+  'staff_document_sets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    documentType: staffDocumentType('document_type').notNull(),
+    remindersEnabled: boolean('reminders_enabled').notNull().default(true),
+    currentSubmissionId: uuid('current_submission_id').references(
+      (): AnyPgColumn => staffDocumentSubmissions.id,
+      { onDelete: 'set null' },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('staff_document_sets_staff_idx').on(t.staffId),
+    uniqueIndex('staff_document_sets_staff_type_unique').on(t.staffId, t.documentType),
+  ],
+);
+
+export const staffDocumentSubmissions = pgTable(
+  'staff_document_submissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    documentSetId: uuid('document_set_id')
+      .notNull()
+      .references(() => staffDocumentSets.id, { onDelete: 'cascade' }),
+    reviewStatus: staffDocumentReviewStatus('review_status').notNull(),
+    processedDate: date('processed_date'),
+    expiryDate: date('expiry_date'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull(),
+    submittedByActorType: staffDocumentActorType('submitted_by_actor_type').notNull(),
+    submittedByStaffAccountId: uuid('submitted_by_staff_account_id').references(
+      () => staffAccounts.id,
+      { onDelete: 'set null' },
+    ),
+    submittedByUserId: uuid('submitted_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedByUserId: uuid('reviewed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    issueNote: text('issue_note').notNull().default(''),
+    supersededAt: timestamp('superseded_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('staff_document_submissions_set_idx').on(t.documentSetId),
+    index('staff_document_submissions_review_status_idx').on(t.reviewStatus),
+    index('staff_document_submissions_expiry_idx')
+      .on(t.expiryDate)
+      .where(sql`${t.expiryDate} is not null`),
+  ],
+);
+
+export const staffDocumentFiles = pgTable(
+  'staff_document_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    submissionId: uuid('submission_id')
+      .notNull()
+      .references(() => staffDocumentSubmissions.id, { onDelete: 'cascade' }),
+    originalFilename: text('original_filename').notNull(),
+    contentType: text('content_type').notNull(),
+    byteSize: integer('byte_size').notNull(),
+    storageKey: text('storage_key').notNull(),
+    checksumSha256: text('checksum_sha256').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('staff_document_files_submission_idx').on(t.submissionId)],
+);
+
 // Convenience type aliases -----------------------------------------------------
 export type User = typeof users.$inferSelect;
 export type Centre = typeof centres.$inferSelect;
@@ -417,3 +519,6 @@ export type ApplicationDocument = typeof applicationDocuments.$inferSelect;
 export type ApplicationActivity = typeof applicationActivity.$inferSelect;
 export type StaffAccount = typeof staffAccounts.$inferSelect;
 export type StaffPortalAuditEvent = typeof staffPortalAuditEvents.$inferSelect;
+export type StaffDocumentSet = typeof staffDocumentSets.$inferSelect;
+export type StaffDocumentSubmission = typeof staffDocumentSubmissions.$inferSelect;
+export type StaffDocumentFile = typeof staffDocumentFiles.$inferSelect;

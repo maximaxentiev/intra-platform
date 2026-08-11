@@ -35,6 +35,11 @@ import {
   assertStagingCleanupConfirmation,
   assertStagingMaintenanceEnvironment,
 } from './staging-db-guard';
+import {
+  assertStaffDocumentStorageDeleteSucceeded,
+  deleteStaffDocumentStorageKeys,
+} from '../storage/staff-document-storage-cleanup.util';
+import { isStaffDocumentStorageKey } from '../storage/storage-key.util';
 
 const STAFF_SESSION_PREFIX = 'staffsess:';
 
@@ -49,6 +54,10 @@ export interface StaffCleanupCounts {
   shiftsAssigned: number;
   applicationsHiredStaff: number;
   staffSourceApplicationLinks: number;
+  staffDocumentSets: number;
+  staffDocumentSubmissions: number;
+  staffDocumentFiles: number;
+  staffDocumentStorageKeys: number;
 }
 
 export interface PreservedCounts {
@@ -106,7 +115,11 @@ export async function readStaffCleanupCounts(client: PoolClient): Promise<StaffC
       (SELECT COUNT(*)::int FROM shift_contacted) AS shift_contacted,
       (SELECT COUNT(*)::int FROM shifts WHERE assigned_staff_id IS NOT NULL) AS shifts_assigned,
       (SELECT COUNT(*)::int FROM applications WHERE hired_staff_id IS NOT NULL) AS applications_hired_staff,
-      (SELECT COUNT(*)::int FROM staff WHERE source_application_id IS NOT NULL) AS staff_source_application_links
+      (SELECT COUNT(*)::int FROM staff WHERE source_application_id IS NOT NULL) AS staff_source_application_links,
+      (SELECT COUNT(*)::int FROM staff_document_sets) AS staff_document_sets,
+      (SELECT COUNT(*)::int FROM staff_document_submissions) AS staff_document_submissions,
+      (SELECT COUNT(*)::int FROM staff_document_files) AS staff_document_files,
+      (SELECT COUNT(*)::int FROM staff_document_files) AS staff_document_storage_keys
   `);
   const row = rows[0] as Record<string, unknown> | undefined;
   if (!row) throw new Error('Could not read staff cleanup counts.');
@@ -125,7 +138,36 @@ export async function readStaffCleanupCounts(client: PoolClient): Promise<StaffC
       row.staff_source_application_links,
       'staff_source_application_links',
     ),
+    staffDocumentSets: parseTableCount(row.staff_document_sets, 'staff_document_sets'),
+    staffDocumentSubmissions: parseTableCount(
+      row.staff_document_submissions,
+      'staff_document_submissions',
+    ),
+    staffDocumentFiles: parseTableCount(row.staff_document_files, 'staff_document_files'),
+    staffDocumentStorageKeys: parseTableCount(
+      row.staff_document_storage_keys,
+      'staff_document_storage_keys',
+    ),
   };
+}
+
+/** Lists staff/ object keys only — application documents are never included. */
+export async function readStaffDocumentStorageKeys(client: PoolClient): Promise<string[]> {
+  const { rows } = await client.query<{ storage_key: string }>(`
+    SELECT f.storage_key
+    FROM staff_document_files f
+    ORDER BY f.storage_key
+  `);
+  return rows.map((row) => row.storage_key).filter((key) => isStaffDocumentStorageKey(key));
+}
+
+export async function purgeStaffDocumentStorage(
+  keys: string[],
+  env: Record<string, unknown>,
+): Promise<void> {
+  if (keys.length === 0) return;
+  const result = await deleteStaffDocumentStorageKeys(keys, env);
+  assertStaffDocumentStorageDeleteSucceeded(result, keys.length);
 }
 
 export async function readPreservedCounts(client: PoolClient): Promise<PreservedCounts> {
@@ -174,6 +216,10 @@ export function printDryRunReport(
   console.log('  shifts with assigned staff (will be detached):', staffCounts.shiftsAssigned);
   console.log('  applications with hired staff (will be detached):', staffCounts.applicationsHiredStaff);
   console.log('  staff source-application links (will be cleared):', staffCounts.staffSourceApplicationLinks);
+  console.log('  staff document sets:', staffCounts.staffDocumentSets);
+  console.log('  staff document submissions:', staffCounts.staffDocumentSubmissions);
+  console.log('  staff document files:', staffCounts.staffDocumentFiles);
+  console.log('  staff document storage keys (staff/ only):', staffCounts.staffDocumentStorageKeys);
   console.log('  preserved users:', preservedBefore.users);
   console.log('  preserved centres:', preservedBefore.centres);
   console.log('  preserved shifts:', preservedBefore.shifts);
@@ -195,6 +241,8 @@ export function printExecuteReport(
   console.log('  removed shift contacted links:', staffCountsBefore.shiftContacted);
   console.log('  detached shift assignments:', staffCountsBefore.shiftsAssigned);
   console.log('  detached application hire links:', staffCountsBefore.applicationsHiredStaff);
+  console.log('  removed staff document files:', staffCountsBefore.staffDocumentFiles);
+  console.log('  removed staff document storage keys:', staffCountsBefore.staffDocumentStorageKeys);
   if (redisStaffSessionsRemoved !== null) {
     console.log('  redis staff portal sessions removed:', redisStaffSessionsRemoved);
   }
@@ -314,6 +362,9 @@ async function main() {
       printDryRunReport(staffBefore, preservedBefore, { allowLocalTestDb });
       return;
     }
+
+    const storageKeys = await readStaffDocumentStorageKeys(client);
+    await purgeStaffDocumentStorage(storageKeys, process.env as Record<string, unknown>);
 
     await runStaffCleanup(client);
 
