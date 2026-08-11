@@ -6,9 +6,11 @@ import { CarerAuthCard } from "@/components/carer/CarerAuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/carer/login")({
   ssr: false,
+  pendingComponent: CarerLoginPending,
   beforeLoad: async () => {
     try {
       const session = await carerAuthApi.session();
@@ -20,6 +22,17 @@ export const Route = createFileRoute("/carer/login")({
   },
   component: CarerLoginPage,
 });
+
+function CarerLoginPending() {
+  return (
+    <CarerAuthCard title="Checking your Carer Portal access…">
+      <div className="space-y-3">
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-full" />
+      </div>
+    </CarerAuthCard>
+  );
+}
 
 function CarerLoginPage() {
   const navigate = useNavigate();

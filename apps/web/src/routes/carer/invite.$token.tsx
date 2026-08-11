@@ -1,10 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { carerAuthApi, carerLandingPath, passwordProblem } from "@/lib/carer";
+import { carerAuthApi, carerLandingPath, passwordProblem, type CarerInviteInfo } from "@/lib/carer";
+import { resolveUnusableInviteRedirect } from "@/lib/carer-invite-routing";
 import { CarerAuthCard } from "@/components/carer/CarerAuthCard";
-import { CarerInviteUnavailable } from "@/components/carer/CarerInviteUnavailable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,21 +11,41 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/carer/invite/$token")({
   ssr: false,
+  pendingComponent: InviteAccessPending,
+  beforeLoad: async ({ params }) => {
+    try {
+      const invite = await carerAuthApi.invite(params.token);
+      return { invite };
+    } catch {
+      const destination = await resolveUnusableInviteRedirect({
+        getSession: () => carerAuthApi.session(),
+        landingPath: carerLandingPath,
+      });
+      throw redirect({ to: destination, replace: true });
+    }
+  },
+  loader: ({ context }) => context.invite as CarerInviteInfo,
   component: CarerInvitePage,
 });
 
+function InviteAccessPending() {
+  return (
+    <CarerAuthCard title="Checking your Carer Portal access…">
+      <div className="space-y-3">
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-full" />
+      </div>
+    </CarerAuthCard>
+  );
+}
+
 function CarerInvitePage() {
+  const invite = Route.useLoaderData();
   const { token } = Route.useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const invite = useQuery({
-    queryKey: ["carer-invite", token],
-    queryFn: () => carerAuthApi.invite(token),
-    retry: false,
-  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,30 +70,15 @@ function CarerInvitePage() {
     }
   }
 
-  if (invite.isLoading) {
-    return (
-      <CarerAuthCard title="Checking your link…">
-        <div className="space-y-3">
-          <Skeleton className="h-11 w-full" />
-          <Skeleton className="h-11 w-full" />
-        </div>
-      </CarerAuthCard>
-    );
-  }
-
-  if (invite.isError || !invite.data) {
-    return <CarerInviteUnavailable />;
-  }
-
-  const name = [invite.data.legalFirstName, invite.data.legalLastName].filter(Boolean).join(" ");
+  const name = [invite.legalFirstName, invite.legalLastName].filter(Boolean).join(" ");
 
   return (
     <CarerAuthCard
-      title={invite.data.alreadySetUp ? "Set a new password" : "Create your password"}
+      title={invite.alreadySetUp ? "Set a new password" : "Create your password"}
       description={
         <>
           {name ? `${name} — ` : null}
-          {invite.data.email}
+          {invite.email}
         </>
       }
     >
