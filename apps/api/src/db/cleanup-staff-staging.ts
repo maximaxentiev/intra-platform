@@ -13,6 +13,18 @@
  *
  * Local verification (dev Postgres on 127.0.0.1:5434 only):
  *   LOCAL_STAFF_CLEANUP_TEST=YES node --import tsx src/db/cleanup-staff-staging.ts --dry-run --allow-local-test-db
+ *
+ * Before --execute on staging:
+ *   1. Backup (self-contained; env vars read inside postgres container):
+ *      mkdir -p /var/backups
+ *      BACKUP="/var/backups/intra-platform-pre-staff-cleanup-$(date -u +%Y%m%dT%H%M%S).dump"
+ *      docker compose -p intra-ops-test exec -T postgres \
+ *        sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP"
+ *      test -s "$BACKUP" && ls -lh "$BACKUP"
+ *   2. Run --dry-run and review counts
+ *   3. Set STAGING_STAFF_CLEANUP_CONFIRM=YES
+ *   4. Post-cleanup health: curl -fsS https://platform.intra.ca/api/health
+ *      (internal: fetch http://127.0.0.1:8000/api/health from api container)
  */
 import { config as loadDotenv } from 'dotenv';
 import { Pool, type PoolClient } from 'pg';
@@ -261,10 +273,15 @@ Local test only (127.0.0.1 / localhost Postgres):
   LOCAL_STAFF_CLEANUP_TEST=YES node --import tsx src/db/cleanup-staff-staging.ts --dry-run --allow-local-test-db
 
 Before --execute on staging:
-  1. pg_dump backup to /var/backups/intra-platform-pre-staff-cleanup-YYYYMMDDTHHMMSS.dump
-  2. Verify backup file exists
-  3. Run --dry-run and review counts
-  4. Set STAGING_STAFF_CLEANUP_CONFIRM=YES`);
+  1. Backup (self-contained; env vars read inside postgres container):
+     mkdir -p /var/backups
+     BACKUP="/var/backups/intra-platform-pre-staff-cleanup-$(date -u +%Y%m%dT%H%M%S).dump"
+     docker compose -p intra-ops-test exec -T postgres \\
+       sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP"
+     test -s "$BACKUP" && ls -lh "$BACKUP"
+  2. Run --dry-run and review counts
+  3. Set STAGING_STAFF_CLEANUP_CONFIRM=YES
+  4. Post-cleanup: curl -fsS https://platform.intra.ca/api/health`);
 }
 
 async function main() {

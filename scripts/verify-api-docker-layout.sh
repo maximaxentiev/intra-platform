@@ -8,6 +8,7 @@ docker run --rm --entrypoint sh "$IMAGE" -lc '
   set -e
   test -f /app/dist/main.js
   test -f /app/dist/db/migrate.js
+  test -f /app/dist/db/cleanup-staff-staging.js
   test -f /app/packages/shared/dist/index.js
   node -e "require(\"@intra/shared\"); console.log(\"@intra/shared ok\")"
   echo "API Docker layout OK"
