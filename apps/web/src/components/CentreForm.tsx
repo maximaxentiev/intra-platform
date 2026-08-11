@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChannelMultiSelect } from "@/components/ChannelMultiSelect";
+import { CityCombobox, validateCityField } from "@/components/CityCombobox";
 import { CENTRE_CHANNEL_OPTIONS, type CentreChannel } from "@/lib/db";
 
 export type CentreFormValues = {
   name: string;
   address: string;
+  city: string;
   primaryChannel: CentreChannel;
   notes: string;
 };
@@ -26,15 +28,21 @@ export function CentreForm({
   const [values, setValues] = useState<CentreFormValues>({
     name: initial.name ?? "",
     address: initial.address ?? "",
+    city: initial.city ?? "",
     notes: initial.notes ?? "",
     primaryChannel: initial.primaryChannel ?? "email",
   });
   const [secondary, setSecondary] = useState<CentreChannel[]>(secondaryChannels);
   const [saving, setSaving] = useState(false);
+  const [cityError, setCityError] = useState<string | undefined>();
+  const savedCity = initial.city ?? "";
   const set = (k: keyof CentreFormValues, v: string) => setValues((prev) => ({ ...prev, [k]: v }));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    const nextCityError = validateCityField(values.city, savedCity);
+    setCityError(nextCityError);
+    if (nextCityError) return;
     setSaving(true);
     const cleanedSecondary = secondary.filter((c) => c !== values.primaryChannel);
     await onSubmit(values, cleanedSecondary);
@@ -57,6 +65,16 @@ export function CentreForm({
         <Label htmlFor="address">Address</Label>
         <Input id="address" value={values.address} onChange={(e) => set("address", e.target.value)} />
       </div>
+      <CityCombobox
+        id="centre-city"
+        label="City"
+        value={values.city}
+        onChange={(city) => {
+          set("city", city);
+          setCityError(undefined);
+        }}
+        error={cityError}
+      />
       <div className="space-y-2">
         <Label>Primary communication channel</Label>
         <Select value={values.primaryChannel} onValueChange={(v) => onPrimaryChange(v as CentreChannel)}>

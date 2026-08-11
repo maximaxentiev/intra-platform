@@ -13,6 +13,7 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CityCombobox, cityValueForSubmit } from "@/components/CityCombobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -71,14 +72,21 @@ export function CarerPersonalInformationForm({
 
   async function persist(showSuccessToast: boolean) {
     const trimmed = trimPersonalProfile(values);
-    const errors = validatePersonalProfileFields(trimmed);
+    const errors = validatePersonalProfileFields(trimmed, saved.city);
+    const city = cityValueForSubmit(trimmed.city, saved.city);
+    if (!city) {
+      errors.city = errors.city ?? "City must be selected from the supported city list.";
+    }
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
       throw new Error("Fix the highlighted fields.");
     }
+    if (!city) {
+      throw new Error("Fix the highlighted fields.");
+    }
     setLoading(true);
     try {
-      const result = await carerProfileApi.save(trimmed);
+      const result = await carerProfileApi.save({ ...trimmed, city });
       const nextSaved: PersonalProfileFields = {
         legalFirstName: result.legalFirstName,
         legalLastName: result.legalLastName,
@@ -141,7 +149,7 @@ export function CarerPersonalInformationForm({
 
   async function handleNext() {
     const trimmed = trimPersonalProfile(values);
-    const errors = validatePersonalProfileFields(trimmed);
+    const errors = validatePersonalProfileFields(trimmed, saved.city);
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
       setFormError("Complete all required fields before continuing.");
@@ -264,13 +272,13 @@ export function CarerPersonalInformationForm({
                   error={fieldErrors.address}
                   onChange={(v) => setField("address", v)}
                 />
-                <Field
+                <CityCombobox
                   id="city"
                   label="City"
-                  autoComplete="address-level2"
                   value={values.city}
-                  error={fieldErrors.city}
                   onChange={(v) => setField("city", v)}
+                  error={fieldErrors.city}
+                  className="sm:col-span-2"
                 />
               </div>
             </FieldGroup>

@@ -1,4 +1,4 @@
-# Web (and future root-context) Docker builds — keep context small.
+# Root-context Docker builds — keep context small while allowing API image build.
 .git
 **/.git
 **/node_modules
@@ -9,9 +9,15 @@
 !**/.env.example
 **/coverage
 **/*.log
-apps/api/src
-apps/api/drizzle
 apps/api/dist
 .cursor
 dev
 supabase
+# Web build only needs apps/api/package.json; API build re-includes required paths below.
+apps/api/*
+!apps/api/package.json
+!apps/api/nest-cli.json
+!apps/api/tsconfig.json
+!apps/api/tsconfig.build.json
+!apps/api/src
+!apps/api/drizzle

@@ -10,6 +10,7 @@ import {
   STAFF_ROLE_ERROR_MESSAGE,
   type StaffCanonicalRole,
 } from './staff-role.util';
+import { normalizeCityForCsv } from '../common/city-validation';
 
 /** Normalize imported CSV cell text: BOM removal and trim only (preserve +, -, @, =, etc.). */
 export function normalizeImportedCsvCell(raw: string): string {
@@ -211,6 +212,14 @@ export function buildPreviewRows(
     if (!draft.phone) issues.push('Phone number is required.');
     if (!draft.address) issues.push('Home address is required.');
     if (!draft.city) issues.push('City is required.');
+    else {
+      const normalizedCity = normalizeCityForCsv(draft.city);
+      if (!normalizedCity) {
+        issues.push('City must be selected from the supported city list.');
+      } else {
+        draft.city = normalizedCity;
+      }
+    }
 
     let isDuplicate = false;
     if (draft.email && seenCsvEmails.has(draft.email)) {

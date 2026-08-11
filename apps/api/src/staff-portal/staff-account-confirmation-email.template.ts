@@ -5,7 +5,7 @@ export function buildStaffAccountConfirmationEmailContent(params: {
   legalFirstName: string;
   platformEnv: PlatformUrlEnv;
 }) {
-  const loginUrl = buildGenericPlatformEmailLink('/carer/login', params.platformEnv);
+  const loginUrl = buildGenericPlatformEmailLink('/carer', params.platformEnv);
   const greeting = params.legalFirstName.trim() || 'there';
 
   const subject = 'Your Intra Carer Portal account is ready';

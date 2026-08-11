@@ -43,9 +43,24 @@ describe("personalProfileDirty", () => {
       email: "a@b.c",
       phone: "1",
       address: "2",
-      city: "3",
+      city: "Toronto",
     };
     expect(personalProfileDirty({ ...a, phone: "9" }, a)).toBe(true);
     expect(personalProfileDirty(a, a)).toBe(false);
+  });
+
+  it("rejects unsupported city values", () => {
+    const errors = validatePersonalProfileFields(
+      {
+        legalFirstName: "A",
+        legalLastName: "B",
+        email: "a@b.c",
+        phone: "1",
+        address: "2",
+        city: "Tornto",
+      },
+      "Toronto",
+    );
+    expect(errors.city).toMatch(/supported city list/i);
   });
 });

@@ -1,3 +1,5 @@
+import { validateCityField } from "@/components/CityCombobox";
+
 export const MANUAL_STAFF_ROLES = ["ECA", "ECE", "Nanny"] as const;
 
 export type ManualStaffRole = (typeof MANUAL_STAFF_ROLES)[number];
@@ -27,7 +29,8 @@ export function validateManualStaffForm(values: ManualStaffFormValues): Partial<
   req("legalLastName", "Legal last name");
   req("phone", "Phone number");
   req("address", "Home address");
-  req("city", "City");
+  const cityError = validateCityField(String(values.city ?? ""));
+  if (cityError) errors.city = cityError;
   const role = values.role.trim();
   if (!role) errors.role = "Role is required.";
   else if (!MANUAL_STAFF_ROLES.includes(role as ManualStaffRole)) errors.role = ROLE_ERROR;

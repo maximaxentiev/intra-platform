@@ -2,12 +2,16 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
 
-COPY tsconfig.json tsconfig.build.json nest-cli.json ./
-COPY src ./src
-COPY drizzle ./drizzle
+RUN npm ci --workspace=@intra/api --workspace=@intra/shared --include-workspace-root=false --no-audit --no-fund
+
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+
+WORKDIR /app/apps/api
 RUN npm run build
 
 # --- Runtime stage ---
@@ -15,13 +19,16 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/drizzle ./drizzle
+RUN npm ci --workspace=@intra/api --workspace=@intra/shared --include-workspace-root=false --omit=dev --no-audit --no-fund && npm cache clean --force
+
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/apps/api/drizzle ./drizzle
 
 EXPOSE 8000
 
-# Apply migrations, then boot the API.
 CMD ["sh", "-c", "node dist/db/migrate.js && node dist/main.js"]

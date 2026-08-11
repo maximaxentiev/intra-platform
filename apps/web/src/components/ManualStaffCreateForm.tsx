@@ -16,6 +16,7 @@ import {
   type ManualStaffFormValues,
   type ManualStaffRole,
 } from "@/lib/manual-staff-form.validation";
+import { CityCombobox, cityValueForSubmit } from "@/components/CityCombobox";
 import type { ManualStaffCreateInput } from "@/lib/db";
 
 export function ManualStaffCreateForm({
@@ -46,6 +47,8 @@ export function ManualStaffCreateForm({
     if (Object.keys(nextErrors).length) return;
     setSaving(true);
     try {
+      const city = cityValueForSubmit(values.city.trim());
+      if (!city) return;
       await onSubmit({
         displayName: values.displayName.trim(),
         legalFirstName: values.legalFirstName.trim(),
@@ -54,7 +57,7 @@ export function ManualStaffCreateForm({
         email: values.email.trim().toLowerCase(),
         phone: values.phone.trim(),
         address: values.address.trim(),
-        city: values.city.trim(),
+        city,
       } satisfies ManualStaffCreateInput);
     } finally {
       setSaving(false);
@@ -152,7 +155,13 @@ export function ManualStaffCreateForm({
           Location
         </h2>
         {field("address", "Home address", "text", "street-address")}
-        {field("city", "City", "text", "address-level2")}
+        <CityCombobox
+          id="city"
+          label="City"
+          value={values.city}
+          onChange={(city) => set("city", city)}
+          error={errors.city}
+        />
       </section>
 
       <div className="flex flex-col gap-2 border-t border-border/70 pt-6 sm:flex-row">

@@ -11,14 +11,15 @@ const platformEnv = {
 };
 
 describe('staff account confirmation email', () => {
-  it('uses APP_PUBLIC_URL carer login path', () => {
+  it('uses APP_PUBLIC_URL carer entry path', () => {
     const content = buildStaffAccountConfirmationEmailContent({
       legalFirstName: 'Sam',
       platformEnv,
     });
-    expect(content.loginUrl).toBe('https://platform.intra.ca/carer/login');
-    expect(content.html).toContain('https://platform.intra.ca/carer/login');
-    expect(content.text).toContain('https://platform.intra.ca/carer/login');
+    expect(content.loginUrl).toBe('https://platform.intra.ca/carer');
+    expect(content.html).toContain('https://platform.intra.ca/carer');
+    expect(content.text).toContain('https://platform.intra.ca/carer');
+    expect(content.html).not.toContain('/carer/login');
   });
 
   it('greets by legal first name', () => {

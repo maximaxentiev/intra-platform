@@ -38,4 +38,10 @@ describe("validateManualStaffForm", () => {
   it("rejects invalid email", () => {
     expect(validateManualStaffForm({ ...valid, email: "not-an-email" }).email).toBeTruthy();
   });
+
+  it("rejects unsupported city", () => {
+    expect(validateManualStaffForm({ ...valid, city: "Tornto" }).city).toMatch(
+      /supported city list/i,
+    );
+  });
 });

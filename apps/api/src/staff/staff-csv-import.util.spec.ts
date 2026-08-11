@@ -199,6 +199,33 @@ describe('buildPreviewRows preserved field values', () => {
     expect(rows[0]!.status).toBe('duplicate');
   });
 
+  it('normalizes supported city spellings in preview rows', () => {
+    for (const variant of ['toronto', 'TORONTO', ' Toronto ']) {
+      const row = validRow('city@example.test').replace('Toronto', variant);
+      const { rows } = buildPreviewRows(csv(row), empty, empty);
+      expect(rows[0]!.status).toBe('valid');
+      expect(rows[0]!.city).toBe('Toronto');
+    }
+    for (const [variant, canonical, email] of [
+      ['st. catharines', 'St. Catharines', 'stcath@example.test'],
+      ['clarence-rockland', 'Clarence-Rockland', 'clarence@example.test'],
+    ] as const) {
+      const row = validRow(email).replace('Toronto', variant);
+      const { rows } = buildPreviewRows(csv(row), empty, empty);
+      expect(rows[0]!.status).toBe('valid');
+      expect(rows[0]!.city).toBe(canonical);
+    }
+  });
+
+  it('marks misspelled and unsupported cities invalid', () => {
+    for (const badCity of ['Tornto', 'North York', 'Oakville']) {
+      const row = validRow(`bad-${badCity}@example.test`).replace('Toronto', badCity);
+      const { rows } = buildPreviewRows(csv(row), empty, empty);
+      expect(rows[0]!.status).toBe('invalid');
+      expect(rows[0]!.issues).toContain('City must be selected from the supported city list.');
+    }
+  });
+
   it('summarizes preview counts', () => {
     const content = csv(validRow('ok@example.test'), 'Bad,,X,ECA,bad,555,1 Main,Toronto');
     const { rows } = buildPreviewRows(content, empty, empty);

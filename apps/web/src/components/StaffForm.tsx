@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { Staff } from "@/lib/db";
+import { CityCombobox, validateCityField } from "@/components/CityCombobox";
 
 export type StaffFormValues = Partial<Staff>;
 
@@ -30,6 +31,8 @@ export function StaffForm({
     ...initial,
   });
   const [saving, setSaving] = useState(false);
+  const [cityError, setCityError] = useState<string | undefined>();
+  const savedCity = initial.city ?? "";
   const set = <K extends keyof StaffFormValues>(k: K, v: StaffFormValues[K]) =>
     setValues((prev) => ({ ...prev, [k]: v }));
 
@@ -39,6 +42,9 @@ export function StaffForm({
       toast.error("Please pick a role");
       return;
     }
+    const nextCityError = validateCityField(values.city ?? "", savedCity);
+    setCityError(nextCityError);
+    if (nextCityError) return;
     setSaving(true);
     await onSubmit(values);
     setSaving(false);
@@ -118,6 +124,24 @@ export function StaffForm({
           </Select>
         </div>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="address">Home address</Label>
+        <Input
+          id="address"
+          value={values.address ?? ""}
+          onChange={(e) => set("address", e.target.value)}
+        />
+      </div>
+      <CityCombobox
+        id="staff-city"
+        label="City"
+        value={values.city ?? ""}
+        onChange={(city) => {
+          set("city", city);
+          setCityError(undefined);
+        }}
+        error={cityError}
+      />
       <div className="space-y-2">
         <Label htmlFor="docs">Documents link (optional)</Label>
         <Input

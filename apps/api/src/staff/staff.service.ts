@@ -16,6 +16,7 @@ import {
   staffPortalAuditEvents,
 } from '../db/schema';
 import { sanitizeOptionalHttpUrl } from '../common/url.util';
+import { assertCityForCreate, assertCityForUpdate } from '../common/city-validation';
 import { CreateManualStaffDto } from './dto/create-manual-staff.dto';
 import { SetCentreLinksDto, UpsertStaffDto } from './dto/staff.dto';
 import {
@@ -66,6 +67,7 @@ export class StaffService {
     const legalFirstName = dto.legalFirstName.trim();
     const legalLastName = dto.legalLastName.trim();
     const legalName = `${legalFirstName} ${legalLastName}`.trim();
+    const city = assertCityForCreate(dto.city);
 
     const rows = await this.db
       .insert(staff)
@@ -78,7 +80,7 @@ export class StaffService {
         phone: dto.phone.trim(),
         email,
         address: dto.address.trim(),
-        city: dto.city.trim(),
+        city,
         role: dto.role,
         status: 'active',
       })
@@ -191,9 +193,19 @@ export class StaffService {
   }
 
   async update(id: string, dto: UpsertStaffDto) {
+    const existing = (
+      await this.db.select().from(staff).where(eq(staff.id, id))
+    )[0];
+    if (!existing) throw new NotFoundException('Staff not found.');
+
+    const values = this.toValues(dto);
+    if (dto.city !== undefined) {
+      values.city = assertCityForUpdate(values.city, existing.city);
+    }
+
     const rows = await this.db
       .update(staff)
-      .set({ ...this.toValues(dto), updatedAt: new Date() })
+      .set({ ...values, updatedAt: new Date() })
       .where(eq(staff.id, id))
       .returning();
     if (!rows[0]) throw new NotFoundException('Staff not found.');

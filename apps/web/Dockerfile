@@ -7,9 +7,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
 
-RUN npm ci --workspace=@intra/web --include-workspace-root=false --no-audit --no-fund
+RUN npm ci --workspace=@intra/web --workspace=@intra/shared --include-workspace-root=false --no-audit --no-fund
 
+COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
 WORKDIR /app/apps/web

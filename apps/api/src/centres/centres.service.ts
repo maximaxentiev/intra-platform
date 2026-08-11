@@ -15,6 +15,7 @@ import {
   UpsertCentreDto,
   UpsertContactDto,
 } from './dto/centres.dto';
+import { assertCityForCreate, assertCityForUpdate } from '../common/city-validation';
 
 type Channel = 'whatsapp' | 'goto' | 'email';
 
@@ -48,12 +49,13 @@ export class CentresService {
   }
 
   async create(dto: UpsertCentreDto) {
+    const city = dto.city?.trim() ? assertCityForCreate(dto.city) : '';
     const rows = await this.db
       .insert(centres)
       .values({
         name: dto.name,
         address: dto.address ?? '',
-        city: dto.city ?? '',
+        city,
         hourlyRate: dto.hourlyRate ?? null,
         primaryChannel: dto.primaryChannel,
         notes: dto.notes ?? '',
@@ -63,12 +65,20 @@ export class CentresService {
   }
 
   async update(id: string, dto: UpsertCentreDto) {
+    const existing = await this.get(id);
+    let city = dto.city ?? '';
+    if (dto.city !== undefined && dto.city.trim()) {
+      city = assertCityForUpdate(dto.city, existing.city);
+    } else if (dto.city !== undefined) {
+      city = '';
+    }
+
     const rows = await this.db
       .update(centres)
       .set({
         name: dto.name,
         address: dto.address ?? '',
-        city: dto.city ?? '',
+        city,
         hourlyRate: dto.hourlyRate ?? null,
         primaryChannel: dto.primaryChannel,
         notes: dto.notes ?? '',

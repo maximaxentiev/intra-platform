@@ -143,7 +143,7 @@ describe('StaffService.createManual', () => {
           email: 'carer@example.test',
           phone: '1',
           address: 'a',
-          city: 'c',
+          city: 'Toronto',
           role: 'ECA',
         },
         'ops-1',

@@ -20,6 +20,7 @@ import {
   STAFF_PORTAL_AUDIT_EVENTS,
   StaffPortalAuditService,
 } from './staff-portal-audit.service';
+import { assertCityForUpdate } from '../common/city-validation';
 
 export type StaffPortalProfileDto = {
   legalFirstName: string;
@@ -50,7 +51,7 @@ export class StaffPortalProfileService {
     dto: PatchStaffPortalProfileDto,
   ): Promise<StaffPortalProfileDto> {
     const { account, person } = await this.loadSelf(session);
-    const normalized = this.normalizeDto(dto);
+    const normalized = this.normalizeDto(dto, person.city);
     const changedFields = this.diffFields(person, account, normalized);
 
     if (changedFields.length === 0) {
@@ -103,14 +104,14 @@ export class StaffPortalProfileService {
     return this.toDto(refreshed.account, refreshed.person);
   }
 
-  private normalizeDto(dto: PatchStaffPortalProfileDto) {
+  private normalizeDto(dto: PatchStaffPortalProfileDto, previousCity: string) {
     return {
       legalFirstName: dto.legalFirstName.trim(),
       legalLastName: dto.legalLastName.trim(),
       email: normalizeStaffEmail(dto.email),
       phone: dto.phone.trim(),
       address: dto.address.trim(),
-      city: dto.city.trim(),
+      city: assertCityForUpdate(dto.city.trim(), previousCity),
     };
   }
 

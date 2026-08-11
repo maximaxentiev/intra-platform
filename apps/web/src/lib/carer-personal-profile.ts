@@ -1,5 +1,7 @@
 /** Shared validation for carer personal information (onboarding Step 1 and future profile). */
 
+import { validateCityField } from "@/components/CityCombobox";
+
 export type PersonalProfileFields = {
   legalFirstName: string;
   legalLastName: string;
@@ -24,6 +26,7 @@ export function personalProfileFromSession(session: PersonalProfileFields): Pers
 
 export function validatePersonalProfileFields(
   values: PersonalProfileFields,
+  savedCity?: string,
 ): Partial<Record<PersonalProfileFieldKey, string>> {
   const errors: Partial<Record<PersonalProfileFieldKey, string>> = {};
   if (!values.legalFirstName.trim()) errors.legalFirstName = "Legal first name is required.";
@@ -34,7 +37,8 @@ export function validatePersonalProfileFields(
   }
   if (!values.phone.trim()) errors.phone = "Phone number is required.";
   if (!values.address.trim()) errors.address = "Home address is required.";
-  if (!values.city.trim()) errors.city = "City is required.";
+  const cityError = validateCityField(values.city, savedCity);
+  if (cityError) errors.city = cityError;
   return errors;
 }
 

@@ -96,6 +96,7 @@ export interface Centre {
   id: string;
   name: string;
   address: string;
+  city: string;
   primaryChannel: CentreChannel;
   notes: string;
   createdAt: string;

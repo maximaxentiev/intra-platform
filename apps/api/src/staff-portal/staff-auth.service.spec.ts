@@ -283,8 +283,8 @@ describe('StaffAuthService', () => {
       const sent = transport.sent[0]!;
       expect(sent.to).toBe('carer@example.test');
       expect(sent.subject).toBe('Your Intra Carer Portal account is ready');
-      expect(sent.html).toContain('https://platform.intra.ca/carer/login');
-      expect(sent.text).toContain('https://platform.intra.ca/carer/login');
+      expect(sent.html).toContain('https://platform.intra.ca/carer');
+      expect(sent.text).toContain('https://platform.intra.ca/carer');
       expect(sent.html).not.toContain(raw);
       expect(sent.text.toLowerCase()).not.toContain('password');
       expect(
