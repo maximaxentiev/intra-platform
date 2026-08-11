@@ -15,6 +15,7 @@
     "db:import:api": "node --import tsx src/db/import-from-supabase-api.ts",
     "db:import:centres-local": "node --import tsx src/db/import-centres-local.ts",
     "db:import:centres-csv-local": "node --import tsx src/db/import-centres-csv-local.ts",
+    "db:cleanup-staff-staging": "node --import tsx src/db/cleanup-staff-staging.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
