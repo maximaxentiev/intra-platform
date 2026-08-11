@@ -55,6 +55,7 @@ export interface Staff {
   createdAt: string;
   updatedAt: string;
   portalAccountStatus?: PortalAccountDisplayStatus;
+  documentStatus?: string;
 }
 
 export interface PortalAccountInfo {

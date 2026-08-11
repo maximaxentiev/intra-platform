@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffApi, displayStaff, fmtTime, safeDocumentHref } from "@/lib/db";
+import { opsStaffDocumentsApi } from "@/lib/ops-staff-documents";
 import { PortalAccountSection } from "@/components/PortalAccountSection";
 import { StaffForm } from "@/components/StaffForm";
+import { StaffDocumentsSection } from "@/components/staff/StaffDocumentsSection";
 import { MultiCentreSelect } from "@/components/MultiCentreSelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,10 @@ function StaffDetail() {
   const shiftsQ = useQuery({
     queryKey: ["staff-shifts", id],
     queryFn: () => staffApi.shifts(id),
+  });
+  const documentsQ = useQuery({
+    queryKey: ["staff-documents", id],
+    queryFn: () => opsStaffDocumentsApi.get(id),
   });
 
   if (!staffQ.data) return <DetailLoading />;
@@ -95,6 +101,7 @@ function StaffDetail() {
         <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar px-4 sm:px-0">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="centres">Top &amp; Banned Centres</TabsTrigger>
             <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="shifts">Shifts</TabsTrigger>
@@ -126,6 +133,17 @@ function StaffDetail() {
               <ExternalLink className="h-4 w-4" /> Open compliance documents
             </a>
           )}
+        </TabsContent>
+
+        <TabsContent value="documents" className="pt-4">
+          <StaffDocumentsSection
+            staffId={id}
+            documents={documentsQ.data}
+            isLoading={documentsQ.isLoading}
+            onRefresh={async () => {
+              await documentsQ.refetch();
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="centres" className="pt-4 space-y-4">

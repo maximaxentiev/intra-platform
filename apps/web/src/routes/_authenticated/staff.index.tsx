@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
+import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
 import { Plus, Users, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/staff/")({
@@ -156,6 +157,7 @@ function StaffIndex() {
                   <th className="px-3 py-2 font-medium">Email</th>
                   <th className="px-3 py-2 font-medium w-32">Employment</th>
                   <th className="px-3 py-2 font-medium w-36">Portal account</th>
+                  <th className="px-3 py-2 font-medium w-44">Document Status</th>
                   <th className="px-3 py-2 font-medium w-20 text-right">Actions</th>
                 </tr>
               </thead>
@@ -202,6 +204,9 @@ function StaffIndex() {
                         <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
                       </span>
                     </td>
+                    <td className="px-3 py-2">
+                      <DocumentStatusBadge status={s.documentStatus ?? "no_documents_submitted"} size="xs" />
+                    </td>
                     <td className="px-3 py-2 text-right">
                       <Button asChild size="sm" variant="ghost" className="h-8 px-2">
                         <Link to="/staff/$id" params={{ id: s.id }}>View</Link>
@@ -239,6 +244,7 @@ function StaffIndex() {
                     {s.status}
                   </StatusBadge>
                   <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
+                  <DocumentStatusBadge status={s.documentStatus ?? "no_documents_submitted"} size="xs" />
                 </div>
                 <div className="mt-2 space-y-0.5 text-xs text-muted-foreground min-w-0">
                   <div className="break-words">{s.phone || "No phone"}</div>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildComplianceInputsForStaff,
   complianceForRequiredCategories,
   deriveStaffDocumentListStatus,
   deriveStaffShiftDocumentGate,
@@ -188,6 +189,46 @@ describe('deriveStaffShiftDocumentGate', () => {
     ], AS_OF);
     expect(gate.eligible).toBe(true);
     expect(gate.reasons).toHaveLength(0);
+  });
+});
+
+describe('buildComplianceInputsForStaff', () => {
+  it('maps preloaded rows for batch staff list aggregation', () => {
+    const submittedAt = new Date('2026-01-01T00:00:00Z');
+    const inputs = buildComplianceInputsForStaff(
+      [
+        {
+          documentType: 'immunizations',
+          currentSubmissionId: 'sub-1',
+          remindersEnabled: true,
+        },
+      ],
+      new Map([
+        [
+          'sub-1',
+          {
+            id: 'sub-1',
+            reviewStatus: 'pending_review' as const,
+            expiryDate: null,
+            processedDate: null,
+            submittedAt,
+            reviewedAt: null,
+            supersededAt: null,
+          },
+        ],
+      ]),
+      new Map([['sub-1', 1]]),
+    );
+
+    const immunizations = inputs.find((c) => c.documentType === 'immunizations');
+    expect(immunizations?.isSubmitted).toBe(true);
+    expect(immunizations?.reviewStatus).toBe('pending_review');
+    expect(deriveStaffShiftDocumentGate(inputs).documentStatus).toBe('pending_review');
+  });
+
+  it('returns no_documents_submitted when no sets exist', () => {
+    const inputs = buildComplianceInputsForStaff([], new Map(), new Map());
+    expect(deriveStaffShiftDocumentGate(inputs).documentStatus).toBe('no_documents_submitted');
   });
 });
 

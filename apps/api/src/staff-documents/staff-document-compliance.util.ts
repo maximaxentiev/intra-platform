@@ -1,8 +1,10 @@
 import {
   REQUIRED_STAFF_DOCUMENT_TYPES,
+  STAFF_DOCUMENT_TYPE_VALUES,
   type RequiredStaffDocumentType,
   type ShiftDocumentIneligibilityReason,
   type StaffDocumentListStatus,
+  type StaffDocumentReviewStatus,
   type StaffDocumentReviewStatusOrNotSubmitted,
   type StaffDocumentType,
 } from './staff-document.constants';
@@ -47,6 +49,82 @@ function enrichCategory(
     ...input,
     expiryDisplay: deriveExpiryDisplay(input.expiryDate, asOfDate),
   };
+}
+
+type ComplianceSubmissionRow = {
+  id: string;
+  reviewStatus: StaffDocumentReviewStatus;
+  expiryDate: string | null;
+  processedDate: string | null;
+  submittedAt: Date;
+  reviewedAt: Date | null;
+  supersededAt: Date | null;
+};
+
+type ComplianceSetRow = {
+  documentType: StaffDocumentType;
+  currentSubmissionId: string | null;
+  remindersEnabled: boolean;
+};
+
+/** Pure mapping from preloaded set/submission/file-count rows (supports batch staff list). */
+export function buildComplianceInputsForStaff(
+  sets: readonly ComplianceSetRow[],
+  submissionById: ReadonlyMap<string, ComplianceSubmissionRow>,
+  fileCountBySubmissionId: ReadonlyMap<string, number>,
+): StaffDocumentCategoryComplianceInput[] {
+  const setByType = new Map(sets.map((s) => [s.documentType, s]));
+
+  return STAFF_DOCUMENT_TYPE_VALUES.map((documentType) => {
+    const set = setByType.get(documentType);
+    if (!set?.currentSubmissionId) {
+      return {
+        documentType,
+        isSubmitted: false,
+        reviewStatus: 'not_submitted' as const,
+        expiryDate: null,
+        processedDate: null,
+        fileCount: 0,
+        submittedAt: null,
+        reviewedAt: null,
+        remindersEnabled: set?.remindersEnabled ?? true,
+        currentSubmissionId: null,
+        supersededAt: null,
+      };
+    }
+
+    const submission = submissionById.get(set.currentSubmissionId);
+    if (!submission || submission.supersededAt) {
+      return {
+        documentType,
+        isSubmitted: false,
+        reviewStatus: 'not_submitted' as const,
+        expiryDate: null,
+        processedDate: null,
+        fileCount: 0,
+        submittedAt: null,
+        reviewedAt: null,
+        remindersEnabled: set.remindersEnabled,
+        currentSubmissionId: null,
+        supersededAt: null,
+      };
+    }
+
+    const fileCount = fileCountBySubmissionId.get(submission.id) ?? 0;
+    return {
+      documentType,
+      isSubmitted: fileCount > 0,
+      reviewStatus: submission.reviewStatus,
+      expiryDate: submission.expiryDate,
+      processedDate: submission.processedDate,
+      fileCount,
+      submittedAt: submission.submittedAt.toISOString(),
+      reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+      remindersEnabled: set.remindersEnabled,
+      currentSubmissionId: submission.id,
+      supersededAt: null,
+    };
+  });
 }
 
 export function buildCategoryComplianceMap(

@@ -41,10 +41,12 @@ import type { StaffSessionPayload } from '../staff-portal/staff-session.service'
 import {
   STAFF_DOCUMENT_TYPE_VALUES,
   isStaffDocumentReminderType,
+  type StaffDocumentListStatus,
   type StaffDocumentType,
 } from './staff-document.constants';
 import {
   buildCategoryComplianceMap,
+  buildComplianceInputsForStaff,
   complianceForRequiredCategories,
   deriveStaffShiftDocumentGate,
   type StaffDocumentCategoryComplianceInput,
@@ -101,8 +103,68 @@ export class StaffDocumentsService {
   async getOpsDocuments(staffId: string): Promise<StaffDocumentsOpsListDto> {
     await this.assertStaffExists(staffId);
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
+  }
+
+  /** Batch aggregate document status for staff list — 3 queries total, no per-staff N+1. */
+  async getDocumentStatusMapForStaffIds(
+    staffIds: string[],
+  ): Promise<Map<string, StaffDocumentListStatus>> {
+    const result = new Map<string, StaffDocumentListStatus>();
+    if (staffIds.length === 0) return result;
+
+    const sets = await this.db
+      .select()
+      .from(staffDocumentSets)
+      .where(inArray(staffDocumentSets.staffId, staffIds));
+
+    const setsByStaff = new Map<string, StaffDocumentSet[]>();
+    for (const set of sets) {
+      const list = setsByStaff.get(set.staffId) ?? [];
+      list.push(set);
+      setsByStaff.set(set.staffId, list);
+    }
+
+    const currentSubmissionIds = [
+      ...new Set(
+        sets.map((s) => s.currentSubmissionId).filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const submissions =
+      currentSubmissionIds.length > 0
+        ? await this.db
+            .select()
+            .from(staffDocumentSubmissions)
+            .where(inArray(staffDocumentSubmissions.id, currentSubmissionIds))
+        : [];
+
+    const submissionById = new Map(submissions.map((s) => [s.id, s]));
+
+    const fileRows =
+      currentSubmissionIds.length > 0
+        ? await this.db
+            .select({ submissionId: staffDocumentFiles.submissionId })
+            .from(staffDocumentFiles)
+            .where(inArray(staffDocumentFiles.submissionId, currentSubmissionIds))
+        : [];
+
+    const fileCountBySubmission = new Map<string, number>();
+    for (const row of fileRows) {
+      fileCountBySubmission.set(
+        row.submissionId,
+        (fileCountBySubmission.get(row.submissionId) ?? 0) + 1,
+      );
+    }
+
+    for (const staffId of staffIds) {
+      const staffSets = setsByStaff.get(staffId) ?? [];
+      const inputs = buildComplianceInputsForStaff(staffSets, submissionById, fileCountBySubmission);
+      result.set(staffId, deriveStaffShiftDocumentGate(inputs).documentStatus);
+    }
+
+    return result;
   }
 
   async saveCategoryCarer(
@@ -138,7 +200,7 @@ export class StaffDocumentsService {
       uploadedFiles,
     );
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
   }
 
@@ -166,7 +228,7 @@ export class StaffDocumentsService {
       userId,
     });
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
   }
 
@@ -232,7 +294,7 @@ export class StaffDocumentsService {
     });
 
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
   }
 
@@ -279,7 +341,7 @@ export class StaffDocumentsService {
     });
 
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
   }
 
@@ -329,7 +391,7 @@ export class StaffDocumentsService {
     });
 
     const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaff(account);
+    const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
   }
 
@@ -609,14 +671,14 @@ export class StaffDocumentsService {
     };
   }
 
-  private async buildDocumentsListForStaff(
+  private async buildDocumentsListForStaff(account: StaffAccount): Promise<StaffDocumentsListDto> {
+    return this.buildDocumentsListForStaffId(account.staffId, account);
+  }
+
+  private async buildDocumentsListForStaffId(
+    staffId: string,
     account: StaffAccount | null,
   ): Promise<StaffDocumentsListDto> {
-    const staffId = account?.staffId;
-    if (!staffId) {
-      throw new NotFoundException('Staff account not found.');
-    }
-
     const gate = await this.loadComplianceGate(staffId);
     const filesByType = await this.loadCurrentFilesByType(staffId);
     const issueNotes = await this.loadIssueNotesByType(staffId);
@@ -670,7 +732,6 @@ export class StaffDocumentsService {
       .from(staffDocumentSets)
       .where(eq(staffDocumentSets.staffId, staffId));
 
-    const setByType = new Map(sets.map((s) => [s.documentType, s]));
     const currentSubmissionIds = sets
       .map((s) => s.currentSubmissionId)
       .filter((id): id is string => Boolean(id));
@@ -688,68 +749,20 @@ export class StaffDocumentsService {
     const files =
       currentSubmissionIds.length > 0
         ? await this.db
-            .select()
+            .select({ submissionId: staffDocumentFiles.submissionId })
             .from(staffDocumentFiles)
             .where(inArray(staffDocumentFiles.submissionId, currentSubmissionIds))
         : [];
 
-    const filesBySubmission = new Map<string, StaffDocumentFile[]>();
+    const fileCountBySubmission = new Map<string, number>();
     for (const file of files) {
-      const list = filesBySubmission.get(file.submissionId) ?? [];
-      list.push(file);
-      filesBySubmission.set(file.submissionId, list);
+      fileCountBySubmission.set(
+        file.submissionId,
+        (fileCountBySubmission.get(file.submissionId) ?? 0) + 1,
+      );
     }
 
-    return STAFF_DOCUMENT_TYPE_VALUES.map((documentType) => {
-      const set = setByType.get(documentType);
-      if (!set?.currentSubmissionId) {
-        return {
-          documentType,
-          isSubmitted: false,
-          reviewStatus: 'not_submitted' as const,
-          expiryDate: null,
-          processedDate: null,
-          fileCount: 0,
-          submittedAt: null,
-          reviewedAt: null,
-          remindersEnabled: set?.remindersEnabled ?? true,
-          currentSubmissionId: null,
-          supersededAt: null,
-        };
-      }
-
-      const submission = submissionById.get(set.currentSubmissionId);
-      if (!submission || submission.supersededAt) {
-        return {
-          documentType,
-          isSubmitted: false,
-          reviewStatus: 'not_submitted' as const,
-          expiryDate: null,
-          processedDate: null,
-          fileCount: 0,
-          submittedAt: null,
-          reviewedAt: null,
-          remindersEnabled: set.remindersEnabled,
-          currentSubmissionId: null,
-          supersededAt: null,
-        };
-      }
-
-      const submissionFiles = filesBySubmission.get(submission.id) ?? [];
-      return {
-        documentType,
-        isSubmitted: submissionFiles.length > 0,
-        reviewStatus: submission.reviewStatus,
-        expiryDate: submission.expiryDate,
-        processedDate: submission.processedDate,
-        fileCount: submissionFiles.length,
-        submittedAt: submission.submittedAt.toISOString(),
-        reviewedAt: submission.reviewedAt?.toISOString() ?? null,
-        remindersEnabled: set.remindersEnabled,
-        currentSubmissionId: submission.id,
-        supersededAt: null,
-      };
-    });
+    return buildComplianceInputsForStaff(sets, submissionById, fileCountBySubmission);
   }
 
   private async loadCurrentFilesByType(staffId: string): Promise<Map<StaffDocumentType, StaffDocumentFileDto[]>> {

@@ -20,6 +20,8 @@ describe("ops staff portal UI layout", () => {
     const src = readSrc("routes/_authenticated/staff.index.tsx");
     expect(src).toContain("portalAccountStatus");
     expect(src).toContain("PORTAL_ACCOUNT_STATUS_LABELS");
+    expect(src).toContain("DocumentStatusBadge");
+    expect(src).toContain("documentStatus");
     expect(src).toContain("lg:hidden");
     expect(src).toContain("hidden lg:block");
   });

@@ -28,19 +28,27 @@ import {
   StaffPortalAuditService,
   staffPortalAuditBlocksDeletion,
 } from '../staff-portal/staff-portal-audit.service';
+import { StaffDocumentsService } from '../staff-documents/staff-documents.service';
 
 @Injectable()
 export class StaffService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly portalAudit: StaffPortalAuditService,
+    private readonly staffDocuments: StaffDocumentsService,
   ) {}
 
   async list() {
     const rows = await this.db.select().from(staff).orderBy(staff.legalName);
     const accounts = await this.db.select().from(staffAccounts);
     const byStaff = new Map(accounts.map((a) => [a.staffId, a]));
-    return rows.map((row) => this.withPortalSummary(row, byStaff.get(row.id)));
+    const documentStatusByStaff = await this.staffDocuments.getDocumentStatusMapForStaffIds(
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) => ({
+      ...this.withPortalSummary(row, byStaff.get(row.id)),
+      documentStatus: documentStatusByStaff.get(row.id) ?? 'no_documents_submitted',
+    }));
   }
 
   async get(id: string) {
