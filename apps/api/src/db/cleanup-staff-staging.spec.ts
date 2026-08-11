@@ -241,10 +241,11 @@ describe('readStaffCleanupCounts', () => {
 });
 
 describe('readStaffDocumentStorageKeys', () => {
-  it('returns staff/ keys from staff_document_files', async () => {
+  it('returns unique staff/ keys from staff_document_files', async () => {
     const client = {
       query: vi.fn(async () => ({
         rows: [
+          { storage_key: 'staff/a/b/c/file.pdf' },
           { storage_key: 'staff/a/b/c/file.pdf' },
           { storage_key: 'applications/x/y/file.pdf' },
         ],

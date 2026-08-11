@@ -35,11 +35,12 @@ export async function deleteStaffDocumentStorageKeys(
     throw new Error('Object storage is not configured — cannot delete staff document objects.');
   }
 
+  const uniqueKeys = [...new Set(keys.filter((key) => isStaffDocumentStorageKey(key)))];
   const client = createS3Client(config);
   const failures: Array<{ key: string; message: string }> = [];
   let deleted = 0;
 
-  for (const key of keys) {
+  for (const key of uniqueKeys) {
     if (!isStaffDocumentStorageKey(key)) {
       failures.push({ key, message: 'Refusing to delete non-staff storage key.' });
       continue;

@@ -16,6 +16,16 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   onboardingStep1Completed: 'onboarding_step_1_completed',
   carerAccountConfirmationEmailSent: 'carer_account_confirmation_email_sent',
   carerAccountConfirmationEmailFailed: 'carer_account_confirmation_email_failed',
+  carerDocumentSubmitted: 'carer_document_submitted',
+  carerDocumentReplaced: 'carer_document_replaced',
+  carerDocumentCleared: 'carer_document_cleared',
+  opsDocumentSubmitted: 'ops_document_submitted',
+  opsDocumentReplaced: 'ops_document_replaced',
+  opsDocumentApproved: 'ops_document_approved',
+  opsDocumentIssueFlagged: 'ops_document_issue_flagged',
+  opsDocumentCleared: 'ops_document_cleared',
+  opsDocumentRemindersChanged: 'ops_document_reminders_changed',
+  onboardingStep2Completed: 'onboarding_step_2_completed',
 } as const;
 
 export type StaffPortalAuditEventType =

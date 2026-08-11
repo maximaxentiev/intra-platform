@@ -119,7 +119,7 @@ export async function readStaffCleanupCounts(client: PoolClient): Promise<StaffC
       (SELECT COUNT(*)::int FROM staff_document_sets) AS staff_document_sets,
       (SELECT COUNT(*)::int FROM staff_document_submissions) AS staff_document_submissions,
       (SELECT COUNT(*)::int FROM staff_document_files) AS staff_document_files,
-      (SELECT COUNT(*)::int FROM staff_document_files) AS staff_document_storage_keys
+      (SELECT COUNT(DISTINCT storage_key)::int FROM staff_document_files) AS staff_document_storage_keys
   `);
   const row = rows[0] as Record<string, unknown> | undefined;
   if (!row) throw new Error('Could not read staff cleanup counts.');
@@ -151,14 +151,15 @@ export async function readStaffCleanupCounts(client: PoolClient): Promise<StaffC
   };
 }
 
-/** Lists staff/ object keys only — application documents are never included. */
+/** Lists unique staff/ object keys only — application documents are never included. */
 export async function readStaffDocumentStorageKeys(client: PoolClient): Promise<string[]> {
   const { rows } = await client.query<{ storage_key: string }>(`
-    SELECT f.storage_key
+    SELECT DISTINCT f.storage_key
     FROM staff_document_files f
     ORDER BY f.storage_key
   `);
-  return rows.map((row) => row.storage_key).filter((key) => isStaffDocumentStorageKey(key));
+  const keys = rows.map((row) => row.storage_key).filter((key) => isStaffDocumentStorageKey(key));
+  return [...new Set(keys)];
 }
 
 export async function purgeStaffDocumentStorage(

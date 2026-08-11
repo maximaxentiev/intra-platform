@@ -24,11 +24,10 @@ describe('deleteStaffDocumentStorageKeys', () => {
     OBJECT_STORAGE_REGION: 'nyc3',
   };
 
-  it('deletes staff/ keys only', async () => {
-    const result = await deleteStaffDocumentStorageKeys([STAFF_KEY, APP_KEY], env);
+  it('deletes unique staff/ keys only and ignores application keys', async () => {
+    const result = await deleteStaffDocumentStorageKeys([STAFF_KEY, STAFF_KEY, APP_KEY], env);
     expect(result.deleted).toBe(1);
-    expect(result.failures).toHaveLength(1);
-    expect(result.failures[0]?.message).toMatch(/non-staff/i);
+    expect(result.failures).toHaveLength(0);
   });
 
   it('throws when any staff key deletion fails', () => {

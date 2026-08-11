@@ -18,6 +18,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { EmailModule } from './email/email.module';
 import { StaffPortalModule } from './staff-portal/staff-portal.module';
+import { StaffDocumentsModule } from './staff-documents/staff-documents.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
 
@@ -40,6 +41,7 @@ import { HealthController } from './health.controller';
     ShiftsModule,
     DashboardModule,
     ApplicationsModule,
+    StaffDocumentsModule,
     StorageModule,
   ],
   controllers: [HealthController],

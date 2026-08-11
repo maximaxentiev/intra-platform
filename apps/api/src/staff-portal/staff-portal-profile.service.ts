@@ -30,6 +30,7 @@ export type StaffPortalProfileDto = {
   address: string;
   city: string;
   profileCompletedAt: string | null;
+  documentsCompletedAt: string | null;
   onboardingStep: number;
   onboardingCompletedAt: string | null;
 };
@@ -217,6 +218,7 @@ export class StaffPortalProfileService {
       address: person.address,
       city: person.city,
       profileCompletedAt: account.profileCompletedAt?.toISOString() ?? null,
+      documentsCompletedAt: account.documentsCompletedAt?.toISOString() ?? null,
       onboardingStep: account.onboardingStep,
       onboardingCompletedAt: account.onboardingCompletedAt?.toISOString() ?? null,
     };
