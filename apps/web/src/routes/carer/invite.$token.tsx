@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { carerAuthApi, carerLandingPath, passwordProblem } from "@/lib/carer";
 import { CarerAuthCard } from "@/components/carer/CarerAuthCard";
+import { CarerInviteUnavailable } from "@/components/carer/CarerInviteUnavailable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,17 +63,7 @@ function CarerInvitePage() {
   }
 
   if (invite.isError || !invite.data) {
-    return (
-      <CarerAuthCard
-        title="This link is no longer valid"
-        description="It may have expired or already been used."
-      >
-        <p className="text-sm text-muted-foreground">
-          Contact your Intra coordinator to have a new invitation sent, or request a password reset
-          from the sign-in page.
-        </p>
-      </CarerAuthCard>
-    );
+    return <CarerInviteUnavailable />;
   }
 
   const name = [invite.data.legalFirstName, invite.data.legalLastName].filter(Boolean).join(" ");

@@ -14,6 +14,8 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   staffBulkImportCompleted: 'staff_bulk_import_completed',
   carerProfileUpdated: 'carer_profile_updated',
   onboardingStep1Completed: 'onboarding_step_1_completed',
+  carerAccountConfirmationEmailSent: 'carer_account_confirmation_email_sent',
+  carerAccountConfirmationEmailFailed: 'carer_account_confirmation_email_failed',
 } as const;
 
 export type StaffPortalAuditEventType =

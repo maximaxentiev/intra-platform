@@ -23,7 +23,8 @@ describe("carer onboarding routing", () => {
 
   it("step 2 placeholder does not mark onboarding complete", () => {
     const src = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(src).not.toContain("onboardingCompletedAt");
+    expect(src).not.toContain("completeStep1");
+    expect(src).not.toMatch(/onboardingCompletedAt:\s*new Date/);
     expect(src).toContain("not available yet");
   });
 

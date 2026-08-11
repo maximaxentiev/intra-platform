@@ -47,9 +47,15 @@ function CarerOnboardingProfilePage() {
       title="Personal information"
       subtitle="Confirm your contact details so we can reach you about shifts."
     >
-      <CarerOnboardingShell currentStep={1}>
+      <CarerOnboardingShell
+        activeStep={1}
+        profileCompletedAt={carer.profileCompletedAt}
+        onboardingStep={carer.onboardingStep}
+        onboardingCompletedAt={carer.onboardingCompletedAt}
+      >
         <CarerPersonalInformationForm
           initial={initial}
+          step1Complete={Boolean(carer.profileCompletedAt)}
           onStepComplete={() =>
             navigate({ to: "/carer/onboarding/documents", replace: true })
           }

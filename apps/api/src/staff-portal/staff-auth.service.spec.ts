@@ -1,8 +1,22 @@
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hashPassword } from '../auth/password.util';
+import { EmailDeliveryError, EmailService } from '../email/email.service';
+import { RecordingEmailTransport } from '../email/email.transport';
 import { hashToken, StaffAuthService } from './staff-auth.service';
+import { STAFF_PORTAL_AUDIT_EVENTS } from './staff-portal-audit.service';
 import type { StaffSessionService } from './staff-session.service';
+
+function configService() {
+  return {
+    get: (key: string) => {
+      if (key === 'APP_PUBLIC_URL') return 'https://platform.intra.ca';
+      if (key === 'NODE_ENV') return 'test';
+      return undefined;
+    },
+  } as ConfigService;
+}
 
 type AccountRow = {
   id: string;
@@ -65,6 +79,8 @@ describe('StaffAuthService', () => {
   let dbMock: ReturnType<typeof mockDb>;
   let sessions: StaffSessionService;
   let service: StaffAuthService;
+  let email: EmailService;
+  let audit: { record: ReturnType<typeof vi.fn> };
 
   const staffRow = {
     id: 'staff-1',
@@ -78,8 +94,16 @@ describe('StaffAuthService', () => {
   beforeEach(() => {
     dbMock = mockDb();
     sessions = mockSessions();
-    const audit = { record: vi.fn().mockResolvedValue(undefined) };
-    service = new StaffAuthService(dbMock.db, sessions, audit as never);
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
+    email = new EmailService(configService());
+    email.useTransport(new RecordingEmailTransport());
+    service = new StaffAuthService(
+      dbMock.db,
+      sessions,
+      audit as never,
+      email,
+      configService(),
+    );
   });
 
   describe('login', () => {
@@ -197,21 +221,27 @@ describe('StaffAuthService', () => {
     it('sets password and starts session', async () => {
       const raw = 'accept-token-xyz';
       const select = dbMock.db.select as ReturnType<typeof vi.fn>;
-      select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
-            {
-              id: 'acc-1',
-              staffId: 'staff-1',
-              email: 'carer@example.test',
-              passwordHash: null,
-              status: 'invited',
-              inviteTokenHash: hashToken(raw),
-              inviteTokenExpiresAt: new Date(Date.now() + 60_000),
-            },
-          ]),
-        }),
-      });
+      select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([
+              {
+                id: 'acc-1',
+                staffId: 'staff-1',
+                email: 'carer@example.test',
+                passwordHash: null,
+                status: 'invited',
+                inviteTokenHash: hashToken(raw),
+                inviteTokenExpiresAt: new Date(Date.now() + 60_000),
+              },
+            ]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([staffRow]),
+          }),
+        });
 
       const result = await service.acceptInvite(raw, 'NewPassword12');
       expect(result.sid).toBe('staff-session-id');
@@ -220,6 +250,118 @@ describe('StaffAuthService', () => {
         inviteTokenExpiresAt: null,
         status: 'incomplete',
       });
+    });
+
+    it('sends confirmation email on first account setup', async () => {
+      const raw = 'accept-token-confirm';
+      const select = dbMock.db.select as ReturnType<typeof vi.fn>;
+      select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([
+              {
+                id: 'acc-1',
+                staffId: 'staff-1',
+                email: 'carer@example.test',
+                passwordHash: null,
+                status: 'invited',
+                inviteTokenHash: hashToken(raw),
+                inviteTokenExpiresAt: new Date(Date.now() + 60_000),
+              },
+            ]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([staffRow]),
+          }),
+        });
+
+      await service.acceptInvite(raw, 'NewPassword12');
+
+      const transport = email['transport'] as RecordingEmailTransport;
+      const sent = transport.sent[0]!;
+      expect(sent.to).toBe('carer@example.test');
+      expect(sent.subject).toBe('Your Intra Carer Portal account is ready');
+      expect(sent.html).toContain('https://platform.intra.ca/carer/login');
+      expect(sent.text).toContain('https://platform.intra.ca/carer/login');
+      expect(sent.html).not.toContain(raw);
+      expect(sent.text.toLowerCase()).not.toContain('password');
+      expect(
+        audit.record.mock.calls.some(
+          ([event]) =>
+            event.eventType === STAFF_PORTAL_AUDIT_EVENTS.carerAccountConfirmationEmailSent,
+        ),
+      ).toBe(true);
+    });
+
+    it('does not roll back account creation when confirmation email fails', async () => {
+      email.useTransport({
+        send: vi.fn().mockRejectedValue(new EmailDeliveryError('Resend API unavailable')),
+      });
+      const raw = 'accept-token-email-fail';
+      const select = dbMock.db.select as ReturnType<typeof vi.fn>;
+      select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([
+              {
+                id: 'acc-1',
+                staffId: 'staff-1',
+                email: 'carer@example.test',
+                passwordHash: null,
+                status: 'invited',
+                inviteTokenHash: hashToken(raw),
+                inviteTokenExpiresAt: new Date(Date.now() + 60_000),
+              },
+            ]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([staffRow]),
+          }),
+        });
+
+      const result = await service.acceptInvite(raw, 'NewPassword12');
+      expect(result.sid).toBe('staff-session-id');
+      expect(sessions.create).toHaveBeenCalled();
+      expect(
+        audit.record.mock.calls.some(
+          ([event]) =>
+            event.eventType === STAFF_PORTAL_AUDIT_EVENTS.carerAccountConfirmationEmailFailed,
+        ),
+      ).toBe(true);
+    });
+
+    it('does not send confirmation email when resetting password via invite', async () => {
+      const raw = 'reset-token-xyz';
+      const select = dbMock.db.select as ReturnType<typeof vi.fn>;
+      select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([
+              {
+                id: 'acc-1',
+                staffId: 'staff-1',
+                email: 'carer@example.test',
+                passwordHash: 'existing-hash',
+                status: 'active',
+                inviteTokenHash: hashToken(raw),
+                inviteTokenExpiresAt: new Date(Date.now() + 60_000),
+              },
+            ]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([staffRow]),
+          }),
+        });
+
+      await service.acceptInvite(raw, 'NewPassword12');
+      const transport = email['transport'] as RecordingEmailTransport;
+      expect(transport.sent).toHaveLength(0);
     });
 
     it('rejects reused invite after token cleared', async () => {
@@ -253,6 +395,54 @@ describe('StaffAuthService', () => {
         }),
       });
       await expect(service.acceptInvite(raw, 'short')).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('acceptInvite login after email failure', () => {
+    it('allows login after confirmation email failure', async () => {
+      email.useTransport({
+        send: vi.fn().mockRejectedValue(new EmailDeliveryError('Resend API unavailable')),
+      });
+      const raw = 'accept-then-login';
+      const select = dbMock.db.select as ReturnType<typeof vi.fn>;
+
+      select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([
+              {
+                id: 'acc-1',
+                staffId: 'staff-1',
+                email: 'carer@example.test',
+                passwordHash: null,
+                status: 'invited',
+                inviteTokenHash: hashToken(raw),
+                inviteTokenExpiresAt: new Date(Date.now() + 60_000),
+              },
+            ]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([staffRow]),
+          }),
+        });
+
+      await service.acceptInvite(raw, 'NewPassword12');
+
+      const updateHash = (dbMock.updateSets[0] as { passwordHash: string }).passwordHash;
+      dbMock.setSelectRows([
+        {
+          id: 'acc-1',
+          staffId: 'staff-1',
+          email: 'carer@example.test',
+          passwordHash: updateHash,
+          status: 'incomplete',
+        },
+      ]);
+
+      const login = await service.login('carer@example.test', 'NewPassword12');
+      expect(login.sid).toBe('staff-session-id');
     });
   });
 

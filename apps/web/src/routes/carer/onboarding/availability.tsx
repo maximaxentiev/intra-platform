@@ -21,7 +21,12 @@ function CarerOnboardingAvailabilityPage() {
       title="Availability"
       subtitle="Set your weekly availability in a future release."
     >
-      <CarerOnboardingShell currentStep={3}>
+      <CarerOnboardingShell
+        activeStep={3}
+        profileCompletedAt={carer.profileCompletedAt}
+        onboardingStep={carer.onboardingStep}
+        onboardingCompletedAt={carer.onboardingCompletedAt}
+      >
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Availability scheduling is not available yet. Complete document uploads when they

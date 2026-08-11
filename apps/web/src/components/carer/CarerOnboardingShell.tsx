@@ -1,38 +1,43 @@
 import type { ReactNode } from "react";
 import { Check, Lock } from "lucide-react";
 import { CARER_ONBOARDING_STEPS } from "@/lib/carer-onboarding";
-
-type StepState = "complete" | "current" | "locked";
-
-const STATE_LABEL: Record<StepState, string> = {
-  complete: "Completed",
-  current: "In progress",
-  locked: "Locked",
-};
+import {
+  countCompletedOnboardingSteps,
+  onboardingStepStateLabel,
+  resolveOnboardingStepDisplayState,
+  type OnboardingProgressContext,
+} from "@/lib/carer-onboarding-progress";
 
 /**
  * Progress chrome for the three-step carer onboarding wizard.
  * Presentation only — route guards remain the source of truth for access.
  */
 export function CarerOnboardingShell({
-  currentStep,
+  activeStep,
+  profileCompletedAt,
+  onboardingStep,
+  onboardingCompletedAt,
   children,
-}: {
-  currentStep: number;
-  children: ReactNode;
-}) {
+}: OnboardingProgressContext & { children: ReactNode }) {
+  const ctx: OnboardingProgressContext = {
+    activeStep,
+    profileCompletedAt,
+    onboardingStep,
+    onboardingCompletedAt,
+  };
   const total = CARER_ONBOARDING_STEPS.length;
-  const percent = Math.round(((currentStep - 1) / total) * 100);
+  const completedCount = countCompletedOnboardingSteps(ctx);
+  const percent = Math.round((completedCount / total) * 100);
 
   return (
     <div className="space-y-6 min-w-0">
       <nav aria-label="Onboarding progress" className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <p className="text-sm font-semibold text-foreground">
-            Step {currentStep} of {total}
+            Step {activeStep} of {total}
           </p>
           <p className="text-xs text-muted-foreground">
-            {currentStep - 1} of {total} steps completed
+            {completedCount} of {total} steps completed
           </p>
         </div>
 
@@ -52,15 +57,16 @@ export function CarerOnboardingShell({
 
         <ol className="grid gap-2 sm:grid-cols-3">
           {CARER_ONBOARDING_STEPS.map((s) => {
-            const state: StepState =
-              s.step < currentStep ? "complete" : s.step === currentStep ? "current" : "locked";
+            const state = resolveOnboardingStepDisplayState(s.step, ctx);
+            const label = onboardingStepStateLabel(state, s.step, activeStep);
+            const isViewing = s.step === activeStep;
             return (
               <li
                 key={s.step}
-                aria-current={state === "current" ? "step" : undefined}
+                aria-current={isViewing ? "step" : undefined}
                 className={[
                   "flex min-w-0 items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
-                  state === "current"
+                  isViewing
                     ? "border-primary/60 bg-primary/5 shadow-sm"
                     : state === "complete"
                       ? "border-border/70 bg-card"
@@ -71,7 +77,7 @@ export function CarerOnboardingShell({
                   aria-hidden="true"
                   className={[
                     "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold",
-                    state === "current"
+                    isViewing
                       ? "bg-primary text-primary-foreground"
                       : state === "complete"
                         ? "bg-primary/15 text-primary"
@@ -89,14 +95,12 @@ export function CarerOnboardingShell({
                 <span className="min-w-0">
                   <span
                     className={`block truncate text-sm ${
-                      state === "current" ? "font-semibold text-foreground" : "text-foreground/90"
+                      isViewing ? "font-semibold text-foreground" : "text-foreground/90"
                     }`}
                   >
                     {s.title}
                   </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {STATE_LABEL[state]}
-                  </span>
+                  <span className="block text-xs text-muted-foreground">{label}</span>
                 </span>
               </li>
             );

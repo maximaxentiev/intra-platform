@@ -30,11 +30,14 @@ export function CarerPersonalInformationForm({
   onPersisted,
   onStepComplete,
   mode = "onboarding",
+  step1Complete = false,
 }: {
   initial: PersonalProfileFields;
   onPersisted?: (values: PersonalProfileFields) => void;
   onStepComplete?: () => void;
   mode?: "onboarding" | "profile";
+  /** When true, Continue returns to the next step without re-marking Step 1 complete. */
+  step1Complete?: boolean;
 }) {
   const [saved, setSaved] = useState(initial);
   const [values, setValues] = useState(initial);
@@ -164,6 +167,11 @@ export function CarerPersonalInformationForm({
 
   async function completeStep() {
     if (mode !== "onboarding") return;
+    if (step1Complete) {
+      allowNavigationOnce();
+      onStepComplete?.();
+      return;
+    }
     setLoading(true);
     try {
       await carerProfileApi.completeStep1();

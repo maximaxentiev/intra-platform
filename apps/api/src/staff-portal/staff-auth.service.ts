@@ -1,9 +1,12 @@
 import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import { assertStrongPassword, hashPassword, verifyPassword } from '../auth/password.util';
+import { EmailDeliveryError, EmailService } from '../email/email.service';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { staff, staffAccounts } from '../db/schema';
+import { buildStaffAccountConfirmationEmailContent } from './staff-account-confirmation-email.template';
 import { StaffSessionService, type StaffSessionPayload } from './staff-session.service';
 import {
   STAFF_PORTAL_AUDIT_EVENTS,
@@ -23,6 +26,8 @@ export class StaffAuthService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly sessions: StaffSessionService,
     private readonly audit: StaffPortalAuditService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
   ) {}
 
   /** Mints a fresh invite/reset token, stores its hash, returns the raw token. */
@@ -56,7 +61,7 @@ export class StaffAuthService {
   /** Validates an invite/reset token and returns who it belongs to. */
   async describeInvite(token: string) {
     const account = await this.findByToken(token);
-    if (!account) throw new NotFoundException('This link is invalid or has expired.');
+    if (!account) throw new NotFoundException('This invitation link is not available.');
     const person = (await this.db.select().from(staff).where(eq(staff.id, account.staffId)))[0];
     return {
       email: account.email,
@@ -69,9 +74,10 @@ export class StaffAuthService {
   /** Sets the password from an invite/reset link and signs the carer in. */
   async acceptInvite(token: string, password: string) {
     const account = await this.findByToken(token);
-    if (!account) throw new NotFoundException('This link is invalid or has expired.');
+    if (!account) throw new NotFoundException('This invitation link is not available.');
     assertStrongPassword(password);
     const isFirstSetup = !account.passwordHash;
+    const person = (await this.db.select().from(staff).where(eq(staff.id, account.staffId)))[0];
     await this.db
       .update(staffAccounts)
       .set({
@@ -90,11 +96,61 @@ export class StaffAuthService {
       detail: { firstSetup: isFirstSetup },
     });
 
-    return this.startSession({
+    const session = await this.startSession({
       id: account.id,
       staffId: account.staffId,
       email: account.email,
     });
+
+    if (isFirstSetup) {
+      await this.sendAccountConfirmationEmail(account.staffId, account.id, account.email, person);
+    }
+
+    return session;
+  }
+
+  /** Best-effort confirmation email after first account setup; never rolls back acceptance. */
+  private async sendAccountConfirmationEmail(
+    staffId: string,
+    staffAccountId: string,
+    email: string,
+    person: typeof staff.$inferSelect | undefined,
+  ) {
+    const platformEnv = {
+      APP_PUBLIC_URL: this.config.get<string>('APP_PUBLIC_URL'),
+      APP_HOST: this.config.get<string>('APP_HOST'),
+      LEGACY_APP_HOST: this.config.get<string>('LEGACY_APP_HOST'),
+      NODE_ENV: this.config.get<string>('NODE_ENV'),
+    };
+    const content = buildStaffAccountConfirmationEmailContent({
+      legalFirstName: person?.legalFirstName ?? '',
+      platformEnv,
+    });
+    try {
+      await this.email.send({
+        to: email,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
+      });
+      await this.audit.record({
+        staffId,
+        staffAccountId,
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.carerAccountConfirmationEmailSent,
+        detail: { source: 'carer_portal' },
+      });
+    } catch (err) {
+      await this.audit.record({
+        staffId,
+        staffAccountId,
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.carerAccountConfirmationEmailFailed,
+        detail: {
+          source: 'carer_portal',
+          reason:
+            err instanceof EmailDeliveryError ? err.message.slice(0, 200) : 'send_failed',
+        },
+      });
+    }
   }
 
   async login(email: string, password: string) {

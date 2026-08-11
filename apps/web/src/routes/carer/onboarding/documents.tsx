@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Clock, FileText } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, CheckCircle2, Clock, FileText } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
 
@@ -22,8 +23,19 @@ function CarerOnboardingDocumentsPage() {
       title="Documents"
       subtitle="The next step in your onboarding — coming soon."
     >
-      <CarerOnboardingShell currentStep={2}>
+      <CarerOnboardingShell
+        activeStep={2}
+        profileCompletedAt={carer.profileCompletedAt}
+        onboardingStep={carer.onboardingStep}
+        onboardingCompletedAt={carer.onboardingCompletedAt}
+      >
         <div className="space-y-3">
+          <Button asChild variant="ghost" className="h-10 px-0 text-muted-foreground hover:text-foreground">
+            <Link to="/carer/onboarding/profile">
+              <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
+              Personal Information
+            </Link>
+          </Button>
           <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
             <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span>
