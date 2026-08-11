@@ -6,34 +6,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { Staff } from "@/lib/db";
+import type { Staff, StaffDetail } from "@/lib/db";
 import { CityCombobox, validateCityField } from "@/components/CityCombobox";
-
-export type StaffFormValues = Partial<Staff>;
+import {
+  buildStaffUpdatePayload,
+  pickStaffFormEditableInitial,
+  type StaffFormEditableValues,
+  type StaffUpdatePayload,
+} from "@/lib/staff-form-payload";
 
 export function StaffForm({
   initial,
   onSubmit,
 }: {
-  initial: StaffFormValues;
-  onSubmit: (values: StaffFormValues) => Promise<void>;
+  initial: StaffDetail | Partial<StaffFormEditableValues>;
+  onSubmit: (values: StaffUpdatePayload) => Promise<void>;
 }) {
-  const [values, setValues] = useState<StaffFormValues>({
-    legalName: "",
-    displayName: "",
-    useDisplayName: false,
-    phone: "",
-    email: "",
-    role: "",
-    status: "active",
-    notes: "",
-    documentsUrl: "",
-    ...initial,
-  });
+  const savedCity = String(initial.city ?? "");
+  const [values, setValues] = useState<StaffFormEditableValues>(() =>
+    pickStaffFormEditableInitial(initial),
+  );
   const [saving, setSaving] = useState(false);
   const [cityError, setCityError] = useState<string | undefined>();
-  const savedCity = initial.city ?? "";
-  const set = <K extends keyof StaffFormValues>(k: K, v: StaffFormValues[K]) =>
+  const set = <K extends keyof StaffFormEditableValues>(k: K, v: StaffFormEditableValues[K]) =>
     setValues((prev) => ({ ...prev, [k]: v }));
 
   async function submit(e: FormEvent) {
@@ -42,12 +37,22 @@ export function StaffForm({
       toast.error("Please pick a role");
       return;
     }
-    const nextCityError = validateCityField(values.city ?? "", savedCity);
+    const nextCityError = validateCityField(values.city, savedCity);
     setCityError(nextCityError);
     if (nextCityError) return;
+
+    const payload = buildStaffUpdatePayload(values, savedCity);
+    if (!payload) {
+      setCityError("City must be selected from the supported city list.");
+      return;
+    }
+
     setSaving(true);
-    await onSubmit(values);
-    setSaving(false);
+    try {
+      await onSubmit(payload);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -57,7 +62,7 @@ export function StaffForm({
         <Input
           id="legal"
           required
-          value={values.legalName ?? ""}
+          value={values.legalName}
           onChange={(e) => set("legalName", e.target.value)}
         />
       </div>
@@ -76,7 +81,7 @@ export function StaffForm({
         {values.useDisplayName && (
           <Input
             placeholder="Display name shown across the platform"
-            value={values.displayName ?? ""}
+            value={values.displayName}
             onChange={(e) => set("displayName", e.target.value)}
           />
         )}
@@ -84,14 +89,14 @@ export function StaffForm({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" value={values.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
+          <Input id="phone" value={values.phone} onChange={(e) => set("phone", e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
-            value={values.email ?? ""}
+            value={values.email}
             onChange={(e) => set("email", e.target.value)}
           />
         </div>
@@ -128,14 +133,14 @@ export function StaffForm({
         <Label htmlFor="address">Home address</Label>
         <Input
           id="address"
-          value={values.address ?? ""}
+          value={values.address}
           onChange={(e) => set("address", e.target.value)}
         />
       </div>
       <CityCombobox
         id="staff-city"
         label="City"
-        value={values.city ?? ""}
+        value={values.city}
         onChange={(city) => {
           set("city", city);
           setCityError(undefined);
@@ -148,7 +153,7 @@ export function StaffForm({
           id="docs"
           type="url"
           placeholder="https://…"
-          value={values.documentsUrl ?? ""}
+          value={values.documentsUrl}
           onChange={(e) => set("documentsUrl", e.target.value)}
         />
       </div>
@@ -157,7 +162,7 @@ export function StaffForm({
         <Textarea
           id="notes"
           rows={4}
-          value={values.notes ?? ""}
+          value={values.notes}
           onChange={(e) => set("notes", e.target.value)}
         />
       </div>

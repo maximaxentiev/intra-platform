@@ -1,6 +1,7 @@
 // Domain types, helpers, and typed resource clients for the Intra API.
 // (Replaces the former Supabase browser client.)
 import { api } from "@/lib/api";
+import type { StaffUpdatePayload } from "@/lib/staff-form-payload";
 
 export type StaffStatus = "active" | "inactive";
 export type PortalAccountDisplayStatus =
@@ -247,7 +248,7 @@ export const staffApi = {
   get: (id: string) => api.get<StaffDetail>(`/staff/${id}`),
   createManual: (values: ManualStaffCreateInput) => api.post<Staff>("/staff", values),
   create: (values: Partial<Staff>) => api.post<Staff>("/staff", values),
-  update: (id: string, values: Partial<Staff>) => api.patch<Staff>(`/staff/${id}`, values),
+  update: (id: string, values: StaffUpdatePayload) => api.patch<Staff>(`/staff/${id}`, values),
   remove: (id: string) => api.del<{ ok: true }>(`/staff/${id}`),
   sendPortalInvitation: (id: string, body: { resend?: boolean }) =>
     api.post<PortalInvitationResult>(`/staff/${id}/portal-invitations`, body),
