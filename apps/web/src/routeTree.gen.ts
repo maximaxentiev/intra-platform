@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
 import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
+import { Route as CarerDocumentsRouteImport } from './routes/carer/documents'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
@@ -73,6 +74,11 @@ const CarerLoginRoute = CarerLoginRouteImport.update({
 const CarerForgotPasswordRoute = CarerForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => CarerRouteRoute,
+} as any)
+const CarerDocumentsRoute = CarerDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
   getParentRoute: () => CarerRouteRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/staff': typeof AuthenticatedStaffRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer/': typeof CarerIndexRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer': typeof CarerIndexRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer/': typeof CarerIndexRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/staff'
     | '/users'
+    | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer/'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/users'
+    | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/_authenticated/shifts'
     | '/_authenticated/staff'
     | '/_authenticated/users'
+    | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer/'
@@ -447,6 +459,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/carer/forgot-password'
       preLoaderRoute: typeof CarerForgotPasswordRouteImport
+      parentRoute: typeof CarerRouteRoute
+    }
+    '/carer/documents': {
+      id: '/carer/documents'
+      path: '/documents'
+      fullPath: '/carer/documents'
+      preLoaderRoute: typeof CarerDocumentsRouteImport
       parentRoute: typeof CarerRouteRoute
     }
     '/_authenticated/users': {
@@ -711,6 +730,7 @@ const CarerOnboardingRouteRouteWithChildren =
 
 interface CarerRouteRouteChildren {
   CarerOnboardingRouteRoute: typeof CarerOnboardingRouteRouteWithChildren
+  CarerDocumentsRoute: typeof CarerDocumentsRoute
   CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
   CarerLoginRoute: typeof CarerLoginRoute
   CarerIndexRoute: typeof CarerIndexRoute
@@ -719,6 +739,7 @@ interface CarerRouteRouteChildren {
 
 const CarerRouteRouteChildren: CarerRouteRouteChildren = {
   CarerOnboardingRouteRoute: CarerOnboardingRouteRouteWithChildren,
+  CarerDocumentsRoute: CarerDocumentsRoute,
   CarerForgotPasswordRoute: CarerForgotPasswordRoute,
   CarerLoginRoute: CarerLoginRoute,
   CarerIndexRoute: CarerIndexRoute,

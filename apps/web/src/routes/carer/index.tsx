@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { carerAuthApi } from "@/lib/carer";
 import { carerOnboardingResumePath, onboardingComplete } from "@/lib/carer-onboarding";
 import { CarerShell } from "@/components/carer/CarerShell";
@@ -37,6 +37,17 @@ function CarerHomePage() {
             <div className="font-medium">{carerFullName(carer) || carer.email}</div>
             <div className="text-muted-foreground">{carer.email}</div>
             {carer.phone ? <div className="text-muted-foreground">{carer.phone}</div> : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Documents</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <Link to="/carer/documents" className="font-medium text-primary hover:underline">
+              Manage your compliance documents
+            </Link>
           </CardContent>
         </Card>
 

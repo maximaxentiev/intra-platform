@@ -11,9 +11,10 @@ function readSrc(rel: string) {
 
 describe("carer onboarding revisit navigation", () => {
   it("documents page links back to personal information", () => {
-    const docs = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(docs).toContain("/carer/onboarding/profile");
-    expect(docs).toMatch(/Personal Information/);
+    const form = readSrc("components/carer/CarerDocumentsForm.tsx");
+    const backLink = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(backLink).toContain("/carer/onboarding/profile");
+    expect(form).toMatch(/Personal Information/);
   });
 
   it("profile form skips re-completing step 1 when already complete", () => {

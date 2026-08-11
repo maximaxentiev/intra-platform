@@ -21,11 +21,15 @@ describe("carer onboarding routing", () => {
     expect(src).toContain("maxAccessibleOnboardingStep");
   });
 
-  it("step 2 placeholder does not mark onboarding complete", () => {
-    const src = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(src).not.toContain("completeStep1");
-    expect(src).not.toMatch(/onboardingCompletedAt:\s*new Date/);
-    expect(src).toContain("not available yet");
+  it("documents step uses the real documents workflow", () => {
+    const route = readSrc("routes/carer/onboarding/documents.tsx");
+    const form = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(route).toContain("CarerDocumentsForm");
+    expect(route).toContain("carerDocumentsApi.get");
+    expect(route).not.toContain("not available yet");
+    expect(form).toContain("useUnsavedChangesGuard");
+    expect(form).toContain("completeStep2");
+    expect(form).toContain("retainFileIds");
   });
 
   it("personal information form supports save discard next", () => {
