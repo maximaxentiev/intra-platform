@@ -448,61 +448,74 @@ export function StaffDocumentsSection({
             </CardHeader>
 
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-0">
               {isEditing ? (
-                <>
+                <div className="space-y-4 rounded-lg border border-primary/25 bg-primary/[0.03] p-3 sm:p-4">
                   {category.reviewStatus === "approved" ? (
-                    <p className="text-xs text-muted-foreground">
-                      Replacing this submission will return it to Pending Review.
+                    <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+                      <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>Replacing this submission will return it to Pending Review.</span>
                     </p>
                   ) : null}
 
                   {meta.dateField === "processed" ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
-                      <Input
-                        id={`ops-processed-${type}`}
-                        type="date"
-                        className="h-10"
-                        value={draft.processedDate}
-                        disabled={busy}
-                        onChange={(e) => setDraft((d) => ({ ...d, processedDate: e.target.value }))}
-                      />
+                    <div className="grid gap-3 sm:max-w-xs">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
+                        <Input
+                          id={`ops-processed-${type}`}
+                          type="date"
+                          className="h-10"
+                          value={draft.processedDate}
+                          disabled={busy}
+                          onChange={(e) => setDraft((d) => ({ ...d, processedDate: e.target.value }))}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Expiry is calculated by Intra from this date.
+                        </p>
+                      </div>
                     </div>
                   ) : null}
 
                   {meta.dateField === "expiry" ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`ops-expiry-${type}`}>Expiry Date</Label>
-                      <Input
-                        id={`ops-expiry-${type}`}
-                        type="date"
-                        className="h-10"
-                        value={draft.expiryDate}
-                        disabled={busy}
-                        onChange={(e) => setDraft((d) => ({ ...d, expiryDate: e.target.value }))}
-                      />
+                    <div className="grid gap-3 sm:max-w-xs">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`ops-expiry-${type}`}>Expiry Date</Label>
+                        <Input
+                          id={`ops-expiry-${type}`}
+                          type="date"
+                          className="h-10"
+                          value={draft.expiryDate}
+                          disabled={busy}
+                          onChange={(e) => setDraft((d) => ({ ...d, expiryDate: e.target.value }))}
+                        />
+                      </div>
                     </div>
                   ) : null}
 
-                  {category.files.filter((f) => draft.retainFileIds.includes(f.id)).length > 0 ? (
-                    <ul className="space-y-2">
+                  {category.files.filter((f) => draft.retainFileIds.includes(f.id)).length > 0 ||
+                  draft.newFiles.length > 0 ? (
+                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                       {category.files
                         .filter((f) => draft.retainFileIds.includes(f.id))
                         .map((file) => (
                           <li
                             key={file.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
                           >
-                            <span className="min-w-0 break-all">{file.originalFilename}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDocumentByteSize(file.byteSize)}
-                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium" title={file.originalFilename}>
+                                {file.originalFilename}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDocumentByteSize(file.byteSize)}
+                              </p>
+                            </div>
                             <Button
                               type="button"
                               size="sm"
                               variant="ghost"
-                              className="h-8"
+                              className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
                               disabled={busy}
                               aria-label={`Remove ${file.originalFilename} from draft`}
                               onClick={() =>
@@ -516,49 +529,51 @@ export function StaffDocumentsSection({
                             </Button>
                           </li>
                         ))}
+                      {draft.newFiles.map((file, index) => (
+                        <li
+                          key={`${file.name}-${index}`}
+                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-warning-soft/40 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium" title={file.name}>
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDocumentByteSize(file.size)} · not saved yet
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                            disabled={busy}
+                            aria-label={`Remove ${file.name}`}
+                            onClick={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                newFiles: d.newFiles.filter((_, i) => i !== index),
+                              }))
+                            }
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
                     </ul>
                   ) : null}
 
-                  {draft.newFiles.map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <span className="min-w-0 break-all">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDocumentByteSize(file.size)}
-                      </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-8"
-                        disabled={busy}
-                        aria-label={`Remove ${file.name}`}
-                        onClick={() =>
-                          setDraft((d) => ({
-                            ...d,
-                            newFiles: d.newFiles.filter((_, i) => i !== index),
-                          }))
-                        }
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-
-                  <div>
-                    <Label htmlFor={`ops-files-${type}`} className="sr-only">
-                      Upload files for {meta.title}
-                    </Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ops-files-${type}`}>Add files for {meta.title}</Label>
                     <Input
                       id={`ops-files-${type}`}
                       ref={fileInputRef}
                       type="file"
                       multiple
                       accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                      className="h-10"
+                      className="h-10 cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium"
                       disabled={busy}
+                      aria-describedby={`ops-files-hint-${type}`}
                       onChange={(e) => {
                         const incoming = e.target.files ? Array.from(e.target.files) : [];
                         if (!incoming.length) return;
@@ -566,27 +581,41 @@ export function StaffDocumentsSection({
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                     />
+                    <p id={`ops-files-hint-${type}`} className="text-xs text-muted-foreground">
+                      PDF, PNG, JPG or JPEG · up to 10 files · 50 MB total
+                    </p>
                   </div>
 
                   {categoryError ? (
-                    <p className="text-sm text-destructive">{categoryError}</p>
+                    <p className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span className="min-w-0 break-words">{categoryError}</span>
+                    </p>
                   ) : null}
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       type="button"
+                      className="sm:order-2"
                       disabled={busy || !categoryDraftDirty(draft, savedDraft)}
                       onClick={() => void handleSaveCategory(type)}
                     >
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                       Save
                     </Button>
-                    <Button type="button" variant="outline" disabled={busy} onClick={cancelEdit}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-muted-foreground sm:order-1"
+                      disabled={busy}
+                      onClick={cancelEdit}
+                    >
                       Cancel
                     </Button>
                   </div>
-                </>
+                </div>
               ) : (
+
                 <>
                   {category.files.length > 0 ? (
                     <ul className="space-y-2">
