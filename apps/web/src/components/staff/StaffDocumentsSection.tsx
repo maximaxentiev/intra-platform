@@ -3,11 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
+  ChevronDown,
   Download,
   ExternalLink,
   FileText,
   Flag,
   Loader2,
+  MoreHorizontal,
   Pencil,
   ShieldAlert,
   ShieldCheck,
@@ -18,11 +20,18 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,11 +56,13 @@ import {
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftFromCategory,
   categoryDraftDirty,
+  expiryDisplayLabel,
   formatDocumentByteSize,
   formatDocumentDate,
   isStaleSubmissionError,
   mapOpsDocumentsApiError,
   opsStaffDocumentsApi,
+  reviewStatusLabel,
   shiftEligibilityReasonLabel,
   validateCategoryDraft,
   type CarerDocumentCategory,
@@ -64,13 +75,10 @@ import {
   openOpsStaffDocumentFile,
 } from "@/lib/staff-document-content";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
-import {
-  ExpiryStatusPill,
-  IssueNoteCallout,
-  RequirementPill,
-  ReviewStatusPill,
-} from "@/components/documents/DocumentStatusPills";
+import { IssueNoteCallout } from "@/components/documents/DocumentStatusPills";
 import { cn } from "@/lib/utils";
+
+type PanelMode = "review" | "edit" | "details";
 
 function emptyDraft(): CategoryDraft {
   return { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" };
@@ -85,6 +93,35 @@ export function invalidateStaffDocumentQueries(
   void qc.invalidateQueries({ queryKey: ["staff", staffId] });
 }
 
+/** Compact status line: review status, then expiry information when relevant. */
+function statusLine(category: CarerDocumentCategory): string {
+  if (!category.isSubmitted) return "Not submitted";
+  const parts = [reviewStatusLabel(category.reviewStatus)];
+  const expiryLabel = expiryDisplayLabel(category.expiryDisplay);
+  if (expiryLabel && expiryLabel !== "Current") {
+    parts.push(
+      category.expiryDate
+        ? `${expiryLabel} · Expires ${formatDocumentDate(category.expiryDate)}`
+        : expiryLabel,
+    );
+  } else if (category.expiryDate) {
+    parts.push(`Expires ${formatDocumentDate(category.expiryDate)}`);
+  }
+  return parts.join(" · ");
+}
+
+function statusToneClass(category: CarerDocumentCategory): string {
+  if (!category.isSubmitted) return "text-muted-foreground";
+  if (category.reviewStatus === "issue_flagged" || category.expiryDisplay === "expired") {
+    return "text-destructive";
+  }
+  if (category.reviewStatus === "pending_review" || category.expiryDisplay === "expiring_soon") {
+    return "text-warning";
+  }
+  if (category.reviewStatus === "approved") return "text-success";
+  return "text-muted-foreground";
+}
+
 export function StaffDocumentsSection({
   staffId,
   documents,
@@ -97,7 +134,8 @@ export function StaffDocumentsSection({
   onRefresh: () => Promise<unknown>;
 }) {
   const qc = useQueryClient();
-  const [editingType, setEditingType] = useState<StaffDocumentType | null>(null);
+  const [openType, setOpenType] = useState<StaffDocumentType | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>("details");
   const [draft, setDraft] = useState<CategoryDraft>(emptyDraft());
   const [savedDraft, setSavedDraft] = useState<CategoryDraft>(emptyDraft());
   const [categoryError, setCategoryError] = useState<string | null>(null);
@@ -115,6 +153,8 @@ export function StaffDocumentsSection({
   const [flagNote, setFlagNote] = useState("");
   const [clearTarget, setClearTarget] = useState<StaffDocumentType | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const editingType = openType !== null && panelMode === "edit" ? openType : null;
 
   const categoriesByType = useMemo(() => {
     const map = new Map<StaffDocumentType, CarerDocumentCategory>();
@@ -139,25 +179,32 @@ export function StaffDocumentsSection({
     invalidateStaffDocumentQueries(qc, staffId);
   }
 
+  function closePanel() {
+    setOpenType(null);
+    setPanelMode("details");
+    setDraft(emptyDraft());
+    setSavedDraft(emptyDraft());
+    setCategoryError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function openPanel(type: StaffDocumentType, mode: PanelMode) {
+    if (openType === type && panelMode === mode) {
+      closePanel();
+      return;
+    }
+    setCategoryError(null);
+    setOpenType(type);
+    setPanelMode(mode);
+  }
+
   async function handleStaleRefresh() {
     toast.message("This submission has been replaced. Refreshing the latest documents.");
     setApproveTarget(null);
     setFlagTarget(null);
     setFlagNote("");
-    setEditingType(null);
+    closePanel();
     await refreshAll();
-  }
-
-  function startEdit(type: StaffDocumentType) {
-    setEditingType(type);
-  }
-
-  function cancelEdit() {
-    setEditingType(null);
-    setDraft(emptyDraft());
-    setSavedDraft(emptyDraft());
-    setCategoryError(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSaveCategory(type: StaffDocumentType) {
@@ -177,7 +224,7 @@ export function StaffDocumentsSection({
         buildOpsCategorySaveFormData(type, draft),
       );
       toast.success("Document saved — pending review");
-      setEditingType(null);
+      closePanel();
       await refreshAll();
     } catch (err) {
       setCategoryError(mapOpsDocumentsApiError(err, "Could not save this document."));
@@ -198,6 +245,7 @@ export function StaffDocumentsSection({
       );
       toast.success("Document approved");
       setApproveTarget(null);
+      closePanel();
       await refreshAll();
     } catch (err) {
       if (isStaleSubmissionError(err)) {
@@ -233,6 +281,7 @@ export function StaffDocumentsSection({
       toast.success("Issue flagged");
       setFlagTarget(null);
       setFlagNote("");
+      closePanel();
       await refreshAll();
     } catch (err) {
       if (isStaleSubmissionError(err)) {
@@ -252,7 +301,7 @@ export function StaffDocumentsSection({
       await opsStaffDocumentsApi.clearCategory(staffId, clearTarget);
       toast.success("Current submission cleared");
       setClearTarget(null);
-      setEditingType(null);
+      closePanel();
       await refreshAll();
     } catch (err) {
       toast.error(mapOpsDocumentsApiError(err, "Could not clear this submission."));
@@ -320,463 +369,511 @@ export function StaffDocumentsSection({
 
   const busy = saving || pendingAction !== null;
 
+  /** Compact file list, used inside review / details / issue panels. */
+  function fileList(type: StaffDocumentType, category: CarerDocumentCategory) {
+    if (category.files.length === 0) {
+      return <p className="text-sm text-muted-foreground">No files submitted.</p>;
+    }
+    return (
+      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        {category.files.map((file) => (
+          <li
+            key={file.id}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <FileText aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium" title={file.originalFilename}>
+                  {file.originalFilename}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDocumentByteSize(file.byteSize)}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5"
+                disabled={viewingFileId === file.id}
+                onClick={() => void handleViewFile(type, file.id)}
+              >
+                {viewingFileId === file.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                )}
+                View document
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                disabled={viewingFileId === file.id}
+                onClick={() => void handleDownloadFile(type, file.id, file.originalFilename)}
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden />
+                <span className="hidden sm:inline">Download</span>
+                <span className="sr-only sm:hidden">Download {file.originalFilename}</span>
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
-    <div className="space-y-4 min-w-0">
+    <div className="space-y-3 min-w-0">
+      {/* Compact compliance summary — all values come from the backend. */}
       <Card
         className={cn(
           "border-l-4 shadow-sm",
           documents.shiftEligible ? "border-l-success" : "border-l-destructive",
         )}
       >
-        <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2">
-              {documents.shiftEligible ? (
-                <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-success" />
-              ) : (
-                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0 text-destructive" />
-              )}
-              <p
-                className={cn(
-                  "text-sm font-semibold",
-                  documents.shiftEligible ? "text-success" : "text-destructive",
-                )}
-              >
-                {documents.shiftEligible
-                  ? "Eligible for shift matching"
-                  : "Not eligible for shift matching"}
-              </p>
-            </div>
-            {!documents.shiftEligible && documents.shiftEligibilityReasons.length > 0 ? (
-              <ul className="list-disc space-y-0.5 pl-8 text-sm text-muted-foreground">
-                {documents.shiftEligibilityReasons.map((reason) => (
-                  <li key={reason}>{shiftEligibilityReasonLabel(reason)}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2 sm:justify-end">
-            <span className="text-xs text-muted-foreground">Document status</span>
+        <CardContent className="grid gap-2 p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Documents</span>
             <DocumentStatusBadge status={documents.documentStatus} />
+          </div>
+          <div className="min-w-0">
+            <p
+              className={cn(
+                "flex items-center gap-2 text-sm font-semibold",
+                documents.shiftEligible ? "text-success" : "text-destructive",
+              )}
+            >
+              {documents.shiftEligible ? (
+                <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+              ) : (
+                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0" />
+              )}
+              {documents.shiftEligible
+                ? "Eligible for shift matching"
+                : "Not eligible for shift matching"}
+            </p>
+            {!documents.shiftEligible && documents.shiftEligibilityReasons.length > 0 ? (
+              <p className="pl-6 text-xs text-muted-foreground">
+                {documents.shiftEligibilityReasons
+                  .map((reason) => shiftEligibilityReasonLabel(reason))
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>
 
-      {STAFF_DOCUMENT_TYPES.map((type) => {
-        const category = categoriesByType.get(type)!;
-        const meta = CARER_DOCUMENT_CATEGORY_META[type];
-        const isEditing = editingType === type;
-        const showReminderToggle =
-          type === "vulnerable_sector_check" || type === "first_aid_cpr";
-        const canReview =
-          category.isSubmitted &&
-          category.currentSubmissionId &&
-          (category.reviewStatus === "pending_review" ||
-            category.reviewStatus === "issue_flagged");
-        const canClear = category.isSubmitted && category.currentSubmissionId;
+      <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        {STAFF_DOCUMENT_TYPES.map((type) => {
+          const category = categoriesByType.get(type)!;
+          const meta = CARER_DOCUMENT_CATEGORY_META[type];
+          const isOpen = openType === type;
+          const isEditing = isOpen && panelMode === "edit";
+          const showReminderToggle =
+            type === "vulnerable_sector_check" || type === "first_aid_cpr";
+          const needsReview =
+            category.isSubmitted &&
+            Boolean(category.currentSubmissionId) &&
+            (category.reviewStatus === "pending_review" ||
+              category.reviewStatus === "issue_flagged");
+          const canClear = category.isSubmitted && Boolean(category.currentSubmissionId);
+          const panelId = `ops-doc-panel-${type}`;
 
-        return (
-          <Card
-            key={type}
-            className={cn("min-w-0 border-border/70 shadow-sm", isEditing && "ring-1 ring-primary/40")}
-          >
-            <CardHeader className="gap-3 pb-3">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  <span
-                    aria-hidden="true"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+          const primary = !category.isSubmitted
+            ? { label: "Upload", icon: Upload, mode: "edit" as PanelMode }
+            : category.reviewStatus === "pending_review"
+              ? { label: "Review", icon: Check, mode: "review" as PanelMode }
+              : category.reviewStatus === "issue_flagged"
+                ? { label: "Review Issue", icon: AlertCircle, mode: "review" as PanelMode }
+                : { label: "View", icon: ExternalLink, mode: "details" as PanelMode };
+          const PrimaryIcon = primary.icon;
+
+          return (
+            <li key={type} className={cn("min-w-0", isOpen && "bg-muted/30")}>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-4">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <p className="truncate text-sm font-semibold">{meta.title}</p>
+                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {meta.required ? "Required" : "Optional"}
+                    </span>
+                  </div>
+                  <p className={cn("truncate text-xs", statusToneClass(category))}>
+                    {statusLine(category)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      primary.mode === "edit" && !category.isSubmitted
+                        ? "default"
+                        : needsReview
+                          ? "default"
+                          : "outline"
+                    }
+                    className="h-9 gap-1.5"
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? panelId : undefined}
+                    disabled={busy}
+                    onClick={() => openPanel(type, primary.mode)}
                   >
-                    <FileText className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <CardTitle className="text-base leading-snug">{meta.title}</CardTitle>
-                      <RequirementPill required={meta.required} />
-                    </div>
-                    {isEditing ? (
-                      <p className="text-xs font-medium text-primary">
-                        Editing submission — changes are saved when you press Save.
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  <ReviewStatusPill status={category.reviewStatus} />
-                  <ExpiryStatusPill display={category.expiryDisplay} />
-                </div>
-              </div>
-
-              {category.reviewStatus === "issue_flagged" && category.issueNote ? (
-                <IssueNoteCallout note={category.issueNote} />
-              ) : null}
-
-              {!isEditing && category.isSubmitted ? (
-                <dl className="grid gap-x-6 gap-y-1 rounded-lg bg-muted/40 px-3 py-2 text-xs sm:grid-cols-2">
-                  {category.submittedAt ? (
-                    <div>
-                      <dt className="inline text-muted-foreground">Submitted: </dt>
-                      <dd className="inline font-medium">
-                        {formatDocumentDate(category.submittedAt.slice(0, 10))}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {category.reviewedAt ? (
-                    <div>
-                      <dt className="inline text-muted-foreground">Reviewed: </dt>
-                      <dd className="inline font-medium">
-                        {formatDocumentDate(category.reviewedAt.slice(0, 10))}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {category.processedDate ? (
-                    <div>
-                      <dt className="inline text-muted-foreground">Processed: </dt>
-                      <dd className="inline font-medium">
-                        {formatDocumentDate(category.processedDate)}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {category.expiryDate ? (
-                    <div>
-                      <dt className="inline text-muted-foreground">Expiry: </dt>
-                      <dd className="inline font-medium">{formatDocumentDate(category.expiryDate)}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              ) : null}
-            </CardHeader>
-
-
-            <CardContent className="space-y-4 pt-0">
-              {isEditing ? (
-                <div className="space-y-4 rounded-lg border border-primary/25 bg-primary/[0.03] p-3 sm:p-4">
-                  {category.reviewStatus === "approved" ? (
-                    <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
-                      <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span>Replacing this submission will return it to Pending Review.</span>
-                    </p>
-                  ) : null}
-
-                  {meta.dateField === "processed" ? (
-                    <div className="grid gap-3 sm:max-w-xs">
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
-                        <Input
-                          id={`ops-processed-${type}`}
-                          type="date"
-                          className="h-10"
-                          value={draft.processedDate}
-                          disabled={busy}
-                          onChange={(e) => setDraft((d) => ({ ...d, processedDate: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Expiry is calculated by Intra from this date.
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {meta.dateField === "expiry" ? (
-                    <div className="grid gap-3 sm:max-w-xs">
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`ops-expiry-${type}`}>Expiry Date</Label>
-                        <Input
-                          id={`ops-expiry-${type}`}
-                          type="date"
-                          className="h-10"
-                          value={draft.expiryDate}
-                          disabled={busy}
-                          onChange={(e) => setDraft((d) => ({ ...d, expiryDate: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {category.files.filter((f) => draft.retainFileIds.includes(f.id)).length > 0 ||
-                  draft.newFiles.length > 0 ? (
-                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-                      {category.files
-                        .filter((f) => draft.retainFileIds.includes(f.id))
-                        .map((file) => (
-                          <li
-                            key={file.id}
-                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium" title={file.originalFilename}>
-                                {file.originalFilename}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDocumentByteSize(file.byteSize)}
-                              </p>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                              disabled={busy}
-                              aria-label={`Remove ${file.originalFilename} from draft`}
-                              onClick={() =>
-                                setDraft((d) => ({
-                                  ...d,
-                                  retainFileIds: d.retainFileIds.filter((id) => id !== file.id),
-                                }))
-                              }
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </li>
-                        ))}
-                      {draft.newFiles.map((file, index) => (
-                        <li
-                          key={`${file.name}-${index}`}
-                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-warning-soft/40 px-3 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium" title={file.name}>
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDocumentByteSize(file.size)} · not saved yet
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                            disabled={busy}
-                            aria-label={`Remove ${file.name}`}
-                            onClick={() =>
-                              setDraft((d) => ({
-                                ...d,
-                                newFiles: d.newFiles.filter((_, i) => i !== index),
-                              }))
-                            }
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`ops-files-${type}`}>Add files for {meta.title}</Label>
-                    <Input
-                      id={`ops-files-${type}`}
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                      className="h-10 cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium"
-                      disabled={busy}
-                      aria-describedby={`ops-files-hint-${type}`}
-                      onChange={(e) => {
-                        const incoming = e.target.files ? Array.from(e.target.files) : [];
-                        if (!incoming.length) return;
-                        setDraft((d) => ({ ...d, newFiles: [...d.newFiles, ...incoming] }));
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
+                    <PrimaryIcon className="h-4 w-4" aria-hidden />
+                    <span>{primary.label}</span>
+                    <span className="sr-only"> {meta.title}</span>
+                    <ChevronDown
+                      aria-hidden
+                      className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
                     />
-                    <p id={`ops-files-hint-${type}`} className="text-xs text-muted-foreground">
-                      PDF, PNG, JPG or JPEG · up to 10 files · 50 MB total
-                    </p>
-                  </div>
-
-                  {categoryError ? (
-                    <p className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                      <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="min-w-0 break-words">{categoryError}</span>
-                    </p>
-                  ) : null}
-
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button
-                      type="button"
-                      className="sm:order-2"
-                      disabled={busy || !categoryDraftDirty(draft, savedDraft)}
-                      onClick={() => void handleSaveCategory(type)}
-                    >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-muted-foreground sm:order-1"
-                      disabled={busy}
-                      onClick={cancelEdit}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {category.files.length > 0 ? (
-                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-                      {category.files.map((file) => (
-                        <li
-                          key={file.id}
-                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
-                        >
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <FileText aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium" title={file.originalFilename}>
-                                {file.originalFilename}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDocumentByteSize(file.byteSize)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-9 gap-1.5"
-                              disabled={viewingFileId === file.id}
-                              onClick={() => void handleViewFile(type, file.id)}
-                            >
-                              {viewingFileId === file.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                              ) : (
-                                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                              )}
-                              View
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-                              disabled={viewingFileId === file.id}
-                              onClick={() => void handleDownloadFile(type, file.id, file.originalFilename)}
-                            >
-                              <Download className="h-3.5 w-3.5" aria-hidden />
-                              <span className="hidden sm:inline">Download</span>
-                              <span className="sr-only sm:hidden">
-                                Download {file.originalFilename}
-                              </span>
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-                      No files submitted.
-                    </p>
-                  )}
-
-                  <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:items-center">
-                    {canReview ? (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-9"
-                          disabled={busy}
-                          onClick={() =>
-                            setApproveTarget({
-                              type,
-                              submissionId: category.currentSubmissionId!,
-                            })
-                          }
-                        >
-                          <Check className="h-4 w-4" aria-hidden />
-                          Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-9 border-warning/40 text-warning hover:bg-warning-soft hover:text-warning"
-                          disabled={busy}
-                          onClick={() => {
-                            setFlagTarget({
-                              type,
-                              submissionId: category.currentSubmissionId!,
-                            });
-                            setFlagNote("");
-                          }}
-                        >
-                          <Flag className="h-4 w-4" aria-hidden />
-                          Flag Issue
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-9"
-                      disabled={busy}
-                      onClick={() => startEdit(type)}
-                    >
-                      {category.isSubmitted ? (
-                        <>
-                          <Pencil className="h-4 w-4" aria-hidden />
-                          Replace
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4" aria-hidden />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                    {canClear ? (
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="h-9 text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto"
+                        className="h-9 w-9 p-0 text-muted-foreground"
                         disabled={busy}
-                        onClick={() => setClearTarget(type)}
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                        Clear Submission
+                        <MoreHorizontal className="h-4 w-4" aria-hidden />
+                        <span className="sr-only">More actions for {meta.title}</span>
                       </Button>
-                    ) : null}
-                  </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {category.isSubmitted ? (
+                        <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
+                          <FileText className="h-4 w-4" aria-hidden />
+                          Details &amp; files
+                        </DropdownMenuItem>
+                      ) : null}
+                      <DropdownMenuItem onSelect={() => openPanel(type, "edit")}>
+                        {category.isSubmitted ? (
+                          <>
+                            <Pencil className="h-4 w-4" aria-hidden />
+                            Replace
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" aria-hidden />
+                            Upload
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      {showReminderToggle ? (
+                        <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
+                          <Check className="h-4 w-4 opacity-0" aria-hidden />
+                          Reminder settings
+                        </DropdownMenuItem>
+                      ) : null}
+                      {canClear ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setClearTarget(type)}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden />
+                            Clear Submission
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
 
-                  {showReminderToggle ? (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
-                      <div className="min-w-0">
-                        <Label htmlFor={`reminder-${type}`} className="text-sm font-normal">
-                          Automated expiry reminders
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Notify this staff member before the document expires.
+              {isOpen ? (
+                <div id={panelId} className="border-t border-border px-3 py-3 sm:px-4">
+                  {panelMode === "edit" ? (
+                    <div className="space-y-4">
+                      {category.reviewStatus === "approved" ? (
+                        <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+                          <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          <span>Replacing this submission will return it to Pending Review.</span>
+                        </p>
+                      ) : null}
+
+                      {meta.dateField === "processed" ? (
+                        <div className="space-y-1.5 sm:max-w-xs">
+                          <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
+                          <Input
+                            id={`ops-processed-${type}`}
+                            type="date"
+                            className="h-10"
+                            value={draft.processedDate}
+                            disabled={busy}
+                            onChange={(e) =>
+                              setDraft((d) => ({ ...d, processedDate: e.target.value }))
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Expiry is calculated by Intra from this date.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {meta.dateField === "expiry" ? (
+                        <div className="space-y-1.5 sm:max-w-xs">
+                          <Label htmlFor={`ops-expiry-${type}`}>Expiry Date</Label>
+                          <Input
+                            id={`ops-expiry-${type}`}
+                            type="date"
+                            className="h-10"
+                            value={draft.expiryDate}
+                            disabled={busy}
+                            onChange={(e) => setDraft((d) => ({ ...d, expiryDate: e.target.value }))}
+                          />
+                        </div>
+                      ) : null}
+
+                      {category.files.filter((f) => draft.retainFileIds.includes(f.id)).length > 0 ||
+                      draft.newFiles.length > 0 ? (
+                        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+                          {category.files
+                            .filter((f) => draft.retainFileIds.includes(f.id))
+                            .map((file) => (
+                              <li
+                                key={file.id}
+                                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <p
+                                    className="truncate text-sm font-medium"
+                                    title={file.originalFilename}
+                                  >
+                                    {file.originalFilename}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatDocumentByteSize(file.byteSize)}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                                  disabled={busy}
+                                  aria-label={`Remove ${file.originalFilename} from draft`}
+                                  onClick={() =>
+                                    setDraft((d) => ({
+                                      ...d,
+                                      retainFileIds: d.retainFileIds.filter((id) => id !== file.id),
+                                    }))
+                                  }
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </li>
+                            ))}
+                          {draft.newFiles.map((file, index) => (
+                            <li
+                              key={`${file.name}-${index}`}
+                              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-warning-soft/40 px-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium" title={file.name}>
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDocumentByteSize(file.size)} · not saved yet
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                                disabled={busy}
+                                aria-label={`Remove ${file.name}`}
+                                onClick={() =>
+                                  setDraft((d) => ({
+                                    ...d,
+                                    newFiles: d.newFiles.filter((_, i) => i !== index),
+                                  }))
+                                }
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`ops-files-${type}`}>Add files for {meta.title}</Label>
+                        <Input
+                          id={`ops-files-${type}`}
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                          className="h-10 cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium"
+                          disabled={busy}
+                          aria-describedby={`ops-files-hint-${type}`}
+                          onChange={(e) => {
+                            const incoming = e.target.files ? Array.from(e.target.files) : [];
+                            if (!incoming.length) return;
+                            setDraft((d) => ({ ...d, newFiles: [...d.newFiles, ...incoming] }));
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                          }}
+                        />
+                        <p id={`ops-files-hint-${type}`} className="text-xs text-muted-foreground">
+                          PDF, PNG, JPG or JPEG · up to 10 files · 50 MB total
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {category.remindersEnabled ? "On" : "Off"}
-                        </span>
-                        <Switch
-                          id={`reminder-${type}`}
-                          checked={category.remindersEnabled}
+
+                      {categoryError ? (
+                        <p
+                          role="alert"
+                          className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                        >
+                          <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span className="min-w-0 break-words">{categoryError}</span>
+                        </p>
+                      ) : null}
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          type="button"
+                          className="sm:order-2"
+                          disabled={busy || !categoryDraftDirty(draft, savedDraft)}
+                          onClick={() => void handleSaveCategory(type)}
+                        >
+                          {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="text-muted-foreground sm:order-1"
                           disabled={busy}
-                          aria-label={`Automated expiry reminders for ${meta.title}`}
-                          onCheckedChange={(checked) => void handleReminderToggle(type, checked)}
-                        />
+                          onClick={closePanel}
+                        >
+                          Cancel
+                        </Button>
                       </div>
                     </div>
-                  ) : null}
-                </>
+                  ) : (
+                    <div className="space-y-3">
+                      {category.reviewStatus === "issue_flagged" && category.issueNote ? (
+                        <IssueNoteCallout note={category.issueNote} />
+                      ) : null}
 
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                      <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+                        {category.submittedAt ? (
+                          <div>
+                            <dt className="inline text-muted-foreground">Submitted: </dt>
+                            <dd className="inline font-medium">
+                              {formatDocumentDate(category.submittedAt.slice(0, 10))}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {category.reviewedAt ? (
+                          <div>
+                            <dt className="inline text-muted-foreground">Reviewed: </dt>
+                            <dd className="inline font-medium">
+                              {formatDocumentDate(category.reviewedAt.slice(0, 10))}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {category.processedDate ? (
+                          <div>
+                            <dt className="inline text-muted-foreground">Processed: </dt>
+                            <dd className="inline font-medium">
+                              {formatDocumentDate(category.processedDate)}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {category.expiryDate ? (
+                          <div>
+                            <dt className="inline text-muted-foreground">Expiry: </dt>
+                            <dd className="inline font-medium">
+                              {formatDocumentDate(category.expiryDate)}
+                            </dd>
+                          </div>
+                        ) : null}
+                      </dl>
+
+                      {fileList(type, category)}
+
+                      {panelMode === "review" && needsReview ? (
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            type="button"
+                            className="h-9"
+                            disabled={busy}
+                            onClick={() =>
+                              setApproveTarget({
+                                type,
+                                submissionId: category.currentSubmissionId!,
+                              })
+                            }
+                          >
+                            <Check className="h-4 w-4" aria-hidden />
+                            Approve
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 border-warning/40 text-warning hover:bg-warning-soft hover:text-warning"
+                            disabled={busy}
+                            onClick={() => {
+                              setFlagTarget({
+                                type,
+                                submissionId: category.currentSubmissionId!,
+                              });
+                              setFlagNote("");
+                            }}
+                          >
+                            <Flag className="h-4 w-4" aria-hidden />
+                            Flag an Issue
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-9 text-muted-foreground sm:ml-auto"
+                            disabled={busy}
+                            onClick={() => openPanel(type, "edit")}
+                          >
+                            <Pencil className="h-4 w-4" aria-hidden />
+                            Replace
+                          </Button>
+                        </div>
+                      ) : null}
+
+                      {showReminderToggle ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
+                          <Label htmlFor={`reminder-${type}`} className="text-xs font-normal text-muted-foreground">
+                            Automated expiry reminders
+                          </Label>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {category.remindersEnabled ? "On" : "Off"}
+                            </span>
+                            <Switch
+                              id={`reminder-${type}`}
+                              checked={category.remindersEnabled}
+                              disabled={busy}
+                              aria-label={`Automated expiry reminders for ${meta.title}`}
+                              onCheckedChange={(checked) => void handleReminderToggle(type, checked)}
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
 
       <AlertDialog open={approveTarget !== null} onOpenChange={(open) => !open && setApproveTarget(null)}>
         <AlertDialogContent>
