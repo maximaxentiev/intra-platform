@@ -615,58 +615,148 @@ export function StaffDocumentsSection({
                   </div>
                 </div>
               ) : (
-
                 <>
                   {category.files.length > 0 ? (
-                    <ul className="space-y-2">
+                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                       {category.files.map((file) => (
                         <li
                           key={file.id}
-                          className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2"
                         >
-                          <span className="min-w-0 flex-1 break-all">{file.originalFilename}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {formatDocumentByteSize(file.byteSize)}
-                          </span>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8"
-                            disabled={viewingFileId === file.id}
-                            onClick={() => void handleViewFile(type, file.id)}
-                          >
-                            {viewingFileId === file.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                            ) : (
-                              <ExternalLink className="h-3.5 w-3.5 mr-1" aria-hidden />
-                            )}
-                            View
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-8"
-                            disabled={viewingFileId === file.id}
-                            onClick={() => void handleDownloadFile(type, file.id, file.originalFilename)}
-                          >
-                            <Download className="h-3.5 w-3.5 mr-1" aria-hidden />
-                            Download
-                          </Button>
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <FileText aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium" title={file.originalFilename}>
+                                {file.originalFilename}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDocumentByteSize(file.byteSize)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-9 gap-1.5"
+                              disabled={viewingFileId === file.id}
+                              onClick={() => void handleViewFile(type, file.id)}
+                            >
+                              {viewingFileId === file.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                              ) : (
+                                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                              )}
+                              View
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                              disabled={viewingFileId === file.id}
+                              onClick={() => void handleDownloadFile(type, file.id, file.originalFilename)}
+                            >
+                              <Download className="h-3.5 w-3.5" aria-hidden />
+                              <span className="hidden sm:inline">Download</span>
+                              <span className="sr-only sm:hidden">
+                                Download {file.originalFilename}
+                              </span>
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No files submitted.</p>
+                    <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+                      No files submitted.
+                    </p>
                   )}
 
+                  <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:items-center">
+                    {canReview ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-9"
+                          disabled={busy}
+                          onClick={() =>
+                            setApproveTarget({
+                              type,
+                              submissionId: category.currentSubmissionId!,
+                            })
+                          }
+                        >
+                          <Check className="h-4 w-4" aria-hidden />
+                          Approve
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-9 border-warning/40 text-warning hover:bg-warning-soft hover:text-warning"
+                          disabled={busy}
+                          onClick={() => {
+                            setFlagTarget({
+                              type,
+                              submissionId: category.currentSubmissionId!,
+                            });
+                            setFlagNote("");
+                          }}
+                        >
+                          <Flag className="h-4 w-4" aria-hidden />
+                          Flag Issue
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9"
+                      disabled={busy}
+                      onClick={() => startEdit(type)}
+                    >
+                      {category.isSubmitted ? (
+                        <>
+                          <Pencil className="h-4 w-4" aria-hidden />
+                          Replace
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" aria-hidden />
+                          Upload
+                        </>
+                      )}
+                    </Button>
+                    {canClear ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-9 text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto"
+                        disabled={busy}
+                        onClick={() => setClearTarget(type)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                        Clear Submission
+                      </Button>
+                    ) : null}
+                  </div>
+
                   {showReminderToggle ? (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
-                      <Label htmlFor={`reminder-${type}`} className="text-sm font-normal">
-                        Automated expiry reminders
-                      </Label>
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
+                      <div className="min-w-0">
+                        <Label htmlFor={`reminder-${type}`} className="text-sm font-normal">
+                          Automated expiry reminders
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Notify this staff member before the document expires.
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
                         <span className="text-xs text-muted-foreground">
                           {category.remindersEnabled ? "On" : "Off"}
                         </span>
@@ -680,76 +770,8 @@ export function StaffDocumentsSection({
                       </div>
                     </div>
                   ) : null}
-
-                  <div className="flex flex-wrap gap-2">
-                    {canReview ? (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() =>
-                            setApproveTarget({
-                              type,
-                              submissionId: category.currentSubmissionId!,
-                            })
-                          }
-                        >
-                          <Check className="h-4 w-4 mr-1.5" aria-hidden />
-                          Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() => {
-                            setFlagTarget({
-                              type,
-                              submissionId: category.currentSubmissionId!,
-                            });
-                            setFlagNote("");
-                          }}
-                        >
-                          <Flag className="h-4 w-4 mr-1.5" aria-hidden />
-                          Flag Issue
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => startEdit(type)}
-                    >
-                      {category.isSubmitted ? (
-                        <>
-                          <Pencil className="h-4 w-4 mr-1.5" aria-hidden />
-                          Replace
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-1.5" aria-hidden />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                    {canClear ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={busy}
-                        onClick={() => setClearTarget(type)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1.5" aria-hidden />
-                        Clear Submission
-                      </Button>
-                    ) : null}
-                  </div>
                 </>
+
               )}
             </CardContent>
           </Card>
