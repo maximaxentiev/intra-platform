@@ -804,24 +804,33 @@ export function StaffDocumentsSection({
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
           <DialogHeader>
             <DialogTitle>Flag document issue</DialogTitle>
             <DialogDescription>
               Describe what the carer needs to fix. This note is visible on the current submission.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="issue-note">Issue note</Label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="issue-note">
+                Issue note <span className="text-destructive">*</span>
+              </Label>
+              <span className="text-xs text-muted-foreground">{flagNote.length}/2000</span>
+            </div>
             <Textarea
               id="issue-note"
               value={flagNote}
               maxLength={2000}
-              rows={4}
+              rows={5}
+              required
+              aria-required="true"
+              placeholder="e.g. The expiry date on the certificate does not match the date entered."
               disabled={pendingAction === "flag"}
               onChange={(e) => setFlagNote(e.target.value)}
             />
           </div>
+
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
