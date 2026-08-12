@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Check, Lock } from "lucide-react";
-import { CARER_ONBOARDING_STEPS } from "@/lib/carer-onboarding";
+import {
+  CARER_ONBOARDING_STEPS,
+  isOnboardingStepNavigable,
+} from "@/lib/carer-onboarding";
 import {
   countCompletedOnboardingSteps,
   onboardingStepStateLabel,
@@ -8,9 +12,22 @@ import {
   type OnboardingProgressContext,
 } from "@/lib/carer-onboarding-progress";
 
+function stepItemClassName(isViewing: boolean, state: string): string {
+  return [
+    "flex min-w-0 items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
+    isViewing
+      ? "border-primary/60 bg-primary/5 shadow-sm"
+      : state === "complete"
+        ? "border-border/70 bg-card hover:bg-muted/40"
+        : state === "locked"
+          ? "border-dashed border-border/70 bg-muted/30"
+          : "border-border/70 bg-card hover:bg-muted/40",
+  ].join(" ");
+}
+
 /**
  * Progress chrome for the three-step carer onboarding wizard.
- * Presentation only — route guards remain the source of truth for access.
+ * Route guards remain the source of truth for access; unlocked steps link backward/forward within range.
  */
 export function CarerOnboardingShell({
   activeStep,
@@ -25,6 +42,7 @@ export function CarerOnboardingShell({
     onboardingStep,
     onboardingCompletedAt,
   };
+  const session = { profileCompletedAt, onboardingStep };
   const total = CARER_ONBOARDING_STEPS.length;
   const completedCount = countCompletedOnboardingSteps(ctx);
   const percent = Math.round((completedCount / total) * 100);
@@ -60,19 +78,11 @@ export function CarerOnboardingShell({
             const state = resolveOnboardingStepDisplayState(s.step, ctx);
             const label = onboardingStepStateLabel(state, s.step, activeStep);
             const isViewing = s.step === activeStep;
-            return (
-              <li
-                key={s.step}
-                aria-current={isViewing ? "step" : undefined}
-                className={[
-                  "flex min-w-0 items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
-                  isViewing
-                    ? "border-primary/60 bg-primary/5 shadow-sm"
-                    : state === "complete"
-                      ? "border-border/70 bg-card"
-                      : "border-dashed border-border/70 bg-muted/30",
-                ].join(" ")}
-              >
+            const navigable = isOnboardingStepNavigable(s.step, activeStep, session);
+            const itemClass = stepItemClassName(isViewing, state);
+
+            const inner = (
+              <>
                 <span
                   aria-hidden="true"
                   className={[
@@ -102,6 +112,32 @@ export function CarerOnboardingShell({
                   </span>
                   <span className="block text-xs text-muted-foreground">{label}</span>
                 </span>
+              </>
+            );
+
+            if (navigable) {
+              return (
+                <li key={s.step}>
+                  <Link
+                    to={s.path}
+                    className={`${itemClass} block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                    aria-label={`Go to ${s.title}`}
+                  >
+                    {inner}
+                  </Link>
+                </li>
+              );
+            }
+
+            return (
+              <li
+                key={s.step}
+                aria-current={isViewing ? "step" : undefined}
+                aria-disabled={state === "locked" ? true : undefined}
+                className={itemClass}
+                title={state === "locked" ? "Complete previous steps first" : undefined}
+              >
+                {inner}
               </li>
             );
           })}

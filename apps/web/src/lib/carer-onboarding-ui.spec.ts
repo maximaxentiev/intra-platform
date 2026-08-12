@@ -44,4 +44,24 @@ describe("carer onboarding routing", () => {
     expect(form).toContain("overflow-x-hidden");
     expect(form).toContain("min-w-0");
   });
+
+  it("onboarding progress links to unlocked earlier steps", () => {
+    const shell = readSrc("components/carer/CarerOnboardingShell.tsx");
+    expect(shell).toContain("isOnboardingStepNavigable");
+    expect(shell).toContain("<Link");
+    expect(shell).toContain('aria-current={isViewing ? "step" : undefined}');
+    expect(shell).not.toMatch(/onClick=.*navigate/i);
+  });
+
+  it("availability placeholder includes back to documents", () => {
+    const route = readSrc("routes/carer/onboarding/availability.tsx");
+    expect(route).toContain("Back to Documents");
+    expect(route).toContain("stepPathForNumber(2)");
+  });
+
+  it("route guards allow backward navigation without rewinding onboarding", () => {
+    const guards = readSrc("lib/carer-route-guards.ts");
+    expect(guards).toContain("required > allowed");
+    expect(guards).not.toMatch(/onboardingStep\s*=|profileCompletedAt\s*=/);
+  });
 });

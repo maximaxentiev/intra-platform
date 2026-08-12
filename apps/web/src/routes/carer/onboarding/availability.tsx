@@ -1,8 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
+import { stepPathForNumber } from "@/lib/carer-onboarding";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -27,6 +30,16 @@ function CarerOnboardingAvailabilityPage() {
         onboardingStep={carer.onboardingStep}
         onboardingCompletedAt={carer.onboardingCompletedAt}
       >
+        <Button
+          asChild
+          variant="ghost"
+          className="h-10 px-0 text-muted-foreground hover:text-foreground"
+        >
+          <Link to={stepPathForNumber(2)}>
+            <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
+            Back to Documents
+          </Link>
+        </Button>
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Availability scheduling is not available yet. Complete document uploads when they

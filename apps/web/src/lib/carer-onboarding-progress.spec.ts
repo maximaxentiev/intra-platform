@@ -26,6 +26,18 @@ describe("resolveOnboardingStepDisplayState", () => {
     expect(resolveOnboardingStepDisplayState(3, ctx)).toBe("locked");
   });
 
+  it("shows earlier steps complete when viewing availability at step 3", () => {
+    const ctx = {
+      activeStep: 3,
+      profileCompletedAt: "2026-01-01T00:00:00.000Z",
+      onboardingStep: 3,
+      onboardingCompletedAt: null,
+    };
+    expect(resolveOnboardingStepDisplayState(1, ctx)).toBe("complete");
+    expect(resolveOnboardingStepDisplayState(2, ctx)).toBe("complete");
+    expect(resolveOnboardingStepDisplayState(3, ctx)).toBe("current");
+  });
+
   it("shows step 1 in progress before profile completion", () => {
     const ctx = {
       activeStep: 1,

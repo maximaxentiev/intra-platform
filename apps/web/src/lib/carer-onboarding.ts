@@ -48,3 +48,13 @@ export function requiredStepForPath(path: CarerOnboardingStepPath): number {
   const found = CARER_ONBOARDING_STEPS.find((s) => s.path === path);
   return found?.step ?? 1;
 }
+
+/** Earlier unlocked steps remain navigable; future locked steps are not. */
+export function isOnboardingStepNavigable(
+  stepNumber: number,
+  activeStep: number,
+  session: Pick<CarerSession, "profileCompletedAt" | "onboardingStep">,
+): boolean {
+  if (stepNumber === activeStep) return false;
+  return stepNumber <= maxAccessibleOnboardingStep(session);
+}
