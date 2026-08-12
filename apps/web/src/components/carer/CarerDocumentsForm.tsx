@@ -350,7 +350,7 @@ export function CarerDocumentsForm({
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+        <div className="sticky bottom-0 z-10 rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:bg-card sm:p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {mode === "onboarding" ? (
               <Button
