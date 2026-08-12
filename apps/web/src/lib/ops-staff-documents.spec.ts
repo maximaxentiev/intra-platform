@@ -210,3 +210,59 @@ describe("status label completeness", () => {
     expect(Object.keys(STAFF_DOCUMENT_LIST_STATUS_LABELS)).toHaveLength(4);
   });
 });
+
+describe("simplified ops documents section", () => {
+  it("maps review status to state-based primary actions", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain('label: "Upload"');
+    expect(src).toContain('label: "Review"');
+    expect(src).toContain('label: "Review Issue"');
+    expect(src).toContain('label: "View"');
+    expect(src).toContain("reviewStatus === \"pending_review\"");
+    expect(src).toContain("reviewStatus === \"issue_flagged\"");
+    expect(src).not.toMatch(/deriveStaffDocumentListStatus|complianceForRequiredCategories/);
+  });
+
+  it("uses progressive disclosure panels for review and edit flows", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain('panelMode === "review"');
+    expect(src).toContain('panelMode === "edit"');
+    expect(src).toContain("closePanel");
+    expect(src).toContain("aria-expanded={isOpen}");
+    expect(src).toContain("aria-controls={isOpen ? panelId : undefined}");
+  });
+
+  it("keeps approve and flag on exact currentSubmissionId in review panel", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain("submissionId: category.currentSubmissionId!");
+    expect(src).toContain("approveSubmission");
+    expect(src).toContain("flagIssue");
+    expect(src).toContain("handleStaleRefresh");
+    expect(src).not.toMatch(/auto.?retry|retry.*approve/i);
+  });
+
+  it("exposes secondary actions through overflow menu without removing replace/clear", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain("DropdownMenu");
+    expect(src).toContain("More actions for");
+    expect(src).toContain("Details &amp; files");
+    expect(src).toContain("Replace");
+    expect(src).toContain("Clear Submission");
+    expect(src).toContain("DropdownMenuSeparator");
+  });
+
+  it("uses authenticated ops file helpers for view and download", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain("openOpsStaffDocumentFile");
+    expect(src).toContain("downloadOpsStaffDocumentFile");
+    expect(src).not.toContain("storageKey");
+  });
+});
+
+describe("carer onboarding navigation preservation", () => {
+  it("retains step 3 backward navigation from commit 48fefd3", () => {
+    expect(readSrc("components/carer/CarerOnboardingShell.tsx")).toContain("isOnboardingStepNavigable");
+    expect(readSrc("routes/carer/onboarding/availability.tsx")).toContain("Back to Documents");
+    expect(readSrc("lib/carer-onboarding.ts")).toContain("isOnboardingStepNavigable");
+  });
+});
