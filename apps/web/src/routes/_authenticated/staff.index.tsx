@@ -246,10 +246,17 @@ function StaffIndex() {
                   <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
                   <DocumentStatusBadge status={s.documentStatus ?? "no_documents_submitted"} size="xs" />
                 </div>
-                <div className="mt-2 space-y-0.5 text-xs text-muted-foreground min-w-0">
-                  <div className="break-words">{s.phone || "No phone"}</div>
-                  <div className="break-all">{s.email || "No email"}</div>
-                </div>
+                <dl className="mt-2 min-w-0 space-y-0.5 text-xs text-muted-foreground">
+                  <div className="flex min-w-0 gap-1.5">
+                    <dt className="shrink-0">Phone:</dt>
+                    <dd className="min-w-0 break-words tabular-nums">{s.phone || "—"}</dd>
+                  </div>
+                  <div className="flex min-w-0 gap-1.5">
+                    <dt className="shrink-0">Email:</dt>
+                    <dd className="min-w-0 break-all">{s.email || "—"}</dd>
+                  </div>
+                </dl>
+
               </Card>
             ))}
           </div>
