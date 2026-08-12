@@ -15,7 +15,7 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -350,7 +350,7 @@ export function CarerDocumentsForm({
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+        <div className="sticky bottom-0 z-10 rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:bg-card sm:p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {mode === "onboarding" ? (
               <Button
@@ -521,7 +521,11 @@ function CarerDocumentCategoryCard({
           : "Approved — no action needed.";
 
   return (
-    <Card className="min-w-0 border-border/70 shadow-sm">
+    <Card
+      className="min-w-0 border-border/70 shadow-sm"
+      role="group"
+      aria-labelledby={`doc-title-${category.documentType}`}
+    >
       <CardHeader className="gap-3 pb-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -533,12 +537,15 @@ function CarerDocumentCategoryCard({
             </span>
             <div className="min-w-0 space-y-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <CardTitle className="text-base leading-snug">{meta.title}</CardTitle>
+                <CardTitle id={`doc-title-${category.documentType}`} className="text-base leading-snug">
+                  {meta.title}
+                </CardTitle>
                 <RequirementPill required={meta.required} />
               </div>
               <p className="text-xs text-muted-foreground">{nextAction}</p>
             </div>
           </div>
+
           <div className="flex flex-wrap justify-end gap-1.5">
             <ReviewStatusPill status={category.reviewStatus} />
             <ExpiryStatusPill display={category.expiryDisplay} />
@@ -732,11 +739,15 @@ function CarerDocumentCategoryCard({
         </div>
 
         {error ? (
-          <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
             <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
             <span className="min-w-0 break-words">{error}</span>
           </p>
         ) : null}
+
       </CardContent>
     </Card>
   );

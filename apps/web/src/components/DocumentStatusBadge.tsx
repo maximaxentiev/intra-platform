@@ -14,11 +14,11 @@ const TONES: Record<
     icon: Circle,
   },
   pending_review: {
-    cls: "bg-warning-soft text-warning border-warning/25",
+    cls: "bg-info-soft text-info border-info/25",
     icon: Clock,
   },
   warning: {
-    cls: "bg-warning-soft text-warning border-warning/25",
+    cls: "bg-warning-soft text-warning border-warning/30",
     icon: AlertCircle,
   },
   approved: {
@@ -26,6 +26,7 @@ const TONES: Record<
     icon: CheckCircle2,
   },
 };
+
 
 /** Staff list aggregate document compliance status from the backend. */
 export function DocumentStatusBadge({
