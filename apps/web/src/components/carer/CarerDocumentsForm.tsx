@@ -33,11 +33,9 @@ import {
   categoryDraftDirty,
   categoryDraftFromCategory,
   documentsDraftDirty,
-  expiryDisplayLabel,
   formatDocumentByteSize,
   formatDocumentDate,
   mapDocumentsApiError,
-  reviewStatusLabel,
   STAFF_DOCUMENT_TYPES,
   validateCategoryDraft,
   carerDocumentsApi,
@@ -47,6 +45,13 @@ import {
   type StaffDocumentType,
 } from "@/lib/carer-documents";
 import { openStaffDocumentFile } from "@/lib/staff-document-content";
+import {
+  ExpiryStatusPill,
+  IssueNoteCallout,
+  RequirementPill,
+  ReviewStatusPill,
+  UnsavedPill,
+} from "@/components/documents/DocumentStatusPills";
 
 function emptyDrafts(): Record<StaffDocumentType, CategoryDraft> {
   return {
