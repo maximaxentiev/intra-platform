@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -97,8 +98,16 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function carerDocumentsStickyBarRoute(pathname: string): boolean {
+  return pathname === "/carer/onboarding/documents" || pathname === "/carer/documents";
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const toastMobileOffset = carerDocumentsStickyBarRoute(pathname)
+    ? { bottom: "96px" as const, left: "16px" as const, right: "16px" as const }
+    : undefined;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -110,7 +119,7 @@ function RootComponent() {
           position="bottom-right"
           expand={false}
           offset={20}
-          mobileOffset={{ bottom: "96px", left: "16px", right: "16px" }}
+          mobileOffset={toastMobileOffset}
           toastOptions={{ duration: 3500 }}
         />
       </TooltipProvider>
