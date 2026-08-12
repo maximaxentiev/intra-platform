@@ -283,26 +283,33 @@ export function CarerDocumentsForm({
   return (
     <>
       <form onSubmit={(e) => void handleSave(e)} className="space-y-4 min-w-0 overflow-x-hidden">
-        {mode === "onboarding" ? (
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          {mode === "onboarding" ? (
             <Button
               type="button"
               variant="ghost"
-              className="h-10 px-0 text-muted-foreground hover:text-foreground"
+              className="h-10 justify-self-start px-0 text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={handleBackRequest}
             >
               <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
               Personal Information
             </Button>
-            {isDirty ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                Unsaved changes
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+          ) : (
+            <p className="min-w-0 text-sm text-muted-foreground">
+              Keep these documents current — Intra reviews every new submission.
+            </p>
+          )}
+          {isDirty ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warning" />
+              Unsaved changes
+            </span>
+          ) : (
+            <span />
+          )}
+        </div>
+
 
         <div className="space-y-4">
           {STAFF_DOCUMENT_TYPES.map((type) => {
