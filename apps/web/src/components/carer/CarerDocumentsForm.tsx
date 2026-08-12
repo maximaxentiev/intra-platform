@@ -6,6 +6,7 @@ import {
   ExternalLink,
   FileText,
   Loader2,
+  Lock,
   Upload,
   X,
 } from "lucide-react";
