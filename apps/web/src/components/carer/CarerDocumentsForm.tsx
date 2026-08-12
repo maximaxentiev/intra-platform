@@ -350,48 +350,57 @@ export function CarerDocumentsForm({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
-          {mode === "onboarding" ? (
-            <Button
-              type="button"
-              className="h-11 w-full font-medium sm:order-4 sm:ml-auto sm:w-auto"
-              disabled={busy}
-              onClick={() => void handleNext()}
-            >
-              {advancing ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-              Next
-            </Button>
-          ) : null}
-          <Button
-            type="submit"
-            variant={mode === "onboarding" ? "outline" : "default"}
-            className="h-11 w-full sm:order-2 sm:w-auto"
-            disabled={busy || !isDirty}
-          >
-            {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-11 w-full text-muted-foreground sm:order-3 sm:w-auto"
-            disabled={busy || !isDirty}
-            onClick={() => setDiscardOpen(true)}
-          >
-            Discard
-          </Button>
-          {mode === "onboarding" ? (
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {mode === "onboarding" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-11 w-full justify-center text-muted-foreground hover:text-foreground sm:order-1 sm:w-auto sm:justify-start"
+                disabled={busy}
+                onClick={handleBackRequest}
+              >
+                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                Back
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
-              className="h-11 w-full text-muted-foreground sm:order-1 sm:w-auto"
-              disabled={busy}
-              onClick={handleBackRequest}
+              className="h-11 w-full text-muted-foreground sm:order-2 sm:ml-auto sm:w-auto"
+              disabled={busy || !isDirty}
+              onClick={() => setDiscardOpen(true)}
             >
-              Back
+              Discard
             </Button>
-          ) : null}
+            <Button
+              type="submit"
+              variant={mode === "onboarding" ? "outline" : "default"}
+              className={`h-11 w-full sm:order-3 sm:w-auto ${mode === "account" ? "sm:ml-0" : ""}`}
+              disabled={busy || !isDirty}
+            >
+              {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            {mode === "onboarding" ? (
+              <Button
+                type="button"
+                className="h-11 w-full font-medium sm:order-4 sm:w-auto"
+                disabled={busy}
+                onClick={() => void handleNext()}
+              >
+                {advancing ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
+                Next
+              </Button>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground sm:text-right">
+            {mode === "onboarding"
+              ? "Next saves your changes and continues to the following step."
+              : "Changes are only stored once you save."}
+          </p>
         </div>
+
       </form>
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
