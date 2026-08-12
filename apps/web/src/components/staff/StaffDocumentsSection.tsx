@@ -47,13 +47,11 @@ import {
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftFromCategory,
   categoryDraftDirty,
-  expiryDisplayLabel,
   formatDocumentByteSize,
   formatDocumentDate,
   isStaleSubmissionError,
   mapOpsDocumentsApiError,
   opsStaffDocumentsApi,
-  reviewStatusLabel,
   shiftEligibilityReasonLabel,
   validateCategoryDraft,
   type CarerDocumentCategory,
@@ -66,6 +64,13 @@ import {
   openOpsStaffDocumentFile,
 } from "@/lib/staff-document-content";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
+import {
+  ExpiryStatusPill,
+  IssueNoteCallout,
+  RequirementPill,
+  ReviewStatusPill,
+} from "@/components/documents/DocumentStatusPills";
+import { cn } from "@/lib/utils";
 
 function emptyDraft(): CategoryDraft {
   return { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" };
