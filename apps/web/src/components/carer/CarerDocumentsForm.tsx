@@ -732,11 +732,15 @@ function CarerDocumentCategoryCard({
         </div>
 
         {error ? (
-          <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
             <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
             <span className="min-w-0 break-words">{error}</span>
           </p>
         ) : null}
+
       </CardContent>
     </Card>
   );
