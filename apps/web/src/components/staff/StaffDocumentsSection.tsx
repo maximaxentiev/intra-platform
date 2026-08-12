@@ -315,30 +315,42 @@ export function StaffDocumentsSection({
 
   return (
     <div className="space-y-4 min-w-0">
-      <Card className="border-border/70">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Compliance summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">Document status:</span>
-            <DocumentStatusBadge status={documents.documentStatus} />
+      <Card
+        className={cn(
+          "border-l-4 shadow-sm",
+          documents.shiftEligible ? "border-l-success" : "border-l-destructive",
+        )}
+      >
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2">
+              {documents.shiftEligible ? (
+                <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-success" />
+              ) : (
+                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0 text-destructive" />
+              )}
+              <p
+                className={cn(
+                  "text-sm font-semibold",
+                  documents.shiftEligible ? "text-success" : "text-destructive",
+                )}
+              >
+                {documents.shiftEligible
+                  ? "Eligible for shift matching"
+                  : "Not eligible for shift matching"}
+              </p>
+            </div>
+            {!documents.shiftEligible && documents.shiftEligibilityReasons.length > 0 ? (
+              <ul className="list-disc space-y-0.5 pl-8 text-sm text-muted-foreground">
+                {documents.shiftEligibilityReasons.map((reason) => (
+                  <li key={reason}>{shiftEligibilityReasonLabel(reason)}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-          <div>
-            {documents.shiftEligible ? (
-              <p className="font-medium text-success">Eligible for shift matching</p>
-            ) : (
-              <div className="space-y-1">
-                <p className="font-medium text-destructive">Not eligible for shift matching</p>
-                {documents.shiftEligibilityReasons.length > 0 ? (
-                  <ul className="list-disc pl-5 text-muted-foreground">
-                    {documents.shiftEligibilityReasons.map((reason) => (
-                      <li key={reason}>{shiftEligibilityReasonLabel(reason)}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            )}
+          <div className="flex items-center gap-2 sm:justify-end">
+            <span className="text-xs text-muted-foreground">Document status</span>
+            <DocumentStatusBadge status={documents.documentStatus} />
           </div>
         </CardContent>
       </Card>
@@ -357,9 +369,12 @@ export function StaffDocumentsSection({
         const canClear = category.isSubmitted && category.currentSubmissionId;
 
         return (
-          <Card key={type} className="min-w-0 border-border/70">
-            <CardHeader className="gap-2 pb-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
+          <Card
+            key={type}
+            className={cn("min-w-0 border-border/70 shadow-sm", isEditing && "ring-1 ring-primary/40")}
+          >
+            <CardHeader className="gap-3 pb-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="flex min-w-0 items-start gap-2.5">
                   <span
                     aria-hidden="true"
@@ -367,59 +382,64 @@ export function StaffDocumentsSection({
                   >
                     <FileText className="h-4 w-4" />
                   </span>
-                  <div className="min-w-0">
-                    <CardTitle className="text-base">{meta.title}</CardTitle>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {meta.required ? "Required" : "Optional"}
-                    </p>
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <CardTitle className="text-base leading-snug">{meta.title}</CardTitle>
+                      <RequirementPill required={meta.required} />
+                    </div>
+                    {isEditing ? (
+                      <p className="text-xs font-medium text-primary">
+                        Editing submission — changes are saved when you press Save.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary">{reviewStatusLabel(category.reviewStatus)}</Badge>
-                  {expiryDisplayLabel(category.expiryDisplay) ? (
-                    <Badge variant="outline">{expiryDisplayLabel(category.expiryDisplay)}</Badge>
-                  ) : null}
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  <ReviewStatusPill status={category.reviewStatus} />
+                  <ExpiryStatusPill display={category.expiryDisplay} />
                 </div>
               </div>
 
               {category.reviewStatus === "issue_flagged" && category.issueNote ? (
-                <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>
-                    <span className="font-medium">Issue flagged.</span> {category.issueNote}
-                  </span>
-                </p>
+                <IssueNoteCallout note={category.issueNote} />
               ) : null}
 
               {!isEditing && category.isSubmitted ? (
-                <dl className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                <dl className="grid gap-x-6 gap-y-1 rounded-lg bg-muted/40 px-3 py-2 text-xs sm:grid-cols-2">
                   {category.submittedAt ? (
                     <div>
-                      <dt className="inline font-medium text-foreground">Submitted: </dt>
-                      <dd className="inline">{formatDocumentDate(category.submittedAt.slice(0, 10))}</dd>
+                      <dt className="inline text-muted-foreground">Submitted: </dt>
+                      <dd className="inline font-medium">
+                        {formatDocumentDate(category.submittedAt.slice(0, 10))}
+                      </dd>
                     </div>
                   ) : null}
                   {category.reviewedAt ? (
                     <div>
-                      <dt className="inline font-medium text-foreground">Reviewed: </dt>
-                      <dd className="inline">{formatDocumentDate(category.reviewedAt.slice(0, 10))}</dd>
+                      <dt className="inline text-muted-foreground">Reviewed: </dt>
+                      <dd className="inline font-medium">
+                        {formatDocumentDate(category.reviewedAt.slice(0, 10))}
+                      </dd>
                     </div>
                   ) : null}
                   {category.processedDate ? (
                     <div>
-                      <dt className="inline font-medium text-foreground">Processed: </dt>
-                      <dd className="inline">{formatDocumentDate(category.processedDate)}</dd>
+                      <dt className="inline text-muted-foreground">Processed: </dt>
+                      <dd className="inline font-medium">
+                        {formatDocumentDate(category.processedDate)}
+                      </dd>
                     </div>
                   ) : null}
                   {category.expiryDate ? (
                     <div>
-                      <dt className="inline font-medium text-foreground">Expiry: </dt>
-                      <dd className="inline">{formatDocumentDate(category.expiryDate)}</dd>
+                      <dt className="inline text-muted-foreground">Expiry: </dt>
+                      <dd className="inline font-medium">{formatDocumentDate(category.expiryDate)}</dd>
                     </div>
                   ) : null}
                 </dl>
               ) : null}
             </CardHeader>
+
 
             <CardContent className="space-y-4">
               {isEditing ? (
