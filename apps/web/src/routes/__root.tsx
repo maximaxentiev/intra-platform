@@ -110,6 +110,7 @@ function RootComponent() {
           position="bottom-right"
           expand={false}
           offset={20}
+          mobileOffset={{ bottom: "96px", left: "16px", right: "16px" }}
           toastOptions={{ duration: 3500 }}
         />
       </TooltipProvider>
