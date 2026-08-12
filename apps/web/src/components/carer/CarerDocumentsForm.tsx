@@ -521,7 +521,11 @@ function CarerDocumentCategoryCard({
           : "Approved — no action needed.";
 
   return (
-    <Card className="min-w-0 border-border/70 shadow-sm">
+    <Card
+      className="min-w-0 border-border/70 shadow-sm"
+      role="group"
+      aria-labelledby={`doc-title-${category.documentType}`}
+    >
       <CardHeader className="gap-3 pb-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -533,12 +537,15 @@ function CarerDocumentCategoryCard({
             </span>
             <div className="min-w-0 space-y-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <CardTitle className="text-base leading-snug">{meta.title}</CardTitle>
+                <CardTitle id={`doc-title-${category.documentType}`} className="text-base leading-snug">
+                  {meta.title}
+                </CardTitle>
                 <RequirementPill required={meta.required} />
               </div>
               <p className="text-xs text-muted-foreground">{nextAction}</p>
             </div>
           </div>
+
           <div className="flex flex-wrap justify-end gap-1.5">
             <ReviewStatusPill status={category.reviewStatus} />
             <ExpiryStatusPill display={category.expiryDisplay} />
