@@ -9,6 +9,8 @@ import {
   Flag,
   Loader2,
   Pencil,
+  ShieldAlert,
+  ShieldCheck,
   Trash2,
   Upload,
   X,
