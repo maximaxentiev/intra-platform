@@ -484,14 +484,24 @@ function CarerDocumentCategoryCard({
 }) {
   const inputId = `files-${category.documentType}`;
   const retainedFiles = category.files.filter((f) => draft.retainFileIds.includes(f.id));
-  const expiryLabel = expiryDisplayLabel(category.expiryDisplay);
+  const fileCount = retainedFiles.length + draft.newFiles.length;
   const showApprovedReplacementHint =
     category.reviewStatus === "approved" && (dirty || category.isSubmitted);
+  const nextAction =
+    category.reviewStatus === "issue_flagged"
+      ? "Replace the file(s) or fix the details below, then save."
+      : category.reviewStatus === "not_submitted"
+        ? meta.required
+          ? "Upload this document to continue."
+          : "Optional — upload it if you have it."
+        : category.reviewStatus === "pending_review"
+          ? "Submitted. Intra will review this shortly."
+          : "Approved — no action needed.";
 
   return (
-    <Card className="min-w-0">
-      <CardHeader className="gap-2 pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+    <Card className="min-w-0 border-border/70 shadow-sm">
+      <CardHeader className="gap-3 pb-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
             <span
               aria-hidden="true"
@@ -499,31 +509,23 @@ function CarerDocumentCategoryCard({
             >
               <FileText className="h-4 w-4" />
             </span>
-            <div className="min-w-0">
-              <CardTitle className="text-base">{meta.title}</CardTitle>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {meta.required ? "Required" : "Optional"}
-              </p>
+            <div className="min-w-0 space-y-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <CardTitle className="text-base leading-snug">{meta.title}</CardTitle>
+                <RequirementPill required={meta.required} />
+              </div>
+              <p className="text-xs text-muted-foreground">{nextAction}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="secondary">{reviewStatusLabel(category.reviewStatus)}</Badge>
-            {expiryLabel ? <Badge variant="outline">{expiryLabel}</Badge> : null}
-            {dirty ? (
-              <Badge variant="outline" className="border-dashed">
-                Unsaved
-              </Badge>
-            ) : null}
+          <div className="flex flex-wrap justify-end gap-1.5">
+            <ReviewStatusPill status={category.reviewStatus} />
+            <ExpiryStatusPill display={category.expiryDisplay} />
+            {dirty ? <UnsavedPill /> : null}
           </div>
         </div>
 
         {category.reviewStatus === "issue_flagged" && category.issueNote ? (
-          <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <span className="font-medium">Issue flagged.</span> {category.issueNote}
-            </span>
-          </p>
+          <IssueNoteCallout note={category.issueNote} />
         ) : null}
 
         {showApprovedReplacementHint ? (
@@ -533,149 +535,191 @@ function CarerDocumentCategoryCard({
         ) : null}
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 pt-0">
         {meta.dateField === "processed" ? (
-          <div className="space-y-1.5">
-            <Label htmlFor={`processed-${category.documentType}`}>Processed Date</Label>
-            <Input
-              id={`processed-${category.documentType}`}
-              type="date"
-              className="h-11"
-              value={draft.processedDate}
-              disabled={disabled}
-              onChange={(e) => onProcessedDateChange(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter the processed date shown on your Vulnerable Sector Check.
-            </p>
-            {category.expiryDate ? (
-              <p className="text-xs text-muted-foreground">
-                Expires: {formatDocumentDate(category.expiryDate)}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor={`processed-${category.documentType}`}>Processed Date</Label>
+              <Input
+                id={`processed-${category.documentType}`}
+                type="date"
+                className="h-11"
+                value={draft.processedDate}
+                disabled={disabled}
+                aria-describedby={`processed-hint-${category.documentType}`}
+                onChange={(e) => onProcessedDateChange(e.target.value)}
+              />
+              <p
+                id={`processed-hint-${category.documentType}`}
+                className="text-xs text-muted-foreground"
+              >
+                As shown on your Vulnerable Sector Check.
               </p>
-            ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
+                <Lock aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+                Expiry Date
+              </span>
+              <div className="flex h-11 items-center rounded-md border border-dashed border-border bg-muted/40 px-3 text-sm text-muted-foreground">
+                {category.expiryDate ? formatDocumentDate(category.expiryDate) : "Not calculated yet"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Calculated by Intra — you can&apos;t edit this.
+              </p>
+            </div>
           </div>
         ) : null}
 
         {meta.dateField === "expiry" ? (
-          <div className="space-y-1.5">
-            <Label htmlFor={`expiry-${category.documentType}`}>Expiry Date</Label>
-            <Input
-              id={`expiry-${category.documentType}`}
-              type="date"
-              className="h-11"
-              value={draft.expiryDate}
-              disabled={disabled}
-              onChange={(e) => onExpiryDateChange(e.target.value)}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor={`expiry-${category.documentType}`}>Expiry Date</Label>
+              <Input
+                id={`expiry-${category.documentType}`}
+                type="date"
+                className="h-11"
+                value={draft.expiryDate}
+                disabled={disabled}
+                aria-describedby={`expiry-hint-${category.documentType}`}
+                onChange={(e) => onExpiryDateChange(e.target.value)}
+              />
+              <p id={`expiry-hint-${category.documentType}`} className="text-xs text-muted-foreground">
+                The expiry date printed on your certification.
+              </p>
+            </div>
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor={inputId}>Files</Label>
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3">
-            <input
-              ref={fileInputRef}
-              id={inputId}
-              type="file"
-              multiple
-              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-              className="sr-only"
-              disabled={disabled}
-              onChange={(e) => onFilesSelected(e.target.files)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 w-full justify-center gap-2 sm:w-auto"
-              disabled={disabled}
-              onClick={() => document.getElementById(inputId)?.click()}
-            >
-              <Upload aria-hidden="true" className="h-4 w-4" />
-              Add files
-            </Button>
-            <p className="mt-2 text-xs text-muted-foreground">
-              PDF, PNG, JPG, or JPEG. Up to 10 files and 50 MB total per document type.
-            </p>
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor={inputId} className="text-sm">
+              Files
+            </Label>
+            <span className="text-xs text-muted-foreground">
+              {fileCount === 0 ? "None attached" : `${fileCount} attached`}
+            </span>
           </div>
+
+          {fileCount > 0 ? (
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {retainedFiles.map((file) => (
+                <li
+                  key={file.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium" title={file.originalFilename}>
+                        {file.originalFilename}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDocumentByteSize(file.byteSize)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 gap-1.5"
+                      disabled={disabled || viewingFileId === file.id}
+                      onClick={() => onViewFile(file.id)}
+                    >
+                      {viewingFileId === file.id ? (
+                        <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                      )}
+                      <span className="hidden sm:inline">View</span>
+                      <span className="sr-only sm:hidden">View {file.originalFilename}</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                      disabled={disabled}
+                      aria-label={`Remove ${file.originalFilename} from this save`}
+                      onClick={() => onRemoveRetainedFile(file.id)}
+                    >
+                      <X aria-hidden="true" className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+              {draft.newFiles.map((file, index) => (
+                <li
+                  key={`${file.name}-${index}`}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-warning-soft/40 px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium" title={file.name}>
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDocumentByteSize(file.size)} · not saved yet
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                    disabled={disabled}
+                    aria-label={`Remove ${file.name}`}
+                    onClick={() => onRemoveNewFile(index)}
+                  >
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            id={inputId}
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+            className="sr-only"
+            disabled={disabled}
+            onChange={(e) => onFilesSelected(e.target.files)}
+          />
+          <button
+            type="button"
+            disabled={disabled}
+            aria-describedby={`upload-hint-${category.documentType}`}
+            className="flex w-full flex-col items-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-5 text-center transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => document.getElementById(inputId)?.click()}
+          >
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+              <Upload aria-hidden="true" className="h-4 w-4 text-primary" />
+              {fileCount > 0 ? "Add more files" : "Add files"}
+            </span>
+            <span id={`upload-hint-${category.documentType}`} className="text-xs text-muted-foreground">
+              PDF, PNG, JPG or JPEG · up to 10 files · 50 MB total
+            </span>
+          </button>
         </div>
 
-        <ul className="space-y-2">
-          {retainedFiles.map((file) => (
-            <li
-              key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{file.originalFilename}</p>
-                <p className="text-xs text-muted-foreground">{formatDocumentByteSize(file.byteSize)}</p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 shrink-0 gap-1"
-                disabled={disabled || viewingFileId === file.id}
-                onClick={() => onViewFile(file.id)}
-              >
-                {viewingFileId === file.id ? (
-                  <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-                )}
-                View
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-9 shrink-0"
-                disabled={disabled}
-                aria-label={`Remove ${file.originalFilename} from this save`}
-                onClick={() => onRemoveRetainedFile(file.id)}
-              >
-                <X aria-hidden="true" className="h-4 w-4" />
-              </Button>
-            </li>
-          ))}
-          {draft.newFiles.map((file, index) => (
-            <li
-              key={`${file.name}-${index}`}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDocumentByteSize(file.size)} · not saved yet
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-9 shrink-0"
-                disabled={disabled}
-                aria-label={`Remove ${file.name}`}
-                onClick={() => onRemoveNewFile(index)}
-              >
-                <X aria-hidden="true" className="h-4 w-4" />
-              </Button>
-            </li>
-          ))}
-          {!retainedFiles.length && !draft.newFiles.length ? (
-            <li className="text-sm text-muted-foreground">No files uploaded yet.</li>
-          ) : null}
-        </ul>
-
         {error ? (
-          <p className="flex items-start gap-2 text-sm text-destructive">
-            <AlertCircle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{error}</span>
+          <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-words">{error}</span>
           </p>
         ) : null}
       </CardContent>
     </Card>
   );
 }
+
 
 export function CarerDocumentsBackLink() {
   return (
