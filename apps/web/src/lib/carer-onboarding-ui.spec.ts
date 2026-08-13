@@ -53,8 +53,10 @@ describe("carer onboarding routing", () => {
     expect(shell).not.toMatch(/onClick=.*navigate/i);
   });
 
-  it("availability placeholder includes back to documents", () => {
+  it("availability step uses the shared availability editor", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
+    expect(route).toContain("CarerAvailabilityEditor");
+    expect(route).toContain("carerAvailabilityApi.list");
     expect(route).toContain("Back to Documents");
     expect(route).toContain("stepPathForNumber(2)");
   });

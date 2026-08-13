@@ -53,6 +53,18 @@ function CarerHomePage() {
 
         <Card>
           <CardHeader className="pb-3">
+            <CardTitle className="text-base">Availability</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            <p>Manage the days and times you&apos;re available to work.</p>
+            <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+              Manage availability
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base">Upcoming shifts</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">

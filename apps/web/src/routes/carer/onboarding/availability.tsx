@@ -1,11 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
+import { CarerAvailabilityEditor } from "@/components/carer/CarerAvailabilityEditor";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
 import { stepPathForNumber } from "@/lib/carer-onboarding";
+import { carerAvailabilityApi } from "@/lib/carer-availability";
+import { currentMondayWeekStart } from "@/lib/carer-availability-dates";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -17,12 +21,19 @@ export const Route = createFileRoute("/carer/onboarding/availability")({
 
 function CarerOnboardingAvailabilityPage() {
   const { carer } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const [weekStart, setWeekStart] = useState(() => currentMondayWeekStart());
+
+  const availability = useQuery({
+    queryKey: ["carer-availability", weekStart],
+    queryFn: () => carerAvailabilityApi.list(weekStart),
+  });
 
   return (
     <CarerShell
       session={carer}
       title="Availability"
-      subtitle="Set your weekly availability in a future release."
+      subtitle="Add the days and times you're available to work."
     >
       <CarerOnboardingShell
         activeStep={3}
@@ -40,13 +51,17 @@ function CarerOnboardingAvailabilityPage() {
             Back to Documents
           </Link>
         </Button>
-        <Card>
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            Availability scheduling is not available yet. Complete document uploads when they
-            launch, then return here. The full carer portal stays locked until onboarding is
-            finished.
-          </CardContent>
-        </Card>
+        <CarerAvailabilityEditor
+          mode="onboarding"
+          weekStart={weekStart}
+          onWeekStartChange={setWeekStart}
+          slots={availability.data}
+          isLoading={availability.isLoading}
+          isFetching={availability.isFetching}
+          loadFailed={availability.isError}
+          onRefresh={() => availability.refetch()}
+          onStepComplete={() => navigate({ to: "/carer", replace: true })}
+        />
       </CarerOnboardingShell>
     </CarerShell>
   );
