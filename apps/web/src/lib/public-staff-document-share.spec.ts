@@ -182,4 +182,25 @@ describe("public share page source hygiene", () => {
     expect(pageSrc).toContain("showExpiryDate");
     expect(pageSrc).not.toMatch(/Missing COVID|COVID required|COVID incomplete/i);
   });
+
+  it("uses generic unavailable copy for error and unavailable states", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    expect(pageSrc).toContain('pageState === "unavailable" || pageState === "error"');
+    expect(pageSrc).toContain("PUBLIC_SHARE_UNAVAILABLE_MESSAGE");
+    expect(pageSrc).not.toMatch(/invalid token|revoked token|rotated token|pending review|issue flagged/i);
+    expect(pageSrc).not.toMatch(/Something went wrong/i);
+  });
+
+  it("does not persist the share token beyond fragment exchange", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    expect(pageSrc).toContain("removeShareTokenFromBrowserUrl");
+    expect(pageSrc).not.toMatch(/useState\(.*token|setToken|localStorage|sessionStorage/i);
+    expect(pageSrc).not.toMatch(/location\.hash\s*=|searchParams.*token/i);
+  });
+
+  it("labels view buttons for accessibility without exposing internal ids", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    expect(pageSrc).toContain('aria-label={`View document ${file.originalFilename}`}');
+    expect(pageSrc).not.toMatch(/\bstaffId\b|\bsubmissionId\b|\bstorageKey\b/i);
+  });
 });

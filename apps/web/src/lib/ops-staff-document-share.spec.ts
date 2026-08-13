@@ -51,4 +51,18 @@ describe("ops share UI", () => {
     expect(STAFF_DOCUMENT_SHARE_POLICY).toMatch(/COVID-19 Vaccination/i);
     expect(STAFF_DOCUMENT_SHARE_POLICY).toMatch(/only when it is on file and approved/i);
   });
+
+  it("renders canonical policy copy visibly without duplicating sr-only text", () => {
+    const controlsSrc = readSrc("components/staff/StaffDocumentShareControls.tsx");
+    expect(controlsSrc).toContain("{STAFF_DOCUMENT_SHARE_POLICY}");
+    expect(controlsSrc).not.toContain("sr-only");
+  });
+
+  it("keeps shareUrl transient and uses POST copy-link", () => {
+    const controlsSrc = readSrc("components/staff/StaffDocumentShareControls.tsx");
+    expect(controlsSrc).toContain("copyLink");
+    expect(controlsSrc).toContain("setFallbackUrl(null)");
+    expect(controlsSrc).not.toMatch(/queryKey.*shareUrl|shareUrl.*queryKey/i);
+    expect(controlsSrc).not.toMatch(/localStorage|sessionStorage/);
+  });
 });

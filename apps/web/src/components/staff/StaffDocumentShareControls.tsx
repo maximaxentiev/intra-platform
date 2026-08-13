@@ -155,11 +155,7 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
             )}
           </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            The share link includes current approved staff documents. COVID-19 Vaccination is included
-            only when it is on file and approved.
-            <span className="sr-only"> {STAFF_DOCUMENT_SHARE_POLICY}</span>
-          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{STAFF_DOCUMENT_SHARE_POLICY}</p>
 
           <div aria-live="polite">
             {shareQ.isLoading ? (
