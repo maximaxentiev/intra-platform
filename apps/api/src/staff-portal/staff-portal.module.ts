@@ -9,10 +9,16 @@ import { StaffPortalAuditService } from './staff-portal-audit.service';
 import { StaffPortalInvitationsService } from './staff-portal-invitations.service';
 import { StaffPortalProfileController } from './staff-portal-profile.controller';
 import { StaffPortalProfileService } from './staff-portal-profile.service';
+import { StaffPortalAvailabilityController } from './staff-portal-availability.controller';
+import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [StaffAuthController, StaffPortalProfileController],
+  controllers: [
+    StaffAuthController,
+    StaffPortalProfileController,
+    StaffPortalAvailabilityController,
+  ],
   providers: [
     StaffAuthService,
     StaffSessionService,
@@ -21,6 +27,7 @@ import { StaffPortalProfileService } from './staff-portal-profile.service';
     StaffPortalAuditService,
     StaffPortalInvitationsService,
     StaffPortalProfileService,
+    StaffPortalAvailabilityService,
   ],
   exports: [
     StaffAuthService,
@@ -29,6 +36,7 @@ import { StaffPortalProfileService } from './staff-portal-profile.service';
     StaffPortalAuditService,
     StaffPortalInvitationsService,
     StaffPortalProfileService,
+    StaffPortalAvailabilityService,
   ],
 })
 export class StaffPortalModule {}
