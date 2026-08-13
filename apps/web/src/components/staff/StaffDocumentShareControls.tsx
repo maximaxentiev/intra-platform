@@ -121,32 +121,57 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
   const state = shareQ.data?.state ?? "none";
   const isBusy = pendingAction !== null || shareQ.isLoading;
 
+  const stateLabel =
+    state === "active" ? "Share link active" : state === "revoked" ? "Share link revoked" : "No active share link";
+
   return (
     <>
-      <Card className="border-dashed shadow-sm">
-        <CardContent className="space-y-4 p-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Link2 aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
-              Share documents
+      <Card className="shadow-sm">
+        <CardContent className="space-y-3 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Share documents</h3>
             </div>
-            <p className="text-xs text-muted-foreground">{STAFF_DOCUMENT_SHARE_POLICY}</p>
+            {shareQ.isLoading ? null : (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                  state === "active"
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-border bg-muted text-muted-foreground",
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    state === "active" ? "bg-success" : "bg-muted-foreground/60",
+                  )}
+                />
+                {stateLabel}
+              </span>
+            )}
           </div>
 
-          {shareQ.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-              Loading share status…
-            </div>
-          ) : null}
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            The share link includes current approved staff documents. COVID-19 Vaccination is included
+            only when it is on file and approved.
+            <span className="sr-only"> {STAFF_DOCUMENT_SHARE_POLICY}</span>
+          </p>
 
-          {!shareQ.isLoading && state === "none" ? (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">No share link has been created yet.</p>
+          <div aria-live="polite">
+            {shareQ.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                Loading share status…
+              </div>
+            ) : null}
+
+            {!shareQ.isLoading && state !== "active" ? (
               <Button
                 type="button"
-                variant="outline"
-                className="h-11"
+                className="h-11 w-full sm:w-auto"
                 disabled={isBusy}
                 onClick={() => void handleGenerate()}
               >
@@ -155,21 +180,19 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
                     <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
                     Generating…
                   </>
+                ) : state === "revoked" ? (
+                  "Generate new link"
                 ) : (
                   "Generate share link"
                 )}
               </Button>
-            </div>
-          ) : null}
+            ) : null}
 
-          {!shareQ.isLoading && state === "active" ? (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-success">Share link active</p>
-              <div className="flex flex-wrap gap-2">
+            {!shareQ.isLoading && state === "active" ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Button
                   type="button"
-                  variant="outline"
-                  className="h-11"
+                  className="h-11 w-full sm:w-auto"
                   disabled={isBusy || !shareQ.data?.canCopy}
                   onClick={() => void handleCopy()}
                 >
@@ -185,51 +208,31 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
                     </>
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11"
-                  disabled={isBusy}
-                  onClick={() => setRotateOpen(true)}
-                >
-                  <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
-                  Rotate link
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11"
-                  disabled={isBusy}
-                  onClick={() => setRevokeOpen(true)}
-                >
-                  <ShieldOff aria-hidden="true" className="mr-2 h-4 w-4" />
-                  Revoke link
-                </Button>
+                <div className="flex gap-2 sm:ml-auto">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 flex-1 text-muted-foreground sm:flex-none"
+                    disabled={isBusy}
+                    onClick={() => setRotateOpen(true)}
+                  >
+                    <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Rotate
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-none"
+                    disabled={isBusy}
+                    onClick={() => setRevokeOpen(true)}
+                  >
+                    <ShieldOff aria-hidden="true" className="mr-2 h-4 w-4" />
+                    Revoke
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : null}
-
-          {!shareQ.isLoading && state === "revoked" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Share link revoked</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11"
-                disabled={isBusy}
-                onClick={() => void handleGenerate()}
-              >
-                {pendingAction === "generate" ? (
-                  <>
-                    <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  "Generate new link"
-                )}
-              </Button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </CardContent>
       </Card>
 
