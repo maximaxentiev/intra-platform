@@ -120,6 +120,7 @@ function createHarness() {
     select: vi.fn().mockImplementation(() => ({
       from: (table: unknown) => buildSelect(table),
     })),
+    execute: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
     insert: vi.fn().mockImplementation(() => ({
       values: (row: Omit<Availability, 'id' | 'createdAt'>) => ({
         returning: async () => {

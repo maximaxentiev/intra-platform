@@ -15,6 +15,7 @@ import {
   normalizeAvailabilityTimeHm,
 } from '../availability/availability-carer-validation.util';
 import { calendarDateFromWeekDay } from '../availability/availability-calendar.util';
+import { acquireCarerAvailabilityDayLock } from '../availability/availability-carer-advisory-lock.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { availability, staffAccounts, type Availability } from '../db/schema';
 import {
@@ -32,6 +33,11 @@ import {
 
 @Injectable()
 export class StaffPortalAvailabilityService {
+  /**
+   * Carer availability writes serialize per staff/week/day using
+   * pg_advisory_xact_lock inside the mutation transaction, then SELECT … FOR UPDATE
+   * on existing same-day rows as defense-in-depth when rows are present.
+   */
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly audit: StaffPortalAuditService,
@@ -65,6 +71,13 @@ export class StaffPortalAvailabilityService {
     const calendarDate = calendarDateFromWeekDay(dto.weekStartDate, dto.dayOfWeek);
 
     const row = await this.db.transaction(async (tx) => {
+      await acquireCarerAvailabilityDayLock(
+        tx,
+        session.staffId,
+        dto.weekStartDate,
+        dto.dayOfWeek,
+      );
+
       const existing = await tx
         .select()
         .from(availability)
@@ -127,6 +140,13 @@ export class StaffPortalAvailabilityService {
       const owned = await this.loadOwnedRowTx(tx, id, session.staffId);
       assertCalendarDateNotBeforeToday(owned.weekStartDate, owned.dayOfWeek, 'update');
 
+      await acquireCarerAvailabilityDayLock(
+        tx,
+        session.staffId,
+        owned.weekStartDate,
+        owned.dayOfWeek,
+      );
+
       const existing = await tx
         .select()
         .from(availability)
@@ -175,6 +195,14 @@ export class StaffPortalAvailabilityService {
 
     await this.db.transaction(async (tx) => {
       const owned = await this.loadOwnedRowTx(tx, id, session.staffId);
+
+      await acquireCarerAvailabilityDayLock(
+        tx,
+        session.staffId,
+        owned.weekStartDate,
+        owned.dayOfWeek,
+      );
+
       await tx.delete(availability).where(eq(availability.id, id));
 
       const calendarDate = calendarDateFromWeekDay(owned.weekStartDate, owned.dayOfWeek);
