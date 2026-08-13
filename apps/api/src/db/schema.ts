@@ -188,6 +188,8 @@ export const staffAccounts = pgTable(
     // Step 2 onboarding complete (historical); not cleared when documents expire later.
     documentsCompletedAt: timestamp('documents_completed_at', { withTimezone: true }),
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+    /** Monday anchor for guided two-week availability onboarding (Toronto calendar). */
+    availabilityOnboardingWeek1Start: date('availability_onboarding_week1_start'),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -241,6 +243,22 @@ export const availability = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('availability_staff_week_idx').on(t.staffId, t.weekStartDate)],
+);
+
+/** Explicit "not available" answers during guided availability onboarding. */
+export const staffAvailabilityUnavailableDays = pgTable(
+  'staff_availability_unavailable_days',
+  {
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    calendarDate: date('calendar_date').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.staffId, t.calendarDate] }),
+    index('staff_availability_unavailable_days_staff_idx').on(t.staffId),
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -512,6 +530,7 @@ export type Centre = typeof centres.$inferSelect;
 export type CentreContact = typeof centreContacts.$inferSelect;
 export type Staff = typeof staff.$inferSelect;
 export type Availability = typeof availability.$inferSelect;
+export type StaffAvailabilityUnavailableDay = typeof staffAvailabilityUnavailableDays.$inferSelect;
 export type Shift = typeof shifts.$inferSelect;
 export type ShiftComment = typeof shiftComments.$inferSelect;
 export type Application = typeof applications.$inferSelect;

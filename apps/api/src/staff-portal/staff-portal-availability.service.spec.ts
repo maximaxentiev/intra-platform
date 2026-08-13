@@ -6,7 +6,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AvailabilityService } from '../availability/availability.service';
 import * as torontoUtil from '../availability/availability-toronto.util';
-import { availability, staffAccounts, type Availability } from '../db/schema';
+import { availability, staffAccounts, type Availability, type StaffAvailabilityUnavailableDay } from '../db/schema';
 import { STAFF_PORTAL_AUDIT_EVENTS } from './staff-portal-audit.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
 import type { StaffSessionPayload } from './staff-session.service';
@@ -34,7 +34,13 @@ const DB_COLUMN_TO_FIELD: Record<string, string> = {
   day_of_week: 'dayOfWeek',
   start_time: 'startTime',
   end_time: 'endTime',
+  calendar_date: 'calendarDate',
   id: 'id',
+};
+
+type QueryFilters = {
+  eq: Record<string, unknown>;
+  inArray: Record<string, unknown[]>;
 };
 
 function extractEqFilters(condition: unknown): Record<string, unknown> {
@@ -44,7 +50,7 @@ function extractEqFilters(condition: unknown): Record<string, unknown> {
   const walk = (node: unknown): void => {
     if (!node || typeof node !== 'object') return;
     const chunk = node as { name?: string; value?: unknown; queryChunks?: unknown[] };
-    if (chunk.name) pendingColumn = chunk.name;
+    if (chunk.name && chunk.name !== 'inArray') pendingColumn = chunk.name;
     if (pendingColumn && chunk.value !== undefined && typeof chunk.value !== 'object') {
       const field = DB_COLUMN_TO_FIELD[pendingColumn] ?? pendingColumn;
       filters[field] = chunk.value;
@@ -59,8 +65,43 @@ function extractEqFilters(condition: unknown): Record<string, unknown> {
   return filters;
 }
 
-function matchesFilters(row: Record<string, unknown>, filters: Record<string, unknown>): boolean {
-  return Object.entries(filters).every(([key, value]) => row[key] === value);
+function extractInArrayFilters(condition: unknown): Record<string, unknown[]> {
+  const filters: Record<string, unknown[]> = {};
+  let pendingColumn: string | undefined;
+  let inArrayMode = false;
+
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    const chunk = node as { name?: string; value?: unknown; queryChunks?: unknown[] };
+    if (chunk.name === 'inArray') inArrayMode = true;
+    if (chunk.name && chunk.name !== 'inArray') pendingColumn = chunk.name;
+    if (inArrayMode && pendingColumn && Array.isArray(chunk.value)) {
+      const field = DB_COLUMN_TO_FIELD[pendingColumn] ?? pendingColumn;
+      filters[field] = chunk.value;
+      pendingColumn = undefined;
+      inArrayMode = false;
+    }
+    if (chunk.queryChunks) {
+      for (const child of chunk.queryChunks) walk(child);
+    }
+  };
+
+  walk(condition);
+  return filters;
+}
+
+function extractFilters(condition: unknown): QueryFilters {
+  return { eq: extractEqFilters(condition), inArray: extractInArrayFilters(condition) };
+}
+
+function matchesFilters(row: Record<string, unknown>, filters: QueryFilters): boolean {
+  for (const [key, value] of Object.entries(filters.eq)) {
+    if (row[key] !== value) return false;
+  }
+  for (const [key, values] of Object.entries(filters.inArray)) {
+    if (!values.includes(row[key] as never)) return false;
+  }
+  return true;
 }
 
 function tableName(table: unknown): string | undefined {
@@ -73,8 +114,9 @@ function tableName(table: unknown): string | undefined {
   return undefined;
 }
 
-function createHarness() {
+function createHarness(initial?: Partial<AccountRow>) {
   const availabilityRows: Availability[] = [];
+  const unavailableRows: StaffAvailabilityUnavailableDay[] = [];
   let account: AccountRow = {
     id: ACCOUNT_A,
     staffId: STAFF_A,
@@ -84,6 +126,7 @@ function createHarness() {
     documentsCompletedAt: new Date('2026-08-02T12:00:00.000Z'),
     onboardingStep: 3,
     onboardingCompletedAt: null,
+    availabilityOnboardingWeek1Start: null,
     inviteTokenHash: null,
     inviteTokenExpiresAt: null,
     inviteSentAt: null,
@@ -91,19 +134,23 @@ function createHarness() {
     lastLoginAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    ...initial,
   };
   const audit = vi.fn();
 
   function buildSelect(table: unknown) {
-    const isAccounts = tableName(table) === 'staff_accounts';
+    const name = tableName(table);
     return {
       where: (condition: unknown) => {
-        const filters = extractEqFilters(condition);
-        const rows = isAccounts
-          ? account && matchesFilters(account, filters)
-            ? [account]
-            : []
-          : availabilityRows.filter((row) => matchesFilters(row, filters));
+        const filters = extractFilters(condition);
+        const rows =
+          name === 'staff_accounts'
+            ? account && matchesFilters(account, filters)
+              ? [account]
+              : []
+            : name === 'staff_availability_unavailable_days'
+              ? unavailableRows.filter((row) => matchesFilters(row, filters))
+              : availabilityRows.filter((row) => matchesFilters(row, filters));
         const promise = Promise.resolve(rows);
         return {
           orderBy: () => promise,
@@ -121,13 +168,35 @@ function createHarness() {
       from: (table: unknown) => buildSelect(table),
     })),
     execute: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-    insert: vi.fn().mockImplementation(() => ({
-      values: (row: Omit<Availability, 'id' | 'createdAt'>) => ({
+    insert: vi.fn().mockImplementation((table: unknown) => ({
+      values: (row: Record<string, unknown>) => ({
+        onConflictDoUpdate: () => {
+          const upsert = async () => {
+            if (tableName(table) === 'staff_availability_unavailable_days') {
+              const existingIdx = unavailableRows.findIndex(
+                (r) =>
+                  r.staffId === row.staffId && r.calendarDate === row.calendarDate,
+              );
+              const created: StaffAvailabilityUnavailableDay = {
+                staffId: row.staffId as string,
+                calendarDate: row.calendarDate as string,
+                createdAt: new Date(),
+              };
+              if (existingIdx >= 0) unavailableRows[existingIdx] = created;
+              else unavailableRows.push(created);
+            }
+          };
+          return {
+            returning: upsert,
+            then: (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
+              upsert().then(resolve, reject),
+          };
+        },
         returning: async () => {
           const created: Availability = {
             id: `av-${availabilityRows.length + 1}`,
             createdAt: new Date(),
-            ...row,
+            ...(row as Omit<Availability, 'id' | 'createdAt'>),
           };
           availabilityRows.push(created);
           return [created];
@@ -137,7 +206,7 @@ function createHarness() {
     update: vi.fn().mockImplementation(() => ({
       set: (patch: Partial<AccountRow | Availability>) => ({
         where: (condition: unknown) => {
-          const filters = extractEqFilters(condition);
+          const filters = extractFilters(condition);
           if (account && matchesFilters(account, filters)) {
             Object.assign(account, patch);
           }
@@ -154,14 +223,32 @@ function createHarness() {
         },
       }),
     })),
-    delete: vi.fn().mockImplementation(() => ({
-      where: async (condition: unknown) => {
-        const filters = extractEqFilters(condition);
-        for (let i = availabilityRows.length - 1; i >= 0; i--) {
-          if (matchesFilters(availabilityRows[i]!, filters)) {
-            availabilityRows.splice(i, 1);
+    delete: vi.fn().mockImplementation((table: unknown) => ({
+      where: (condition: unknown) => {
+        const filters = extractFilters(condition);
+        const name = tableName(table);
+        const performDelete = () => {
+          const removed: unknown[] = [];
+          if (name === 'availability') {
+            for (let i = availabilityRows.length - 1; i >= 0; i--) {
+              if (matchesFilters(availabilityRows[i]!, filters)) {
+                removed.push(availabilityRows.splice(i, 1)[0]!);
+              }
+            }
+          } else if (name === 'staff_availability_unavailable_days') {
+            for (let i = unavailableRows.length - 1; i >= 0; i--) {
+              if (matchesFilters(unavailableRows[i]!, filters)) {
+                removed.push(unavailableRows.splice(i, 1)[0]!);
+              }
+            }
           }
-        }
+          return removed;
+        };
+        return {
+          returning: async () => performDelete(),
+          then: (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
+            Promise.resolve(performDelete()).then(resolve, reject),
+        };
       },
     })),
     transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
@@ -463,8 +550,22 @@ describe('StaffPortalAvailabilityService', () => {
     );
   });
 
-  it('completes step 3 with zero availability rows', async () => {
+  it('rejects step 3 without onboarding anchor for incomplete accounts', async () => {
     const harness = createHarness();
+    await expect(harness.service.completeStep3(SESSION_A)).rejects.toThrow(/onboarding period/i);
+  });
+
+  it('complete step 3 succeeds when guided onboarding is satisfied', async () => {
+    const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
+    const state = await harness.service.getOnboardingState(SESSION_A);
+    for (const day of state.days) {
+      if (day.status !== 'incomplete') continue;
+      const weekStartDate = day.weekIndex === 1 ? MONDAY : '2026-08-17';
+      await harness.service.markUnavailable(SESSION_A, {
+        weekStartDate,
+        dayOfWeek: day.dayOfWeek,
+      });
+    }
     const result = await harness.service.completeStep3(SESSION_A);
     expect(result.onboardingCompletedAt).not.toBeNull();
     expect(harness.account.onboardingCompletedAt).not.toBeNull();
@@ -473,17 +574,27 @@ describe('StaffPortalAvailabilityService', () => {
     );
   });
 
-  it('complete step 3 preserves earlier completion timestamps', async () => {
-    const harness = createHarness();
+  it('complete step 3 preserves earlier completion timestamps after guided completion', async () => {
+    const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
     const profileAt = harness.account.profileCompletedAt!;
     const documentsAt = harness.account.documentsCompletedAt!;
+    const state = await harness.service.getOnboardingState(SESSION_A);
+    for (const day of state.days) {
+      if (day.status !== 'incomplete') continue;
+      const weekStartDate = day.weekIndex === 1 ? MONDAY : '2026-08-17';
+      await harness.service.markUnavailable(SESSION_A, {
+        weekStartDate,
+        dayOfWeek: day.dayOfWeek,
+      });
+    }
     const result = await harness.service.completeStep3(SESSION_A);
     expect(result.profileCompletedAt).toBe(profileAt.toISOString());
     expect(result.documentsCompletedAt).toBe(documentsAt.toISOString());
   });
 
-  it('complete step 3 is idempotent', async () => {
+  it('complete step 3 is idempotent for already completed accounts', async () => {
     const harness = createHarness();
+    harness.account.onboardingCompletedAt = new Date('2026-08-20T12:00:00.000Z');
     const first = await harness.service.completeStep3(SESSION_A);
     const completedAt = harness.account.onboardingCompletedAt;
     harness.audit.mockClear();

@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as torontoUtil from '../availability/availability-toronto.util';
 import * as schema from '../db/schema';
-import { availability, staff, staffAccounts } from '../db/schema';
+import { availability, staff, staffAccounts, staffAvailabilityUnavailableDays } from '../db/schema';
 import type { StaffSessionPayload } from './staff-session.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
 
@@ -118,6 +118,12 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
     await db
       .delete(availability)
       .where(and(eq(availability.staffId, STAFF_B), eq(availability.weekStartDate, MONDAY)));
+    await db.delete(staffAvailabilityUnavailableDays).where(eq(staffAvailabilityUnavailableDays.staffId, STAFF_A));
+    await db.delete(staffAvailabilityUnavailableDays).where(eq(staffAvailabilityUnavailableDays.staffId, STAFF_B));
+    await db
+      .update(staffAccounts)
+      .set({ availabilityOnboardingWeek1Start: null })
+      .where(eq(staffAccounts.id, ACCOUNT_A));
   });
 
   function mockToday() {
@@ -237,6 +243,82 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
     expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
     expect(await rowsFor(STAFF_A, TODAY_DAY)).toHaveLength(1);
     expect(await rowsFor(STAFF_B, TODAY_DAY)).toHaveLength(1);
+  });
+
+  it('serializes concurrent create vs mark-unavailable to one consistent final state', async () => {
+    mockToday();
+    await service.ensureOnboardingState(SESSION_A);
+
+    const results = await Promise.allSettled([
+      service.create(SESSION_A, {
+        weekStartDate: MONDAY,
+        dayOfWeek: TODAY_DAY,
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+      service.markUnavailable(SESSION_A, {
+        weekStartDate: MONDAY,
+        dayOfWeek: TODAY_DAY,
+      }),
+    ]);
+
+    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+
+    const rows = await rowsFor(STAFF_A, TODAY_DAY);
+    const unavailable = await db
+      .select()
+      .from(staffAvailabilityUnavailableDays)
+      .where(eq(staffAvailabilityUnavailableDays.staffId, STAFF_A));
+
+    const hasWindows = rows.length > 0;
+    const hasMarker = unavailable.some((r) => r.calendarDate === '2026-08-13');
+    expect(hasWindows && hasMarker).toBe(false);
+    expect(hasWindows || hasMarker).toBe(true);
+  });
+
+  it('concurrent ensure requests produce one stable anchor', async () => {
+    mockToday();
+
+    const results = await Promise.allSettled([
+      service.ensureOnboardingState(SESSION_A),
+      service.ensureOnboardingState(SESSION_A),
+      service.ensureOnboardingState(SESSION_A),
+    ]);
+
+    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+    const anchors = results
+      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof service.ensureOnboardingState>>> => r.status === 'fulfilled')
+      .map((r) => r.value.week1Start);
+    expect(new Set(anchors)).toEqual(new Set([MONDAY]));
+
+    const account = (
+      await db.select().from(staffAccounts).where(eq(staffAccounts.id, ACCOUNT_A))
+    )[0];
+    expect(account?.availabilityOnboardingWeek1Start).toBe(MONDAY);
+  });
+
+  it('concurrent mark-unavailable is idempotent', async () => {
+    mockToday();
+    await service.ensureOnboardingState(SESSION_A);
+
+    const results = await Promise.allSettled([
+      service.markUnavailable(SESSION_A, {
+        weekStartDate: MONDAY,
+        dayOfWeek: TODAY_DAY,
+      }),
+      service.markUnavailable(SESSION_A, {
+        weekStartDate: MONDAY,
+        dayOfWeek: TODAY_DAY,
+      }),
+    ]);
+
+    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+    const unavailable = await db
+      .select()
+      .from(staffAvailabilityUnavailableDays)
+      .where(eq(staffAvailabilityUnavailableDays.staffId, STAFF_A));
+    expect(unavailable.filter((r) => r.calendarDate === '2026-08-13')).toHaveLength(1);
+    expect(await rowsFor(STAFF_A, TODAY_DAY)).toHaveLength(0);
   });
 });
 

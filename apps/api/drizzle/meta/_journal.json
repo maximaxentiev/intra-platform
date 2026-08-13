@@ -50,6 +50,13 @@
       "when": 1786300000000,
       "tag": "0006_staff_documents_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786652146216,
+      "tag": "0007_availability_onboarding_state",
+      "breakpoints": true
     }
   ]
 }

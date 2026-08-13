@@ -34,14 +34,16 @@ export function assertStartBeforeEnd(startTime: string, endTime: string): void {
 export function assertCalendarDateNotBeforeToday(
   weekStartDate: string,
   dayOfWeek: number,
-  action: 'create' | 'update',
+  action: 'create' | 'update' | 'mark unavailable',
 ): void {
   const calendarDate = calendarDateFromWeekDay(weekStartDate, dayOfWeek);
   if (isDateBeforeTodayInToronto(calendarDate)) {
     throw new BadRequestException(
       action === 'create'
         ? 'Availability cannot be created for a past date.'
-        : 'Availability for a past date cannot be edited.',
+        : action === 'update'
+          ? 'Availability for a past date cannot be edited.'
+          : 'Past dates cannot be marked unavailable.',
     );
   }
 }
