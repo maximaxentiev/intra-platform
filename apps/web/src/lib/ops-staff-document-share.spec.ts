@@ -1,0 +1,54 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import {
+  STAFF_DOCUMENT_SHARE_POLICY,
+  STAFF_DOCUMENT_SHARE_POLICY_DETAIL,
+  opsStaffDocumentShareApi,
+} from "@/lib/ops-staff-document-share";
+
+const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function readSrc(rel: string) {
+  return readFileSync(join(webRoot, rel), "utf8");
+}
+
+describe("ops staff document share API client", () => {
+  it("defines typed lifecycle endpoints", () => {
+    expect(typeof opsStaffDocumentShareApi.getStatus).toBe("function");
+    expect(typeof opsStaffDocumentShareApi.generate).toBe("function");
+    expect(typeof opsStaffDocumentShareApi.copyLink).toBe("function");
+    expect(typeof opsStaffDocumentShareApi.rotate).toBe("function");
+    expect(typeof opsStaffDocumentShareApi.revoke).toBe("function");
+  });
+});
+
+describe("ops share UI", () => {
+  it("places staff-level share controls in StaffDocumentsSection", () => {
+    const sectionSrc = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(sectionSrc).toContain("StaffDocumentShareControls");
+    expect(sectionSrc).not.toContain("Share documents</");
+  });
+
+  it("supports none, active, and revoked states with confirmations", () => {
+    const controlsSrc = readSrc("components/staff/StaffDocumentShareControls.tsx");
+    expect(controlsSrc).toContain("Generate share link");
+    expect(controlsSrc).toContain("Share link active");
+    expect(controlsSrc).toContain("Copy link");
+    expect(controlsSrc).toContain("Rotate share link?");
+    expect(controlsSrc).toContain("Revoke share link?");
+    expect(controlsSrc).toContain("Share link revoked");
+    expect(controlsSrc).toContain("Generate new link");
+    expect(controlsSrc).toContain('["staff-document-share", staffId]');
+    expect(controlsSrc).toContain("copyLink");
+    expect(controlsSrc).not.toMatch(/console\.log|localStorage|sessionStorage/);
+  });
+
+  it("shows the VSC and First Aid privacy policy copy", () => {
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toContain("Vulnerable Sector Check");
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toContain("First Aid");
+    expect(STAFF_DOCUMENT_SHARE_POLICY_DETAIL).toMatch(/Immunization/i);
+    expect(STAFF_DOCUMENT_SHARE_POLICY_DETAIL).toMatch(/COVID-19/i);
+  });
+});

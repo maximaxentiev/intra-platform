@@ -14,6 +14,7 @@ import { Route as CarerRouteRouteImport } from './routes/carer/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
+import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
 import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
 import { Route as CarerDocumentsRouteImport } from './routes/carer/documents'
@@ -65,6 +66,11 @@ const CarerIndexRoute = CarerIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CarerRouteRoute,
+} as any)
+const DocumentsSlugRoute = DocumentsSlugRouteImport.update({
+  id: '/documents/$slug',
+  path: '/documents/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CarerLoginRoute = CarerLoginRouteImport.update({
   id: '/login',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
+  '/documents/$slug': typeof DocumentsSlugRoute
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
+  '/documents/$slug': typeof DocumentsSlugRoute
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
+  '/documents/$slug': typeof DocumentsSlugRoute
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
+    | '/documents/$slug'
     | '/carer/'
     | '/centres/$id'
     | '/centres/new'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
+    | '/documents/$slug'
     | '/carer'
     | '/centres/$id'
     | '/centres/new'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/carer/documents'
     | '/carer/forgot-password'
     | '/carer/login'
+    | '/documents/$slug'
     | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
@@ -408,6 +420,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CarerRouteRoute: typeof CarerRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DocumentsSlugRoute: typeof DocumentsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -446,6 +459,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/carer/'
       preLoaderRoute: typeof CarerIndexRouteImport
       parentRoute: typeof CarerRouteRoute
+    }
+    '/documents/$slug': {
+      id: '/documents/$slug'
+      path: '/documents/$slug'
+      fullPath: '/documents/$slug'
+      preLoaderRoute: typeof DocumentsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/carer/login': {
       id: '/carer/login'
@@ -755,6 +775,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CarerRouteRoute: CarerRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  DocumentsSlugRoute: DocumentsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

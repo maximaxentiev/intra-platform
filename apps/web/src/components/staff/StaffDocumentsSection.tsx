@@ -74,6 +74,7 @@ import {
   downloadOpsStaffDocumentFile,
   openOpsStaffDocumentFile,
 } from "@/lib/staff-document-content";
+import { StaffDocumentShareControls } from "@/components/staff/StaffDocumentShareControls";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
 import { IssueNoteCallout } from "@/components/documents/DocumentStatusPills";
 import { cn } from "@/lib/utils";
@@ -467,6 +468,8 @@ export function StaffDocumentsSection({
           </div>
         </CardContent>
       </Card>
+
+      <StaffDocumentShareControls staffId={staffId} />
 
       <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {STAFF_DOCUMENT_TYPES.map((type) => {
