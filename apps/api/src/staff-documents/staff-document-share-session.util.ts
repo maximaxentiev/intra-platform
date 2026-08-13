@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { CookieOptions } from 'express';
 import {
+  STAFF_DOCUMENT_SHARE_SESSION_COOKIE_MAX_AGE_MS,
   STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME,
   STAFF_DOCUMENT_SHARE_SESSION_COOKIE_PATH,
   STAFF_DOCUMENT_SHARE_SESSION_DOMAIN,
@@ -87,7 +88,7 @@ export function staffDocumentShareSessionCookieOptions(
     secure: config.secure,
     sameSite: 'lax',
     path: STAFF_DOCUMENT_SHARE_SESSION_COOKIE_PATH,
-    maxAge: Math.floor(STAFF_DOCUMENT_SHARE_SESSION_TTL_MS / 1000),
+    maxAge: STAFF_DOCUMENT_SHARE_SESSION_COOKIE_MAX_AGE_MS,
   };
 }
 

@@ -22,8 +22,16 @@ export const STAFF_DOCUMENT_SHARE_SESSION_DOMAIN = 'staff-document-share-session
 
 export const STAFF_DOCUMENT_SHARE_SESSION_VERSION = 1 as const;
 
-/** Share session lifetime — 30 minutes. */
-export const STAFF_DOCUMENT_SHARE_SESSION_TTL_MS = 30 * 60 * 1000;
+/** Share session lifetime in seconds — 30 minutes. */
+export const STAFF_DOCUMENT_SHARE_SESSION_TTL_SECONDS = 30 * 60;
+
+/** Share session lifetime in milliseconds — signed payload exp validation. */
+export const STAFF_DOCUMENT_SHARE_SESSION_TTL_MS =
+  STAFF_DOCUMENT_SHARE_SESSION_TTL_SECONDS * 1000;
+
+/** Express res.cookie maxAge — milliseconds (must match signed session TTL). */
+export const STAFF_DOCUMENT_SHARE_SESSION_COOKIE_MAX_AGE_MS =
+  STAFF_DOCUMENT_SHARE_SESSION_TTL_MS;
 
 /** Cookie name for future public share session (set in Phase 3I-C). */
 export const STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME = 'intra_staff_share';

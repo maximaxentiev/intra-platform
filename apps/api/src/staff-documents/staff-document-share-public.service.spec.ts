@@ -9,7 +9,7 @@ import {
   staffDocumentSubmissions,
 } from '../db/schema';
 import { STAFF_PORTAL_AUDIT_EVENTS } from '../staff-portal/staff-portal-audit.service';
-import { STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME } from './staff-document-share.constants';
+import { STAFF_DOCUMENT_SHARE_SESSION_COOKIE_MAX_AGE_MS, STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME } from './staff-document-share.constants';
 import { PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE } from './staff-document-share-public.constants';
 import { StaffDocumentSharePublicAuthService } from './staff-document-share-public-auth.service';
 import { StaffDocumentSharePublicService } from './staff-document-share-public.service';
@@ -336,7 +336,11 @@ describe('StaffDocumentSharePublicService exchangeSession', () => {
     expect(harness.res.cookie).toHaveBeenCalledWith(
       STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME,
       expect.any(String),
-      expect.objectContaining({ httpOnly: true, path: '/api/v1/public/staff-documents/share' }),
+      expect.objectContaining({
+        httpOnly: true,
+        path: '/api/v1/public/staff-documents/share',
+        maxAge: STAFF_DOCUMENT_SHARE_SESSION_COOKIE_MAX_AGE_MS,
+      }),
     );
     expect(harness.res.clearCookie).not.toHaveBeenCalled();
     expect(harness.audit).toHaveBeenCalledWith(

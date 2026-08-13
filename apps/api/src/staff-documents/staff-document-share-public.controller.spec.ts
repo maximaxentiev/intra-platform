@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { Readable } from 'stream';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   staff,
   staffDocumentFiles,
@@ -12,7 +12,10 @@ import {
 } from '../db/schema';
 import { StaffPortalAuditService } from '../staff-portal/staff-portal-audit.service';
 import { resolveClientIp } from '../common/client-ip.util';
-import { STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME } from './staff-document-share.constants';
+import {
+  STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME,
+  STAFF_DOCUMENT_SHARE_SESSION_TTL_MS,
+} from './staff-document-share.constants';
 import { StaffDocumentSharePublicAuthService } from './staff-document-share-public-auth.service';
 import { StaffDocumentSharePublicController } from './staff-document-share-public.controller';
 import { StaffDocumentSharePublicService } from './staff-document-share-public.service';
@@ -361,6 +364,142 @@ describe('StaffDocumentSharePublicController HTTP flow', () => {
     expect(fileRes.headers.get('content-type')).toContain('application/pdf');
     const body = Buffer.from(await fileRes.arrayBuffer());
     expect(body.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('sets intra_staff_share with Max-Age=1800 and scoped Path on session exchange', async () => {
+    const exchangeRes = await fetch(`${baseUrl}/api/v1/public/staff-documents/share/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ slug: 'jane-doe', token: shareToken }),
+    });
+    expect(exchangeRes.status).toBe(201);
+
+    const setCookie = exchangeRes.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain(`${STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME}=`);
+    expect(setCookie).toMatch(/Max-Age=1800(?:;|$)/);
+    expect(setCookie).toContain('Path=/api/v1/public/staff-documents/share');
+    expect(setCookie).toMatch(/HttpOnly/i);
+    expect(setCookie).toMatch(/SameSite=Lax/i);
+  });
+});
+
+describe('StaffDocumentSharePublicController session lifetime', () => {
+  const SESSION_NOW = new Date('2026-08-13T18:00:00.000Z');
+
+  function buildSessionLifetimeApp() {
+    const shareService = createShareService();
+    const generated = shareService.generateShareTokenState(STAFF_A_ID, CREATED_AT);
+    const state = createHarnessState();
+    const db = createDbMock(state);
+    const storage = {
+      getObjectStream: vi.fn().mockResolvedValue({
+        body: Readable.from([Buffer.from('%PDF-1.4')]),
+        contentType: 'application/pdf',
+      }),
+    };
+    const config = {
+      get: (key: string) => (key === 'SESSION_COOKIE_SECURE' ? 'false' : undefined),
+      getOrThrow: (key: string) => {
+        if (key === 'DOCUMENT_SHARE_SIGNING_SECRET') return TEST_SIGNING_SECRET;
+        throw new Error(key);
+      },
+    } as unknown as ConfigService;
+    const auth = new StaffDocumentSharePublicAuthService(db, shareService, config);
+    const publicShare = new StaffDocumentSharePublicService(db, shareService, auth, storage as never, {
+      record: vi.fn().mockResolvedValue(undefined),
+    } as unknown as StaffPortalAuditService);
+    const rateLimit = {
+      assertExchangeAllowed: vi.fn().mockResolvedValue(undefined),
+      assertMetadataAllowed: vi.fn().mockResolvedValue(undefined),
+      assertFileStreamAllowed: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new StaffDocumentSharePublicController(publicShare, rateLimit as never);
+    return {
+      app: createPublicShareHttpApp(controller, rateLimit),
+      shareToken: generated.token,
+    };
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps metadata and file authorization valid well beyond one second', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(SESSION_NOW);
+
+    const { app, shareToken } = buildSessionLifetimeApp();
+    const server = await new Promise<ReturnType<Express['listen']>>((resolve) => {
+      const instance = app.listen(0, '127.0.0.1', () => resolve(instance));
+    });
+    const port =
+      typeof server.address() === 'object' && server.address() ? server.address()!.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      const exchangeRes = await fetch(`${baseUrl}/api/v1/public/staff-documents/share/session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: 'jane-doe', token: shareToken }),
+      });
+      const cookie = shareCookieFromSetCookie(exchangeRes.headers.get('set-cookie'));
+
+      vi.setSystemTime(SESSION_NOW.getTime() + 10_000);
+      const metadataRes = await fetch(`${baseUrl}/api/v1/public/staff-documents/share`, {
+        headers: { cookie },
+      });
+      expect(metadataRes.status).toBe(200);
+      const metadata = (await metadataRes.json()) as {
+        documents: Array<{ documentType: string; files: Array<{ id: string }> }>;
+      };
+      const document = metadata.documents[0]!;
+      const file = document.files[0]!;
+      const fileUrl = `${baseUrl}/api/v1/public/staff-documents/share/${document.documentType}/files/${file.id}/content`;
+      const fileRes = await fetch(fileUrl, { headers: { cookie } });
+      expect(fileRes.status).toBe(200);
+
+      vi.setSystemTime(SESSION_NOW.getTime() + 10 * 60 * 1000);
+      const metadataLater = await fetch(`${baseUrl}/api/v1/public/staff-documents/share`, {
+        headers: { cookie },
+      });
+      expect(metadataLater.status).toBe(200);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
+  });
+
+  it('rejects metadata after the 30-minute signed session TTL', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(SESSION_NOW);
+
+    const { app, shareToken } = buildSessionLifetimeApp();
+    const server = await new Promise<ReturnType<Express['listen']>>((resolve) => {
+      const instance = app.listen(0, '127.0.0.1', () => resolve(instance));
+    });
+    const port =
+      typeof server.address() === 'object' && server.address() ? server.address()!.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      const exchangeRes = await fetch(`${baseUrl}/api/v1/public/staff-documents/share/session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: 'jane-doe', token: shareToken }),
+      });
+      const cookie = shareCookieFromSetCookie(exchangeRes.headers.get('set-cookie'));
+
+      vi.setSystemTime(SESSION_NOW.getTime() + STAFF_DOCUMENT_SHARE_SESSION_TTL_MS);
+      const metadataRes = await fetch(`${baseUrl}/api/v1/public/staff-documents/share`, {
+        headers: { cookie },
+      });
+      expect(metadataRes.status).toBe(404);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
   });
 });
 
