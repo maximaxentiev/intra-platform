@@ -242,7 +242,7 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Rotate share link?</AlertDialogTitle>
             <AlertDialogDescription>
-              The existing link will stop working immediately. A new link will be created.
+              The current link will stop working immediately and a new link will be created.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
