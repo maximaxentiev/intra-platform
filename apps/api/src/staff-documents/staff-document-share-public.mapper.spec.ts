@@ -24,7 +24,7 @@ function category(overrides: Partial<StaffDocumentCategoryComplianceInput>) {
 }
 
 describe('mapPublicStaffDocumentShareMetadata', () => {
-  it('returns minimal staff identity and only shareable documents', () => {
+  it('returns all shareable approved categories with canonical labels', () => {
     const metadata = mapPublicStaffDocumentShareMetadata({
       staff: {
         displayName: 'Jane Doe',
@@ -35,8 +35,8 @@ describe('mapPublicStaffDocumentShareMetadata', () => {
       categories: [
         category({ documentType: 'vulnerable_sector_check' }),
         category({ documentType: 'first_aid_cpr', processedDate: null }),
-        category({ documentType: 'immunizations' }),
-        category({ documentType: 'covid19_vaccination' }),
+        category({ documentType: 'immunizations', expiryDate: null, processedDate: null }),
+        category({ documentType: 'covid19_vaccination', expiryDate: null, processedDate: null }),
       ],
       filesByType: new Map([
         [
@@ -69,14 +69,76 @@ describe('mapPublicStaffDocumentShareMetadata', () => {
             } as never,
           ],
         ],
+        [
+          'immunizations',
+          [
+            {
+              id: 'file-imm',
+              originalFilename: 'imm.pdf',
+              contentType: 'application/pdf',
+              byteSize: 100,
+              storageKey: 'secret3',
+              checksumSha256: 'ghi',
+              submissionId: 'sub-3',
+              createdAt: new Date(),
+            } as never,
+          ],
+        ],
+        [
+          'covid19_vaccination',
+          [
+            {
+              id: 'file-covid',
+              originalFilename: 'covid.pdf',
+              contentType: 'application/pdf',
+              byteSize: 100,
+              storageKey: 'secret4',
+              checksumSha256: 'jkl',
+              submissionId: 'sub-4',
+              createdAt: new Date(),
+            } as never,
+          ],
+        ],
       ]),
     });
 
     expect(metadata.staff).toEqual({ displayName: 'Jane Doe', role: 'ECE' });
-    expect(metadata.documents).toHaveLength(2);
+    expect(metadata.documents).toHaveLength(4);
+    expect(metadata.documents.map((doc) => doc.label)).toEqual([
+      'Vulnerable Sector Check',
+      'First Aid & CPR Certification',
+      'Immunizations',
+      'COVID-19 Vaccination',
+    ]);
+    expect(metadata.documents.find((doc) => doc.documentType === 'immunizations')).toMatchObject({
+      processedDate: null,
+      expiryDate: null,
+      expiryDisplay: 'no_expiry',
+    });
+    expect(metadata.documents.find((doc) => doc.documentType === 'covid19_vaccination')).toMatchObject({
+      processedDate: null,
+      expiryDate: null,
+      expiryDisplay: 'no_expiry',
+    });
     expect(JSON.stringify(metadata)).not.toMatch(
       /staffId|storageKey|checksum|reviewStatus|issueNote|submissionId|email|secret/i,
     );
+  });
+
+  it('omits missing or non-approved COVID without placeholder entries', () => {
+    const metadata = mapPublicStaffDocumentShareMetadata({
+      staff: {
+        displayName: 'Jane Doe',
+        useDisplayName: false,
+        legalName: 'Jane Doe',
+        role: 'ECA',
+      },
+      categories: [
+        category({ documentType: 'covid19_vaccination', reviewStatus: 'pending_review', expiryDate: null }),
+      ],
+      filesByType: new Map(),
+    });
+    expect(metadata.documents).toEqual([]);
   });
 
   it('returns empty documents array when nothing is shareable', () => {

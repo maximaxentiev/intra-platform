@@ -41,10 +41,7 @@ export const opsStaffDocumentShareApi = {
 };
 
 export const STAFF_DOCUMENT_SHARE_POLICY =
-  "Shares current approved Vulnerable Sector Check and First Aid & CPR documents only.";
-
-export const STAFF_DOCUMENT_SHARE_POLICY_DETAIL =
-  "Immunization and COVID-19 documents are never included.";
+  "Shares the staff member's current approved documents. Vulnerable Sector Check, First Aid & CPR and Immunizations are included when approved. COVID-19 Vaccination is included only when it is on file and approved.";
 
 export async function copyTextToClipboard(text: string): Promise<boolean> {
   if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {

@@ -10,8 +10,8 @@
  * - Slug alone must never grant access.
  *
  * Default public visibility:
- * - VSC + First Aid may be included (see STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE).
- * - Immunizations + COVID remain private.
+ * - All four categories may appear when approved/current (see STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE).
+ * - COVID inclusion on the public page does not affect compliance or shift eligibility.
  */
 
 /** Domain separation prefix for long-lived share token HMAC. */

@@ -26,7 +26,6 @@ import {
 import { ApiError } from "@/lib/api";
 import {
   STAFF_DOCUMENT_SHARE_POLICY,
-  STAFF_DOCUMENT_SHARE_POLICY_DETAIL,
   copyTextToClipboard,
   opsStaffDocumentShareApi,
 } from "@/lib/ops-staff-document-share";
@@ -132,7 +131,6 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
               Share documents
             </div>
             <p className="text-xs text-muted-foreground">{STAFF_DOCUMENT_SHARE_POLICY}</p>
-            <p className="text-xs text-muted-foreground">{STAFF_DOCUMENT_SHARE_POLICY_DETAIL}</p>
           </div>
 
           {shareQ.isLoading ? (

@@ -17,12 +17,18 @@ export type PublicStaffDocumentShareFile = {
   contentType: string;
 };
 
+export type PublicStaffDocumentShareDocumentType =
+  | "vulnerable_sector_check"
+  | "first_aid_cpr"
+  | "immunizations"
+  | "covid19_vaccination";
+
 export type PublicStaffDocumentShareDocument = {
-  documentType: "vulnerable_sector_check" | "first_aid_cpr";
+  documentType: PublicStaffDocumentShareDocumentType;
   label: string;
   processedDate: string | null;
   expiryDate: string | null;
-  expiryDisplay: "current" | "expiring_soon";
+  expiryDisplay: "current" | "expiring_soon" | "no_expiry";
   files: PublicStaffDocumentShareFile[];
 };
 

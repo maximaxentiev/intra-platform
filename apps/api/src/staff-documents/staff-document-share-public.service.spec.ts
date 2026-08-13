@@ -21,6 +21,8 @@ const STAFF_B_ID = '22222222-2222-4222-8222-222222222222';
 const CREATED_AT = new Date('2026-08-01T12:00:00.000Z');
 const FILE_VSC = '33333333-3333-4333-8333-333333333333';
 const FILE_FA = '44444444-4444-4444-8444-444444444444';
+const FILE_IMM = '55555555-5555-4555-8555-555555555555';
+const FILE_COVID = '66666666-6666-4666-8666-666666666666';
 
 function createShareService() {
   return new StaffDocumentShareService({
@@ -202,6 +204,12 @@ function createHarness(activeStaff = staffRow()) {
         currentSubmissionId: 'sub-imm',
         remindersEnabled: true,
       },
+      {
+        staffId: STAFF_A_ID,
+        documentType: 'covid19_vaccination',
+        currentSubmissionId: 'sub-covid',
+        remindersEnabled: true,
+      },
     ],
     submissions: [
       {
@@ -231,6 +239,15 @@ function createHarness(activeStaff = staffRow()) {
         reviewedAt: CREATED_AT,
         supersededAt: null,
       },
+      {
+        id: 'sub-covid',
+        reviewStatus: 'approved',
+        expiryDate: null,
+        processedDate: null,
+        submittedAt: CREATED_AT,
+        reviewedAt: CREATED_AT,
+        supersededAt: null,
+      },
     ],
     files: [
       {
@@ -250,12 +267,20 @@ function createHarness(activeStaff = staffRow()) {
         storageKey: `staff/${STAFF_A_ID}/sub-fa/${FILE_FA}/fa.pdf`,
       },
       {
-        id: 'file-imm',
+        id: FILE_IMM,
         submissionId: 'sub-imm',
         originalFilename: 'imm.pdf',
         contentType: 'application/pdf',
         byteSize: 100,
-        storageKey: `staff/${STAFF_A_ID}/sub-imm/file-imm/imm.pdf`,
+        storageKey: `staff/${STAFF_A_ID}/sub-imm/${FILE_IMM}/imm.pdf`,
+      },
+      {
+        id: FILE_COVID,
+        submissionId: 'sub-covid',
+        originalFilename: 'covid.pdf',
+        contentType: 'application/pdf',
+        byteSize: 100,
+        storageKey: `staff/${STAFF_A_ID}/sub-covid/${FILE_COVID}/covid.pdf`,
       },
     ],
   };
@@ -393,7 +418,7 @@ describe('StaffDocumentSharePublicService exchangeSession', () => {
 });
 
 describe('StaffDocumentSharePublicService metadata', () => {
-  it('returns only VSC and First Aid without internal fields', async () => {
+  it('returns all four approved categories without internal fields', async () => {
     const harness = createHarness();
     const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
     const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
@@ -404,10 +429,78 @@ describe('StaffDocumentSharePublicService metadata', () => {
     expect(metadata.documents.map((doc) => doc.documentType)).toEqual([
       'vulnerable_sector_check',
       'first_aid_cpr',
+      'immunizations',
+      'covid19_vaccination',
     ]);
+    expect(metadata.documents.find((doc) => doc.documentType === 'immunizations')).toMatchObject({
+      processedDate: null,
+      expiryDate: null,
+      expiryDisplay: 'no_expiry',
+    });
+    expect(metadata.documents.find((doc) => doc.documentType === 'covid19_vaccination')).toMatchObject({
+      processedDate: null,
+      expiryDate: null,
+      expiryDisplay: 'no_expiry',
+    });
     expect(JSON.stringify(metadata)).not.toMatch(
       /staffId|storageKey|reviewStatus|issueNote|submissionId|setId|checksum|documentSlug|documentShareTokenHash/i,
     );
+  });
+
+  it('omits missing, pending, and issue-flagged COVID without placeholders', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    harness.state.sets = harness.state.sets.filter((set) => set.documentType !== 'covid19_vaccination');
+    harness.state.submissions = harness.state.submissions.filter((sub) => sub.id !== 'sub-covid');
+    harness.state.files = harness.state.files.filter((file) => file.submissionId !== 'sub-covid');
+
+    let metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(false);
+
+    harness.state.sets.push({
+      staffId: STAFF_A_ID,
+      documentType: 'covid19_vaccination',
+      currentSubmissionId: 'sub-covid-pending',
+      remindersEnabled: true,
+    });
+    harness.state.submissions.push({
+      id: 'sub-covid-pending',
+      reviewStatus: 'pending_review',
+      expiryDate: null,
+      processedDate: null,
+      submittedAt: CREATED_AT,
+      reviewedAt: null,
+      supersededAt: null,
+    });
+
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(false);
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-covid-pending' ? { ...sub, reviewStatus: 'issue_flagged' } : sub,
+    );
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(false);
+  });
+
+  it('omits pending and issue-flagged Immunizations', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-imm' ? { ...sub, reviewStatus: 'pending_review' } : sub,
+    );
+    let metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'immunizations')).toBe(false);
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-imm' ? { ...sub, reviewStatus: 'issue_flagged' } : sub,
+    );
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'immunizations')).toBe(false);
   });
 
   it('returns empty documents when no shareable categories exist', async () => {
@@ -487,27 +580,68 @@ describe('StaffDocumentSharePublicService streamFile', () => {
     );
   });
 
-  it('blocks health document types with generic unavailable', async () => {
+  it('streams approved current Immunizations and COVID files', async () => {
     const harness = createHarness();
     const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
     const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
 
+    await expect(harness.service.streamFile(req, 'immunizations', FILE_IMM)).resolves.toMatchObject({
+      contentType: 'application/pdf',
+    });
     await expect(
-      harness.service.streamFile(req, 'immunizations', 'file-imm'),
+      harness.service.streamFile(req, 'covid19_vaccination', FILE_COVID),
+    ).resolves.toMatchObject({ contentType: 'application/pdf' });
+  });
+
+  it('blocks pending, issue-flagged, and superseded health files', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-imm' ? { ...sub, reviewStatus: 'pending_review' } : sub,
+    );
+    await expect(
+      harness.service.streamFile(req, 'immunizations', FILE_IMM),
     ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
 
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-imm'
+        ? { ...sub, reviewStatus: 'approved', supersededAt: CREATED_AT }
+        : sub,
+    );
     await expect(
-      harness.service.streamFile(req, 'covid19_vaccination', 'file-imm'),
+      harness.service.streamFile(req, 'immunizations', FILE_IMM),
     ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
   });
 
-  it('blocks wrong file id and wrong document type pairings', async () => {
+  it('blocks wrong file id, wrong document type pairings, and cross-staff files', async () => {
     const harness = createHarness();
     const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
     const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
 
     await expect(
       harness.service.streamFile(req, 'vulnerable_sector_check', FILE_FA),
+    ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
+
+    await expect(
+      harness.service.streamFile(req, 'immunizations', FILE_COVID),
+    ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
+
+    await expect(
+      harness.service.streamFile(req, 'covid19_vaccination', FILE_IMM),
+    ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
+
+    harness.state.files.push({
+      id: 'file-other-staff',
+      submissionId: 'sub-other',
+      originalFilename: 'other.pdf',
+      contentType: 'application/pdf',
+      byteSize: 100,
+      storageKey: `staff/${STAFF_B_ID}/sub-other/file-other-staff/other.pdf`,
+    });
+    await expect(
+      harness.service.streamFile(req, 'immunizations', 'file-other-staff'),
     ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
   });
 });
@@ -518,42 +652,108 @@ describe('StaffDocumentSharePublicService live state', () => {
     const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
     const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
 
-    harness.state.submissions = [
-      {
-        id: 'sub-vsc',
-        reviewStatus: 'pending_review',
-        expiryDate: '2029-08-01',
-        processedDate: '2026-08-01',
-        submittedAt: CREATED_AT,
-        reviewedAt: null,
-        supersededAt: null,
-      },
-      {
-        id: 'sub-fa',
-        reviewStatus: 'approved',
-        expiryDate: '2029-08-01',
-        processedDate: null,
-        submittedAt: CREATED_AT,
-        reviewedAt: CREATED_AT,
-        supersededAt: null,
-      },
-      {
-        id: 'sub-imm',
-        reviewStatus: 'approved',
-        expiryDate: null,
-        processedDate: null,
-        submittedAt: CREATED_AT,
-        reviewedAt: CREATED_AT,
-        supersededAt: null,
-      },
-    ];
+    harness.state.submissions = harness.state.submissions.map((submission) =>
+      submission.id === 'sub-vsc'
+        ? {
+            ...submission,
+            reviewStatus: 'pending_review',
+            reviewedAt: null,
+          }
+        : submission,
+    );
 
     const metadata = await harness.service.getMetadata(req);
-    expect(metadata.documents.map((doc) => doc.documentType)).toEqual(['first_aid_cpr']);
+    expect(metadata.documents.map((doc) => doc.documentType)).not.toContain('vulnerable_sector_check');
 
     await expect(
       harness.service.streamFile(req, 'vulnerable_sector_check', FILE_VSC),
     ).rejects.toThrow(PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE);
+  });
+
+  it('hides Immunizations on replacement pending then re-exposes after approval', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    harness.state.sets = harness.state.sets.map((set) =>
+      set.documentType === 'immunizations'
+        ? { ...set, currentSubmissionId: 'sub-imm-pending' }
+        : set,
+    );
+    harness.state.submissions.push({
+      id: 'sub-imm-pending',
+      reviewStatus: 'pending_review',
+      expiryDate: null,
+      processedDate: null,
+      submittedAt: CREATED_AT,
+      reviewedAt: null,
+      supersededAt: null,
+    });
+
+    let metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'immunizations')).toBe(false);
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-imm-pending'
+        ? { ...sub, reviewStatus: 'approved', reviewedAt: CREATED_AT }
+        : sub,
+    );
+    harness.state.files.push({
+      id: 'file-imm-new',
+      submissionId: 'sub-imm-pending',
+      originalFilename: 'imm-new.pdf',
+      contentType: 'application/pdf',
+      byteSize: 100,
+      storageKey: `staff/${STAFF_A_ID}/sub-imm-pending/file-imm-new/imm-new.pdf`,
+    });
+
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'immunizations')).toBe(true);
+  });
+
+  it('hides COVID when cleared or pending and re-exposes after approval', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    harness.state.sets = harness.state.sets.map((set) =>
+      set.documentType === 'covid19_vaccination' ? { ...set, currentSubmissionId: null } : set,
+    );
+    let metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(false);
+
+    harness.state.sets = harness.state.sets.map((set) =>
+      set.documentType === 'covid19_vaccination'
+        ? { ...set, currentSubmissionId: 'sub-covid-pending' }
+        : set,
+    );
+    harness.state.submissions.push({
+      id: 'sub-covid-pending',
+      reviewStatus: 'pending_review',
+      expiryDate: null,
+      processedDate: null,
+      submittedAt: CREATED_AT,
+      reviewedAt: null,
+      supersededAt: null,
+    });
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(false);
+
+    harness.state.submissions = harness.state.submissions.map((sub) =>
+      sub.id === 'sub-covid-pending'
+        ? { ...sub, reviewStatus: 'approved', reviewedAt: CREATED_AT }
+        : sub,
+    );
+    harness.state.files.push({
+      id: 'file-covid-new',
+      submissionId: 'sub-covid-pending',
+      originalFilename: 'covid-new.pdf',
+      contentType: 'application/pdf',
+      byteSize: 100,
+      storageKey: `staff/${STAFF_A_ID}/sub-covid-pending/file-covid-new/covid-new.pdf`,
+    });
+    metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.some((doc) => doc.documentType === 'covid19_vaccination')).toBe(true);
   });
 
   it('hides expired documents on metadata and file requests', async () => {
@@ -568,7 +768,14 @@ describe('StaffDocumentSharePublicService live state', () => {
     );
 
     const metadata = await harness.service.getMetadata(req);
-    expect(metadata.documents.map((doc) => doc.documentType)).toEqual(['first_aid_cpr']);
+    expect(metadata.documents.map((doc) => doc.documentType)).toEqual([
+      'first_aid_cpr',
+      'immunizations',
+      'covid19_vaccination',
+    ]);
+    expect(metadata.documents.some((doc) => doc.documentType === 'vulnerable_sector_check')).toBe(
+      false,
+    );
 
     await expect(
       harness.service.streamFile(req, 'vulnerable_sector_check', FILE_VSC),

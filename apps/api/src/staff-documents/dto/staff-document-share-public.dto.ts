@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import type { StaffDocumentType } from '../staff-document.constants';
 
 export class ExchangeStaffDocumentShareSessionDto {
   @IsString()
@@ -23,12 +24,15 @@ export type PublicStaffDocumentShareFileDto = {
   contentType: string;
 };
 
+/** Mirrors canonical backend expiry states exposed publicly (never includes expired). */
+export type PublicStaffDocumentShareExpiryDisplay = 'current' | 'expiring_soon' | 'no_expiry';
+
 export type PublicStaffDocumentShareDocumentDto = {
-  documentType: 'vulnerable_sector_check' | 'first_aid_cpr';
+  documentType: StaffDocumentType;
   label: string;
   processedDate: string | null;
   expiryDate: string | null;
-  expiryDisplay: 'current' | 'expiring_soon';
+  expiryDisplay: PublicStaffDocumentShareExpiryDisplay;
   files: PublicStaffDocumentShareFileDto[];
 };
 

@@ -1,10 +1,12 @@
 export const PUBLIC_STAFF_DOCUMENT_SHARE_UNAVAILABLE_MESSAGE =
   'This shared document page is not available.';
 
-/** Public share document category labels (VSC + First Aid only). */
+/** Public share document category labels. */
 export const STAFF_DOCUMENT_PUBLIC_SHARE_LABELS = {
   vulnerable_sector_check: 'Vulnerable Sector Check',
   first_aid_cpr: 'First Aid & CPR Certification',
+  immunizations: 'Immunizations',
+  covid19_vaccination: 'COVID-19 Vaccination',
 } as const;
 
 export const STAFF_SHARE_RATE_LIMIT_EXCHANGE_MINUTE_MAX = 10;

@@ -18,8 +18,22 @@ import { cn } from "@/lib/utils";
 
 type PageState = "initializing" | "available" | "empty" | "unavailable" | "error";
 
-function publicExpiryLabel(display: PublicStaffDocumentShareDocument["expiryDisplay"]): string {
-  return expiryDisplayLabel(display) ?? "Current";
+function publicStatusBadge(document: PublicStaffDocumentShareDocument): string {
+  if (document.documentType === "covid19_vaccination") {
+    return "Optional";
+  }
+  if (document.expiryDisplay === "no_expiry") {
+    return "Current";
+  }
+  return expiryDisplayLabel(document.expiryDisplay) ?? "Current";
+}
+
+function showProcessedDate(document: PublicStaffDocumentShareDocument): boolean {
+  return document.processedDate !== null;
+}
+
+function showExpiryDate(document: PublicStaffDocumentShareDocument): boolean {
+  return document.expiryDate !== null;
 }
 
 export function PublicDocumentSharePage({ slug }: { slug: string }) {
@@ -158,21 +172,21 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
                                 : "bg-muted text-muted-foreground",
                             )}
                           >
-                            {publicExpiryLabel(document.expiryDisplay)}
+                            {publicStatusBadge(document)}
                           </span>
                         </div>
 
                         <dl className="mt-3 space-y-1 text-sm text-muted-foreground">
-                          {document.processedDate ? (
+                          {showProcessedDate(document) ? (
                             <div className="flex flex-wrap gap-x-2">
                               <dt>Processed:</dt>
-                              <dd>{formatDocumentDate(document.processedDate)}</dd>
+                              <dd>{formatDocumentDate(document.processedDate!)}</dd>
                             </div>
                           ) : null}
-                          {document.expiryDate ? (
+                          {showExpiryDate(document) ? (
                             <div className="flex flex-wrap gap-x-2">
                               <dt>Expires:</dt>
-                              <dd>{formatDocumentDate(document.expiryDate)}</dd>
+                              <dd>{formatDocumentDate(document.expiryDate!)}</dd>
                             </div>
                           ) : null}
                         </dl>

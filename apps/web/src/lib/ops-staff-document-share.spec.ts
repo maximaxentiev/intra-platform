@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   STAFF_DOCUMENT_SHARE_POLICY,
-  STAFF_DOCUMENT_SHARE_POLICY_DETAIL,
   opsStaffDocumentShareApi,
 } from "@/lib/ops-staff-document-share";
 
@@ -45,10 +44,11 @@ describe("ops share UI", () => {
     expect(controlsSrc).not.toMatch(/console\.log|localStorage|sessionStorage/);
   });
 
-  it("shows the VSC and First Aid privacy policy copy", () => {
+  it("shows the expanded public share policy copy", () => {
     expect(STAFF_DOCUMENT_SHARE_POLICY).toContain("Vulnerable Sector Check");
-    expect(STAFF_DOCUMENT_SHARE_POLICY).toContain("First Aid");
-    expect(STAFF_DOCUMENT_SHARE_POLICY_DETAIL).toMatch(/Immunization/i);
-    expect(STAFF_DOCUMENT_SHARE_POLICY_DETAIL).toMatch(/COVID-19/i);
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toContain("First Aid & CPR");
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toMatch(/Immunizations/i);
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toMatch(/COVID-19 Vaccination/i);
+    expect(STAFF_DOCUMENT_SHARE_POLICY).toMatch(/only when it is on file and approved/i);
   });
 });

@@ -7,7 +7,7 @@ import type {
 } from './dto/staff-document-share-public.dto';
 import type { StaffDocumentCategoryCompliance } from './staff-document-compliance.util';
 import { STAFF_DOCUMENT_PUBLIC_SHARE_LABELS } from './staff-document-share-public.constants';
-import { isPubliclyShareableCategory } from './staff-document-share-public-eligibility.util';
+import { isPubliclyShareableCategory, mapPublicShareExpiryDisplay } from './staff-document-share-public-eligibility.util';
 import { resolveStaffPublicDisplayName } from './staff-document-slug.util';
 
 export function mapPublicStaffDocumentShareFile(row: StaffDocumentFile): PublicStaffDocumentShareFileDto {
@@ -35,15 +35,12 @@ export function mapPublicStaffDocumentShareMetadata(input: {
       continue;
     }
 
-    const expiryDisplay =
-      category.expiryDisplay === 'expiring_soon' ? 'expiring_soon' : 'current';
-
     documents.push({
-      documentType: category.documentType as PublicStaffDocumentShareDocumentDto['documentType'],
-      label: STAFF_DOCUMENT_PUBLIC_SHARE_LABELS[category.documentType as keyof typeof STAFF_DOCUMENT_PUBLIC_SHARE_LABELS],
+      documentType: category.documentType,
+      label: STAFF_DOCUMENT_PUBLIC_SHARE_LABELS[category.documentType],
       processedDate: category.processedDate,
       expiryDate: category.expiryDate,
-      expiryDisplay,
+      expiryDisplay: mapPublicShareExpiryDisplay(category),
       files,
     });
   }

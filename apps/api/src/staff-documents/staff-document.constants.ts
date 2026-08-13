@@ -70,12 +70,12 @@ export const STAFF_DOCUMENT_REMINDER_TYPES = [
 /** Future reminder offsets in days before expiry (Communications phase). */
 export const STAFF_DOCUMENT_REMINDER_OFFSETS_DAYS = [30, 14, 7, 3, 1] as const;
 
-/** Default public-share policy (Phase 3I) — schema only until product approves otherwise. */
+/** Default public-share policy — all categories may appear when live eligibility passes. */
 export const STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE: Record<StaffDocumentType, boolean> = {
   vulnerable_sector_check: true,
   first_aid_cpr: true,
-  immunizations: false,
-  covid19_vaccination: false,
+  immunizations: true,
+  covid19_vaccination: true,
 };
 
 export function isRequiredStaffDocumentType(type: StaffDocumentType): type is RequiredStaffDocumentType {

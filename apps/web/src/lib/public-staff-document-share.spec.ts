@@ -168,4 +168,18 @@ describe("public share page source hygiene", () => {
     expect(contentSrc).toContain("publicStaffDocumentContentPath");
     expect(contentSrc).not.toMatch(/storageKey|digitalocean|spaces/i);
   });
+
+  it("renders all backend document categories without two-category assumptions", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    const libSrc = readSrc("lib/public-staff-document-share.ts");
+
+    expect(libSrc).toContain("immunizations");
+    expect(libSrc).toContain("covid19_vaccination");
+    expect(libSrc).toContain("no_expiry");
+    expect(pageSrc).toContain("metadata.documents.map");
+    expect(pageSrc).toContain("publicStatusBadge");
+    expect(pageSrc).toContain('"Optional"');
+    expect(pageSrc).toContain("showExpiryDate");
+    expect(pageSrc).not.toMatch(/Missing COVID|COVID required|COVID incomplete/i);
+  });
 });

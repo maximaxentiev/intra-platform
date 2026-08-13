@@ -27,16 +27,25 @@ describe('staff document schema constants', () => {
     expect(OPTIONAL_STAFF_DOCUMENT_TYPES).toEqual(['covid19_vaccination']);
   });
 
-  it('allows only VSC and First Aid for public share policy', () => {
+  it('allows all four categories for public share policy', () => {
     expect(STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE).toEqual({
       vulnerable_sector_check: true,
       first_aid_cpr: true,
-      immunizations: false,
-      covid19_vaccination: false,
+      immunizations: true,
+      covid19_vaccination: true,
     });
     expect(isStaffDocumentPublicShareType('vulnerable_sector_check')).toBe(true);
     expect(isStaffDocumentPublicShareType('first_aid_cpr')).toBe(true);
-    expect(isStaffDocumentPublicShareType('immunizations')).toBe(false);
-    expect(isStaffDocumentPublicShareType('covid19_vaccination')).toBe(false);
+    expect(isStaffDocumentPublicShareType('immunizations')).toBe(true);
+    expect(isStaffDocumentPublicShareType('covid19_vaccination')).toBe(true);
+  });
+
+  it('keeps compliance required/optional rules separate from public sharing', () => {
+    expect(REQUIRED_STAFF_DOCUMENT_TYPES).toEqual([
+      'vulnerable_sector_check',
+      'first_aid_cpr',
+      'immunizations',
+    ]);
+    expect(OPTIONAL_STAFF_DOCUMENT_TYPES).toEqual(['covid19_vaccination']);
   });
 });
