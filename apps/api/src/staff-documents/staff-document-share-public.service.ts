@@ -37,7 +37,14 @@ import { isPubliclyShareableCategory } from './staff-document-share-public-eligi
 import { mapPublicStaffDocumentShareMetadata } from './staff-document-share-public.mapper';
 import { shareTokenRotationEpochFromPersisted } from './staff-document-share-epoch.util';
 import { StaffDocumentShareService } from './staff-document-share.service';
-import { assertStaffDocumentType } from './staff-document-validation.util';
+import {
+  hashPublicShareDiagId,
+  logPublicShareFileAuthDecision,
+} from './staff-document-share-public-file-auth-diag.util';
+import {
+  assertStaffDocumentType,
+  StaffDocumentValidationError,
+} from './staff-document-validation.util';
 
 function normalizePublicShareFileId(fileId: string): string {
   return fileId.trim().toLowerCase();
@@ -137,26 +144,86 @@ export class StaffDocumentSharePublicService {
     documentTypeRaw: string,
     fileIdRaw: string,
   ): Promise<PublicStaffDocumentStreamResult> {
-    const ctx = await this.auth.authorizeFromRequest(req);
-    const documentType = assertStaffDocumentType(documentTypeRaw.trim());
+    const routeDocumentType = documentTypeRaw.trim();
+    const routeFileId = fileIdRaw.trim();
+    const ctx = await this.auth.authorizeFromRequest(req, 'file_stream');
+
+    let documentType: StaffDocumentType;
+    try {
+      documentType = assertStaffDocumentType(routeDocumentType);
+    } catch (err) {
+      if (err instanceof StaffDocumentValidationError) {
+        logPublicShareFileAuthDecision('file_stream', 'document_type_invalid', {
+          routeDocumentType,
+          routeFileIdHash: hashPublicShareDiagId(routeFileId),
+        });
+      }
+      throw err;
+    }
 
     if (!isStaffDocumentPublicShareType(documentType)) {
+      logPublicShareFileAuthDecision('file_stream', 'document_type_not_public', {
+        routeDocumentType: documentType,
+        routeFileIdHash: hashPublicShareDiagId(routeFileId),
+      });
       throw this.auth.unavailable();
     }
 
     const snapshot = await this.loadPublicShareSnapshot(ctx.staffId);
+    const categoryFiles = snapshot.filesByType.get(documentType) ?? [];
     const category = snapshot.categories.find((item) => item.documentType === documentType);
-    if (!category || !isPubliclyShareableCategory(category)) {
+    if (!category) {
+      logPublicShareFileAuthDecision('file_stream', 'category_missing', {
+        routeDocumentType: documentType,
+        routeFileIdHash: hashPublicShareDiagId(routeFileId),
+        snapshotFileCount: categoryFiles.length,
+        routeFileMatchedSnapshot: false,
+      });
       throw this.auth.unavailable();
     }
 
-    const file = findPublicShareFile(snapshot.filesByType.get(documentType) ?? [], fileIdRaw);
-    if (
-      !file ||
-      !category.currentSubmissionId ||
-      normalizePublicShareFileId(file.submissionId) !==
-        normalizePublicShareFileId(category.currentSubmissionId)
-    ) {
+    if (!isPubliclyShareableCategory(category)) {
+      logPublicShareFileAuthDecision('file_stream', 'category_not_shareable', {
+        routeDocumentType: documentType,
+        routeFileIdHash: hashPublicShareDiagId(routeFileId),
+        snapshotFileCount: categoryFiles.length,
+        isSubmitted: category.isSubmitted,
+        reviewStatus: category.reviewStatus,
+        supersededAtPresent: category.supersededAt !== null,
+        fileCount: category.fileCount,
+        expiryDisplay: category.expiryDisplay,
+        currentSubmissionIdHash: hashPublicShareDiagId(category.currentSubmissionId),
+      });
+      throw this.auth.unavailable();
+    }
+
+    const file = findPublicShareFile(categoryFiles, routeFileId);
+    const routeFileMatchedSnapshot = Boolean(file);
+    if (!file) {
+      logPublicShareFileAuthDecision('file_stream', 'file_not_in_snapshot', {
+        routeDocumentType: documentType,
+        routeFileIdHash: hashPublicShareDiagId(routeFileId),
+        snapshotFileCount: categoryFiles.length,
+        routeFileMatchedSnapshot,
+        currentSubmissionIdHash: hashPublicShareDiagId(category.currentSubmissionId),
+      });
+      throw this.auth.unavailable();
+    }
+
+    const submissionMatches =
+      category.currentSubmissionId !== null &&
+      normalizePublicShareFileId(file.submissionId) ===
+        normalizePublicShareFileId(category.currentSubmissionId);
+    if (!submissionMatches) {
+      logPublicShareFileAuthDecision('file_stream', 'file_submission_mismatch', {
+        routeDocumentType: documentType,
+        routeFileIdHash: hashPublicShareDiagId(routeFileId),
+        snapshotFileCount: categoryFiles.length,
+        routeFileMatchedSnapshot,
+        currentSubmissionIdHash: hashPublicShareDiagId(category.currentSubmissionId),
+        matchedFileSubmissionIdHash: hashPublicShareDiagId(file.submissionId),
+        submissionIdMatchesCurrent: submissionMatches,
+      });
       throw this.auth.unavailable();
     }
 
@@ -165,10 +232,23 @@ export class StaffDocumentSharePublicService {
       streamResult = await this.storage.getObjectStream(file.storageKey);
     } catch (err) {
       if (err instanceof StorageNotConfiguredError || err instanceof StorageOperationError) {
+        logPublicShareFileAuthDecision('file_stream', 'storage_stream_failed', {
+          routeDocumentType: documentType,
+          routeFileIdHash: hashPublicShareDiagId(file.id),
+          storageErrorType: err.constructor.name,
+        });
         throw new ServiceUnavailableException('Document is temporarily unavailable.');
       }
       throw err;
     }
+
+    logPublicShareFileAuthDecision('file_stream', 'file_stream_authorized', {
+      routeDocumentType: documentType,
+      routeFileIdHash: hashPublicShareDiagId(file.id),
+      snapshotFileCount: categoryFiles.length,
+      routeFileMatchedSnapshot: true,
+      submissionIdMatchesCurrent: true,
+    });
 
     await this.audit.record({
       staffId: ctx.staffId,

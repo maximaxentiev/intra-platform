@@ -45,7 +45,7 @@ export class StaffDocumentSharePublicController {
     applyPublicStaffDocumentShareHeaders(res);
     await this.rateLimit.assertFileStreamAllowed(resolveClientIp(req));
 
-    const result = await this.publicShare.streamFile(req, documentType, fileId);
+    const result = await this.publicShare.streamFile(req, documentType.trim(), fileId.trim());
 
     res.setHeader('Content-Type', result.contentType);
     res.setHeader('Content-Disposition', result.contentDisposition);
