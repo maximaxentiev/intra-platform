@@ -5,6 +5,7 @@ const baseConfig = {
   DATABASE_URL: 'postgres://u:p@localhost/db',
   REDIS_URL: 'redis://127.0.0.1:6379',
   SESSION_SECRET: 'long-enough-secret-here',
+  DOCUMENT_SHARE_SIGNING_SECRET: 'long-enough-document-share-signing-secret-value',
 };
 
 describe('validateEnv CORS and platform URL', () => {
@@ -28,5 +29,35 @@ describe('validateEnv CORS and platform URL', () => {
       CORS_ORIGINS: 'http://localhost:8080',
     });
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:8080']);
+  });
+
+  it('requires DOCUMENT_SHARE_SIGNING_SECRET outside test environments', () => {
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        DOCUMENT_SHARE_SIGNING_SECRET: undefined,
+        NODE_ENV: 'development',
+      }),
+    ).toThrow(/DOCUMENT_SHARE_SIGNING_SECRET/);
+  });
+
+  it('enforces minimum DOCUMENT_SHARE_SIGNING_SECRET length', () => {
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        DOCUMENT_SHARE_SIGNING_SECRET: 'too-short',
+        NODE_ENV: 'development',
+      }),
+    ).toThrow(/at least 32 characters/);
+  });
+
+  it('provides a test-only fallback when NODE_ENV is test', () => {
+    const env = validateEnv({
+      DATABASE_URL: baseConfig.DATABASE_URL,
+      REDIS_URL: baseConfig.REDIS_URL,
+      SESSION_SECRET: baseConfig.SESSION_SECRET,
+      NODE_ENV: 'test',
+    });
+    expect(env.DOCUMENT_SHARE_SIGNING_SECRET.length).toBeGreaterThanOrEqual(32);
   });
 });

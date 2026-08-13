@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   OPTIONAL_STAFF_DOCUMENT_TYPES,
   REQUIRED_STAFF_DOCUMENT_TYPES,
+  STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE,
   STAFF_DOCUMENT_TYPE_VALUES,
+  isStaffDocumentPublicShareType,
 } from './staff-document.constants';
 
 describe('staff document schema constants', () => {
@@ -23,5 +25,18 @@ describe('staff document schema constants', () => {
 
   it('treats COVID as optional', () => {
     expect(OPTIONAL_STAFF_DOCUMENT_TYPES).toEqual(['covid19_vaccination']);
+  });
+
+  it('allows only VSC and First Aid for public share policy', () => {
+    expect(STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE).toEqual({
+      vulnerable_sector_check: true,
+      first_aid_cpr: true,
+      immunizations: false,
+      covid19_vaccination: false,
+    });
+    expect(isStaffDocumentPublicShareType('vulnerable_sector_check')).toBe(true);
+    expect(isStaffDocumentPublicShareType('first_aid_cpr')).toBe(true);
+    expect(isStaffDocumentPublicShareType('immunizations')).toBe(false);
+    expect(isStaffDocumentPublicShareType('covid19_vaccination')).toBe(false);
   });
 });

@@ -85,3 +85,8 @@ export function isRequiredStaffDocumentType(type: StaffDocumentType): type is Re
 export function isStaffDocumentReminderType(type: StaffDocumentType): boolean {
   return (STAFF_DOCUMENT_REMINDER_TYPES as readonly string[]).includes(type);
 }
+
+/** True when a document category may appear on the public staff share page (Phase 3I). */
+export function isStaffDocumentPublicShareType(type: StaffDocumentType): boolean {
+  return STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE[type];
+}

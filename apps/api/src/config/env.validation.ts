@@ -1,3 +1,4 @@
+import { STAFF_DOCUMENT_SHARE_SIGNING_SECRET_MIN_LENGTH } from '../staff-documents/staff-document-share.constants';
 import { parseCarerPortalEnabled } from './carer-portal.config';
 import { mergeProductionCorsOrigins, resolvePublicPlatformUrl } from './platform-url';
 
@@ -14,6 +15,7 @@ export interface AppEnv {
   APP_HOST?: string;
   LEGACY_APP_HOST?: string;
   SESSION_SECRET: string;
+  DOCUMENT_SHARE_SIGNING_SECRET: string;
   SESSION_COOKIE_NAME: string;
   SESSION_COOKIE_SECURE: boolean;
   SESSION_TTL_SECONDS: number;
@@ -45,6 +47,7 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
   }
 
   const nodeEnv = (config.NODE_ENV as string) ?? 'development';
+  const documentShareSigningSecret = resolveDocumentShareSigningSecret(config, nodeEnv);
   const appHost = trimOptional(config.APP_HOST);
   const legacyAppHost = trimOptional(config.LEGACY_APP_HOST);
   const platformEnv = {
@@ -75,6 +78,7 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     APP_HOST: appHost,
     LEGACY_APP_HOST: legacyAppHost,
     SESSION_SECRET: sessionSecret,
+    DOCUMENT_SHARE_SIGNING_SECRET: documentShareSigningSecret,
     SESSION_COOKIE_NAME: (config.SESSION_COOKIE_NAME as string) ?? 'intra_session',
     SESSION_COOKIE_SECURE: String(config.SESSION_COOKIE_SECURE ?? 'false') === 'true',
     SESSION_TTL_SECONDS: Number(config.SESSION_TTL_SECONDS ?? 43200),
@@ -96,4 +100,28 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
 function trimOptional(value: unknown): string | undefined {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed || undefined;
+}
+
+function resolveDocumentShareSigningSecret(
+  config: Record<string, unknown>,
+  nodeEnv: string,
+): string {
+  const raw = config.DOCUMENT_SHARE_SIGNING_SECRET as string | undefined;
+  const isTestEnv = nodeEnv === 'test';
+
+  if (!raw || raw.trim() === '') {
+    if (isTestEnv) {
+      return 'test-document-share-signing-secret-32chars-min';
+    }
+    throw new Error('Missing required environment variable: DOCUMENT_SHARE_SIGNING_SECRET');
+  }
+
+  const secret = raw.trim();
+  if (secret.length < STAFF_DOCUMENT_SHARE_SIGNING_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `DOCUMENT_SHARE_SIGNING_SECRET must be at least ${STAFF_DOCUMENT_SHARE_SIGNING_SECRET_MIN_LENGTH} characters.`,
+    );
+  }
+
+  return secret;
 }
