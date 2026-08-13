@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   STAFF_DOCUMENT_SHARE_POLICY,
   copyTextToClipboard,
