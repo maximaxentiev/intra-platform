@@ -23,11 +23,14 @@ vi.mock("@/lib/api", () => ({
 import { api } from "@/lib/api";
 import {
   carerAvailabilityApi,
+  countOnboardingWeekProgress,
+  defaultOnboardingWizardWeek,
   groupSlotsByDay,
   mapAvailabilityApiError,
   sortAvailabilitySlots,
   validateClientTimeRange,
   type CarerAvailabilitySlot,
+  type CarerGuidedAvailabilityOnboardingState,
 } from "@/lib/carer-availability";
 
 const slot = (overrides: Partial<CarerAvailabilitySlot> = {}): CarerAvailabilitySlot => ({
@@ -37,6 +40,19 @@ const slot = (overrides: Partial<CarerAvailabilitySlot> = {}): CarerAvailability
   startTime: "09:00",
   endTime: "12:00",
   createdAt: "2026-08-13T12:00:00.000Z",
+  ...overrides,
+});
+
+const onboardingState = (
+  overrides: Partial<CarerGuidedAvailabilityOnboardingState> = {},
+): CarerGuidedAvailabilityOnboardingState => ({
+  anchorEstablished: true,
+  week1Start: "2026-08-10",
+  week2Start: "2026-08-17",
+  days: [],
+  week1Complete: false,
+  week2Complete: false,
+  canCompleteOnboarding: false,
   ...overrides,
 });
 
@@ -86,10 +102,61 @@ describe("carerAvailabilityApi", () => {
     expect(api.del).toHaveBeenCalledWith("/staff-portal/availability/slot-1");
   });
 
+  it("ensures onboarding state", async () => {
+    vi.mocked(api.post).mockResolvedValue(onboardingState());
+    await carerAvailabilityApi.ensureOnboardingState();
+    expect(api.post).toHaveBeenCalledWith("/staff-portal/availability/onboarding-state/ensure");
+  });
+
+  it("gets onboarding state", async () => {
+    vi.mocked(api.get).mockResolvedValue(onboardingState());
+    await carerAvailabilityApi.getOnboardingState();
+    expect(api.get).toHaveBeenCalledWith("/staff-portal/availability/onboarding-state");
+  });
+
+  it("marks unavailable without staffId", async () => {
+    vi.mocked(api.post).mockResolvedValue(onboardingState());
+    await carerAvailabilityApi.markUnavailable({ weekStartDate: "2026-08-10", dayOfWeek: 3 });
+    expect(api.post).toHaveBeenCalledWith("/staff-portal/availability/mark-unavailable", {
+      weekStartDate: "2026-08-10",
+      dayOfWeek: 3,
+    });
+    const body = vi.mocked(api.post).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("staffId");
+  });
+
+  it("clears unavailable with body", async () => {
+    vi.mocked(api.del).mockResolvedValue(onboardingState());
+    await carerAvailabilityApi.clearUnavailable({ weekStartDate: "2026-08-17", dayOfWeek: 1 });
+    expect(api.del).toHaveBeenCalledWith("/staff-portal/availability/mark-unavailable", {
+      weekStartDate: "2026-08-17",
+      dayOfWeek: 1,
+    });
+  });
+
   it("completes onboarding step 3", async () => {
     vi.mocked(api.post).mockResolvedValue({ onboardingCompletedAt: "2026-08-13T12:00:00.000Z" });
     await carerAvailabilityApi.completeStep3();
     expect(api.post).toHaveBeenCalledWith("/staff-portal/availability/complete-step-3");
+  });
+});
+
+describe("onboarding helpers", () => {
+  it("counts required days excluding exempt past", () => {
+    const progress = countOnboardingWeekProgress(
+      [
+        { calendarDate: "2026-08-10", weekIndex: 1, dayOfWeek: 0, status: "exempt_past", windows: [] },
+        { calendarDate: "2026-08-13", weekIndex: 1, dayOfWeek: 3, status: "available", windows: [slot()] },
+        { calendarDate: "2026-08-14", weekIndex: 1, dayOfWeek: 4, status: "incomplete", windows: [] },
+      ],
+      1,
+    );
+    expect(progress).toEqual({ answered: 1, required: 2 });
+  });
+
+  it("defaults wizard week from server completion flags", () => {
+    expect(defaultOnboardingWizardWeek(onboardingState({ week1Complete: false }))).toBe(1);
+    expect(defaultOnboardingWizardWeek(onboardingState({ week1Complete: true }))).toBe(2);
   });
 });
 
@@ -135,13 +202,13 @@ describe("mapAvailabilityApiError", () => {
     ).toMatch(/overlaps with availability/i);
   });
 
-  it("maps duplicate errors", () => {
+  it("maps completion validation errors", () => {
     expect(
       mapAvailabilityApiError(
-        new ApiError(400, "An identical availability window already exists."),
+        new ApiError(400, "Complete availability for every required day in your onboarding period."),
         "fallback",
       ),
-    ).toMatch(/matches availability/i);
+    ).toMatch(/Complete every required day/i);
   });
 });
 
@@ -152,5 +219,29 @@ describe("carer availability security", () => {
     expect(src).toContain("/staff-portal/availability");
     expect(src).not.toMatch(/['"`]\/availability['"`]/);
     expect(src).not.toContain("staffId");
+  });
+
+  it("carer routes do not call ops availability API", () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const files = [
+      "routes/carer/onboarding/availability.tsx",
+      "routes/carer/availability.tsx",
+      "components/carer/CarerAvailabilityOnboardingWizard.tsx",
+      "components/carer/CarerAvailabilityEditor.tsx",
+    ];
+    for (const file of files) {
+      const src = readFileSync(join(root, file), "utf8");
+      expect(src).not.toMatch(/['"`]\/availability['"`]/);
+      expect(src).not.toContain("staffId");
+    }
+  });
+
+  it("onboarding wizard uses server onboarding state query", () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const route = readFileSync(join(root, "routes/carer/onboarding/availability.tsx"), "utf8");
+    expect(route).toContain("ensureOnboardingState");
+    expect(route).toContain("CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY");
+    expect(route).not.toContain("localStorage");
+    expect(route).not.toContain("sessionStorage");
   });
 });

@@ -10,51 +10,88 @@ function readSrc(rel: string) {
 }
 
 describe("carer availability UI contracts", () => {
-  it("onboarding step 3 uses the shared availability editor", () => {
+  it("onboarding step 3 uses the guided availability wizard", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
-    const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
-    expect(route).toContain("CarerAvailabilityEditor");
-    expect(route).toContain("carerAvailabilityApi.list");
-    expect(route).toContain("onStepComplete");
-    expect(editor).toContain("carerAvailabilityApi.completeStep3");
-    expect(route).not.toContain("not available yet");
+    const wizard = readSrc("components/carer/CarerAvailabilityOnboardingWizard.tsx");
+    expect(route).toContain("CarerAvailabilityOnboardingWizard");
+    expect(route).toContain("ensureOnboardingState");
+    expect(route).toContain("CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY");
+    expect(route).not.toContain("CarerAvailabilityEditor");
+    expect(route).not.toContain("Previous week");
     expect(route).toContain("Back to Documents");
-    expect(editor).toContain("Finish onboarding");
-    expect(editor).toContain("Finishing");
+    expect(wizard).toContain("Week {activeWeek} of 2");
+    expect(wizard).toContain("Next week");
+    expect(wizard).toContain("Previous week");
+    expect(wizard).toContain("Complete onboarding");
+    expect(wizard).toContain("Finishing");
+    expect(wizard).toContain("week1Complete");
+    expect(wizard).toContain("canCompleteOnboarding");
+    expect(wizard).not.toContain("This week");
   });
 
-  it("account availability route uses the shared editor", () => {
+  it("onboarding wizard renders server day statuses", () => {
+    const wizard = readSrc("components/carer/CarerAvailabilityOnboardingWizard.tsx");
+    expect(wizard).toContain("exempt_past");
+    expect(wizard).toContain("No response required");
+    expect(wizard).toContain("Not available");
+    expect(wizard).toContain("Needs a response");
+    expect(wizard).toContain("markUnavailable");
+    expect(wizard).toContain("Mark this day as not available?");
+    expect(wizard).toContain("Your saved availability for this day will be removed.");
+  });
+
+  it("account availability route is constrained to this week and next week", () => {
     const route = readSrc("routes/carer/availability.tsx");
+    const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
     expect(route).toContain("/carer/availability");
     expect(route).toContain("CarerAvailabilityEditor");
     expect(route).toContain("requireCarerSessionForPortal");
     expect(route).not.toContain("Finish onboarding");
+    expect(route).not.toContain("Complete onboarding");
+    expect(editor).toContain("This week");
+    expect(editor).toContain("Next week");
+    expect(editor).not.toContain("Previous week");
+    expect(editor).not.toContain("markUnavailable");
+    expect(editor).not.toContain("Not available");
   });
 
-  it("carer home links to availability management", () => {
+  it("carer home links to profile and availability management", () => {
     const home = readSrc("routes/carer/index.tsx");
     expect(home).toContain('to="/carer/availability"');
+    expect(home).toContain('to="/carer/profile"');
     expect(home).toContain("Manage availability");
+    expect(home).toContain("Edit personal information");
+    expect(home).toContain("Manage documents");
+  });
+
+  it("profile route reuses CarerPersonalInformationForm in profile mode", () => {
+    const profile = readSrc("routes/carer/profile.tsx");
+    expect(profile).toContain("/carer/profile");
+    expect(profile).toContain("requireCarerSessionForPortal");
+    expect(profile).toContain('mode="profile"');
+    expect(profile).toContain("CarerPersonalInformationForm");
+    expect(profile).not.toContain("completeStep1");
+    expect(profile).not.toContain("staffId");
   });
 
   it("editor hides add and edit on past days", () => {
     const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
-    expect(editor).toContain("isPastCalendarDate");
-    expect(editor).toContain("Add availability");
+    const shared = readSrc("components/carer/CarerAvailabilityShared.tsx");
+    expect(shared).toContain("Add availability");
     expect(editor).toContain("!past");
-    expect(editor).toContain("Remove");
+    expect(shared).toContain("Remove");
   });
 
-  it("editor validates start before end client-side", () => {
-    const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
+  it("shared helpers validate start before end client-side", () => {
+    const shared = readSrc("components/carer/CarerAvailabilityShared.tsx");
     const lib = readSrc("lib/carer-availability.ts");
-    expect(editor).toContain("validateClientTimeRange");
+    expect(shared).toContain("validateClientTimeRange");
     expect(lib).toContain("End time must be after start time");
   });
 
-  it("editor maps overlap API errors for users", () => {
-    const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
-    expect(editor).toContain("mapAvailabilityApiError");
+  it("components map overlap API errors for users", () => {
+    const shared = readSrc("components/carer/CarerAvailabilityShared.tsx");
+    expect(shared).toContain("mapAvailabilityApiError");
   });
 
   it("carer availability client never references ops availability API", () => {

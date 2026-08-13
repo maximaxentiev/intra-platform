@@ -1,15 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
-import { CarerAvailabilityEditor } from "@/components/carer/CarerAvailabilityEditor";
+import {
+  CarerAvailabilityOnboardingWizard,
+  CarerAvailabilityOnboardingWizardSkeleton,
+} from "@/components/carer/CarerAvailabilityOnboardingWizard";
 import { Button } from "@/components/ui/button";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
 import { stepPathForNumber } from "@/lib/carer-onboarding";
-import { carerAvailabilityApi } from "@/lib/carer-availability";
-import { currentMondayWeekStart } from "@/lib/carer-availability-dates";
+import {
+  CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
+  carerAvailabilityApi,
+  mapAvailabilityApiError,
+} from "@/lib/carer-availability";
+import { CarerAvailabilityLoadError } from "@/components/carer/CarerAvailabilityShared";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -22,12 +28,21 @@ export const Route = createFileRoute("/carer/onboarding/availability")({
 function CarerOnboardingAvailabilityPage() {
   const { carer } = Route.useRouteContext();
   const navigate = useNavigate();
-  const [weekStart, setWeekStart] = useState(() => currentMondayWeekStart());
 
-  const availability = useQuery({
-    queryKey: ["carer-availability", weekStart],
-    queryFn: () => carerAvailabilityApi.list(weekStart),
+  const onboardingState = useQuery({
+    queryKey: CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
+    queryFn: async () => {
+      await carerAvailabilityApi.ensureOnboardingState();
+      return carerAvailabilityApi.getOnboardingState();
+    },
+    retry: 1,
   });
+
+  const state = onboardingState.data;
+  const initFailed = onboardingState.isError;
+  const initError = initFailed
+    ? mapAvailabilityApiError(onboardingState.error, "Could not load your onboarding availability.")
+    : null;
 
   return (
     <CarerShell
@@ -51,17 +66,31 @@ function CarerOnboardingAvailabilityPage() {
             Back to Documents
           </Link>
         </Button>
-        <CarerAvailabilityEditor
-          mode="onboarding"
-          weekStart={weekStart}
-          onWeekStartChange={setWeekStart}
-          slots={availability.data}
-          isLoading={availability.isLoading}
-          isFetching={availability.isFetching}
-          loadFailed={availability.isError}
-          onRefresh={() => availability.refetch()}
-          onStepComplete={() => navigate({ to: "/carer", replace: true })}
-        />
+
+        {onboardingState.isLoading || !state?.anchorEstablished ? (
+          initFailed ? (
+            <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
+          ) : (
+            <CarerAvailabilityOnboardingWizardSkeleton />
+          )
+        ) : initFailed ? (
+          <div className="space-y-2">
+            {initError ? (
+              <p className="text-sm text-destructive" role="alert">
+                {initError}
+              </p>
+            ) : null}
+            <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
+          </div>
+        ) : (
+          <CarerAvailabilityOnboardingWizard
+            onboardingState={state}
+            isFetching={onboardingState.isFetching}
+            loadFailed={false}
+            onRefresh={() => onboardingState.refetch()}
+            onComplete={() => navigate({ to: "/carer", replace: true })}
+          />
+        )}
       </CarerOnboardingShell>
     </CarerShell>
   );

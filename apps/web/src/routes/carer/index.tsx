@@ -33,10 +33,15 @@ function CarerHomePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Your details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <div className="font-medium">{carerFullName(carer) || carer.email}</div>
-            <div className="text-muted-foreground">{carer.email}</div>
-            {carer.phone ? <div className="text-muted-foreground">{carer.phone}</div> : null}
+          <CardContent className="space-y-2 text-sm">
+            <div className="space-y-1">
+              <div className="font-medium">{carerFullName(carer) || carer.email}</div>
+              <div className="text-muted-foreground">{carer.email}</div>
+              {carer.phone ? <div className="text-muted-foreground">{carer.phone}</div> : null}
+            </div>
+            <Link to="/carer/profile" className="font-medium text-primary hover:underline">
+              Edit personal information
+            </Link>
           </CardContent>
         </Card>
 
@@ -46,7 +51,7 @@ function CarerHomePage() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <Link to="/carer/documents" className="font-medium text-primary hover:underline">
-              Manage your compliance documents
+              Manage documents
             </Link>
           </CardContent>
         </Card>

@@ -3,11 +3,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
-import { CarerAvailabilityEditor } from "@/components/carer/CarerAvailabilityEditor";
+import {
+  accountWeekChoices,
+  CarerAvailabilityEditor,
+} from "@/components/carer/CarerAvailabilityEditor";
 import { Button } from "@/components/ui/button";
 import { requireCarerSessionForPortal } from "@/lib/carer-route-guards";
 import { carerAvailabilityApi } from "@/lib/carer-availability";
-import { currentMondayWeekStart } from "@/lib/carer-availability-dates";
 
 export const Route = createFileRoute("/carer/availability")({
   ssr: false,
@@ -20,12 +22,19 @@ export const Route = createFileRoute("/carer/availability")({
 
 function CarerAccountAvailabilityPage() {
   const { carer } = Route.useRouteContext();
-  const [weekStart, setWeekStart] = useState(() => currentMondayWeekStart());
+  const [weekStart, setWeekStart] = useState(() => accountWeekChoices().thisWeekStart);
 
   const availability = useQuery({
     queryKey: ["carer-availability", weekStart],
     queryFn: () => carerAvailabilityApi.list(weekStart),
   });
+
+  function handleWeekStartChange(nextWeekStart: string) {
+    const { thisWeekStart, nextWeekStart: allowedNext } = accountWeekChoices();
+    if (nextWeekStart === thisWeekStart || nextWeekStart === allowedNext) {
+      setWeekStart(nextWeekStart);
+    }
+  }
 
   return (
     <CarerShell
@@ -42,9 +51,8 @@ function CarerAccountAvailabilityPage() {
         </Button>
       </div>
       <CarerAvailabilityEditor
-        mode="account"
         weekStart={weekStart}
-        onWeekStartChange={setWeekStart}
+        onWeekStartChange={handleWeekStartChange}
         slots={availability.data}
         isLoading={availability.isLoading}
         isFetching={availability.isFetching}

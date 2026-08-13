@@ -53,12 +53,19 @@ describe("carer onboarding routing", () => {
     expect(shell).not.toMatch(/onClick=.*navigate/i);
   });
 
-  it("availability step uses the shared availability editor", () => {
+  it("availability step uses the guided onboarding wizard", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
-    expect(route).toContain("CarerAvailabilityEditor");
-    expect(route).toContain("carerAvailabilityApi.list");
+    expect(route).toContain("CarerAvailabilityOnboardingWizard");
+    expect(route).toContain("ensureOnboardingState");
     expect(route).toContain("Back to Documents");
     expect(route).toContain("stepPathForNumber(2)");
+    expect(route).not.toContain("CarerAvailabilityEditor");
+  });
+
+  it("profile route exists for completed carers", () => {
+    const profile = readSrc("routes/carer/profile.tsx");
+    expect(profile).toContain("requireCarerSessionForPortal");
+    expect(profile).toContain('mode="profile"');
   });
 
   it("route guards allow backward navigation without rewinding onboarding", () => {

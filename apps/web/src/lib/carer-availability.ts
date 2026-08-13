@@ -9,11 +9,31 @@ export type CarerAvailabilitySlot = {
   createdAt: string;
 };
 
-export type CarerAvailabilityOnboardingState = {
+export type CarerAvailabilityStepCompletion = {
   profileCompletedAt: string | null;
   documentsCompletedAt: string | null;
   onboardingStep: number;
   onboardingCompletedAt: string | null;
+};
+
+export type OnboardingDayStatus = "exempt_past" | "incomplete" | "available" | "unavailable";
+
+export type CarerOnboardingAvailabilityDay = {
+  calendarDate: string;
+  weekIndex: 1 | 2;
+  dayOfWeek: number;
+  status: OnboardingDayStatus;
+  windows: CarerAvailabilitySlot[];
+};
+
+export type CarerGuidedAvailabilityOnboardingState = {
+  anchorEstablished: boolean;
+  week1Start: string | null;
+  week2Start: string | null;
+  days: CarerOnboardingAvailabilityDay[];
+  week1Complete: boolean;
+  week2Complete: boolean;
+  canCompleteOnboarding: boolean;
 };
 
 export type CreateCarerAvailabilityInput = {
@@ -27,6 +47,15 @@ export type UpdateCarerAvailabilityInput = {
   startTime: string;
   endTime: string;
 };
+
+export type MarkCarerUnavailableInput = {
+  weekStartDate: string;
+  dayOfWeek: number;
+};
+
+export const CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY = [
+  "carer-availability-onboarding-state",
+] as const;
 
 export function validateClientTimeRange(startTime: string, endTime: string): string | null {
   if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
@@ -57,6 +86,28 @@ export function groupSlotsByDay(
   return grouped;
 }
 
+export function countOnboardingWeekProgress(
+  days: CarerOnboardingAvailabilityDay[],
+  weekIndex: 1 | 2,
+): { answered: number; required: number } {
+  const weekDays = days.filter((d) => d.weekIndex === weekIndex);
+  const required = weekDays.filter((d) => d.status !== "exempt_past");
+  const answered = required.filter(
+    (d) => d.status === "available" || d.status === "unavailable",
+  );
+  return { answered: answered.length, required: required.length };
+}
+
+export function defaultOnboardingWizardWeek(state: CarerGuidedAvailabilityOnboardingState): 1 | 2 {
+  if (state.week1Complete && (!state.week2Complete || !state.canCompleteOnboarding)) {
+    return 2;
+  }
+  if (state.week1Complete && state.canCompleteOnboarding) {
+    return 2;
+  }
+  return 1;
+}
+
 export function mapAvailabilityApiError(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) {
     return err instanceof Error ? err.message : fallback;
@@ -70,11 +121,26 @@ export function mapAvailabilityApiError(err: unknown, fallback: string): string 
   if (/identical/i.test(msg)) {
     return "This time range matches availability you've already added.";
   }
-  if (/past date/i.test(msg)) {
+  if (/past date/i.test(msg) || /Past dates cannot/i.test(msg)) {
     return "Availability for past dates cannot be changed.";
   }
   if (/startTime must be before endTime/i.test(msg)) {
     return "End time must be after start time.";
+  }
+  if (/Complete availability for every required day/i.test(msg)) {
+    return "Complete every required day before finishing onboarding.";
+  }
+  if (/outside your guided onboarding period/i.test(msg)) {
+    return "That date is outside your guided onboarding period.";
+  }
+  if (/onboarding period/i.test(msg)) {
+    return "Set up your two-week availability period before continuing.";
+  }
+  if (/Establish your onboarding period/i.test(msg)) {
+    return "Your availability onboarding period could not be loaded. Try again.";
+  }
+  if (/Could not establish onboarding anchor/i.test(msg)) {
+    return "Could not start your availability onboarding. Try again.";
   }
   return msg || fallback;
 }
@@ -91,6 +157,28 @@ export const carerAvailabilityApi = {
 
   remove: (id: string) => api.del<{ ok: true }>(`/staff-portal/availability/${id}`),
 
+  ensureOnboardingState: () =>
+    api.post<CarerGuidedAvailabilityOnboardingState>(
+      "/staff-portal/availability/onboarding-state/ensure",
+    ),
+
+  getOnboardingState: () =>
+    api.get<CarerGuidedAvailabilityOnboardingState>(
+      "/staff-portal/availability/onboarding-state",
+    ),
+
+  markUnavailable: (body: MarkCarerUnavailableInput) =>
+    api.post<CarerGuidedAvailabilityOnboardingState>(
+      "/staff-portal/availability/mark-unavailable",
+      body,
+    ),
+
+  clearUnavailable: (body: MarkCarerUnavailableInput) =>
+    api.del<CarerGuidedAvailabilityOnboardingState>(
+      "/staff-portal/availability/mark-unavailable",
+      body,
+    ),
+
   completeStep3: () =>
-    api.post<CarerAvailabilityOnboardingState>("/staff-portal/availability/complete-step-3"),
+    api.post<CarerAvailabilityStepCompletion>("/staff-portal/availability/complete-step-3"),
 };
