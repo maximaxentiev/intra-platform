@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { STAFF_PORTAL_AUDIT_EVENTS } from '../staff-portal/staff-portal-audit.service';
+import { STAFF_PORTAL_AUDIT_EVENTS, StaffPortalAuditService } from '../staff-portal/staff-portal-audit.service';
 import { StaffDocumentShareLifecycleService } from './staff-document-share-lifecycle.service';
 import { StaffDocumentShareService } from './staff-document-share.service';
 import { nextShareTokenRotationCreatedAt } from './staff-document-share-epoch.util';
@@ -44,10 +44,14 @@ function baseStaffRow(overrides: Record<string, unknown> = {}) {
 
 type StaffRow = ReturnType<typeof baseStaffRow>;
 
-function createHarness(initialRow: StaffRow = baseStaffRow(), options?: { slugCollisions?: Set<string> }) {
+function createHarness(
+  initialRow: StaffRow = baseStaffRow(),
+  options?: { slugCollisions?: Set<string>; useRealAudit?: boolean },
+) {
   let row: StaffRow = { ...initialRow };
   const audit = vi.fn();
   const slugCollisions = options?.slugCollisions ?? new Set<string>();
+  const useRealAudit = options?.useRealAudit ?? false;
 
   const shareService = createShareService();
   const config = {
@@ -62,6 +66,7 @@ function createHarness(initialRow: StaffRow = baseStaffRow(), options?: { slugCo
   const applyUpdate = async (values: Record<string, unknown>) => {
     if (
       typeof values.documentSlug === 'string' &&
+      values.documentShareTokenHash === undefined &&
       !row.documentSlug &&
       slugCollisions.has(values.documentSlug)
     ) {
@@ -71,7 +76,20 @@ function createHarness(initialRow: StaffRow = baseStaffRow(), options?: { slugCo
     return [row];
   };
 
-  const db = {
+  const createUpdateChain = () => ({
+    set: (values: Record<string, unknown>) => ({
+      where: () => {
+        const promise = applyUpdate(values);
+        return {
+          returning: () => promise,
+          then: (resolve: (value: unknown) => void, reject?: (reason: unknown) => void) =>
+            promise.then(resolve, reject),
+        };
+      },
+    }),
+  });
+
+  const tx = {
     select: vi.fn().mockImplementation(() => ({
       from: () => ({
         where: () => ({
@@ -80,22 +98,49 @@ function createHarness(initialRow: StaffRow = baseStaffRow(), options?: { slugCo
         }),
       }),
     })),
-    transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
-    update: vi.fn().mockImplementation(() => ({
-      set: (values: Record<string, unknown>) => ({
-        where: () => ({
-          returning: () => applyUpdate(values),
-        }),
+    transaction: vi.fn().mockImplementation(async (fn: (inner: typeof tx) => Promise<unknown>) =>
+      fn(tx),
+    ),
+    update: vi.fn().mockImplementation(() => createUpdateChain()),
+    insert: vi.fn().mockImplementation(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    })),
+  };
+
+  const db = {
+    select: vi.fn().mockImplementation(() => ({
+      from: () => ({
+        where: () => Promise.resolve([row]),
       }),
+    })),
+    transaction: vi.fn().mockImplementation(async (fn: (inner: typeof tx) => Promise<unknown>) => {
+      const snapshot = structuredClone(row);
+      try {
+        return await fn(tx);
+      } catch (err) {
+        row = snapshot;
+        throw err;
+      }
+    }),
+    update: vi.fn().mockImplementation(() => createUpdateChain()),
+    insert: vi.fn().mockImplementation(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
     })),
   } as never;
 
-  const service = new StaffDocumentShareLifecycleService(db, shareService, { record: audit } as never, config);
+  const auditService = useRealAudit
+    ? new StaffPortalAuditService(db)
+    : ({ record: audit } as never);
+
+  const service = new StaffDocumentShareLifecycleService(db, shareService, auditService, config);
 
   return {
     service,
     shareService,
     audit,
+    auditService,
+    tx,
+    db,
     get row() {
       return row;
     },
@@ -148,6 +193,7 @@ describe('StaffDocumentShareLifecycleService generate', () => {
     expect(harness.row.documentSlug).toBe('jane-doe-2');
     expect(harness.audit).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkGenerated }),
+      harness.tx,
     );
     expect(JSON.stringify(harness.audit.mock.calls[0]?.[0]?.detail ?? {})).not.toMatch(/shareUrl|token|hash/i);
   });
@@ -251,6 +297,7 @@ describe('StaffDocumentShareLifecycleService rotate', () => {
     expect(rotated.shareUrl).not.toContain(`#${initial.token}`);
     expect(harness.audit).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRotated }),
+      harness.tx,
     );
   });
 
@@ -279,6 +326,7 @@ describe('StaffDocumentShareLifecycleService revoke', () => {
     await expect(harness.service.copyShareLink(STAFF_ID)).rejects.toBeInstanceOf(ConflictException);
     expect(harness.audit).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRevoked }),
+      harness.tx,
     );
   });
 
@@ -373,5 +421,62 @@ describe('nextShareTokenRotationCreatedAt edge cases', () => {
     const previous = new Date('2026-08-01T12:00:00.001Z');
     const next = nextShareTokenRotationCreatedAt(previous, previous.getTime() - 1);
     expect(next.getTime()).toBe(previous.getTime() + 1);
+  });
+});
+
+describe('StaffDocumentShareLifecycleService transaction safety', () => {
+  it('writes audit through the active transaction executor, not the global pool', async () => {
+    const harness = createHarness(baseStaffRow(), { useRealAudit: true });
+    await harness.service.generateShareLink(STAFF_ID, ACTOR_USER_ID);
+
+    expect(harness.tx.insert).toHaveBeenCalled();
+    expect(harness.db.insert).not.toHaveBeenCalled();
+  });
+
+  it('rolls back lifecycle mutation when audit insert fails', async () => {
+    const harness = createHarness(baseStaffRow(), { useRealAudit: true });
+    harness.tx.insert.mockImplementationOnce(() => ({
+      values: vi.fn().mockRejectedValue(new Error('audit insert failed')),
+    }));
+
+    await expect(harness.service.generateShareLink(STAFF_ID, ACTOR_USER_ID)).rejects.toThrow(
+      'audit insert failed',
+    );
+    expect(harness.row.documentShareTokenHash).toBeNull();
+    expect(harness.row.documentSlug).toBeNull();
+  });
+
+  it('uses nested savepoints for slug collision retries inside the open transaction', async () => {
+    const harness = createHarness(baseStaffRow(), {
+      slugCollisions: new Set(['jane-doe']),
+    });
+
+    await harness.service.generateShareLink(STAFF_ID, ACTOR_USER_ID);
+
+    expect(harness.tx.transaction).toHaveBeenCalled();
+    expect(harness.row.documentSlug).toBe('jane-doe-2');
+  });
+
+  it('completes rotate and revoke using the transaction executor for audit', async () => {
+    const generated = createShareService().generateShareTokenState(STAFF_ID, CREATED_AT);
+    const harness = createHarness(
+      baseStaffRow({
+        documentSlug: 'jane-doe',
+        documentShareTokenHash: generated.hash,
+        documentShareTokenCreatedAt: generated.createdAt,
+      }),
+      { useRealAudit: true },
+    );
+
+    await harness.service.rotateShareLink(STAFF_ID, ACTOR_USER_ID);
+    expect(harness.tx.insert).toHaveBeenCalled();
+    expect(harness.db.insert).not.toHaveBeenCalled();
+
+    harness.tx.insert.mockClear();
+    harness.db.insert.mockClear();
+
+    await harness.service.revokeShareLink(STAFF_ID, ACTOR_USER_ID);
+    expect(harness.tx.insert).toHaveBeenCalled();
+    expect(harness.db.insert).not.toHaveBeenCalled();
   });
 });

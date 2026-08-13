@@ -1,6 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DRIZZLE, type Database } from '../db/drizzle.module';
+import { DRIZZLE, type Database, type DbExecutor } from '../db/drizzle.module';
 import { staffPortalAuditEvents } from '../db/schema';
+
+export type StaffPortalAuditRecordParams = {
+  staffId: string;
+  staffAccountId?: string | null;
+  actorUserId?: string | null;
+  eventType: StaffPortalAuditEventType;
+  detail?: Record<string, unknown>;
+};
+
+export type StaffPortalAuditDbExecutor = Pick<DbExecutor, 'insert'>;
 
 export const STAFF_PORTAL_AUDIT_EVENTS = {
   staffCreated: 'staff_record_created',
@@ -57,15 +67,13 @@ const FORBIDDEN_DETAIL_KEYS = /token|password|secret|hash/i;
 export class StaffPortalAuditService {
   constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
-  async record(params: {
-    staffId: string;
-    staffAccountId?: string | null;
-    actorUserId?: string | null;
-    eventType: StaffPortalAuditEventType;
-    detail?: Record<string, unknown>;
-  }) {
+  async record(
+    params: StaffPortalAuditRecordParams,
+    executor?: StaffPortalAuditDbExecutor,
+  ) {
     const detail = sanitizeDetail(params.detail ?? {});
-    await this.db.insert(staffPortalAuditEvents).values({
+    const db = executor ?? this.db;
+    await db.insert(staffPortalAuditEvents).values({
       staffId: params.staffId,
       staffAccountId: params.staffAccountId ?? null,
       actorUserId: params.actorUserId ?? null,

@@ -7,6 +7,9 @@ import * as schema from './schema';
 export const DRIZZLE = Symbol('DRIZZLE');
 export type Database = NodePgDatabase<typeof schema>;
 
+/** Drizzle transaction / nested savepoint executor (same surface as Database for queries). */
+export type DbExecutor = Parameters<Parameters<Database['transaction']>[0]>[0];
+
 @Global()
 @Module({
   imports: [ConfigModule],

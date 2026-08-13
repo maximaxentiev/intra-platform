@@ -1,5 +1,37 @@
-import { describe, expect, it } from 'vitest';
-import { sanitizeDetail } from './staff-portal-audit.service';
+import { describe, expect, it, vi } from 'vitest';
+import { StaffPortalAuditService, sanitizeDetail } from './staff-portal-audit.service';
+
+describe('StaffPortalAuditService.record', () => {
+  it('uses the global database by default', async () => {
+    const globalInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+    const service = new StaffPortalAuditService({ insert: globalInsert } as never);
+
+    await service.record({
+      staffId: 'staff-1',
+      eventType: 'share_link_generated',
+    });
+
+    expect(globalInsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a supplied transaction executor when provided', async () => {
+    const globalInsert = vi.fn();
+    const txInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+    const service = new StaffPortalAuditService({ insert: globalInsert } as never);
+
+    await service.record(
+      {
+        staffId: 'staff-1',
+        eventType: 'share_link_generated',
+        detail: { action: 'share_link_generated' },
+      },
+      { insert: txInsert },
+    );
+
+    expect(txInsert).toHaveBeenCalledTimes(1);
+    expect(globalInsert).not.toHaveBeenCalled();
+  });
+});
 
 describe('sanitizeDetail', () => {
   it('drops keys and values that look like secrets', () => {

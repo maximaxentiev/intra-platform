@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { eq } from 'drizzle-orm';
 import { resolvePublicPlatformUrl } from '../config/platform-url';
-import { DRIZZLE, type Database } from '../db/drizzle.module';
+import { DRIZZLE, type Database, type DbExecutor } from '../db/drizzle.module';
 import { staff } from '../db/schema';
 import {
   STAFF_PORTAL_AUDIT_EVENTS,
@@ -68,16 +68,19 @@ export class StaffDocumentShareLifecycleService {
         generated,
       });
 
-      await this.audit.record({
-        staffId,
-        actorUserId,
-        eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkGenerated,
-        detail: {
-          action: 'share_link_generated',
-          slug: updated.documentSlug,
-          createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
+      await this.audit.record(
+        {
+          staffId,
+          actorUserId,
+          eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkGenerated,
+          detail: {
+            action: 'share_link_generated',
+            slug: updated.documentSlug,
+            createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
+          },
         },
-      });
+        tx,
+      );
 
       return this.toShareUrlDto(staffId, updated, generated.token);
     });
@@ -118,16 +121,19 @@ export class StaffDocumentShareLifecycleService {
         generated,
       });
 
-      await this.audit.record({
-        staffId,
-        actorUserId,
-        eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRotated,
-        detail: {
-          action: 'share_link_rotated',
-          slug: updated.documentSlug,
-          createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
+      await this.audit.record(
+        {
+          staffId,
+          actorUserId,
+          eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRotated,
+          detail: {
+            action: 'share_link_rotated',
+            slug: updated.documentSlug,
+            createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
+          },
         },
-      });
+        tx,
+      );
 
       return this.toShareUrlDto(staffId, updated, generated.token);
     });
@@ -156,16 +162,19 @@ export class StaffDocumentShareLifecycleService {
         .where(eq(staff.id, staffId))
         .returning();
 
-      await this.audit.record({
-        staffId,
-        actorUserId,
-        eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRevoked,
-        detail: {
-          action: 'share_link_revoked',
-          slug: updated.documentSlug,
-          revokedAt: revokedAt.toISOString(),
+      await this.audit.record(
+        {
+          staffId,
+          actorUserId,
+          eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkRevoked,
+          detail: {
+            action: 'share_link_revoked',
+            slug: updated.documentSlug,
+            revokedAt: revokedAt.toISOString(),
+          },
         },
-      });
+        tx,
+      );
 
       return mapStaffDocumentShareStatus(updated);
     });
@@ -195,7 +204,7 @@ export class StaffDocumentShareLifecycleService {
     return rows[0];
   }
 
-  private async lockStaffRow(tx: Database, staffId: string): Promise<StaffShareRow> {
+  private async lockStaffRow(tx: DbExecutor, staffId: string): Promise<StaffShareRow> {
     const rows = await tx.select().from(staff).where(eq(staff.id, staffId)).for('update');
     if (!rows[0]) {
       throw new NotFoundException('Staff not found.');
@@ -211,7 +220,7 @@ export class StaffDocumentShareLifecycleService {
     };
   }
 
-  private async resolveSlugForIssuance(tx: Database, row: StaffShareRow): Promise<string> {
+  private async resolveSlugForIssuance(tx: DbExecutor, row: StaffShareRow): Promise<string> {
     if (row.documentSlug) {
       return row.documentSlug;
     }
@@ -221,11 +230,12 @@ export class StaffDocumentShareLifecycleService {
 
     for (const candidate of candidates) {
       try {
-        await tx
-          .update(staff)
-          .set({ documentSlug: candidate, updatedAt: new Date() })
-          .where(eq(staff.id, row.id))
-          .returning();
+        await tx.transaction(async (slugTx) => {
+          await slugTx
+            .update(staff)
+            .set({ documentSlug: candidate, updatedAt: new Date() })
+            .where(eq(staff.id, row.id));
+        });
         return candidate;
       } catch (err) {
         if (isStaffDocumentSlugUniqueViolation(err)) {
@@ -239,7 +249,7 @@ export class StaffDocumentShareLifecycleService {
   }
 
   private async persistActiveShareState(
-    tx: Database,
+    tx: DbExecutor,
     staffId: string,
     input: {
       slug: string;
