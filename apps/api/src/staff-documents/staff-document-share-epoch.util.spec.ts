@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shareTokenRotationEpoch, shareTokenRotationEpochFromPersisted } from './staff-document-share-epoch.util';
+import { shareTokenRotationEpoch, shareTokenRotationEpochFromPersisted, nextShareTokenRotationCreatedAt } from './staff-document-share-epoch.util';
 
 describe('shareTokenRotationEpoch', () => {
   it('uses UTC epoch milliseconds from Date', () => {
@@ -27,5 +27,24 @@ describe('shareTokenRotationEpochFromPersisted', () => {
 
   it('returns null for invalid persisted values', () => {
     expect(shareTokenRotationEpochFromPersisted('not-a-date')).toBeNull();
+  });
+});
+
+describe('nextShareTokenRotationCreatedAt', () => {
+  it('uses now when there is no previous epoch', () => {
+    const nowMs = 1_754_054_400_000;
+    expect(nextShareTokenRotationCreatedAt(null, nowMs).getTime()).toBe(nowMs);
+  });
+
+  it('forces a strictly greater epoch when clock equals previous epoch', () => {
+    const previous = new Date('2026-08-01T12:00:00.000Z');
+    const nowMs = previous.getTime();
+    expect(nextShareTokenRotationCreatedAt(previous, nowMs).getTime()).toBe(nowMs + 1);
+  });
+
+  it('forces a strictly greater epoch when clock is behind previous epoch', () => {
+    const previous = new Date('2026-08-01T12:00:00.001Z');
+    const nowMs = previous.getTime() - 1;
+    expect(nextShareTokenRotationCreatedAt(previous, nowMs).getTime()).toBe(previous.getTime() + 1);
   });
 });

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -22,16 +23,50 @@ import {
   pickNewDocumentFiles,
   staffDocumentUploadInterceptor,
 } from './staff-document-multipart.util';
+import { StaffDocumentShareLifecycleService } from './staff-document-share-lifecycle.service';
 import { StaffDocumentsService } from './staff-documents.service';
+
+const SHARE_URL_CACHE_CONTROL = 'private, no-store';
 
 @ApiTags('staff')
 @Controller('staff')
 export class StaffDocumentsOpsController {
-  constructor(private readonly documents: StaffDocumentsService) {}
+  constructor(
+    private readonly documents: StaffDocumentsService,
+    private readonly shareLifecycle: StaffDocumentShareLifecycleService,
+  ) {}
 
   @Get(':staffId/documents')
   list(@Param('staffId') staffId: string) {
     return this.documents.getOpsDocuments(staffId);
+  }
+
+  @Get(':staffId/documents/share')
+  getShareStatus(@Param('staffId') staffId: string) {
+    return this.shareLifecycle.getShareStatus(staffId);
+  }
+
+  @Post(':staffId/documents/share/generate')
+  @Header('Cache-Control', SHARE_URL_CACHE_CONTROL)
+  generateShareLink(@Param('staffId') staffId: string, @CurrentUser() user: SessionPayload) {
+    return this.shareLifecycle.generateShareLink(staffId, user.userId);
+  }
+
+  @Post(':staffId/documents/share/copy-link')
+  @Header('Cache-Control', SHARE_URL_CACHE_CONTROL)
+  copyShareLink(@Param('staffId') staffId: string) {
+    return this.shareLifecycle.copyShareLink(staffId);
+  }
+
+  @Post(':staffId/documents/share/rotate')
+  @Header('Cache-Control', SHARE_URL_CACHE_CONTROL)
+  rotateShareLink(@Param('staffId') staffId: string, @CurrentUser() user: SessionPayload) {
+    return this.shareLifecycle.rotateShareLink(staffId, user.userId);
+  }
+
+  @Post(':staffId/documents/share/revoke')
+  revokeShareLink(@Param('staffId') staffId: string, @CurrentUser() user: SessionPayload) {
+    return this.shareLifecycle.revokeShareLink(staffId, user.userId);
   }
 
   @Post(':staffId/documents/:documentType')

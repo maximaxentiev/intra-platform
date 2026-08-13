@@ -26,6 +26,9 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   opsDocumentCleared: 'ops_document_cleared',
   opsDocumentRemindersChanged: 'ops_document_reminders_changed',
   onboardingStep2Completed: 'onboarding_step_2_completed',
+  shareLinkGenerated: 'share_link_generated',
+  shareLinkRotated: 'share_link_rotated',
+  shareLinkRevoked: 'share_link_revoked',
 } as const;
 
 export type StaffPortalAuditEventType =

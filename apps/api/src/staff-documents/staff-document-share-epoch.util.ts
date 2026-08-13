@@ -26,3 +26,19 @@ export function shareTokenRotationEpochFromPersisted(
   }
   return epoch;
 }
+
+/**
+ * Returns the next rotation timestamp strictly after any previous epoch.
+ * Guarantees a different token even when the system clock matches the prior millisecond.
+ */
+export function nextShareTokenRotationCreatedAt(
+  previousCreatedAt: Date | null | undefined,
+  nowMs: number = Date.now(),
+): Date {
+  if (previousCreatedAt == null) {
+    return new Date(nowMs);
+  }
+  const previousEpoch = shareTokenRotationEpoch(previousCreatedAt);
+  const nextEpoch = Math.max(nowMs, previousEpoch + 1);
+  return new Date(nextEpoch);
+}

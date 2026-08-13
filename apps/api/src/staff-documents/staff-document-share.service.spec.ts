@@ -88,7 +88,7 @@ describe('StaffDocumentShareService rotation and revocation', () => {
       STAFF_ID,
       new Date('2026-08-01T12:00:00.000Z'),
     );
-    const rotated = service.buildPersistValuesForRotation(STAFF_ID);
+    const rotated = service.buildPersistValuesForRotation(STAFF_ID, initial.createdAt);
 
     expect(rotated.token).not.toBe(initial.token);
     expect(

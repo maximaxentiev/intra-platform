@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { shareTokenRotationEpochFromPersisted } from './staff-document-share-epoch.util';
+import { nextShareTokenRotationCreatedAt, shareTokenRotationEpochFromPersisted } from './staff-document-share-epoch.util';
 import {
   assertShareSessionMatchesStaffShareState,
   buildShareTokenPersistValues,
@@ -63,10 +63,15 @@ export class StaffDocumentShareService {
   }
 
   /** Rotation always issues a new epoch/token/hash and clears revocation. */
-  buildPersistValuesForRotation(staffId: string): StaffDocumentShareTokenGenerationResult & {
+  buildPersistValuesForRotation(
+    staffId: string,
+    previousCreatedAt: Date | null,
+    nowMs?: number,
+  ): StaffDocumentShareTokenGenerationResult & {
     persist: StaffDocumentShareTokenPersistValues;
   } {
-    return this.buildPersistValuesForGeneration(staffId, new Date());
+    const createdAt = nextShareTokenRotationCreatedAt(previousCreatedAt, nowMs);
+    return this.buildPersistValuesForGeneration(staffId, createdAt);
   }
 
   buildRevokeValues(revokedAt: Date = new Date()): StaffDocumentShareTokenRevokeValues {
