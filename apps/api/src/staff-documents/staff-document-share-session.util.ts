@@ -95,6 +95,18 @@ export function staffDocumentShareSessionCookieName(): string {
   return STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME;
 }
 
+export function clearStaffDocumentShareSessionCookieOptions(
+  config: StaffDocumentShareSessionCookieConfig,
+): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: config.secure,
+    sameSite: 'lax',
+    path: STAFF_DOCUMENT_SHARE_SESSION_COOKIE_PATH,
+    maxAge: 0,
+  };
+}
+
 function createStaffDocumentShareSessionSignature(
   signingSecret: string,
   payloadSegment: string,
