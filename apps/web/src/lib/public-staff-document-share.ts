@@ -6,6 +6,8 @@ export const PUBLIC_SHARE_UNAVAILABLE_MESSAGE =
 export const PUBLIC_SHARE_EMPTY_MESSAGE =
   "No current documents are available to view.";
 
+export const PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE = "This document could not be opened.";
+
 export type PublicStaffDocumentShareStaff = {
   displayName: string;
   role: string;

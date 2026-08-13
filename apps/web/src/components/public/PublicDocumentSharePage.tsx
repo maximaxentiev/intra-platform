@@ -5,6 +5,7 @@ import { formatDocumentDate, expiryDisplayLabel } from "@/lib/carer-documents";
 import { openPublicStaffDocumentFile } from "@/lib/public-staff-document-content";
 import {
   PUBLIC_SHARE_EMPTY_MESSAGE,
+  PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE,
   PUBLIC_SHARE_UNAVAILABLE_MESSAGE,
   exchangeShareSession,
   getPublicStaffDocuments,
@@ -40,6 +41,7 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
   const [pageState, setPageState] = useState<PageState>("initializing");
   const [metadata, setMetadata] = useState<PublicStaffDocumentShareMetadata | null>(null);
   const [viewingFileKey, setViewingFileKey] = useState<string | null>(null);
+  const [fileOpenErrors, setFileOpenErrors] = useState<Record<string, true>>({});
   const loadStarted = useRef(false);
 
   useEffect(() => {
@@ -86,11 +88,16 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
   ) {
     const key = `${documentType}:${fileId}`;
     setViewingFileKey(key);
+    setFileOpenErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
     try {
       await openPublicStaffDocumentFile({ documentType, fileId });
     } catch {
-      setPageState("unavailable");
-      setMetadata(null);
+      setFileOpenErrors((current) => ({ ...current, [key]: true }));
     } finally {
       setViewingFileKey((current) => (current === key ? null : current));
     }
@@ -198,20 +205,28 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
                       ) : null}
 
                       <ul className="mt-4 divide-y divide-border/70 rounded-xl border border-border/70">
-                        {document.files.map((file) => {
-                          const fileKey = `${document.documentType}:${file.id}`;
-                          const isViewing = viewingFileKey === fileKey;
-                          return (
-                            <li key={file.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                              <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                                <FileText
-                                  aria-hidden="true"
-                                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                                />
-                                <p className="min-w-0 break-words text-sm leading-snug text-foreground">
-                                  {file.originalFilename}
-                                </p>
-                              </div>
+                          {document.files.map((file) => {
+                            const fileKey = `${document.documentType}:${file.id}`;
+                            const isViewing = viewingFileKey === fileKey;
+                            const fileOpenFailed = fileOpenErrors[fileKey] === true;
+                            return (
+                              <li key={file.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                                <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                                  <FileText
+                                    aria-hidden="true"
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="min-w-0 break-words text-sm leading-snug text-foreground">
+                                      {file.originalFilename}
+                                    </p>
+                                    {fileOpenFailed ? (
+                                      <p className="mt-1 text-xs text-destructive">
+                                        {PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                </div>
                               <Button
                                 type="button"
                                 variant="outline"

@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import {
   buildContentDisposition,
@@ -12,7 +12,6 @@ import {
   staffDocumentSets,
   staffDocumentSubmissions,
   type StaffDocumentFile,
-  type StaffDocumentSubmission,
 } from '../db/schema';
 import {
   STAFF_PORTAL_AUDIT_EVENTS,
@@ -39,6 +38,18 @@ import { mapPublicStaffDocumentShareMetadata } from './staff-document-share-publ
 import { shareTokenRotationEpochFromPersisted } from './staff-document-share-epoch.util';
 import { StaffDocumentShareService } from './staff-document-share.service';
 import { assertStaffDocumentType } from './staff-document-validation.util';
+
+function normalizePublicShareFileId(fileId: string): string {
+  return fileId.trim().toLowerCase();
+}
+
+function findPublicShareFile(
+  files: StaffDocumentFile[],
+  fileId: string,
+): StaffDocumentFile | undefined {
+  const normalized = normalizePublicShareFileId(fileId);
+  return files.find((file) => normalizePublicShareFileId(file.id) === normalized);
+}
 
 export type PublicStaffDocumentStreamResult = {
   body: NodeJS.ReadableStream;
@@ -112,42 +123,40 @@ export class StaffDocumentSharePublicService {
 
   async getMetadata(req: Request): Promise<PublicStaffDocumentShareMetadataDto> {
     const ctx = await this.auth.authorizeFromRequest(req);
-    const categories = await this.loadCategoryCompliance(ctx.staffId);
-    const filesByType = await this.loadCurrentFilesByType(ctx.staffId);
+    const snapshot = await this.loadPublicShareSnapshot(ctx.staffId);
 
     return mapPublicStaffDocumentShareMetadata({
       staff: ctx.staff,
-      categories,
-      filesByType,
+      categories: snapshot.categories,
+      filesByType: snapshot.filesByType,
     });
   }
 
   async streamFile(
     req: Request,
     documentTypeRaw: string,
-    fileId: string,
+    fileIdRaw: string,
   ): Promise<PublicStaffDocumentStreamResult> {
     const ctx = await this.auth.authorizeFromRequest(req);
-    const documentType = assertStaffDocumentType(documentTypeRaw);
+    const documentType = assertStaffDocumentType(documentTypeRaw.trim());
 
     if (!isStaffDocumentPublicShareType(documentType)) {
       throw this.auth.unavailable();
     }
 
-    const category = (await this.loadCategoryCompliance(ctx.staffId)).find(
-      (item) => item.documentType === documentType,
-    );
+    const snapshot = await this.loadPublicShareSnapshot(ctx.staffId);
+    const category = snapshot.categories.find((item) => item.documentType === documentType);
     if (!category || !isPubliclyShareableCategory(category)) {
       throw this.auth.unavailable();
     }
 
-    const { currentSubmission, files } = await this.loadSetContext(ctx.staffId, documentType);
-    if (!currentSubmission || currentSubmission.reviewStatus !== 'approved' || currentSubmission.supersededAt) {
-      throw this.auth.unavailable();
-    }
-
-    const file = files.find((item) => item.id === fileId);
-    if (!file) {
+    const file = findPublicShareFile(snapshot.filesByType.get(documentType) ?? [], fileIdRaw);
+    if (
+      !file ||
+      !category.currentSubmissionId ||
+      normalizePublicShareFileId(file.submissionId) !==
+        normalizePublicShareFileId(category.currentSubmissionId)
+    ) {
       throw this.auth.unavailable();
     }
 
@@ -180,6 +189,15 @@ export class StaffDocumentSharePublicService {
       contentType,
       contentDisposition: buildContentDisposition(file.originalFilename, inline),
     };
+  }
+
+  private async loadPublicShareSnapshot(staffId: string): Promise<{
+    categories: StaffDocumentCategoryCompliance[];
+    filesByType: Map<StaffDocumentType, StaffDocumentFile[]>;
+  }> {
+    const categories = await this.loadCategoryCompliance(staffId);
+    const filesByType = await this.loadCurrentFilesByType(staffId);
+    return { categories, filesByType };
   }
 
   private async loadCategoryCompliance(staffId: string): Promise<StaffDocumentCategoryCompliance[]> {
@@ -256,43 +274,5 @@ export class StaffDocumentSharePublicService {
     }
 
     return result;
-  }
-
-  private async loadSetContext(staffId: string, documentType: StaffDocumentType): Promise<{
-    currentSubmission: StaffDocumentSubmission | null;
-    files: StaffDocumentFile[];
-  }> {
-    const setRows = await this.db
-      .select()
-      .from(staffDocumentSets)
-      .where(
-        and(
-          eq(staffDocumentSets.staffId, staffId),
-          eq(staffDocumentSets.documentType, documentType),
-        ),
-      )
-      .limit(1);
-    const set = setRows[0] ?? null;
-
-    if (!set?.currentSubmissionId) {
-      return { currentSubmission: null, files: [] };
-    }
-
-    const subRows = await this.db
-      .select()
-      .from(staffDocumentSubmissions)
-      .where(eq(staffDocumentSubmissions.id, set.currentSubmissionId))
-      .limit(1);
-    const currentSubmission = subRows[0] ?? null;
-    if (!currentSubmission || currentSubmission.supersededAt) {
-      return { currentSubmission: null, files: [] };
-    }
-
-    const files = await this.db
-      .select()
-      .from(staffDocumentFiles)
-      .where(eq(staffDocumentFiles.submissionId, currentSubmission.id));
-
-    return { currentSubmission, files };
   }
 }

@@ -166,6 +166,7 @@ describe("public share page source hygiene", () => {
     const contentSrc = readSrc("lib/public-staff-document-content.ts");
     expect(contentSrc).toContain("credentials: \"include\"");
     expect(contentSrc).toContain("publicStaffDocumentContentPath");
+    expect(contentSrc).toContain("PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE");
     expect(contentSrc).not.toMatch(/storageKey|digitalocean|spaces/i);
   });
 
@@ -202,5 +203,13 @@ describe("public share page source hygiene", () => {
     const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
     expect(pageSrc).toContain('aria-label={`View document ${file.originalFilename}`}');
     expect(pageSrc).not.toMatch(/\bstaffId\b|\bsubmissionId\b|\bstorageKey\b/i);
+  });
+
+  it("keeps file-open failures local to the file action", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    expect(pageSrc).toContain("PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE");
+    expect(pageSrc).toContain("fileOpenErrors");
+    expect(pageSrc).not.toMatch(/openPublicStaffDocumentFile\([\s\S]*?setPageState\("unavailable"\)/);
+    expect(pageSrc).not.toMatch(/handleViewFile[\s\S]*?setMetadata\(null\)/);
   });
 });

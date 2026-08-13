@@ -563,6 +563,39 @@ describe('StaffDocumentSharePublicService metadata', () => {
   });
 });
 
+describe('StaffDocumentSharePublicService metadata-to-file consistency', () => {
+  it('streams every file id returned by public metadata', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    const metadata = await harness.service.getMetadata(req);
+    expect(metadata.documents.length).toBeGreaterThan(0);
+
+    for (const document of metadata.documents) {
+      for (const file of document.files) {
+        await expect(
+          harness.service.streamFile(req, document.documentType, file.id),
+        ).resolves.toMatchObject({ contentType: 'application/pdf' });
+      }
+    }
+  });
+
+  it('streams metadata file ids case-insensitively', async () => {
+    const harness = createHarness();
+    const session = harness.shareService.signShareSession(STAFF_A_ID, CREATED_AT.getTime());
+    const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
+
+    const metadata = await harness.service.getMetadata(req);
+    const vsc = metadata.documents.find((doc) => doc.documentType === 'vulnerable_sector_check');
+    expect(vsc?.files[0]?.id).toBeDefined();
+
+    await expect(
+      harness.service.streamFile(req, 'vulnerable_sector_check', vsc!.files[0]!.id.toUpperCase()),
+    ).resolves.toMatchObject({ contentType: 'application/pdf' });
+  });
+});
+
 describe('StaffDocumentSharePublicService streamFile', () => {
   it('streams an authorized public file and audits view', async () => {
     const harness = createHarness();

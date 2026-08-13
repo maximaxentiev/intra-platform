@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/api";
 import {
+  PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE,
   publicStaffDocumentContentPath,
   type PublicStaffDocumentShareDocument,
 } from "@/lib/public-staff-document-share";
@@ -45,7 +46,7 @@ export async function acquirePublicStaffDocumentBlobUrl(input: {
   });
 
   if (!res.ok) {
-    throw new ApiError(res.status, "This shared document page is not available.");
+    throw new ApiError(res.status, PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE);
   }
 
   const blob = await res.blob();
