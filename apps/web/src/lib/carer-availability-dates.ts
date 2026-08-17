@@ -220,6 +220,34 @@ export function defaultSelectedDateForMonth(
   return firstDayOfMonth(monthYear);
 }
 
+export function isBeforeCurrentTorontoWeek(
+  weekStartDate: string,
+  today = torontoTodayDateString(),
+): boolean {
+  return compareDateStrings(weekStartDate, currentMondayWeekStart(today)) < 0;
+}
+
+export function weekDayDates(weekStartDate: string): string[] {
+  return Array.from({ length: 7 }, (_, index) => addDaysToDateString(weekStartDate, index));
+}
+
+export function formatCompactWeekDayLabel(dateStr: string): string {
+  const { year, month, day } = parseCalendarDateString(dateStr);
+  const weekday = new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    weekday: "short",
+  });
+  return `${weekday} ${day}`;
+}
+
+export function formatDashboardAvailabilityDateLabel(dateStr: string): string {
+  const { year, month, day } = parseCalendarDateString(dateStr);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function isDateInMonthYear(dateStr: string, monthYear: MonthYear): boolean {
   const { year, month } = parseCalendarDateString(dateStr);
   return year === monthYear.year && month === monthYear.month;

@@ -11,12 +11,14 @@ import {
   formatAvailabilityWindowDisplay,
   formatWeekRangeLabel,
   isBeforeCurrentTorontoMonth,
+  isBeforeCurrentTorontoWeek,
   isPastCalendarDate,
   isTodayCalendarDate,
   mondayOfDateString,
   slotToCalendarDate,
   torontoTodayDateString,
   weekStartsForMonth,
+  weekDayDates,
 } from "@/lib/carer-availability-dates";
 
 describe("torontoTodayDateString", () => {
@@ -50,6 +52,23 @@ describe("week helpers", () => {
 
   it("adds days without timezone rollover", () => {
     expect(addDaysToDateString("2026-08-10", 6)).toBe("2026-08-16");
+  });
+
+  it("lists all days in a Monday week", () => {
+    expect(weekDayDates("2026-08-10")).toEqual([
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+      "2026-08-13",
+      "2026-08-14",
+      "2026-08-15",
+      "2026-08-16",
+    ]);
+  });
+
+  it("detects weeks before the current Toronto week", () => {
+    expect(isBeforeCurrentTorontoWeek("2026-08-03", "2026-08-13")).toBe(true);
+    expect(isBeforeCurrentTorontoWeek("2026-08-10", "2026-08-13")).toBe(false);
   });
 });
 

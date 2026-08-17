@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
-import { CarerAvailabilityCalendar } from "@/components/carer/CarerAvailabilityCalendar";
+import { CarerAvailabilityManager } from "@/components/carer/CarerAvailabilityManager";
 import { Button } from "@/components/ui/button";
 import { requireCarerSessionForPortal } from "@/lib/carer-route-guards";
 
@@ -31,7 +31,7 @@ function CarerAccountAvailabilityPage() {
           </Link>
         </Button>
       </div>
-      <CarerAvailabilityCalendar />
+      <CarerAvailabilityManager />
     </CarerShell>
   );
 }

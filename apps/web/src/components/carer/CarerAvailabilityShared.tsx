@@ -259,8 +259,9 @@ export function useCarerAvailabilitySlotMutations({
   const [removingSlot, setRemovingSlot] = useState<CarerAvailabilitySlot | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  async function invalidateWeek(weekStartDate: string) {
+  async function invalidateAfterMutation(weekStartDate: string) {
     await queryClient.invalidateQueries({ queryKey: ["carer-availability", weekStartDate] });
+    await queryClient.invalidateQueries({ queryKey: ["carer-availability-upcoming"] });
     await onAfterMutation?.();
   }
 
@@ -319,7 +320,7 @@ export function useCarerAvailabilitySlotMutations({
         toast.success("Availability updated");
       }
       setForm(null);
-      await invalidateWeek(form.weekStartDate);
+      await invalidateAfterMutation(form.weekStartDate);
     } catch (err) {
       const message = mapAvailabilityApiError(
         err,
@@ -339,7 +340,7 @@ export function useCarerAvailabilitySlotMutations({
       await carerAvailabilityApi.remove(removingSlot.id);
       toast.success("Availability removed");
       setRemovingSlot(null);
-      await invalidateWeek(removingSlot.weekStartDate);
+      await invalidateAfterMutation(removingSlot.weekStartDate);
     } catch (err) {
       toast.error(mapAvailabilityApiError(err, "Could not remove availability."));
     } finally {

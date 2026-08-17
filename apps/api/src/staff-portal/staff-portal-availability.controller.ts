@@ -4,6 +4,7 @@ import { Public } from '../auth/session.guard';
 import {
   CreateStaffPortalAvailabilityDto,
   ListStaffPortalAvailabilityQuery,
+  ListUpcomingStaffPortalAvailabilityQuery,
   MarkStaffPortalUnavailableDto,
   UpdateStaffPortalAvailabilityDto,
 } from './dto/staff-portal-availability.dto';
@@ -22,6 +23,14 @@ export class StaffPortalAvailabilityController {
   @Get()
   list(@CurrentStaff() session: StaffSessionPayload, @Query() query: ListStaffPortalAvailabilityQuery) {
     return this.availability.list(session, query.weekStart);
+  }
+
+  @Get('upcoming')
+  listUpcoming(
+    @CurrentStaff() session: StaffSessionPayload,
+    @Query() query: ListUpcomingStaffPortalAvailabilityQuery,
+  ) {
+    return this.availability.listUpcoming(session, query.page, query.pageSize);
   }
 
   @Get('onboarding-state')

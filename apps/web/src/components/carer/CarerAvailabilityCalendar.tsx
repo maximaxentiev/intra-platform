@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -6,44 +6,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   addMonthsToMonthYear,
-  currentTorontoMonthYear,
   dateStringToLocalDate,
   defaultSelectedDateForMonth,
-  formatFullCalendarDateLabel,
+  formatMonthYearLabel,
   isBeforeCurrentTorontoMonth,
   isDateInMonthYear,
   isPastCalendarDate,
   localDateToDateString,
-  formatMonthYearLabel,
   slotToCalendarDate,
   torontoTodayDateString,
   type MonthYear,
 } from "@/lib/carer-availability-dates";
 import { useCarerAvailabilityMonthWeeks } from "@/lib/carer-availability-month-queries";
-import type { CarerAvailabilitySlot } from "@/lib/carer-availability";
 import {
-  CarerAvailabilityAddButton,
-  CarerAvailabilityFormDialog,
   CarerAvailabilityLoadError,
   CarerAvailabilityLoadingCard,
-  CarerAvailabilityRemoveDialog,
-  CarerAvailabilityWindowList,
-  useCarerAvailabilitySlotMutations,
+  type useCarerAvailabilitySlotMutations,
 } from "@/components/carer/CarerAvailabilityShared";
+import { CarerAvailabilitySelectedDayPanel } from "@/components/carer/CarerAvailabilitySelectedDayPanel";
+import { sortSlotsByStartTime } from "@/components/carer/CarerAvailabilitySelectedDayPanel";
 
-function sortSlotsByStartTime(slots: CarerAvailabilitySlot[]): CarerAvailabilitySlot[] {
-  return [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
-}
+type CarerAvailabilityMonthViewProps = {
+  displayMonth: MonthYear;
+  onDisplayMonthChange: (month: MonthYear) => void;
+  selectedDate: string;
+  onSelectedDateChange: (date: string) => void;
+  mutations: ReturnType<typeof useCarerAvailabilitySlotMutations>;
+};
 
-export function CarerAvailabilityCalendar() {
+export function CarerAvailabilityMonthView({
+  displayMonth,
+  onDisplayMonthChange,
+  selectedDate,
+  onSelectedDateChange,
+  mutations,
+}: CarerAvailabilityMonthViewProps) {
   const today = torontoTodayDateString();
-  const [displayMonth, setDisplayMonth] = useState<MonthYear>(() => currentTorontoMonthYear(today));
-  const [selectedDate, setSelectedDate] = useState<string>(() => today);
-
   const { slots, isLoading, isFetching, isError, refetch } =
     useCarerAvailabilityMonthWeeks(displayMonth);
-
-  const mutations = useCarerAvailabilitySlotMutations();
 
   const datesWithAvailability = useMemo(
     () =>
@@ -58,29 +58,28 @@ export function CarerAvailabilityCalendar() {
     [slots, selectedDate],
   );
 
-  const selectedIsPast = isPastCalendarDate(selectedDate, today);
   const prevDisabled = isBeforeCurrentTorontoMonth(displayMonth, today);
 
   function goToPreviousMonth() {
     if (prevDisabled) return;
     const nextMonth = addMonthsToMonthYear(displayMonth, -1);
-    setDisplayMonth(nextMonth);
+    onDisplayMonthChange(nextMonth);
     if (!isDateInMonthYear(selectedDate, nextMonth)) {
-      setSelectedDate(defaultSelectedDateForMonth(nextMonth, today));
+      onSelectedDateChange(defaultSelectedDateForMonth(nextMonth, today));
     }
   }
 
   function goToNextMonth() {
     const nextMonth = addMonthsToMonthYear(displayMonth, 1);
-    setDisplayMonth(nextMonth);
+    onDisplayMonthChange(nextMonth);
     if (!isDateInMonthYear(selectedDate, nextMonth)) {
-      setSelectedDate(defaultSelectedDateForMonth(nextMonth, today));
+      onSelectedDateChange(defaultSelectedDateForMonth(nextMonth, today));
     }
   }
 
   function handleSelectDate(date: Date | undefined) {
     if (!date) return;
-    setSelectedDate(localDateToDateString(date));
+    onSelectedDateChange(localDateToDateString(date));
   }
 
   const monthDate = dateStringToLocalDate(
@@ -88,7 +87,7 @@ export function CarerAvailabilityCalendar() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4">
+    <div className="space-y-4">
       {isError ? <CarerAvailabilityLoadError onRetry={() => void refetch()} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -192,50 +191,13 @@ export function CarerAvailabilityCalendar() {
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">
-              {formatFullCalendarDateLabel(selectedDate)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <CarerAvailabilityWindowList
-              slots={selectedDaySlots}
-              dayName={formatFullCalendarDateLabel(selectedDate)}
-              allowEdit={!selectedIsPast}
-              allowRemove
-              busy={mutations.saving || mutations.removing}
-              emptyMessage="No availability added for this day."
-              onEdit={(slot) => mutations.openEdit(slot)}
-              onRemove={(slot) => mutations.setRemovingSlot(slot)}
-            />
-            {!selectedIsPast ? (
-              <CarerAvailabilityAddButton
-                onClick={() => mutations.openAdd(selectedDate)}
-                disabled={mutations.saving || isLoading}
-              />
-            ) : null}
-          </CardContent>
-        </Card>
+        <CarerAvailabilitySelectedDayPanel
+          selectedDate={selectedDate}
+          slots={selectedDaySlots}
+          mutations={mutations}
+          isLoading={isLoading}
+        />
       </div>
-
-      <CarerAvailabilityFormDialog
-        form={mutations.form}
-        saving={mutations.saving}
-        error={mutations.formError}
-        onClose={() => mutations.setForm(null)}
-        onChange={(patch) =>
-          mutations.setForm((current) => (current ? { ...current, ...patch } : current))
-        }
-        onSave={() => void mutations.handleSaveForm()}
-      />
-
-      <CarerAvailabilityRemoveDialog
-        slot={mutations.removingSlot}
-        removing={mutations.removing}
-        onClose={() => mutations.setRemovingSlot(null)}
-        onConfirm={() => void mutations.handleRemoveConfirm()}
-      />
     </div>
   );
 }

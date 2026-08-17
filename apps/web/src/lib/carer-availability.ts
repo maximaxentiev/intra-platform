@@ -59,6 +59,27 @@ export type MarkCarerUnavailableInput = {
   dayOfWeek: number;
 };
 
+export type UpcomingAvailabilityPageSize = 10 | 25 | 50;
+
+export type CarerUpcomingAvailabilityWindow = {
+  id: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type CarerUpcomingAvailabilityDate = {
+  calendarDate: string;
+  windows: CarerUpcomingAvailabilityWindow[];
+};
+
+export type CarerUpcomingAvailabilityResponse = {
+  items: CarerUpcomingAvailabilityDate[];
+  page: number;
+  pageSize: UpcomingAvailabilityPageSize;
+  totalDates: number;
+  totalPages: number;
+};
+
 export const CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY = [
   "carer-availability-onboarding-state",
 ] as const;
@@ -151,6 +172,9 @@ export function mapAvailabilityApiError(err: unknown, fallback: string): string 
 export const carerAvailabilityApi = {
   list: (weekStart: string) =>
     api.get<CarerAvailabilitySlot[]>("/staff-portal/availability", { weekStart }),
+
+  listUpcoming: (params: { page: number; pageSize: UpcomingAvailabilityPageSize }) =>
+    api.get<CarerUpcomingAvailabilityResponse>("/staff-portal/availability/upcoming", params),
 
   create: (body: CreateCarerAvailabilityInput) =>
     api.post<CarerAvailabilitySlot>("/staff-portal/availability", body),

@@ -4,6 +4,7 @@ import { CARER_ONBOARDING_HUB_PATH, onboardingComplete } from "@/lib/carer-onboa
 import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardingCompleteBanner";
+import { CarerAvailabilityDashboardSummary } from "@/components/carer/CarerAvailabilityDashboardSummary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { carerFullName } from "@/lib/carer";
 
@@ -65,11 +66,11 @@ function CarerHomePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Availability</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm text-muted-foreground">
-            <p>Manage the days and times you&apos;re available to work.</p>
-            <Link to="/carer/availability" className="font-medium text-primary hover:underline">
-              Manage availability
-            </Link>
+          <CardContent className="space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              Keep your availability up to date so our team knows when you&apos;re available to work.
+            </p>
+            <CarerAvailabilityDashboardSummary />
           </CardContent>
         </Card>
 

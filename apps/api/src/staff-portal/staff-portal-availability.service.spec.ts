@@ -634,6 +634,120 @@ describe('StaffPortalAvailabilityService', () => {
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  describe('listUpcoming', () => {
+    it('returns empty items when no upcoming availability exists', async () => {
+      const harness = createHarness();
+      harness.db.execute.mockResolvedValueOnce({ rows: [{ total_dates: 0 }] });
+
+      const result = await harness.service.listUpcoming(SESSION_A, 1, 10);
+      expect(result).toEqual({
+        items: [],
+        page: 1,
+        pageSize: 10,
+        totalDates: 0,
+        totalPages: 0,
+      });
+      expect(harness.db.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('includes today and future dates grouped with windows sorted by start time', async () => {
+      const harness = createHarness();
+      harness.db.execute
+        .mockResolvedValueOnce({ rows: [{ total_dates: 2 }] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'late',
+              calendar_date: '2026-08-13',
+              start_time: '14:00:00',
+              end_time: '17:00:00',
+            },
+            {
+              id: 'early',
+              calendar_date: '2026-08-13',
+              start_time: '09:00:00',
+              end_time: '12:00:00',
+            },
+            {
+              id: 'future',
+              calendar_date: '2026-08-20',
+              start_time: '08:00:00',
+              end_time: '16:00:00',
+            },
+          ],
+        });
+
+      const result = await harness.service.listUpcoming(SESSION_A, 1, 10);
+      expect(result.totalDates).toBe(2);
+      expect(result.totalPages).toBe(1);
+      expect(result.items).toEqual([
+        {
+          calendarDate: '2026-08-13',
+          windows: [
+            { id: 'early', startTime: '09:00', endTime: '12:00' },
+            { id: 'late', startTime: '14:00', endTime: '17:00' },
+          ],
+        },
+        {
+          calendarDate: '2026-08-20',
+          windows: [{ id: 'future', startTime: '08:00', endTime: '16:00' }],
+        },
+      ]);
+    });
+
+    it('paginates distinct calendar dates', async () => {
+      const harness = createHarness();
+      harness.db.execute
+        .mockResolvedValueOnce({ rows: [{ total_dates: 37 }] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'w1',
+              calendar_date: '2026-12-28',
+              start_time: '09:00:00',
+              end_time: '12:00:00',
+            },
+          ],
+        });
+
+      const result = await harness.service.listUpcoming(SESSION_A, 4, 10);
+      expect(result.page).toBe(4);
+      expect(result.pageSize).toBe(10);
+      expect(result.totalDates).toBe(37);
+      expect(result.totalPages).toBe(4);
+      expect(result.items).toHaveLength(1);
+      expect(harness.db.execute).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns empty items when page exceeds total pages', async () => {
+      const harness = createHarness();
+      harness.db.execute.mockResolvedValueOnce({ rows: [{ total_dates: 5 }] });
+
+      const result = await harness.service.listUpcoming(SESSION_A, 3, 10);
+      expect(result.items).toEqual([]);
+      expect(result.totalDates).toBe(5);
+      expect(result.totalPages).toBe(1);
+      expect(harness.db.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('supports page sizes 25 and 50', async () => {
+      const harness = createHarness();
+      harness.db.execute.mockResolvedValueOnce({ rows: [{ total_dates: 0 }] });
+      await harness.service.listUpcoming(SESSION_A, 1, 25);
+      harness.db.execute.mockResolvedValueOnce({ rows: [{ total_dates: 0 }] });
+      await harness.service.listUpcoming(SESSION_A, 1, 50);
+      expect(harness.db.execute).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects disabled accounts', async () => {
+      const harness = createHarness();
+      harness.account.status = 'disabled';
+      await expect(harness.service.listUpcoming(SESSION_A, 1, 10)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    });
+  });
 });
 
 describe('StaffPortalAvailabilityController auth wiring', () => {
@@ -647,6 +761,14 @@ describe('StaffPortalAvailabilityController auth wiring', () => {
       'StaffSessionGuard',
     ]);
     expect(Reflect.getMetadata('isPublic', StaffPortalAvailabilityController)).toBe(true);
+  });
+
+  it('registers upcoming route before id routes', async () => {
+    const { StaffPortalAvailabilityController } = await import(
+      './staff-portal-availability.controller'
+    );
+    const upcoming = Reflect.getMetadata('path', StaffPortalAvailabilityController.prototype.listUpcoming);
+    expect(upcoming).toBe('upcoming');
   });
 });
 

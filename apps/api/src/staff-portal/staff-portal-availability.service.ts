@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import {
   addDaysToDateString,
   buildAnchoredOnboardingDays,
@@ -35,10 +35,15 @@ import {
 } from '../db/schema';
 import {
   CreateStaffPortalAvailabilityDto,
+  ListUpcomingStaffPortalAvailabilityQuery,
   MarkStaffPortalUnavailableDto,
   StaffPortalAvailabilityDto,
   StaffPortalAvailabilityOnboardingStateDto,
+  StaffPortalUpcomingAvailabilityDateDto,
+  StaffPortalUpcomingAvailabilityResponseDto,
+  StaffPortalUpcomingAvailabilityWindowDto,
   UpdateStaffPortalAvailabilityDto,
+  type UpcomingAvailabilityPageSize,
 } from './dto/staff-portal-availability.dto';
 import type { StaffSessionPayload } from './staff-session.service';
 import {
@@ -72,6 +77,64 @@ export class StaffPortalAvailabilityService {
       .orderBy(asc(availability.dayOfWeek), asc(availability.startTime));
 
     return rows.map((row) => this.toDto(row));
+  }
+
+  async listUpcoming(
+    session: StaffSessionPayload,
+    page: number,
+    pageSize: UpcomingAvailabilityPageSize,
+  ): Promise<StaffPortalUpcomingAvailabilityResponseDto> {
+    await this.loadActiveAccount(session);
+    const today = torontoTodayDateString();
+    const offset = (page - 1) * pageSize;
+
+    const countResult = await this.db.execute(sql`
+      SELECT COUNT(*)::int AS total_dates
+      FROM (
+        SELECT DISTINCT (week_start_date + day_of_week)::date AS calendar_date
+        FROM availability
+        WHERE staff_id = ${session.staffId}
+          AND (week_start_date + day_of_week)::date >= ${today}::date
+      ) upcoming
+    `);
+
+    const totalDates = Number(this.rowsFromExecute<{ total_dates: number }>(countResult)[0]?.total_dates ?? 0);
+    const totalPages = totalDates === 0 ? 0 : Math.ceil(totalDates / pageSize);
+
+    if (totalDates === 0 || page > totalPages) {
+      return { items: [], page, pageSize, totalDates, totalPages };
+    }
+
+    const dataResult = await this.db.execute(sql`
+      WITH upcoming_dates AS (
+        SELECT DISTINCT (week_start_date + day_of_week)::date AS calendar_date
+        FROM availability
+        WHERE staff_id = ${session.staffId}
+          AND (week_start_date + day_of_week)::date >= ${today}::date
+        ORDER BY calendar_date ASC
+        LIMIT ${pageSize}
+        OFFSET ${offset}
+      )
+      SELECT
+        a.id,
+        (a.week_start_date + a.day_of_week)::date AS calendar_date,
+        a.start_time,
+        a.end_time
+      FROM availability a
+      INNER JOIN upcoming_dates ud
+        ON (a.week_start_date + a.day_of_week)::date = ud.calendar_date
+      WHERE a.staff_id = ${session.staffId}
+      ORDER BY calendar_date ASC, a.start_time ASC
+    `);
+
+    const items = this.groupUpcomingRows(this.rowsFromExecute<{
+      id: string;
+      calendar_date: string | Date;
+      start_time: string;
+      end_time: string;
+    }>(dataResult));
+
+    return { items, page, pageSize, totalDates, totalPages };
   }
 
   async getOnboardingState(
@@ -583,5 +646,43 @@ export class StaffPortalAvailabilityService {
       endTime: formatAvailabilityTimeForCarer(row.endTime),
       createdAt: row.createdAt.toISOString(),
     };
+  }
+
+  private rowsFromExecute<T>(result: unknown): T[] {
+    if (Array.isArray(result)) return result as T[];
+    if (result && typeof result === 'object' && 'rows' in result) {
+      return (result as { rows: T[] }).rows;
+    }
+    return [];
+  }
+
+  private groupUpcomingRows(
+    rows: Array<{
+      id: string;
+      calendar_date: string | Date;
+      start_time: string;
+      end_time: string;
+    }>,
+  ): StaffPortalUpcomingAvailabilityDateDto[] {
+    const byDate = new Map<string, StaffPortalUpcomingAvailabilityWindowDto[]>();
+
+    for (const row of rows) {
+      const calendarDate =
+        row.calendar_date instanceof Date
+          ? row.calendar_date.toISOString().slice(0, 10)
+          : String(row.calendar_date).slice(0, 10);
+      const windows = byDate.get(calendarDate) ?? [];
+      windows.push({
+        id: row.id,
+        startTime: formatAvailabilityTimeForCarer(row.start_time),
+        endTime: formatAvailabilityTimeForCarer(row.end_time),
+      });
+      byDate.set(calendarDate, windows);
+    }
+
+    return Array.from(byDate.entries()).map(([calendarDate, windows]) => ({
+      calendarDate,
+      windows: windows.sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    }));
   }
 }

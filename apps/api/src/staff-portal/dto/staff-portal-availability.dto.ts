@@ -1,4 +1,5 @@
-import { IsInt, Matches, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsIn, IsOptional, Matches, Max, Min } from 'class-validator';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_HM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -7,6 +8,42 @@ export class ListStaffPortalAvailabilityQuery {
   @Matches(DATE, { message: 'weekStart must be a valid YYYY-MM-DD date.' })
   weekStart!: string;
 }
+
+export const UPCOMING_AVAILABILITY_PAGE_SIZES = [10, 25, 50] as const;
+export type UpcomingAvailabilityPageSize = (typeof UPCOMING_AVAILABILITY_PAGE_SIZES)[number];
+
+export class ListUpcomingStaffPortalAvailabilityQuery {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn(UPCOMING_AVAILABILITY_PAGE_SIZES)
+  pageSize: UpcomingAvailabilityPageSize = 10;
+}
+
+export type StaffPortalUpcomingAvailabilityWindowDto = {
+  id: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type StaffPortalUpcomingAvailabilityDateDto = {
+  calendarDate: string;
+  windows: StaffPortalUpcomingAvailabilityWindowDto[];
+};
+
+export type StaffPortalUpcomingAvailabilityResponseDto = {
+  items: StaffPortalUpcomingAvailabilityDateDto[];
+  page: number;
+  pageSize: UpcomingAvailabilityPageSize;
+  totalDates: number;
+  totalPages: number;
+};
 
 export class CreateStaffPortalAvailabilityDto {
   @Matches(DATE, { message: 'weekStartDate must be a valid YYYY-MM-DD date.' })
