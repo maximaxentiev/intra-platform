@@ -62,8 +62,16 @@ describe("carer portal stabilization invariants", () => {
 
   it("shift matching is not wired to carer availability UI", () => {
     const carerHome = readSrc("routes/carer/index.tsx");
-    expect(carerHome).toContain("Your assigned shifts will appear here.");
+    expect(carerHome).toContain("CarerShiftsDashboardSummary");
     expect(carerHome).not.toContain("available-staff");
+  });
+
+  it("carer shifts UI does not compare against availability data", () => {
+    const manager = readSrc("components/carer/CarerShiftsManager.tsx");
+    const queries = readSrc("lib/carer-shifts-queries.ts");
+    expect(manager).not.toContain("carerAvailabilityApi");
+    expect(manager).not.toContain("useCarerUpcomingAvailability");
+    expect(queries).not.toContain("carer-availability");
   });
 });
 

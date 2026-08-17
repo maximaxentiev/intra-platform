@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardingCompleteBanner";
 import { CarerAvailabilityDashboardSummary } from "@/components/carer/CarerAvailabilityDashboardSummary";
+import { CarerShiftsDashboardSummary } from "@/components/carer/CarerShiftsDashboardSummary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { carerFullName } from "@/lib/carer";
 import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
@@ -66,8 +67,8 @@ function CarerHomePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Upcoming shifts</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Your assigned shifts will appear here.
+          <CardContent className="space-y-2 text-sm">
+            <CarerShiftsDashboardSummary />
           </CardContent>
         </Card>
       </div>
