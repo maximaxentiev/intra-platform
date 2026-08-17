@@ -12,7 +12,7 @@ function readSrc(rel: string) {
 describe("carer onboarding routing", () => {
   it("gates portal home through onboarding hub", () => {
     const src = readSrc("routes/carer/index.tsx");
-    expect(src).toContain("CARER_ONBOARDING_HUB_PATH");
+    expect(src).toContain("requireCarerSessionForPortal");
     expect(src).not.toContain("carerOnboardingResumePath");
   });
 

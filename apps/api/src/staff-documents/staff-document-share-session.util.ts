@@ -108,6 +108,24 @@ export function clearStaffDocumentShareSessionCookieOptions(
   };
 }
 
+/** RFC 6265 path-prefix match: request path must start with the cookie Path. */
+export function isRequestPathWithinShareSessionCookiePath(
+  requestPath: string,
+  cookiePath: string,
+): boolean {
+  if (!requestPath.startsWith('/')) {
+    return false;
+  }
+  if (requestPath === cookiePath) {
+    return true;
+  }
+  if (!requestPath.startsWith(cookiePath)) {
+    return false;
+  }
+  const nextChar = requestPath.charAt(cookiePath.length);
+  return nextChar === '/' || nextChar === '';
+}
+
 function createStaffDocumentShareSessionSignature(
   signingSecret: string,
   payloadSegment: string,

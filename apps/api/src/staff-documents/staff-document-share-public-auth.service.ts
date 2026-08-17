@@ -16,11 +16,6 @@ import {
   type StaffDocumentShareFields,
 } from './staff-document-share-state.util';
 import { StaffDocumentShareService } from './staff-document-share.service';
-import {
-  hashPublicShareDiagId,
-  logPublicShareFileAuthDecision,
-  type PublicShareAuthPhase,
-} from './staff-document-share-public-file-auth-diag.util';
 
 export type PublicShareAuthorizedContext = {
   staffId: string;
@@ -48,57 +43,36 @@ export class StaffDocumentSharePublicAuthService {
     res.clearCookie(this.cookieName(), clearStaffDocumentShareSessionCookieOptions(this.cookieConfig()));
   }
 
-  async authorizeFromRequest(
-    req: Request,
-    phase: PublicShareAuthPhase = 'metadata',
-  ): Promise<PublicShareAuthorizedContext> {
+  async authorizeFromRequest(req: Request): Promise<PublicShareAuthorizedContext> {
     const cookieName = this.cookieName();
     const sessionValue = req.cookies?.[cookieName];
     if (!sessionValue || typeof sessionValue !== 'string') {
-      logPublicShareFileAuthDecision(phase, 'share_session_missing', {
-        cookiePresent: Boolean(sessionValue),
-        cookieName,
-      });
       throw this.unavailable();
     }
 
     const session = this.share.verifyShareSession(sessionValue);
     if (!session) {
-      logPublicShareFileAuthDecision(phase, 'share_session_invalid', {
-        sessionPresent: true,
-      });
       throw this.unavailable();
     }
 
-    return this.authorizeSession(session, phase);
+    return this.authorizeSession(session);
   }
 
   async authorizeSession(
     session: StaffDocumentShareSessionPayload,
-    phase: PublicShareAuthPhase = 'metadata',
   ): Promise<PublicShareAuthorizedContext> {
     const rows = await this.db.select().from(staff).where(eq(staff.id, session.staffId));
     const row = rows[0];
     if (!row) {
-      logPublicShareFileAuthDecision(phase, 'staff_not_found', {
-        staffIdHash: hashPublicShareDiagId(session.staffId),
-      });
       throw this.unavailable();
     }
 
     const shareFields = this.shareFields(row);
     if (!isStaffDocumentShareTokenActive(shareFields)) {
-      logPublicShareFileAuthDecision(phase, 'share_inactive', {
-        staffIdHash: hashPublicShareDiagId(row.id),
-      });
       throw this.unavailable();
     }
 
     if (!this.share.assertShareSessionValidForStaff(session, row.id, shareFields)) {
-      logPublicShareFileAuthDecision(phase, 'share_epoch_mismatch', {
-        staffIdHash: hashPublicShareDiagId(row.id),
-        sessionStaffMatches: session.staffId === row.id,
-      });
       throw this.unavailable();
     }
 

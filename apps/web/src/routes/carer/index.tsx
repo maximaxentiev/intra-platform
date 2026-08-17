@@ -1,26 +1,17 @@
-import { createFileRoute, Link, redirect, useRouterState } from "@tanstack/react-router";
-import { carerAuthApi } from "@/lib/carer";
-import { CARER_ONBOARDING_HUB_PATH, onboardingComplete } from "@/lib/carer-onboarding";
-import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardingCompleteBanner";
 import { CarerAvailabilityDashboardSummary } from "@/components/carer/CarerAvailabilityDashboardSummary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { carerFullName } from "@/lib/carer";
+import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
+import { requireCarerSessionForPortal } from "@/lib/carer-route-guards";
 
 export const Route = createFileRoute("/carer/")({
   ssr: false,
   beforeLoad: async () => {
-    let session;
-    try {
-      session = await carerAuthApi.session();
-    } catch {
-      throw redirect({ to: "/carer/login", replace: true });
-    }
-    if (!onboardingComplete(session)) {
-      throw redirect({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
-    }
-    return { carer: session };
+    const carer = await requireCarerSessionForPortal();
+    return { carer };
   },
   loader: ({ context }) => context.carer,
   component: CarerHomePage,
