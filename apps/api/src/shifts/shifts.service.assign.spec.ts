@@ -35,7 +35,11 @@ describe('ShiftsService.assign idempotency', () => {
       }),
     } as unknown as ShiftAssignmentConfirmationService;
 
-    service = new ShiftsService(db as never, confirmation);
+    const cancellationRequests = {
+      resolvePendingForShift: vi.fn().mockResolvedValue(null),
+    };
+
+    service = new ShiftsService(db as never, confirmation, cancellationRequests as never);
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -43,6 +47,7 @@ describe('ShiftsService.assign idempotency', () => {
   });
 
   it('sends confirmations when assignment changes', async () => {
+    selectWhere.mockResolvedValueOnce([{ assignedStaffId: null }]);
     updateWhere.mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ id: 'shift-1' }]),
     });
@@ -59,10 +64,11 @@ describe('ShiftsService.assign idempotency', () => {
   });
 
   it('returns no-op without sending confirmations for same staff', async () => {
+    selectWhere.mockResolvedValueOnce([{ assignedStaffId: 'staff-1' }]);
     updateWhere.mockReturnValue({
       returning: vi.fn().mockResolvedValue([]),
     });
-    selectWhere.mockResolvedValue([{ assignedStaffId: 'staff-1' }]);
+    selectWhere.mockResolvedValueOnce([{ assignedStaffId: 'staff-1' }]);
 
     const result = await service.assign('shift-1', 'staff-1', 'ops-1');
 
@@ -72,10 +78,11 @@ describe('ShiftsService.assign idempotency', () => {
   });
 
   it('throws when shift does not exist', async () => {
+    selectWhere.mockResolvedValueOnce([{ assignedStaffId: null }]);
     updateWhere.mockReturnValue({
       returning: vi.fn().mockResolvedValue([]),
     });
-    selectWhere.mockResolvedValue([]);
+    selectWhere.mockResolvedValueOnce([]);
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -95,7 +102,10 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
     const confirmation = {
       sendAssignmentConfirmations: vi.fn(),
     } as unknown as ShiftAssignmentConfirmationService;
-    const service = new ShiftsService(db as never, confirmation);
+    const cancellationRequests = {
+      resolvePendingForShift: vi.fn(),
+    };
+    const service = new ShiftsService(db as never, confirmation, cancellationRequests as never);
 
     await expect(service.sendAssignmentConfirmation('shift-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,

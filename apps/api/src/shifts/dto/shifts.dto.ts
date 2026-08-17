@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -115,4 +116,9 @@ export class ListShiftsQuery {
   @IsOptional()
   @Matches(DATE)
   to?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  cancellationRequested?: boolean;
 }

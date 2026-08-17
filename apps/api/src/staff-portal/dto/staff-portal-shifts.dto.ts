@@ -49,6 +49,11 @@ export type CarerShiftSummaryDto = {
     address: string;
     city: string;
   };
+  cancellationRequest?: {
+    status: 'pending';
+    requestedAt: string;
+    reason?: string;
+  } | null;
 };
 
 export type StaffPortalShiftsPageResponseDto = {

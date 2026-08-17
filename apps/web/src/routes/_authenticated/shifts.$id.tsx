@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Star, Trash2, UserCheck, XCircle } from "lucide-react";
+import { Star, Trash2, UserCheck, XCircle, AlertTriangle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ShiftComments } from "@/components/ShiftComments";
@@ -56,10 +56,18 @@ function ShiftDetail() {
     queryFn: () => shiftsApi.availableStaff(id),
   });
 
+  const cancellationQ = useQuery({
+    enabled: !!shift,
+    queryKey: ["shift-cancellation-request", id],
+    queryFn: () => shiftsApi.getCancellationRequest(id),
+  });
+
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<EditVals | null>(null);
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
+  const [resolvingCancellation, setResolvingCancellation] = useState(false);
+  const [resolutionNote, setResolutionNote] = useState("");
 
   if (!shift) return <DetailLoading />;
 
@@ -185,6 +193,30 @@ function ShiftDetail() {
     }
   }
 
+  async function resolveCancellationRequest() {
+    if (resolvingCancellation) return;
+    setResolvingCancellation(true);
+    try {
+      await shiftsApi.resolveCancellationRequest(id, resolutionNote.trim() || undefined);
+      toast.success("Cancellation request marked resolved");
+      setResolutionNote("");
+      qc.invalidateQueries();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resolve request");
+    } finally {
+      setResolvingCancellation(false);
+    }
+  }
+
+  const pendingCancellation = cancellationQ.data?.status === "pending" ? cancellationQ.data : null;
+  const cancellationStaffName = pendingCancellation
+    ? displayStaff({
+        legalName: pendingCancellation.staffLegalName,
+        displayName: pendingCancellation.staffDisplayName,
+        useDisplayName: pendingCancellation.staffUseDisplayName,
+      })
+    : null;
+
   async function deleteShift() {
     try {
       await shiftsApi.remove(id);
@@ -221,6 +253,54 @@ function ShiftDetail() {
         }
       />
 
+
+      {pendingCancellation ? (
+        <Card className="border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-950 dark:text-amber-100">
+              <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
+              Cancellation requested
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-foreground">
+              <span className="font-medium">{cancellationStaffName}</span> requested to cancel this
+              shift.
+            </p>
+            <div>
+              <p className="text-muted-foreground">Reason</p>
+              <p className="whitespace-pre-wrap break-words">{pendingCancellation.reason}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Requested{" "}
+              {new Date(pendingCancellation.requestedAt).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+            <div className="space-y-2 border-t border-amber-200 pt-3 dark:border-amber-900">
+              <Label htmlFor="resolution-note">Resolution note (optional, internal)</Label>
+              <Textarea
+                id="resolution-note"
+                rows={2}
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                placeholder="e.g. Spoke with Jane and reassigned shift."
+                disabled={resolvingCancellation}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={resolvingCancellation}
+                onClick={() => void resolveCancellationRequest()}
+              >
+                {resolvingCancellation ? "Saving…" : "Mark request resolved"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-1">

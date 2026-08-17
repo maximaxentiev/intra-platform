@@ -11,6 +11,7 @@ import {
 } from '../availability/availability-toronto.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staffAccounts } from '../db/schema';
+import { ShiftCancellationRequestsService } from '../shifts/shift-cancellation-requests.service';
 import {
   type ShiftInternalStatus,
   type ShiftRowForCarer,
@@ -38,7 +39,10 @@ type ShiftQueryRow = {
 
 @Injectable()
 export class StaffPortalShiftsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly cancellationRequests: ShiftCancellationRequestsService,
+  ) {}
 
   async listUpcoming(
     session: StaffSessionPayload,
@@ -77,7 +81,7 @@ export class StaffPortalShiftsService {
       limit,
       0,
     );
-    return { items: this.mapRows(rows, today, nowTime) };
+    return { items: await this.attachCancellationSummaries(this.mapRows(rows, today, nowTime), session.staffId) };
   }
 
   async getDetail(
@@ -129,7 +133,44 @@ export class StaffPortalShiftsService {
       throw new NotFoundException('Shift not found.');
     }
 
+    const pending = await this.cancellationRequests.getCarerRequest(shiftId, session.staffId);
+    if (pending) {
+      dto.cancellationRequest = {
+        status: 'pending',
+        requestedAt: pending.requestedAt,
+        reason: pending.reason,
+      };
+    }
+
     return dto;
+  }
+
+  async createCancellationRequest(
+    session: StaffSessionPayload,
+    shiftId: string,
+    reason: string,
+  ) {
+    await this.loadOnboardedAccount(session);
+    return this.cancellationRequests.createCarerRequest({
+      shiftId,
+      staffId: session.staffId,
+      staffAccountId: session.accountId,
+      reason,
+    });
+  }
+
+  async getCancellationRequest(session: StaffSessionPayload, shiftId: string) {
+    await this.loadOnboardedAccount(session);
+
+    const rows = await this.db
+      .select({ id: shifts.id })
+      .from(shifts)
+      .where(and(eq(shifts.id, shiftId), eq(shifts.assignedStaffId, session.staffId)));
+    if (!rows[0]) {
+      throw new NotFoundException('Shift not found.');
+    }
+
+    return this.cancellationRequests.getCarerRequest(shiftId, session.staffId);
   }
 
   private async listScoped(
@@ -151,7 +192,10 @@ export class StaffPortalShiftsService {
     const rows = await this.fetchShiftRows(staffId, scope, today, nowTime, pageSize, offset);
 
     return {
-      items: this.mapRows(rows, today, nowTime),
+      items: await this.attachCancellationSummaries(
+        this.mapRows(rows, today, nowTime),
+        staffId,
+      ),
       page,
       pageSize,
       totalItems,
@@ -258,6 +302,22 @@ export class StaffPortalShiftsService {
         OR (s.status = 'cancelled' AND s.shift_date < ${today}::date)
       )
     `;
+  }
+
+  private async attachCancellationSummaries(
+    items: CarerShiftSummaryDto[],
+    staffId: string,
+  ): Promise<CarerShiftSummaryDto[]> {
+    if (items.length === 0) return items;
+    const pending = await this.cancellationRequests.getPendingSummaryByShiftIds(
+      items.map((i) => i.id),
+      staffId,
+    );
+    return items.map((item) => {
+      const summary = pending.get(item.id);
+      if (!summary) return item;
+      return { ...item, cancellationRequest: summary };
+    });
   }
 
   private mapRows(

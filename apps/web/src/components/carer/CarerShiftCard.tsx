@@ -4,6 +4,7 @@ import {
   formatAvailabilityWindowDisplay,
   formatDashboardAvailabilityDateLabel,
 } from "@/lib/carer-availability-dates";
+import { hasPendingCancellationRequest } from "@/lib/carer-shift-cancellation";
 import { carerShiftDetailLinkLabel } from "@/lib/carer-shifts-display";
 import type { CarerShift } from "@/lib/carer-shifts";
 
@@ -21,7 +22,14 @@ export function CarerShiftCard({ shift }: CarerShiftCardProps) {
           <p className="text-sm font-semibold">
             {formatDashboardAvailabilityDateLabel(shift.shiftDate)}
           </p>
-          <CarerShiftStatusBadge status={shift.status} size="sm" />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {hasPendingCancellationRequest(shift) ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                Cancellation requested
+              </span>
+            ) : null}
+            <CarerShiftStatusBadge status={shift.status} size="sm" />
+          </div>
         </div>
 
         <p className="text-sm font-medium">

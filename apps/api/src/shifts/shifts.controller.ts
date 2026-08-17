@@ -43,6 +43,13 @@ export class ShiftsController {
     return this.shifts.deleteComment(commentId, user.userId, user.role);
   }
 
+  @Get('cancellation-requests/pending')
+  listPendingCancellationRequests(
+    @Query() q: import('./dto/shift-cancellation-request.dto').ListPendingCancellationRequestsQuery,
+  ) {
+    return this.shifts.listPendingCancellationRequests(q.page ?? 1, q.pageSize ?? 25);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.shifts.get(id);
@@ -73,13 +80,31 @@ export class ShiftsController {
   }
 
   @Post(':id/unassign')
-  unassign(@Param('id') id: string) {
-    return this.shifts.unassign(id);
+  unassign(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shifts.unassign(id, user.userId);
+  }
+
+  @Get(':id/cancellation-request')
+  getCancellationRequest(@Param('id') id: string) {
+    return this.shifts.getCancellationRequest(id);
+  }
+
+  @Post(':id/cancellation-request/resolve')
+  resolveCancellationRequest(
+    @Param('id') id: string,
+    @Body() dto: import('./dto/shift-cancellation-request.dto').ResolveShiftCancellationRequestDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.resolveCancellationRequest(id, user.userId, dto.resolutionNote);
   }
 
   @Post(':id/status')
-  changeStatus(@Param('id') id: string, @Body() dto: ChangeStatusDto) {
-    return this.shifts.changeStatus(id, dto);
+  changeStatus(
+    @Param('id') id: string,
+    @Body() dto: ChangeStatusDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.changeStatus(id, dto, user.userId);
   }
 
   @Get(':id/available-staff')

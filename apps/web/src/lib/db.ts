@@ -146,7 +146,23 @@ export interface Shift {
   assignedLegalName?: string | null;
   assignedDisplayName?: string | null;
   assignedUseDisplayName?: boolean | null;
+  hasPendingCancellationRequest?: boolean;
 }
+
+export type ShiftCancellationRequest = {
+  id: string;
+  shiftId: string;
+  staffId: string;
+  staffLegalName: string;
+  staffDisplayName: string;
+  staffUseDisplayName: boolean;
+  status: "pending" | "resolved";
+  reason: string;
+  requestedAt: string;
+  resolvedAt: string | null;
+  resolvedByUserId: string | null;
+  resolutionNote: string;
+};
 
 export interface ShiftComment {
   id: string;
@@ -375,8 +391,14 @@ export const availabilityApi = {
 };
 
 export const shiftsApi = {
-  list: (q: { centreId?: string; staffId?: string; status?: string; from?: string; to?: string }) =>
-    api.get<Shift[]>("/shifts", q),
+  list: (q: {
+    centreId?: string;
+    staffId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    cancellationRequested?: boolean;
+  }) => api.get<Shift[]>("/shifts", q),
   get: (id: string) => api.get<Shift>(`/shifts/${id}`),
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
   update: (id: string, values: Partial<Shift>) => api.patch<Shift>(`/shifts/${id}`, values),
@@ -396,6 +418,12 @@ export const shiftsApi = {
   comments: (id: string) => api.get<ShiftComment[]>(`/shifts/${id}/comments`),
   addComment: (id: string, body: string) =>
     api.post<ShiftComment>(`/shifts/${id}/comments`, { body }),
+  getCancellationRequest: (id: string) =>
+    api.get<ShiftCancellationRequest | null>(`/shifts/${id}/cancellation-request`),
+  resolveCancellationRequest: (id: string, resolutionNote?: string) =>
+    api.post<ShiftCancellationRequest>(`/shifts/${id}/cancellation-request/resolve`, {
+      resolutionNote,
+    }),
 };
 
 export const dashboardApi = {

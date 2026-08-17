@@ -1,15 +1,41 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import {
   formatAvailabilityWindowDisplay,
   formatFullCalendarDateWithYearLabel,
 } from "@/lib/carer-availability-dates";
+import {
+  hasPendingCancellationRequest,
+  isCarerCancellationEligible,
+  useSubmitCarerCancellationRequest,
+} from "@/lib/carer-shift-cancellation";
 import type { CarerShift } from "@/lib/carer-shifts";
 import { useCarerShift } from "@/lib/carer-shifts-queries";
+
+function formatRequestTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 function CarerShiftDetailSkeleton() {
   return (
@@ -52,6 +78,106 @@ function CarerShiftLoadError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const submit = useSubmitCarerCancellationRequest(shift.id);
+
+  if (!isCarerCancellationEligible(shift)) {
+    return null;
+  }
+
+  if (hasPendingCancellationRequest(shift)) {
+    const request = shift.cancellationRequest!;
+    return (
+      <section
+        className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/30"
+        aria-live="polite"
+      >
+        <p className="font-semibold text-foreground">Cancellation requested</p>
+        <p className="text-muted-foreground">
+          Your cancellation request has been sent to the Intra operations team.
+        </p>
+        {request.reason ? (
+          <p className="break-words text-foreground">
+            <span className="text-muted-foreground">Reason: </span>
+            {request.reason}
+          </p>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Requested {formatRequestTimestamp(request.requestedAt)}
+        </p>
+      </section>
+    );
+  }
+
+  async function handleSubmit() {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast.error("Please enter a reason for cancellation.");
+      return;
+    }
+    try {
+      await submit.mutateAsync(trimmed);
+      setOpen(false);
+      setReason("");
+      toast.success("Cancellation request sent", {
+        description:
+          "The Intra operations team has been notified. This shift remains assigned to you until the request is reviewed.",
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not submit cancellation request.");
+    }
+  }
+
+  return (
+    <section className="space-y-3 border-t pt-5">
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="outline" className="h-11 w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive">
+            Cancel shift
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Request to cancel this shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your request will be sent to the Intra operations team. The shift is still assigned to
+              you until the operations team confirms the cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cancellation-reason">Reason for cancellation</Label>
+            <Textarea
+              id="cancellation-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Please tell our operations team why you need to cancel this shift."
+              rows={4}
+              maxLength={1000}
+              className="min-h-[6rem] resize-y"
+              disabled={submit.isPending}
+            />
+          </div>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              className="h-11 w-full"
+              disabled={submit.isPending}
+              onClick={() => void handleSubmit()}
+            >
+              {submit.isPending ? "Submitting…" : "Submit cancellation request"}
+            </Button>
+            <AlertDialogCancel className="h-11 w-full" disabled={submit.isPending}>
+              Keep shift
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
 type CarerShiftDetailContentProps = {
   shift: CarerShift;
 };
@@ -65,6 +191,9 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
         <CarerShiftStatusBadge status={shift.status} />
         {shift.status === "cancelled" ? (
           <p className="text-sm text-muted-foreground">This shift has been cancelled.</p>
+        ) : null}
+        {hasPendingCancellationRequest(shift) ? (
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Cancellation requested</p>
         ) : null}
       </div>
 
@@ -99,6 +228,8 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
           </div>
         ) : null}
       </dl>
+
+      <CarerShiftCancellationSection shift={shift} />
     </article>
   );
 }

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,6 +22,7 @@ const searchSchema = z.object({
   status: z.enum(["pending", "filled", "cancelled", "completed"]).optional(),
   staff: z.string().optional(),
   staffpoint: z.enum(["yes", "no"]).optional(),
+  cancellationRequested: z.enum(["yes"]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/shifts/")({
@@ -37,10 +39,11 @@ function ShiftsIndex() {
   const [status, setStatus] = useState<ShiftStatus | "all">((search.status ?? "all") as any);
   const [staffId, setStaffId] = useState(search.staff ?? "all");
   const [staffpoint, setStaffpoint] = useState<"all" | "yes" | "no">((search.staffpoint ?? "all") as any);
+  const [cancellationRequested, setCancellationRequested] = useState(search.cancellationRequested === "yes");
 
   const hasFilters =
     from !== "" || to !== "" || centreId !== "all" || status !== "all" ||
-    staffId !== "all" || staffpoint !== "all";
+    staffId !== "all" || staffpoint !== "all" || cancellationRequested;
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -52,7 +55,7 @@ function ShiftsIndex() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["shifts-list", from, to, centreId, status, staffId, staffpoint],
+    queryKey: ["shifts-list", from, to, centreId, status, staffId, staffpoint, cancellationRequested],
     queryFn: async () => {
       const rows = await shiftsApi.list({
         from: from || undefined,
@@ -60,6 +63,7 @@ function ShiftsIndex() {
         centreId: centreId === "all" ? undefined : centreId,
         status: status === "all" ? undefined : status,
         staffId: staffId === "all" ? undefined : staffId,
+        cancellationRequested: cancellationRequested || undefined,
       });
       if (staffpoint === "yes") return rows.filter((r) => r.addedToStaffpoint);
       if (staffpoint === "no") return rows.filter((r) => !r.addedToStaffpoint);
@@ -76,13 +80,14 @@ function ShiftsIndex() {
         status: status === "all" ? undefined : status,
         staff: staffId === "all" ? undefined : staffId,
         staffpoint: staffpoint === "all" ? undefined : staffpoint,
+        cancellationRequested: cancellationRequested ? "yes" : undefined,
       },
     });
   }
 
   function clearFilters() {
     setFrom(""); setTo(""); setCentreId("all"); setStatus("all");
-    setStaffId("all"); setStaffpoint("all");
+    setStaffId("all"); setStaffpoint("all"); setCancellationRequested(false);
     navigate({ search: {} });
   }
 
@@ -152,6 +157,15 @@ function ShiftsIndex() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5 col-span-2 lg:col-span-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <Checkbox
+                checked={cancellationRequested}
+                onCheckedChange={(v) => setCancellationRequested(v === true)}
+              />
+              Cancellation requested
+            </label>
+          </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/70">
           <div className="text-xs text-muted-foreground">
@@ -210,7 +224,14 @@ function ShiftsIndex() {
                     {s.addedToStaffpoint && <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">· Staffpoint</span>}
                   </div>
                 </div>
-                <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                  {s.hasPendingCancellationRequest ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                      Cancellation requested
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </Card>
           );
@@ -279,7 +300,14 @@ function ShiftsIndex() {
                       {s.addedToStaffpoint ? "Yes" : "No"}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                      <div className="flex flex-col gap-1">
+                        <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                        {s.hasPendingCancellationRequest ? (
+                          <span className="w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                            Cancellation requested
+                          </span>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

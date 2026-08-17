@@ -71,6 +71,13 @@
       "when": 1787100000000,
       "tag": "0009_shift_assignment_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787200000000,
+      "tag": "0010_shift_cancellation_requests",
+      "breakpoints": true
     }
   ]
 }

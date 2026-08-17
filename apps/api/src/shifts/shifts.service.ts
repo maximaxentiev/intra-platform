@@ -18,6 +18,7 @@ import {
 } from '../db/schema';
 import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
+import { ShiftCancellationRequestsService } from './shift-cancellation-requests.service';
 import {
   AddCommentDto,
   ChangeStatusDto,
@@ -33,17 +34,26 @@ export class ShiftsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly assignmentConfirmations: ShiftAssignmentConfirmationService,
+    private readonly cancellationRequests: ShiftCancellationRequestsService,
   ) {}
 
-  list(q: ListShiftsQuery) {
+  async list(q: ListShiftsQuery) {
     const conds: SQL[] = [];
     if (q.centreId) conds.push(eq(shifts.centreId, q.centreId));
     if (q.staffId) conds.push(eq(shifts.assignedStaffId, q.staffId));
     if (q.status) conds.push(eq(shifts.status, q.status as never));
     if (q.from) conds.push(gte(shifts.shiftDate, q.from));
     if (q.to) conds.push(lte(shifts.shiftDate, q.to));
+    if (q.cancellationRequested) {
+      conds.push(
+        sql`EXISTS (
+          SELECT 1 FROM shift_cancellation_requests scr
+          WHERE scr.shift_id = ${shifts.id} AND scr.status = 'pending'
+        )`,
+      );
+    }
 
-    return this.db
+    const rows = await this.db
       .select({
         id: shifts.id,
         centreId: shifts.centreId,
@@ -66,6 +76,12 @@ export class ShiftsService {
       .leftJoin(assignee, eq(assignee.id, shifts.assignedStaffId))
       .where(conds.length ? and(...conds) : undefined)
       .orderBy(desc(shifts.shiftDate));
+
+    const pendingIds = await this.cancellationRequests.getPendingShiftIdSet(rows.map((r) => r.id));
+    return rows.map((row) => ({
+      ...row,
+      hasPendingCancellationRequest: pendingIds.has(row.id),
+    }));
   }
 
   async get(id: string) {
@@ -135,6 +151,12 @@ export class ShiftsService {
   }
 
   async assign(id: string, staffId: string, actorUserId: string): Promise<ShiftAssignResponse> {
+    const before = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    const previousAssignee = before[0]?.assignedStaffId ?? null;
+
     const updated = await this.db
       .update(shifts)
       .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
@@ -142,6 +164,15 @@ export class ShiftsService {
       .returning();
 
     if (updated[0]) {
+      if (previousAssignee && previousAssignee !== staffId) {
+        await this.cancellationRequests.resolvePendingForShift({
+          shiftId: id,
+          staffId: previousAssignee,
+          context: 'shift_reassigned',
+          resolvedByUserId: actorUserId,
+        });
+      }
+
       const shift = await this.get(id);
       const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
         shiftId: id,
@@ -198,17 +229,39 @@ export class ShiftsService {
     return { notifications };
   }
 
-  async unassign(id: string) {
+  async unassign(id: string, actorUserId?: string) {
+    const before = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    const previousAssignee = before[0]?.assignedStaffId ?? null;
+
     const rows = await this.db
       .update(shifts)
       .set({ assignedStaffId: null, status: 'pending', updatedAt: new Date() })
       .where(eq(shifts.id, id))
       .returning();
     if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+    if (previousAssignee) {
+      await this.cancellationRequests.resolvePendingForShift({
+        shiftId: id,
+        staffId: previousAssignee,
+        context: 'shift_unassigned',
+        resolvedByUserId: actorUserId ?? null,
+      });
+    }
+
     return rows[0];
   }
 
-  async changeStatus(id: string, dto: ChangeStatusDto) {
+  async changeStatus(id: string, dto: ChangeStatusDto, actorUserId?: string) {
+    const before = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    const previousAssignee = before[0]?.assignedStaffId ?? null;
+
     const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
     if (dto.status === 'cancelled' && dto.cancellationReason !== undefined) {
       patch.cancellationReason = dto.cancellationReason;
@@ -216,7 +269,51 @@ export class ShiftsService {
     if (dto.status === 'pending') patch.assignedStaffId = null;
     const rows = await this.db.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
     if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+    if (dto.status === 'cancelled' && previousAssignee) {
+      await this.cancellationRequests.resolvePendingForShift({
+        shiftId: id,
+        staffId: previousAssignee,
+        context: 'shift_cancelled',
+        resolvedByUserId: actorUserId ?? null,
+      });
+    } else if (dto.status === 'completed' && previousAssignee) {
+      await this.cancellationRequests.resolvePendingForShift({
+        shiftId: id,
+        staffId: previousAssignee,
+        context: 'shift_completed',
+        resolvedByUserId: actorUserId ?? null,
+      });
+    } else if (dto.status === 'pending' && previousAssignee) {
+      await this.cancellationRequests.resolvePendingForShift({
+        shiftId: id,
+        staffId: previousAssignee,
+        context: 'shift_unassigned',
+        resolvedByUserId: actorUserId ?? null,
+      });
+    }
+
     return rows[0];
+  }
+
+  getCancellationRequest(shiftId: string) {
+    return this.cancellationRequests.getOpsPendingRequest(shiftId);
+  }
+
+  resolveCancellationRequest(
+    shiftId: string,
+    actorUserId: string,
+    resolutionNote?: string,
+  ) {
+    return this.cancellationRequests.resolvePendingManually(
+      shiftId,
+      actorUserId,
+      resolutionNote,
+    );
+  }
+
+  listPendingCancellationRequests(page: number, pageSize: number) {
+    return this.cancellationRequests.listPending(page, pageSize);
   }
 
   // Eligible staff for a shift: active, not banned at the centre, not

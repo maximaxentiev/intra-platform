@@ -320,6 +320,45 @@ export const shiftAssignmentNotificationStatus = pgEnum('shift_assignment_notifi
   'skipped',
 ]);
 
+export const shiftCancellationRequestStatus = pgEnum('shift_cancellation_request_status', [
+  'pending',
+  'resolved',
+]);
+
+/** Carer-initiated cancellation requests; resolved by Ops or shift workflow changes. */
+export const shiftCancellationRequests = pgTable(
+  'shift_cancellation_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => shifts.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    status: shiftCancellationRequestStatus('status').notNull().default('pending'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedByUserId: uuid('resolved_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    resolutionNote: text('resolution_note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('shift_cancellation_requests_one_pending_per_shift_staff_idx')
+      .on(t.shiftId, t.staffId)
+      .where(sql`${t.status} = 'pending'`),
+    index('shift_cancellation_requests_shift_idx').on(t.shiftId),
+    index('shift_cancellation_requests_staff_idx').on(t.staffId),
+    index('shift_cancellation_requests_pending_idx')
+      .on(t.status)
+      .where(sql`${t.status} = 'pending'`),
+  ],
+);
+
 /** Email confirmation attempts after Ops assigns Staff to a shift. */
 export const shiftAssignmentNotifications = pgTable(
   'shift_assignment_notifications',

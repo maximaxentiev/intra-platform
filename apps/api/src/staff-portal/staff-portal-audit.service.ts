@@ -51,6 +51,8 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   shareLinkRevoked: 'share_link_revoked',
   sharePageViewed: 'share_page_viewed',
   sharedDocumentViewed: 'shared_document_viewed',
+  shiftCancellationRequested: 'shift_cancellation_requested',
+  shiftCancellationRequestResolved: 'shift_cancellation_request_resolved',
 } as const;
 
 export type StaffPortalAuditEventType =
