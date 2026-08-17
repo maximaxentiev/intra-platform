@@ -37,16 +37,16 @@ import {
   CreateStaffPortalAvailabilityDto,
   MarkStaffPortalUnavailableDto,
   StaffPortalAvailabilityDto,
-  StaffPortalAvailabilityOnboardingDto,
   StaffPortalAvailabilityOnboardingStateDto,
   UpdateStaffPortalAvailabilityDto,
 } from './dto/staff-portal-availability.dto';
-import { ONBOARDING_STEP } from './staff-onboarding.util';
 import type { StaffSessionPayload } from './staff-session.service';
 import {
   STAFF_PORTAL_AUDIT_EVENTS,
   StaffPortalAuditService,
 } from './staff-portal-audit.service';
+import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
+import type { StaffPortalOnboardingStatusDto } from './dto/staff-portal-onboarding.dto';
 
 @Injectable()
 export class StaffPortalAvailabilityService {
@@ -58,6 +58,7 @@ export class StaffPortalAvailabilityService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly audit: StaffPortalAuditService,
+    private readonly onboarding: StaffPortalOnboardingService,
   ) {}
 
   async list(session: StaffSessionPayload, weekStart: string): Promise<StaffPortalAvailabilityDto[]> {
@@ -422,53 +423,19 @@ export class StaffPortalAvailabilityService {
     return { ok: true };
   }
 
-  /** Marks onboarding Step 3 complete when guided two-week state is satisfied. Idempotent. */
-  async completeStep3(session: StaffSessionPayload): Promise<StaffPortalAvailabilityOnboardingDto> {
-    const account = await this.loadActiveAccount(session);
+  /** Marks the availability onboarding step complete. Does not finalize onboarding. */
+  async completeOnboardingStep(
+    session: StaffSessionPayload,
+  ): Promise<StaffPortalOnboardingStatusDto> {
+    return this.onboarding.completeAvailabilityStep(session);
+  }
 
-    if (!account.profileCompletedAt) {
-      throw new BadRequestException('Complete your profile before finishing onboarding.');
-    }
-    if (!account.documentsCompletedAt) {
-      throw new BadRequestException('Complete your documents before finishing onboarding.');
-    }
-
-    if (account.onboardingCompletedAt) {
-      return this.toOnboardingDto(account);
-    }
-
-    if (!account.availabilityOnboardingWeek1Start) {
-      throw new BadRequestException(
-        'Establish your availability onboarding period before finishing Step 3.',
-      );
-    }
-
-    const state = await this.buildOnboardingState(session.staffId, account);
-    if (!state.canCompleteOnboarding) {
-      throw new BadRequestException(
-        'Complete availability for every required day in your onboarding period before finishing Step 3.',
-      );
-    }
-
-    const now = new Date();
-    await this.db
-      .update(staffAccounts)
-      .set({
-        onboardingCompletedAt: now,
-        onboardingStep: Math.max(account.onboardingStep, ONBOARDING_STEP.availability),
-        updatedAt: now,
-      })
-      .where(eq(staffAccounts.id, account.id));
-
-    await this.audit.record({
-      staffId: account.staffId,
-      staffAccountId: account.id,
-      eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingStep3Completed,
-      detail: { source: 'carer_portal' },
-    });
-
-    const refreshed = await this.loadActiveAccount(session);
-    return this.toOnboardingDto(refreshed);
+  /**
+   * @deprecated Phase 4C.3B web will migrate to `POST complete-onboarding-step`.
+   * Delegates to availability-step completion; no longer sets `onboardingCompletedAt`.
+   */
+  async completeStep3(session: StaffSessionPayload): Promise<StaffPortalOnboardingStatusDto> {
+    return this.completeOnboardingStep(session);
   }
 
   private async assertOnboardingPrerequisites(session: StaffSessionPayload) {
@@ -615,17 +582,6 @@ export class StaffPortalAvailabilityService {
       startTime: formatAvailabilityTimeForCarer(row.startTime),
       endTime: formatAvailabilityTimeForCarer(row.endTime),
       createdAt: row.createdAt.toISOString(),
-    };
-  }
-
-  private toOnboardingDto(
-    account: typeof staffAccounts.$inferSelect,
-  ): StaffPortalAvailabilityOnboardingDto {
-    return {
-      profileCompletedAt: account.profileCompletedAt?.toISOString() ?? null,
-      documentsCompletedAt: account.documentsCompletedAt?.toISOString() ?? null,
-      onboardingStep: account.onboardingStep,
-      onboardingCompletedAt: account.onboardingCompletedAt?.toISOString() ?? null,
     };
   }
 }

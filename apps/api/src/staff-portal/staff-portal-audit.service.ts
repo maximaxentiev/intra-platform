@@ -42,7 +42,10 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   carerAvailabilityMarkedUnavailable: 'carer_availability_marked_unavailable',
   carerAvailabilityUnavailableCleared: 'carer_availability_unavailable_cleared',
   availabilityOnboardingPeriodStarted: 'availability_onboarding_period_started',
+  /** @deprecated Retained for historical audit rows; new flows emit onboardingAvailabilityStepCompleted. */
   onboardingStep3Completed: 'onboarding_step_3_completed',
+  onboardingAvailabilityStepCompleted: 'onboarding_availability_step_completed',
+  onboardingCompleted: 'onboarding_completed',
   shareLinkGenerated: 'share_link_generated',
   shareLinkRotated: 'share_link_rotated',
   shareLinkRevoked: 'share_link_revoked',

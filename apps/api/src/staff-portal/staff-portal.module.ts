@@ -11,6 +11,8 @@ import { StaffPortalProfileController } from './staff-portal-profile.controller'
 import { StaffPortalProfileService } from './staff-portal-profile.service';
 import { StaffPortalAvailabilityController } from './staff-portal-availability.controller';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
+import { StaffPortalOnboardingController } from './staff-portal-onboarding.controller';
+import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
 
 @Module({
   imports: [AuthModule],
@@ -18,6 +20,7 @@ import { StaffPortalAvailabilityService } from './staff-portal-availability.serv
     StaffAuthController,
     StaffPortalProfileController,
     StaffPortalAvailabilityController,
+    StaffPortalOnboardingController,
   ],
   providers: [
     StaffAuthService,
@@ -27,6 +30,7 @@ import { StaffPortalAvailabilityService } from './staff-portal-availability.serv
     StaffPortalAuditService,
     StaffPortalInvitationsService,
     StaffPortalProfileService,
+    StaffPortalOnboardingService,
     StaffPortalAvailabilityService,
   ],
   exports: [
@@ -36,6 +40,7 @@ import { StaffPortalAvailabilityService } from './staff-portal-availability.serv
     StaffPortalAuditService,
     StaffPortalInvitationsService,
     StaffPortalProfileService,
+    StaffPortalOnboardingService,
     StaffPortalAvailabilityService,
   ],
 })

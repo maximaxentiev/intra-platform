@@ -11,6 +11,7 @@ import {
 } from '../db/schema';
 import { STAFF_PORTAL_AUDIT_EVENTS } from './staff-portal-audit.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
+import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
 import type { StaffSessionPayload } from './staff-session.service';
 
 const STAFF_A = '11111111-1111-4111-8111-111111111111';
@@ -46,6 +47,7 @@ type AccountRow = {
   documentsCompletedAt: Date | null;
   onboardingStep: number;
   onboardingCompletedAt: Date | null;
+  availabilityCompletedAt: Date | null;
   availabilityOnboardingWeek1Start: string | null;
   inviteTokenHash: string | null;
   inviteTokenExpiresAt: Date | null;
@@ -155,6 +157,7 @@ function createHarness(initial?: Partial<AccountRow>) {
     documentsCompletedAt: new Date('2026-08-02T12:00:00.000Z'),
     onboardingStep: 3,
     onboardingCompletedAt: null,
+    availabilityCompletedAt: null,
     availabilityOnboardingWeek1Start: null,
     inviteTokenHash: null,
     inviteTokenExpiresAt: null,
@@ -287,23 +290,11 @@ function createHarness(initial?: Partial<AccountRow>) {
     transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
   };
 
-  const service = new StaffPortalAvailabilityService(db as never, { record: audit } as never);
+  const onboarding = new StaffPortalOnboardingService(db as never, { record: audit } as never);
+  const service = new StaffPortalAvailabilityService(db as never, { record: audit } as never, onboarding);
   const opsService = new AvailabilityService(db as never);
 
   return { service, opsService, availabilityRows, unavailableRows, account, audit, db };
-}
-
-async function answerAllRequiredDays(
-  service: StaffPortalAvailabilityService,
-  session: StaffSessionPayload,
-  week1Start: string,
-) {
-  const state = await service.getOnboardingState(session);
-  for (const day of state.days) {
-    if (day.status !== 'incomplete') continue;
-    const weekStartDate = day.weekIndex === 1 ? week1Start : WEEK2;
-    await service.markUnavailable(session, { weekStartDate, dayOfWeek: day.dayOfWeek });
-  }
 }
 
 describe('StaffPortalAvailabilityService onboarding state', () => {
@@ -495,24 +486,19 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
     });
   });
 
-  describe('complete step 3', () => {
+  describe('complete availability step', () => {
     it('rejects without anchor for incomplete account', async () => {
       const harness = createHarness();
       await expect(harness.service.completeStep3(SESSION_A)).rejects.toThrow(/onboarding period/i);
     });
 
-    it('rejects when required dates remain incomplete', async () => {
+    it('completes with blank weeks and zero rows', async () => {
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
-      await expect(harness.service.completeStep3(SESSION_A)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-    });
-
-    it('completes when both weeks satisfied', async () => {
-      const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
-      await answerAllRequiredDays(harness.service, SESSION_A, MONDAY);
       const result = await harness.service.completeStep3(SESSION_A);
-      expect(result.onboardingCompletedAt).not.toBeNull();
+      expect(result.availabilityComplete).toBe(true);
+      expect(result.onboardingComplete).toBe(false);
+      expect(harness.account.availabilityCompletedAt).not.toBeNull();
+      expect(harness.account.onboardingCompletedAt).toBeNull();
     });
 
     it('completed account remains idempotent without revalidation', async () => {
@@ -522,15 +508,17 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
         onboardingCompletedAt: completedAt,
       });
       const result = await harness.service.completeStep3(SESSION_A);
-      expect(result.onboardingCompletedAt).toBe(completedAt.toISOString());
+      expect(result.onboardingComplete).toBe(true);
       expect(harness.audit).not.toHaveBeenCalled();
     });
 
-    it('past anchored dates do not block completion', async () => {
-      vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue('2026-08-24');
+    it('does not require unavailable markers or per-day completion', async () => {
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
-      const result = await harness.service.completeStep3(SESSION_A);
-      expect(result.onboardingCompletedAt).not.toBeNull();
+      const state = await harness.service.getOnboardingState(SESSION_A);
+      expect(state.canCompleteOnboarding).toBe(false);
+      await expect(harness.service.completeStep3(SESSION_A)).resolves.toMatchObject({
+        availabilityComplete: true,
+      });
     });
   });
 

@@ -73,7 +73,10 @@ export type StaffPortalAvailabilityOnboardingStateDto = {
   week1Start: string | null;
   week2Start: string | null;
   days: StaffPortalAvailabilityOnboardingDayDto[];
+  /** @deprecated Informational only; does not gate availability-step completion. */
   week1Complete: boolean;
+  /** @deprecated Informational only; does not gate availability-step completion. */
   week2Complete: boolean;
+  /** @deprecated Informational only; does not gate availability-step or final onboarding completion. */
   canCompleteOnboarding: boolean;
 };

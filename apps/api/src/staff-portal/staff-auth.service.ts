@@ -12,6 +12,7 @@ import {
   STAFF_PORTAL_AUDIT_EVENTS,
   StaffPortalAuditService,
 } from './staff-portal-audit.service';
+import { buildStaffPortalOnboardingStatus } from './staff-portal-onboarding-status.util';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DUMMY_HASH = '$2a$12$0000000000000000000000000000000000000000000000000000';
@@ -192,6 +193,7 @@ export class StaffAuthService {
     )[0];
     if (!account) throw new UnauthorizedException('Not authenticated.');
     const person = (await this.db.select().from(staff).where(eq(staff.id, account.staffId)))[0];
+    const onboarding = buildStaffPortalOnboardingStatus(account);
     return {
       accountId: account.id,
       staffId: account.staffId,
@@ -200,6 +202,13 @@ export class StaffAuthService {
       onboardingStep: account.onboardingStep,
       onboardingCompletedAt: account.onboardingCompletedAt,
       profileCompletedAt: account.profileCompletedAt,
+      documentsCompletedAt: account.documentsCompletedAt,
+      availabilityCompletedAt: account.availabilityCompletedAt,
+      profileComplete: onboarding.profileComplete,
+      documentsComplete: onboarding.documentsComplete,
+      availabilityComplete: onboarding.availabilityComplete,
+      onboardingComplete: onboarding.onboardingComplete,
+      canCompleteOnboarding: onboarding.canCompleteOnboarding,
       legalFirstName: person?.legalFirstName ?? '',
       legalLastName: person?.legalLastName ?? '',
       phone: person?.phone ?? '',

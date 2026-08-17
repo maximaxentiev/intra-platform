@@ -9,6 +9,7 @@ import * as torontoUtil from '../availability/availability-toronto.util';
 import { availability, staffAccounts, type Availability, type StaffAvailabilityUnavailableDay } from '../db/schema';
 import { STAFF_PORTAL_AUDIT_EVENTS } from './staff-portal-audit.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
+import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
 import type { StaffSessionPayload } from './staff-session.service';
 
 const STAFF_A = '11111111-1111-4111-8111-111111111111';
@@ -126,6 +127,7 @@ function createHarness(initial?: Partial<AccountRow>) {
     documentsCompletedAt: new Date('2026-08-02T12:00:00.000Z'),
     onboardingStep: 3,
     onboardingCompletedAt: null,
+    availabilityCompletedAt: null,
     availabilityOnboardingWeek1Start: null,
     inviteTokenHash: null,
     inviteTokenExpiresAt: null,
@@ -254,7 +256,8 @@ function createHarness(initial?: Partial<AccountRow>) {
     transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
   };
 
-  const service = new StaffPortalAvailabilityService(db as never, { record: audit } as never);
+  const onboarding = new StaffPortalOnboardingService(db as never, { record: audit } as never);
+  const service = new StaffPortalAvailabilityService(db as never, { record: audit } as never, onboarding);
   const opsService = new AvailabilityService(db as never);
 
   return { service, opsService, availabilityRows, account, audit, db };
@@ -555,38 +558,32 @@ describe('StaffPortalAvailabilityService', () => {
     await expect(harness.service.completeStep3(SESSION_A)).rejects.toThrow(/onboarding period/i);
   });
 
-  it('complete step 3 succeeds when guided onboarding is satisfied', async () => {
+  it('complete step 3 sets availabilityCompletedAt without finalizing onboarding', async () => {
     const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
-    const state = await harness.service.getOnboardingState(SESSION_A);
-    for (const day of state.days) {
-      if (day.status !== 'incomplete') continue;
-      const weekStartDate = day.weekIndex === 1 ? MONDAY : '2026-08-17';
-      await harness.service.markUnavailable(SESSION_A, {
-        weekStartDate,
-        dayOfWeek: day.dayOfWeek,
-      });
-    }
     const result = await harness.service.completeStep3(SESSION_A);
-    expect(result.onboardingCompletedAt).not.toBeNull();
-    expect(harness.account.onboardingCompletedAt).not.toBeNull();
+    expect(result.availabilityComplete).toBe(true);
+    expect(result.availabilityCompletedAt).not.toBeNull();
+    expect(result.onboardingComplete).toBe(false);
+    expect(harness.account.onboardingCompletedAt).toBeNull();
     expect(harness.audit).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingStep3Completed }),
+      expect.objectContaining({
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingAvailabilityStepCompleted,
+      }),
+      expect.anything(),
     );
   });
 
-  it('complete step 3 preserves earlier completion timestamps after guided completion', async () => {
+  it('complete step 3 succeeds with blank weeks and zero availability rows', async () => {
+    const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
+    const result = await harness.service.completeOnboardingStep(SESSION_A);
+    expect(result.availabilityComplete).toBe(true);
+    expect(harness.account.onboardingCompletedAt).toBeNull();
+  });
+
+  it('complete step 3 preserves earlier completion timestamps', async () => {
     const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
     const profileAt = harness.account.profileCompletedAt!;
     const documentsAt = harness.account.documentsCompletedAt!;
-    const state = await harness.service.getOnboardingState(SESSION_A);
-    for (const day of state.days) {
-      if (day.status !== 'incomplete') continue;
-      const weekStartDate = day.weekIndex === 1 ? MONDAY : '2026-08-17';
-      await harness.service.markUnavailable(SESSION_A, {
-        weekStartDate,
-        dayOfWeek: day.dayOfWeek,
-      });
-    }
     const result = await harness.service.completeStep3(SESSION_A);
     expect(result.profileCompletedAt).toBe(profileAt.toISOString());
     expect(result.documentsCompletedAt).toBe(documentsAt.toISOString());

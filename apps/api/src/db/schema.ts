@@ -187,6 +187,8 @@ export const staffAccounts = pgTable(
     profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),
     // Step 2 onboarding complete (historical); not cleared when documents expire later.
     documentsCompletedAt: timestamp('documents_completed_at', { withTimezone: true }),
+    /** Availability onboarding step explicitly completed (distinct from final onboarding). */
+    availabilityCompletedAt: timestamp('availability_completed_at', { withTimezone: true }),
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
     /** Monday anchor for guided two-week availability onboarding (Toronto calendar). */
     availabilityOnboardingWeek1Start: date('availability_onboarding_week1_start'),

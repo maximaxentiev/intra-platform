@@ -8,6 +8,7 @@ import * as schema from '../db/schema';
 import { availability, staff, staffAccounts, staffAvailabilityUnavailableDays } from '../db/schema';
 import type { StaffSessionPayload } from './staff-session.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
+import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -58,7 +59,8 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 10 });
     db = drizzle(pool, { schema, casing: 'snake_case' });
-    service = new StaffPortalAvailabilityService(db, { record: audit } as never);
+    const onboarding = new StaffPortalOnboardingService(db, { record: audit } as never);
+    service = new StaffPortalAvailabilityService(db, { record: audit } as never, onboarding);
 
     await db
       .insert(staff)

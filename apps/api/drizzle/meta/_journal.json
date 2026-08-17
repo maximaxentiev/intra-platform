@@ -57,6 +57,13 @@
       "when": 1786652146216,
       "tag": "0007_availability_onboarding_state",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786976478209,
+      "tag": "0008_availability_step_completion",
+      "breakpoints": true
     }
   ]
 }

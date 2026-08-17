@@ -55,6 +55,14 @@ export class StaffPortalAvailabilityController {
     return this.availability.create(session, dto);
   }
 
+  @Post('complete-onboarding-step')
+  completeOnboardingStep(@CurrentStaff() session: StaffSessionPayload) {
+    return this.availability.completeOnboardingStep(session);
+  }
+
+  /**
+   * @deprecated Use `complete-onboarding-step`. Retained for Phase 4C.3B web compatibility.
+   */
   @Post('complete-step-3')
   completeStep3(@CurrentStaff() session: StaffSessionPayload) {
     return this.availability.completeStep3(session);
