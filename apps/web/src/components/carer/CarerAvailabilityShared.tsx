@@ -26,10 +26,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   CARER_DAY_NAMES,
+  calendarDateToWeekDay,
   formatAvailabilityWindowDisplay,
   formatShortCalendarDate,
   isPastCalendarDate,
   isTodayCalendarDate,
+  slotToCalendarDate,
   torontoTodayDateString,
 } from "@/lib/carer-availability-dates";
 import {
@@ -172,6 +174,7 @@ type CarerAvailabilityWindowListProps = {
   allowEdit: boolean;
   allowRemove: boolean;
   busy?: boolean;
+  emptyMessage?: string;
   onEdit: (slot: CarerAvailabilitySlot) => void;
   onRemove: (slot: CarerAvailabilitySlot) => void;
 };
@@ -182,11 +185,16 @@ export function CarerAvailabilityWindowList({
   allowEdit,
   allowRemove,
   busy = false,
+  emptyMessage,
   onEdit,
   onRemove,
 }: CarerAvailabilityWindowListProps) {
   if (slots.length === 0) {
-    return <p className="text-sm text-muted-foreground">No availability added</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {emptyMessage ?? "No availability added"}
+      </p>
+    );
   }
 
   return (
@@ -236,14 +244,12 @@ export function CarerAvailabilityWindowList({
 }
 
 type UseCarerAvailabilitySlotMutationsOptions = {
-  weekStart: string;
   onAfterMutation?: () => Promise<unknown> | void;
 };
 
 export function useCarerAvailabilitySlotMutations({
-  weekStart,
   onAfterMutation,
-}: UseCarerAvailabilitySlotMutationsOptions) {
+}: UseCarerAvailabilitySlotMutationsOptions = {}) {
   const queryClient = useQueryClient();
   const today = torontoTodayDateString();
 
@@ -253,16 +259,17 @@ export function useCarerAvailabilitySlotMutations({
   const [removingSlot, setRemovingSlot] = useState<CarerAvailabilitySlot | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  async function invalidateWeek() {
-    await queryClient.invalidateQueries({ queryKey: ["carer-availability", weekStart] });
+  async function invalidateWeek(weekStartDate: string) {
+    await queryClient.invalidateQueries({ queryKey: ["carer-availability", weekStartDate] });
     await onAfterMutation?.();
   }
 
-  function openAdd(dayOfWeek: number, calendarDate: string) {
+  function openAdd(calendarDate: string) {
+    const { weekStartDate, dayOfWeek } = calendarDateToWeekDay(calendarDate);
     setFormError(null);
     setForm({
       kind: "add",
-      weekStartDate: weekStart,
+      weekStartDate,
       dayOfWeek,
       calendarDate,
       startTime: DEFAULT_AVAILABILITY_START,
@@ -270,7 +277,8 @@ export function useCarerAvailabilitySlotMutations({
     });
   }
 
-  function openEdit(slot: CarerAvailabilitySlot, calendarDate: string) {
+  function openEdit(slot: CarerAvailabilitySlot) {
+    const calendarDate = slotToCalendarDate(slot);
     setFormError(null);
     setForm({
       kind: "edit",
@@ -311,7 +319,7 @@ export function useCarerAvailabilitySlotMutations({
         toast.success("Availability updated");
       }
       setForm(null);
-      await invalidateWeek();
+      await invalidateWeek(form.weekStartDate);
     } catch (err) {
       const message = mapAvailabilityApiError(
         err,
@@ -331,7 +339,7 @@ export function useCarerAvailabilitySlotMutations({
       await carerAvailabilityApi.remove(removingSlot.id);
       toast.success("Availability removed");
       setRemovingSlot(null);
-      await invalidateWeek();
+      await invalidateWeek(removingSlot.weekStartDate);
     } catch (err) {
       toast.error(mapAvailabilityApiError(err, "Could not remove availability."));
     } finally {

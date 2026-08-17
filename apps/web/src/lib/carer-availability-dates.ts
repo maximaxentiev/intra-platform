@@ -109,3 +109,118 @@ export const CARER_DAY_NAMES = [
   "Saturday",
   "Sunday",
 ] as const;
+
+export type MonthYear = {
+  year: number;
+  /** 1–12 */
+  month: number;
+};
+
+export function currentTorontoMonthYear(today = torontoTodayDateString()): MonthYear {
+  const { year, month } = parseCalendarDateString(today);
+  return { year, month };
+}
+
+export function compareMonthYear(a: MonthYear, b: MonthYear): number {
+  if (a.year !== b.year) return a.year - b.year;
+  return a.month - b.month;
+}
+
+export function isBeforeCurrentTorontoMonth(
+  monthYear: MonthYear,
+  today = torontoTodayDateString(),
+): boolean {
+  return compareMonthYear(monthYear, currentTorontoMonthYear(today)) < 0;
+}
+
+export function addMonthsToMonthYear(monthYear: MonthYear, delta: number): MonthYear {
+  const probe = new Date(Date.UTC(monthYear.year, monthYear.month - 1 + delta, 1));
+  return {
+    year: probe.getUTCFullYear(),
+    month: probe.getUTCMonth() + 1,
+  };
+}
+
+export function formatMonthYearLabel(monthYear: MonthYear): string {
+  return new Date(monthYear.year, monthYear.month - 1, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function firstDayOfMonth(monthYear: MonthYear): string {
+  return formatUtcParts(monthYear.year, monthYear.month, 1);
+}
+
+export function lastDayOfMonth(monthYear: MonthYear): string {
+  const probe = new Date(Date.UTC(monthYear.year, monthYear.month, 0));
+  return formatUtcParts(probe.getUTCFullYear(), probe.getUTCMonth() + 1, probe.getUTCDate());
+}
+
+/** Monday week starts for every week intersecting the calendar month. */
+export function weekStartsForMonth(monthYear: MonthYear): string[] {
+  const monthStart = firstDayOfMonth(monthYear);
+  const monthEnd = lastDayOfMonth(monthYear);
+  const weekStarts: string[] = [];
+  let weekStart = mondayOfDateString(monthStart);
+
+  while (compareDateStrings(weekStart, monthEnd) <= 0) {
+    weekStarts.push(weekStart);
+    weekStart = addDaysToDateString(weekStart, 7);
+  }
+
+  return weekStarts;
+}
+
+export function calendarDateToWeekDay(calendarDate: string): {
+  weekStartDate: string;
+  dayOfWeek: number;
+} {
+  const weekStartDate = mondayOfDateString(calendarDate);
+  const startParts = parseCalendarDateString(weekStartDate);
+  const dateParts = parseCalendarDateString(calendarDate);
+  const startUtc = Date.UTC(startParts.year, startParts.month - 1, startParts.day);
+  const dateUtc = Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day);
+  const dayOfWeek = Math.round((dateUtc - startUtc) / (24 * 60 * 60 * 1000));
+  return { weekStartDate, dayOfWeek };
+}
+
+export function slotToCalendarDate(slot: {
+  weekStartDate: string;
+  dayOfWeek: number;
+}): string {
+  return calendarDateFromWeekDay(slot.weekStartDate, slot.dayOfWeek);
+}
+
+export function dateStringToLocalDate(dateStr: string): Date {
+  const { year, month, day } = parseCalendarDateString(dateStr);
+  return new Date(year, month - 1, day);
+}
+
+export function localDateToDateString(date: Date): string {
+  return formatUtcParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+}
+
+export function formatFullCalendarDateLabel(dateStr: string): string {
+  const { year, month, day } = parseCalendarDateString(dateStr);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export function defaultSelectedDateForMonth(
+  monthYear: MonthYear,
+  today = torontoTodayDateString(),
+): string {
+  if (compareMonthYear(monthYear, currentTorontoMonthYear(today)) === 0) {
+    return today;
+  }
+  return firstDayOfMonth(monthYear);
+}
+
+export function isDateInMonthYear(dateStr: string, monthYear: MonthYear): boolean {
+  const { year, month } = parseCalendarDateString(dateStr);
+  return year === monthYear.year && month === monthYear.month;
+}

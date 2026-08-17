@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   addDaysToDateString,
+  addMonthsToMonthYear,
   calendarDateFromWeekDay,
+  calendarDateToWeekDay,
   currentMondayWeekStart,
+  currentTorontoMonthYear,
+  defaultSelectedDateForMonth,
   formatAvailabilityTimeDisplay,
   formatAvailabilityWindowDisplay,
   formatWeekRangeLabel,
+  isBeforeCurrentTorontoMonth,
   isPastCalendarDate,
   isTodayCalendarDate,
   mondayOfDateString,
+  slotToCalendarDate,
   torontoTodayDateString,
+  weekStartsForMonth,
 } from "@/lib/carer-availability-dates";
 
 describe("torontoTodayDateString", () => {
@@ -62,5 +69,81 @@ describe("time display", () => {
 
   it("formats windows", () => {
     expect(formatAvailabilityWindowDisplay("09:00", "17:00")).toBe("9:00 AM – 5:00 PM");
+  });
+});
+
+describe("month calendar helpers", () => {
+  it("uses current Toronto month", () => {
+    expect(currentTorontoMonthYear("2026-08-17")).toEqual({ year: 2026, month: 8 });
+  });
+
+  it("calculates Monday weeks for August 2026 including six weeks", () => {
+    expect(weekStartsForMonth({ year: 2026, month: 8 })).toEqual([
+      "2026-07-27",
+      "2026-08-03",
+      "2026-08-10",
+      "2026-08-17",
+      "2026-08-24",
+      "2026-08-31",
+    ]);
+  });
+
+  it("handles month beginning on Sunday", () => {
+    expect(weekStartsForMonth({ year: 2026, month: 3 })[0]).toBe("2026-02-23");
+  });
+
+  it("handles December to January boundary", () => {
+    const december = weekStartsForMonth({ year: 2026, month: 12 });
+    const january = weekStartsForMonth({ year: 2027, month: 1 });
+    expect(december.at(-1)).toBe("2026-12-28");
+    expect(january[0]).toBe("2026-12-28");
+    expect(january.at(-1)).toBe("2027-01-25");
+  });
+
+  it("handles leap-year February", () => {
+    expect(weekStartsForMonth({ year: 2024, month: 2 })).toContain("2024-02-26");
+  });
+
+  it("maps calendar dates to API week/day fields", () => {
+    expect(calendarDateToWeekDay("2026-08-24")).toEqual({
+      weekStartDate: "2026-08-24",
+      dayOfWeek: 0,
+    });
+    expect(calendarDateToWeekDay("2026-08-26")).toEqual({
+      weekStartDate: "2026-08-24",
+      dayOfWeek: 2,
+    });
+    expect(calendarDateToWeekDay("2026-08-30")).toEqual({
+      weekStartDate: "2026-08-24",
+      dayOfWeek: 6,
+    });
+  });
+
+  it("maps slots back to calendar dates without rollover", () => {
+    expect(
+      slotToCalendarDate({ weekStartDate: "2026-08-24", dayOfWeek: 6 }),
+    ).toBe("2026-08-30");
+  });
+
+  it("defaults selected date to today in current month", () => {
+    expect(defaultSelectedDateForMonth({ year: 2026, month: 8 }, "2026-08-17")).toBe(
+      "2026-08-17",
+    );
+    expect(defaultSelectedDateForMonth({ year: 2027, month: 1 }, "2026-08-17")).toBe(
+      "2027-01-01",
+    );
+  });
+
+  it("blocks navigating before current Toronto month", () => {
+    expect(isBeforeCurrentTorontoMonth({ year: 2026, month: 7 }, "2026-08-17")).toBe(true);
+    expect(isBeforeCurrentTorontoMonth({ year: 2026, month: 8 }, "2026-08-17")).toBe(false);
+    expect(isBeforeCurrentTorontoMonth({ year: 2027, month: 1 }, "2026-08-17")).toBe(false);
+  });
+
+  it("adds months across year boundaries", () => {
+    expect(addMonthsToMonthYear({ year: 2026, month: 12 }, 1)).toEqual({
+      year: 2027,
+      month: 1,
+    });
   });
 });

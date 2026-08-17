@@ -55,7 +55,6 @@ export function CarerAvailabilityEditor({
   const weekHasSlots = (slots?.length ?? 0) > 0;
 
   const mutations = useCarerAvailabilitySlotMutations({
-    weekStart,
     onAfterMutation: onRefresh,
   });
 
@@ -152,7 +151,7 @@ export function CarerAvailabilityEditor({
                     </div>
                     {!past ? (
                       <CarerAvailabilityAddButton
-                        onClick={() => mutations.openAdd(dayOfWeek, calendarDate)}
+                        onClick={() => mutations.openAdd(calendarDate)}
                         disabled={mutations.saving}
                       />
                     ) : null}
@@ -164,7 +163,7 @@ export function CarerAvailabilityEditor({
                     allowEdit={!past}
                     allowRemove
                     busy={mutations.saving || mutations.removing}
-                    onEdit={(slot) => mutations.openEdit(slot, calendarDate)}
+                    onEdit={(slot) => mutations.openEdit(slot)}
                     onRemove={(slot) => mutations.setRemovingSlot(slot)}
                   />
                 </section>

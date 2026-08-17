@@ -230,7 +230,7 @@ describe("carer availability security", () => {
       "routes/carer/onboarding/availability.tsx",
       "routes/carer/availability.tsx",
       "components/carer/CarerAvailabilityOnboardingWizard.tsx",
-      "components/carer/CarerAvailabilityEditor.tsx",
+      "components/carer/CarerAvailabilityCalendar.tsx",
     ];
     for (const file of files) {
       const src = readFileSync(join(root, file), "utf8");

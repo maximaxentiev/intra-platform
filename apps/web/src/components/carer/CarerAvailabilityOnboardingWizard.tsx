@@ -74,7 +74,6 @@ export function CarerAvailabilityOnboardingWizard({
   };
 
   const mutations = useCarerAvailabilitySlotMutations({
-    weekStart,
     onAfterMutation: refreshOnboardingState,
   });
 
@@ -124,8 +123,8 @@ export function CarerAvailabilityOnboardingWizard({
             day={day}
             today={today}
             busy={busy}
-            onAdd={() => mutations.openAdd(day.dayOfWeek, day.calendarDate)}
-            onEdit={(slot) => mutations.openEdit(slot, day.calendarDate)}
+            onAdd={() => mutations.openAdd(day.calendarDate)}
+            onEdit={(slot) => mutations.openEdit(slot)}
             onRemove={(slot) => mutations.setRemovingSlot(slot)}
           />
         ))}

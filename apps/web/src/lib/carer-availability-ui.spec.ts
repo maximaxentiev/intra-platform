@@ -26,11 +26,13 @@ describe("carer availability UI contracts", () => {
     expect(wizard).not.toContain("Not available");
   });
 
-  it("account availability route remains constrained to this week and next week", () => {
+  it("regular availability route uses post-onboarding calendar", () => {
     const route = readSrc("routes/carer/availability.tsx");
-    const editor = readSrc("components/carer/CarerAvailabilityEditor.tsx");
+    const calendar = readSrc("components/carer/CarerAvailabilityCalendar.tsx");
     expect(route).toContain("requireCarerSessionForPortal");
-    expect(editor).toContain("This week");
-    expect(editor).toContain("Next week");
+    expect(route).toContain("CarerAvailabilityCalendar");
+    expect(calendar).toContain("formatMonthYearLabel");
+    expect(calendar).not.toContain("This week");
+    expect(calendar).not.toContain("Next week");
   });
 });
