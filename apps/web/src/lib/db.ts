@@ -168,6 +168,32 @@ export interface AvailableStaff {
   contacted: boolean;
 }
 
+export type ShiftAssignmentRecipientResult = {
+  attempted: boolean;
+  sent: boolean;
+  skippedReason?: string;
+};
+
+export type ShiftAssignmentNotificationsResult = {
+  centre: ShiftAssignmentRecipientResult;
+  carer: ShiftAssignmentRecipientResult;
+};
+
+export type ShiftAssignmentOutcome = {
+  changed: boolean;
+  alreadyAssigned: boolean;
+};
+
+export type ShiftAssignResponse = {
+  shift: Shift;
+  assignment: ShiftAssignmentOutcome;
+  notifications: ShiftAssignmentNotificationsResult | null;
+};
+
+export type ShiftResendConfirmationsResponse = {
+  notifications: ShiftAssignmentNotificationsResult;
+};
+
 export interface LinkedStaff {
   staffId: string;
   id: string;
@@ -355,7 +381,10 @@ export const shiftsApi = {
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
   update: (id: string, values: Partial<Shift>) => api.patch<Shift>(`/shifts/${id}`, values),
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
-  assign: (id: string, staffId: string) => api.post<Shift>(`/shifts/${id}/assign`, { staffId }),
+  assign: (id: string, staffId: string) =>
+    api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, { staffId }),
+  resendAssignmentConfirmation: (id: string) =>
+    api.post<ShiftResendConfirmationsResponse>(`/shifts/${id}/send-assignment-confirmation`),
   unassign: (id: string) => api.post<Shift>(`/shifts/${id}/unassign`),
   changeStatus: (id: string, status: ShiftStatus, cancellationReason?: string) =>
     api.post<Shift>(`/shifts/${id}/status`, { status, cancellationReason }),

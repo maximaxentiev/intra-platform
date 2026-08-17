@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCarerShiftDetailLink,
   buildEmailVerificationLink,
   buildPasswordResetEmailLink,
   buildStaffInviteEmailLink,
@@ -27,6 +28,12 @@ describe('production email links', () => {
   it('uses platform.intra.ca for staff invite', () => {
     expect(buildStaffInviteEmailLink('inv', prodEnv)).toBe(
       'https://platform.intra.ca/carer/invite/inv',
+    );
+  });
+
+  it('uses platform.intra.ca for carer shift detail', () => {
+    expect(buildCarerShiftDetailLink('shift-1', prodEnv)).toBe(
+      'https://platform.intra.ca/carer/shifts/shift-1',
     );
   });
 

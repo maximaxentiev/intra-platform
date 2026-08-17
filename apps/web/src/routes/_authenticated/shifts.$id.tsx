@@ -2,6 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
+import {
+  shiftAssignmentFeedbackMessage,
+  shiftResendFeedbackMessage,
+} from "@/lib/shift-assignment-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +58,8 @@ function ShiftDetail() {
 
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<EditVals | null>(null);
+  const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
+  const [resendingConfirmations, setResendingConfirmations] = useState(false);
 
   if (!shift) return <DetailLoading />;
 
@@ -109,13 +115,53 @@ function ShiftDetail() {
     }
   }
 
-  async function assignStaff(staffId: string) {
+  async function assignStaff(staffId: string, staffName: string) {
+    if (assigningStaffId) return;
+    setAssigningStaffId(staffId);
     try {
-      await shiftsApi.assign(id, staffId);
-      toast.success("Staff assigned");
+      const result = await shiftsApi.assign(id, staffId);
+      const message = shiftAssignmentFeedbackMessage(
+        staffName,
+        result.assignment,
+        result.notifications,
+      );
+      if (result.assignment.alreadyAssigned) {
+        toast.message(message);
+      } else if (
+        result.notifications &&
+        ((!result.notifications.centre.sent && result.notifications.centre.attempted) ||
+          (!result.notifications.carer.sent && result.notifications.carer.attempted) ||
+          result.notifications.centre.skippedReason === "no_centre_primary_contact" ||
+          result.notifications.centre.skippedReason === "document_share_unavailable" ||
+          result.notifications.carer.skippedReason === "no_carer_email")
+      ) {
+        toast.warning(message);
+      } else {
+        toast.success(message);
+      }
       qc.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Assign failed");
+    } finally {
+      setAssigningStaffId(null);
+    }
+  }
+
+  async function resendConfirmations() {
+    if (resendingConfirmations) return;
+    setResendingConfirmations(true);
+    try {
+      const result = await shiftsApi.resendAssignmentConfirmation(id);
+      const message = shiftResendFeedbackMessage(result.notifications);
+      if (result.notifications.centre.sent && result.notifications.carer.sent) {
+        toast.success(message);
+      } else {
+        toast.warning(message);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resend confirmations");
+    } finally {
+      setResendingConfirmations(false);
     }
   }
 
@@ -195,6 +241,18 @@ function ShiftDetail() {
                   <div><span className="text-muted-foreground">Assigned:</span> {assignedName ?? <span className="italic">Unassigned</span>}
                     {assignedName && <Button size="sm" variant="link" onClick={unassign}>Unassign</Button>}
                   </div>
+                  {shift.assignedStaffId && shift.status === "filled" && assignedName ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      disabled={resendingConfirmations}
+                      onClick={() => void resendConfirmations()}
+                    >
+                      {resendingConfirmations ? "Sending…" : "Resend confirmations"}
+                    </Button>
+                  ) : null}
                   {shift.status === "cancelled" && shift.cancellationReason && (
                     <div><span className="text-muted-foreground">Cancellation reason:</span> {shift.cancellationReason}</div>
                   )}
@@ -303,7 +361,14 @@ function ShiftDetail() {
                             Assigned
                           </span>
                         ) : (
-                          <Button size="sm" onClick={() => assignStaff(s.id)}><UserCheck className="h-4 w-4 mr-1" /> Assign</Button>
+                          <Button
+                            size="sm"
+                            disabled={assigningStaffId === s.id || assigningStaffId != null}
+                            onClick={() => assignStaff(s.id, displayStaff(s))}
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            {assigningStaffId === s.id ? "Assigning…" : "Assign"}
+                          </Button>
                         )}
                       </div>
                     </li>

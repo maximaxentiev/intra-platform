@@ -16,6 +16,8 @@ import {
   staffCentreTop,
   users,
 } from '../db/schema';
+import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
+import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import {
   AddCommentDto,
   ChangeStatusDto,
@@ -28,7 +30,10 @@ const assignee = aliasedTable(staff, 'assignee');
 
 @Injectable()
 export class ShiftsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly assignmentConfirmations: ShiftAssignmentConfirmationService,
+  ) {}
 
   list(q: ListShiftsQuery) {
     const conds: SQL[] = [];
@@ -129,14 +134,68 @@ export class ShiftsService {
     return { ok: true };
   }
 
-  async assign(id: string, staffId: string) {
-    const rows = await this.db
+  async assign(id: string, staffId: string, actorUserId: string): Promise<ShiftAssignResponse> {
+    const updated = await this.db
       .update(shifts)
       .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
-      .where(eq(shifts.id, id))
+      .where(and(eq(shifts.id, id), sql`${shifts.assignedStaffId} IS DISTINCT FROM ${staffId}`))
       .returning();
-    if (!rows[0]) throw new NotFoundException('Shift not found.');
-    return rows[0];
+
+    if (updated[0]) {
+      const shift = await this.get(id);
+      const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
+        shiftId: id,
+        assignedStaffId: staffId,
+        actorUserId,
+        trigger: 'assign',
+      });
+      return {
+        shift,
+        assignment: { changed: true, alreadyAssigned: false },
+        notifications,
+      };
+    }
+
+    const existing = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!existing[0]) throw new NotFoundException('Shift not found.');
+    if (existing[0].assignedStaffId === staffId) {
+      const shift = await this.get(id);
+      return {
+        shift,
+        assignment: { changed: false, alreadyAssigned: true },
+        notifications: null,
+      };
+    }
+
+    throw new NotFoundException('Shift not found.');
+  }
+
+  async sendAssignmentConfirmation(
+    id: string,
+    actorUserId: string,
+  ): Promise<ShiftResendConfirmationsResponse> {
+    const row = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId, status: shifts.status })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!row[0]) throw new NotFoundException('Shift not found.');
+    if (!row[0].assignedStaffId) {
+      throw new NotFoundException('Shift has no assigned staff member.');
+    }
+    if (row[0].status !== 'filled') {
+      throw new NotFoundException('Shift is not in a resendable assigned state.');
+    }
+
+    const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
+      shiftId: id,
+      assignedStaffId: row[0].assignedStaffId,
+      actorUserId,
+      trigger: 'resend',
+    });
+    return { notifications };
   }
 
   async unassign(id: string) {

@@ -59,8 +59,17 @@ export class ShiftsController {
   }
 
   @Post(':id/assign')
-  assign(@Param('id') id: string, @Body() dto: AssignDto) {
-    return this.shifts.assign(id, dto.staffId);
+  assign(
+    @Param('id') id: string,
+    @Body() dto: AssignDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.assign(id, dto.staffId, user.userId);
+  }
+
+  @Post(':id/send-assignment-confirmation')
+  sendAssignmentConfirmation(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shifts.sendAssignmentConfirmation(id, user.userId);
   }
 
   @Post(':id/unassign')

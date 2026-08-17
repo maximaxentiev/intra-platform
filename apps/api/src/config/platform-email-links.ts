@@ -35,3 +35,8 @@ export function buildGenericPlatformEmailLink(path: string, env: PlatformUrlEnv)
   assertProductionOutboundUrl(url, env);
   return url;
 }
+
+export function buildCarerShiftDetailLink(shiftId: string, env: PlatformUrlEnv): string {
+  const path = `/carer/shifts/${encodeURIComponent(shiftId)}`;
+  return buildGenericPlatformEmailLink(path, env);
+}

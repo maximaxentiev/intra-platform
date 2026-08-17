@@ -64,6 +64,13 @@
       "when": 1786976478209,
       "tag": "0008_availability_step_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787100000000,
+      "tag": "0009_shift_assignment_notifications",
+      "breakpoints": true
     }
   ]
 }

@@ -100,7 +100,10 @@ export function CentreForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">Rules, Policies, and Other Notes</Label>
+        <p className="text-sm text-muted-foreground">
+          These instructions are shared with carers when they are assigned to shifts at this centre.
+        </p>
         <Textarea
           id="notes"
           rows={4}

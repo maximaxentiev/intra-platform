@@ -306,6 +306,49 @@ export const shiftContacted = pgTable(
   (t) => [primaryKey({ columns: [t.shiftId, t.staffId] })],
 );
 
+export const shiftAssignmentNotificationRecipientType = pgEnum(
+  'shift_assignment_notification_recipient_type',
+  ['centre', 'carer'],
+);
+export const shiftAssignmentNotificationTrigger = pgEnum('shift_assignment_notification_trigger', [
+  'assign',
+  'resend',
+]);
+export const shiftAssignmentNotificationStatus = pgEnum('shift_assignment_notification_status', [
+  'sent',
+  'failed',
+  'skipped',
+]);
+
+/** Email confirmation attempts after Ops assigns Staff to a shift. */
+export const shiftAssignmentNotifications = pgTable(
+  'shift_assignment_notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => shifts.id, { onDelete: 'cascade' }),
+    assignedStaffId: uuid('assigned_staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    recipientType: shiftAssignmentNotificationRecipientType('recipient_type').notNull(),
+    recipientEmail: text('recipient_email').notNull().default(''),
+    trigger: shiftAssignmentNotificationTrigger('trigger').notNull(),
+    status: shiftAssignmentNotificationStatus('status').notNull(),
+    providerId: text('provider_id'),
+    failureCode: text('failure_code'),
+    failureReason: text('failure_reason'),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('shift_assignment_notifications_shift_idx').on(t.shiftId),
+    index('shift_assignment_notifications_recipient_status_idx').on(t.recipientType, t.status),
+    index('shift_assignment_notifications_created_idx').on(t.createdAt),
+  ],
+);
+
 export const shiftComments = pgTable(
   'shift_comments',
   {
