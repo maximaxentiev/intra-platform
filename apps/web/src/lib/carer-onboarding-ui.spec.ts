@@ -32,23 +32,23 @@ describe("carer onboarding routing", () => {
     expect(component).toContain("canCompleteOnboarding");
   });
 
-  it("documents step returns to hub after completion", () => {
+  it("documents step advances to availability after completion", () => {
     const route = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(route).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(route).toContain("Back to onboarding");
+    expect(route).toContain('to: "/carer/onboarding/availability"');
+    expect(route).toContain("CarerOnboardingHomeLink");
     expect(route).not.toContain("stepPathForNumber(3)");
   });
 
-  it("profile step returns to hub after completion", () => {
+  it("profile step advances to documents after completion", () => {
     const route = readSrc("routes/carer/onboarding/profile.tsx");
-    expect(route).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(route).toContain("Back to onboarding");
-    expect(route).not.toContain("/carer/onboarding/documents");
+    expect(route).toContain('to: "/carer/onboarding/documents"');
+    expect(route).toContain("CarerOnboardingHomeLink");
   });
 
   it("availability step returns to hub without success banner", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
     expect(route).toContain("CARER_ONBOARDING_HUB_PATH");
+    expect(route).toContain("CarerOnboardingHomeLink");
     expect(route).not.toContain("CARER_ONBOARDING_JUST_COMPLETED_STATE");
     expect(route).not.toContain('to: "/carer"');
   });

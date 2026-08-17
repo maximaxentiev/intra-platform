@@ -390,13 +390,13 @@ export function CarerDocumentsForm({
                 onClick={() => void handleNext()}
               >
                 {advancing ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-                Next
+                Continue to availability
               </Button>
             ) : null}
           </div>
           <p className="mt-2 text-xs text-muted-foreground sm:text-right">
             {mode === "onboarding"
-              ? "Next saves your changes and continues to the following step."
+              ? "Continue to availability saves your changes and opens the availability step."
               : "Changes are only stored once you save."}
           </p>
         </div>

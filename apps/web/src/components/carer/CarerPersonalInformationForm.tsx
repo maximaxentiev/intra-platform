@@ -319,7 +319,7 @@ export function CarerPersonalInformationForm({
               onClick={() => void handleNext()}
             >
               {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-              {isDirty ? "Save and continue to Documents" : "Continue to Documents"}
+              {isDirty ? "Save and continue to documents" : "Continue to documents"}
             </Button>
           ) : null}
           <Button

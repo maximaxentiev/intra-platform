@@ -14,7 +14,7 @@ describe("carer availability UI contracts", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
     const wizard = readSrc("components/carer/CarerAvailabilityOnboardingWizard.tsx");
     expect(route).toContain("CarerAvailabilityOnboardingWizard");
-    expect(route).toContain("Back to onboarding");
+    expect(route).toContain("CarerOnboardingHomeLink");
     expect(wizard).toContain("Week {activeWeek} of 2");
     expect(wizard).toContain("Next week");
     expect(wizard).toContain("Previous week");

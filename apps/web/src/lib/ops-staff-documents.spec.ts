@@ -262,7 +262,7 @@ describe("simplified ops documents section", () => {
 describe("carer onboarding navigation preservation", () => {
   it("retains step 3 hub backward navigation", () => {
     expect(readSrc("components/carer/CarerOnboardingShell.tsx")).toContain("isOnboardingStepNavigable");
-    expect(readSrc("routes/carer/onboarding/availability.tsx")).toContain("Back to onboarding");
+    expect(readSrc("routes/carer/onboarding/availability.tsx")).toContain("CarerOnboardingHomeLink");
     expect(readSrc("lib/carer-onboarding.ts")).toContain("isOnboardingStepNavigable");
   });
 });

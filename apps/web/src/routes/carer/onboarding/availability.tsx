@@ -1,13 +1,12 @@
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
+import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
 import {
   CarerAvailabilityOnboardingWizard,
   CarerAvailabilityOnboardingWizardSkeleton,
 } from "@/components/carer/CarerAvailabilityOnboardingWizard";
-import { Button } from "@/components/ui/button";
 import { carerAuthApi } from "@/lib/carer";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
 import { CARER_ONBOARDING_HUB_PATH } from "@/lib/carer-onboarding-hub";
@@ -59,16 +58,7 @@ function CarerOnboardingAvailabilityPage() {
       subtitle="Add the days and times you're available to work."
     >
       <CarerOnboardingShell activeStep={3} session={carer}>
-        <Button
-          asChild
-          variant="ghost"
-          className="mb-4 h-10 px-0 text-muted-foreground hover:text-foreground"
-        >
-          <Link to={CARER_ONBOARDING_HUB_PATH}>
-            <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-            Back to onboarding
-          </Link>
-        </Button>
+        <CarerOnboardingHomeLink />
 
         {onboardingState.isLoading || !state?.anchorEstablished ? (
           initFailed ? (
