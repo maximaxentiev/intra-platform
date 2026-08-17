@@ -267,7 +267,7 @@ export function CarerAvailabilityOnboardingWizard({
                 {finishing ? (
                   <>
                     <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-                    Finishing…
+                    Completing onboarding...
                   </>
                 ) : (
                   "Complete onboarding"

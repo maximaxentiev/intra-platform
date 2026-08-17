@@ -16,6 +16,7 @@ import {
   mapAvailabilityApiError,
 } from "@/lib/carer-availability";
 import { CarerAvailabilityLoadError } from "@/components/carer/CarerAvailabilityShared";
+import { CARER_ONBOARDING_JUST_COMPLETED_STATE } from "@/lib/carer-onboarding-completion";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -88,7 +89,13 @@ function CarerOnboardingAvailabilityPage() {
             isFetching={onboardingState.isFetching}
             loadFailed={false}
             onRefresh={() => onboardingState.refetch()}
-            onComplete={() => navigate({ to: "/carer", replace: true })}
+            onComplete={() =>
+              navigate({
+                to: "/carer",
+                replace: true,
+                state: CARER_ONBOARDING_JUST_COMPLETED_STATE,
+              })
+            }
           />
         )}
       </CarerOnboardingShell>

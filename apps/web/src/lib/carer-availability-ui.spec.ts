@@ -23,7 +23,7 @@ describe("carer availability UI contracts", () => {
     expect(wizard).toContain("Next week");
     expect(wizard).toContain("Previous week");
     expect(wizard).toContain("Complete onboarding");
-    expect(wizard).toContain("Finishing");
+    expect(wizard).toContain("Completing onboarding...");
     expect(wizard).toContain("week1Complete");
     expect(wizard).toContain("canCompleteOnboarding");
     expect(wizard).not.toContain("This week");

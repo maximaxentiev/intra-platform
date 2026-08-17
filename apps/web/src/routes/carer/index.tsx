@@ -1,7 +1,9 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { carerAuthApi } from "@/lib/carer";
 import { carerOnboardingResumePath, onboardingComplete } from "@/lib/carer-onboarding";
+import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
 import { CarerShell } from "@/components/carer/CarerShell";
+import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardingCompleteBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { carerFullName } from "@/lib/carer";
 
@@ -25,10 +27,13 @@ export const Route = createFileRoute("/carer/")({
 
 function CarerHomePage() {
   const carer = Route.useLoaderData();
+  const locationState = useRouterState({ select: (s) => s.location.state });
+  const showOnboardingCompleteBanner = readOnboardingJustCompleted(locationState);
 
   return (
     <CarerShell session={carer} title={`Hi ${carer.legalFirstName || "there"}`}>
       <div className="grid gap-4">
+        {showOnboardingCompleteBanner ? <CarerOnboardingCompleteBanner /> : null}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Your details</CardTitle>
