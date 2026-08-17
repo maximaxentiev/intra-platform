@@ -67,9 +67,6 @@ function CarerHomePage() {
             <CardTitle className="text-base">Availability</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="text-muted-foreground">
-              Keep your availability up to date so our team knows when you&apos;re available to work.
-            </p>
             <CarerAvailabilityDashboardSummary />
           </CardContent>
         </Card>

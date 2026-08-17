@@ -123,20 +123,42 @@ describe("carer availability upcoming list", () => {
 });
 
 describe("carer availability dashboard summary", () => {
-  it("loads page 1 pageSize 10 on portal home", () => {
+  it("loads page 1 pageSize 10 on portal home with Availability title", () => {
     const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
     const home = readSrc("routes/carer/index.tsx");
     expect(dashboard).toContain("useCarerUpcomingAvailability(1, 10)");
     expect(home).toContain("CarerAvailabilityDashboardSummary");
+    expect(home).toContain("Availability");
   });
 
-  it("shows empty state, grouped dates, and view more link without edit/remove", () => {
+  it("shows Add availability below title when there is no upcoming availability", () => {
     const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
-    expect(dashboard).toContain("No upcoming availability added.");
+    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
+    expect(dashboard).toContain('to="/carer/availability"');
     expect(dashboard).toContain("Add availability");
+    expect(dashboard).toContain("No upcoming availability added.");
+    expect(dashboard).toContain("hasUpcoming");
+    expect(body.indexOf("Add availability")).toBeLessThan(body.indexOf("No upcoming availability added."));
+    expect(body).not.toMatch(/No upcoming availability added\.[\s\S]*Add availability/);
+  });
+
+  it("shows Edit availability below title when upcoming dates exist", () => {
+    const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
+    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
+    expect(dashboard).toContain("Edit availability");
+    expect(dashboard).toContain('hasUpcoming ? "Edit availability" : "Add availability"');
+    expect(body.indexOf("Edit availability")).toBeLessThan(
+      body.indexOf("formatDashboardAvailabilityDateLabel"),
+    );
+  });
+
+  it("renders upcoming dates below the action and View more below the dates", () => {
+    const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
+    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
+    expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
     expect(dashboard).toContain("View more");
-    expect(dashboard).toContain("hash=\"upcoming-availability\"");
-    expect(dashboard).not.toContain("Edit");
+    expect(dashboard).toContain('hash="upcoming-availability"');
+    expect(body.indexOf("formatDashboardAvailabilityDateLabel")).toBeLessThan(body.indexOf("View more"));
     expect(dashboard).not.toContain("Remove");
     expect(dashboard).not.toContain("Trash2");
   });

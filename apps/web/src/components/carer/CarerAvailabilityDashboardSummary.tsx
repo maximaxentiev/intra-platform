@@ -8,6 +8,7 @@ import { useCarerUpcomingAvailability } from "@/lib/carer-availability-upcoming"
 
 export function CarerAvailabilityDashboardSummary() {
   const { data, isLoading, isError } = useCarerUpcomingAvailability(1, 10);
+  const hasUpcoming = (data?.items.length ?? 0) > 0;
 
   if (isLoading) {
     return (
@@ -20,49 +21,50 @@ export function CarerAvailabilityDashboardSummary() {
 
   if (isError) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Could not load upcoming availability.{" "}
-        <Link to="/carer/availability" className="font-medium text-primary hover:underline">
-          Manage availability
-        </Link>
-      </p>
-    );
-  }
-
-  if (!data || data.items.length === 0) {
-    return (
       <div className="space-y-2 text-sm">
-        <p className="text-muted-foreground">No upcoming availability added.</p>
         <Link to="/carer/availability" className="font-medium text-primary hover:underline">
           Add availability
         </Link>
+        <p className="text-muted-foreground">Could not load upcoming availability.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3 text-sm">
-      <ul className="space-y-3">
-        {data.items.map((item) => (
-          <li key={item.calendarDate}>
-            <p className="font-medium">{formatDashboardAvailabilityDateLabel(item.calendarDate)}</p>
-            <ul className="mt-1 space-y-0.5 text-muted-foreground">
-              {item.windows.map((window) => (
-                <li key={window.id}>
-                  {formatAvailabilityWindowDisplay(window.startTime, window.endTime)}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
-      <Link
-        to="/carer/availability"
-        hash="upcoming-availability"
-        className="font-medium text-primary hover:underline"
-      >
-        View more
+      <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+        {hasUpcoming ? "Edit availability" : "Add availability"}
       </Link>
+
+      {!hasUpcoming ? (
+        <p className="text-muted-foreground">No upcoming availability added.</p>
+      ) : (
+        <>
+          <ul className="space-y-3">
+            {data!.items.map((item) => (
+              <li key={item.calendarDate}>
+                <p className="font-medium">
+                  {formatDashboardAvailabilityDateLabel(item.calendarDate)}
+                </p>
+                <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                  {item.windows.map((window) => (
+                    <li key={window.id}>
+                      {formatAvailabilityWindowDisplay(window.startTime, window.endTime)}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          <Link
+            to="/carer/availability"
+            hash="upcoming-availability"
+            className="font-medium text-primary hover:underline"
+          >
+            View more
+          </Link>
+        </>
+      )}
     </div>
   );
 }
