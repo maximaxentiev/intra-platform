@@ -9,11 +9,17 @@ export type CarerAvailabilitySlot = {
   createdAt: string;
 };
 
-export type CarerAvailabilityStepCompletion = {
+export type CarerOnboardingStatus = {
+  profileComplete: boolean;
   profileCompletedAt: string | null;
+  documentsComplete: boolean;
   documentsCompletedAt: string | null;
-  onboardingStep: number;
+  availabilityComplete: boolean;
+  availabilityCompletedAt: string | null;
+  onboardingComplete: boolean;
   onboardingCompletedAt: string | null;
+  canCompleteOnboarding: boolean;
+  onboardingStep: number;
 };
 
 export type OnboardingDayStatus = "exempt_past" | "incomplete" | "available" | "unavailable";
@@ -98,13 +104,7 @@ export function countOnboardingWeekProgress(
   return { answered: answered.length, required: required.length };
 }
 
-export function defaultOnboardingWizardWeek(state: CarerGuidedAvailabilityOnboardingState): 1 | 2 {
-  if (state.week1Complete && (!state.week2Complete || !state.canCompleteOnboarding)) {
-    return 2;
-  }
-  if (state.week1Complete && state.canCompleteOnboarding) {
-    return 2;
-  }
+export function defaultOnboardingWizardWeek(_state?: CarerGuidedAvailabilityOnboardingState): 1 | 2 {
   return 1;
 }
 
@@ -128,7 +128,10 @@ export function mapAvailabilityApiError(err: unknown, fallback: string): string 
     return "End time must be after start time.";
   }
   if (/Complete availability for every required day/i.test(msg)) {
-    return "Complete every required day before finishing onboarding.";
+    return "Could not complete your availability step. Try again.";
+  }
+  if (/availability step/i.test(msg)) {
+    return msg;
   }
   if (/outside your guided onboarding period/i.test(msg)) {
     return "That date is outside your guided onboarding period.";
@@ -179,6 +182,6 @@ export const carerAvailabilityApi = {
       body,
     ),
 
-  completeStep3: () =>
-    api.post<CarerAvailabilityStepCompletion>("/staff-portal/availability/complete-step-3"),
+  completeOnboardingStep: () =>
+    api.post<CarerOnboardingStatus>("/staff-portal/availability/complete-onboarding-step"),
 };

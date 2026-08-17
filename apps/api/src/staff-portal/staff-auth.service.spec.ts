@@ -502,7 +502,7 @@ describe('StaffAuthService', () => {
       });
       expect(profile.legalFirstName).toBe('Alex');
       expect(profile.onboardingStep).toBe(2);
-      expect(profile.documentsCompletedAt).toBe('2026-01-02T12:00:00.000Z');
+      expect(profile.documentsCompletedAt).toEqual(new Date('2026-01-02T12:00:00.000Z'));
       expect(profile.documentsComplete).toBe(true);
       expect(profile.availabilityComplete).toBe(false);
       expect(profile.canCompleteOnboarding).toBe(false);

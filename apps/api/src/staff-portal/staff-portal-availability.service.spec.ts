@@ -3,9 +3,23 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const TEST_TODAY = '2026-08-13';
+
+vi.mock('../availability/availability-toronto.util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../availability/availability-toronto.util')>();
+  const torontoTodayDateString = vi.fn(() => TEST_TODAY);
+  return {
+    ...actual,
+    torontoTodayDateString,
+    isDateBeforeTodayInToronto: vi.fn((calendarDate: string, today?: string) =>
+      actual.compareDateStrings(calendarDate, today ?? torontoTodayDateString()) < 0,
+    ),
+  };
+});
+
 import { AvailabilityService } from '../availability/availability.service';
-import * as torontoUtil from '../availability/availability-toronto.util';
 import { availability, staffAccounts, type Availability, type StaffAvailabilityUnavailableDay } from '../db/schema';
 import { STAFF_PORTAL_AUDIT_EVENTS } from './staff-portal-audit.service';
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
@@ -24,7 +38,7 @@ const SESSION_A: StaffSessionPayload = {
 };
 
 const MONDAY = '2026-08-10';
-const TODAY = '2026-08-13';
+const TODAY = TEST_TODAY;
 const TODAY_DAY = 3;
 
 type AccountRow = typeof staffAccounts.$inferSelect;
@@ -264,14 +278,6 @@ function createHarness(initial?: Partial<AccountRow>) {
 }
 
 describe('StaffPortalAvailabilityService', () => {
-  beforeEach(() => {
-    vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue(TODAY);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('lists only the authenticated staff week rows', async () => {
     const harness = createHarness();
     harness.availabilityRows.push(

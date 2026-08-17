@@ -3,7 +3,21 @@ import { and, eq } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import * as torontoUtil from '../availability/availability-toronto.util';
+
+const TEST_TODAY = '2026-08-13';
+
+vi.mock('../availability/availability-toronto.util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../availability/availability-toronto.util')>();
+  const torontoTodayDateString = vi.fn(() => TEST_TODAY);
+  return {
+    ...actual,
+    torontoTodayDateString,
+    isDateBeforeTodayInToronto: vi.fn((calendarDate: string, today?: string) =>
+      actual.compareDateStrings(calendarDate, today ?? torontoTodayDateString()) < 0,
+    ),
+  };
+});
+
 import * as schema from '../db/schema';
 import { availability, staff, staffAccounts, staffAvailabilityUnavailableDays } from '../db/schema';
 import type { StaffSessionPayload } from './staff-session.service';
@@ -19,7 +33,7 @@ const ACCOUNT_A = '44444444-4444-4444-8444-444444444441';
 const ACCOUNT_B = '44444444-4444-4444-8444-444444444442';
 
 const MONDAY = '2026-08-10';
-const TODAY = '2026-08-13';
+const TODAY = TEST_TODAY;
 const TODAY_DAY = 3;
 
 const SESSION_A: StaffSessionPayload = {
@@ -59,6 +73,12 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 10 });
     db = drizzle(pool, { schema, casing: 'snake_case' });
+
+    await pool.query(`
+      ALTER TABLE staff_accounts
+      ADD COLUMN IF NOT EXISTS availability_completed_at timestamp with time zone
+    `);
+
     const onboarding = new StaffPortalOnboardingService(db, { record: audit } as never);
     service = new StaffPortalAvailabilityService(db, { record: audit } as never, onboarding);
 
@@ -112,7 +132,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   });
 
   afterEach(async () => {
-    vi.restoreAllMocks();
     audit.mockClear();
     await db
       .delete(availability)
@@ -128,10 +147,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
       .where(eq(staffAccounts.id, ACCOUNT_A));
   });
 
-  function mockToday() {
-    vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue(TODAY);
-  }
-
   async function rowsFor(staffId: string, dayOfWeek: number) {
     return db
       .select()
@@ -146,8 +161,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   }
 
   it('serializes concurrent overlapping first inserts to one success', async () => {
-    mockToday();
-
     const results = await Promise.allSettled([
       service.create(SESSION_A, {
         weekStartDate: MONDAY,
@@ -179,8 +192,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   });
 
   it('allows concurrent adjacent first inserts for the same staff/day', async () => {
-    mockToday();
-
     const results = await Promise.allSettled([
       service.create(SESSION_A, {
         weekStartDate: MONDAY,
@@ -202,8 +213,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   });
 
   it('does not block overlapping inserts on different days for the same staff', async () => {
-    mockToday();
-
     const results = await Promise.allSettled([
       service.create(SESSION_A, {
         weekStartDate: MONDAY,
@@ -225,8 +234,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   });
 
   it('does not block overlapping inserts for different staff on the same day', async () => {
-    mockToday();
-
     const results = await Promise.allSettled([
       service.create(SESSION_A, {
         weekStartDate: MONDAY,
@@ -247,9 +254,7 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
     expect(await rowsFor(STAFF_B, TODAY_DAY)).toHaveLength(1);
   });
 
-  it('serializes concurrent create vs mark-unavailable to one consistent final state', async () => {
-    mockToday();
-    await service.ensureOnboardingState(SESSION_A);
+  it('serializes concurrent create vs mark-unavailable to one consistent final state', async () => {    await service.ensureOnboardingState(SESSION_A);
 
     const results = await Promise.allSettled([
       service.create(SESSION_A, {
@@ -279,8 +284,6 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
   });
 
   it('concurrent ensure requests produce one stable anchor', async () => {
-    mockToday();
-
     const results = await Promise.allSettled([
       service.ensureOnboardingState(SESSION_A),
       service.ensureOnboardingState(SESSION_A),
@@ -299,9 +302,7 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
     expect(account?.availabilityOnboardingWeek1Start).toBe(MONDAY);
   });
 
-  it('concurrent mark-unavailable is idempotent', async () => {
-    mockToday();
-    await service.ensureOnboardingState(SESSION_A);
+  it('concurrent mark-unavailable is idempotent', async () => {    await service.ensureOnboardingState(SESSION_A);
 
     const results = await Promise.allSettled([
       service.markUnavailable(SESSION_A, {

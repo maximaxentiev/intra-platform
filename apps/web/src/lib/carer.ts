@@ -12,7 +12,14 @@ export interface CarerSession {
   status: CarerAccountStatus;
   onboardingStep: number;
   profileCompletedAt: string | null;
+  documentsCompletedAt: string | null;
+  availabilityCompletedAt: string | null;
   onboardingCompletedAt: string | null;
+  profileComplete: boolean;
+  documentsComplete: boolean;
+  availabilityComplete: boolean;
+  onboardingComplete: boolean;
+  canCompleteOnboarding: boolean;
   legalFirstName: string;
   legalLastName: string;
   phone: string;

@@ -134,10 +134,13 @@ describe("carerAvailabilityApi", () => {
     });
   });
 
-  it("completes onboarding step 3", async () => {
-    vi.mocked(api.post).mockResolvedValue({ onboardingCompletedAt: "2026-08-13T12:00:00.000Z" });
-    await carerAvailabilityApi.completeStep3();
-    expect(api.post).toHaveBeenCalledWith("/staff-portal/availability/complete-step-3");
+  it("completes availability onboarding step", async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      availabilityComplete: true,
+      onboardingComplete: false,
+    });
+    await carerAvailabilityApi.completeOnboardingStep();
+    expect(api.post).toHaveBeenCalledWith("/staff-portal/availability/complete-onboarding-step");
   });
 });
 
@@ -154,9 +157,9 @@ describe("onboarding helpers", () => {
     expect(progress).toEqual({ answered: 1, required: 2 });
   });
 
-  it("defaults wizard week from server completion flags", () => {
+  it("defaults wizard week to week 1", () => {
     expect(defaultOnboardingWizardWeek(onboardingState({ week1Complete: false }))).toBe(1);
-    expect(defaultOnboardingWizardWeek(onboardingState({ week1Complete: true }))).toBe(2);
+    expect(defaultOnboardingWizardWeek(onboardingState({ week1Complete: true }))).toBe(1);
   });
 });
 
@@ -208,7 +211,7 @@ describe("mapAvailabilityApiError", () => {
         new ApiError(400, "Complete availability for every required day in your onboarding period."),
         "fallback",
       ),
-    ).toMatch(/Complete every required day/i);
+    ).toMatch(/Could not complete your availability step/i);
   });
 });
 

@@ -260,9 +260,9 @@ describe("simplified ops documents section", () => {
 });
 
 describe("carer onboarding navigation preservation", () => {
-  it("retains step 3 backward navigation from commit 48fefd3", () => {
+  it("retains step 3 hub backward navigation", () => {
     expect(readSrc("components/carer/CarerOnboardingShell.tsx")).toContain("isOnboardingStepNavigable");
-    expect(readSrc("routes/carer/onboarding/availability.tsx")).toContain("Back to Documents");
+    expect(readSrc("routes/carer/onboarding/availability.tsx")).toContain("Back to onboarding");
     expect(readSrc("lib/carer-onboarding.ts")).toContain("isOnboardingStepNavigable");
   });
 });

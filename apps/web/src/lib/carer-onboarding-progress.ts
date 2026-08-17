@@ -1,45 +1,46 @@
+import type { CarerSession } from "./carer";
+
 /** Persisted onboarding fields used to derive step completion in the progress shell. */
 export type OnboardingProgressContext = {
   /** Step number of the page currently being viewed (1–3). */
   activeStep: number;
+  profileComplete: boolean;
+  documentsComplete: boolean;
+  availabilityComplete: boolean;
   profileCompletedAt: string | null;
   onboardingStep: number;
-  onboardingCompletedAt: string | null;
 };
 
 export type OnboardingStepDisplayState = "complete" | "current" | "locked";
 
 export function countCompletedOnboardingSteps(
-  ctx: Pick<
-    OnboardingProgressContext,
-    "profileCompletedAt" | "onboardingStep" | "onboardingCompletedAt"
-  >,
+  session: Pick<CarerSession, "profileComplete" | "documentsComplete" | "availabilityComplete">,
 ): number {
   let count = 0;
-  if (ctx.profileCompletedAt) count++;
-  if (ctx.onboardingStep >= 3) count++;
-  if (ctx.onboardingCompletedAt) count++;
+  if (session.profileComplete) count++;
+  if (session.documentsComplete) count++;
+  if (session.availabilityComplete) count++;
   return count;
 }
 
-/** Completion is derived from persisted state, not from the active route alone. */
+/** Completion is derived from authoritative session flags, not route history. */
 export function resolveOnboardingStepDisplayState(
   stepNumber: number,
   ctx: OnboardingProgressContext,
 ): OnboardingStepDisplayState {
-  if (stepNumber === 1 && ctx.profileCompletedAt) return "complete";
-  if (stepNumber === 2 && ctx.onboardingStep >= 3) return "complete";
-  if (stepNumber === 3 && ctx.onboardingCompletedAt) return "complete";
+  if (stepNumber === 1 && ctx.profileComplete) return "complete";
+  if (stepNumber === 2 && ctx.documentsComplete) return "complete";
+  if (stepNumber === 3 && ctx.availabilityComplete) return "complete";
 
-  if (stepNumber === 1 && !ctx.profileCompletedAt) return "current";
+  if (stepNumber === 1 && !ctx.profileComplete) return "current";
 
   if (stepNumber === 2) {
-    if (!ctx.profileCompletedAt) return "locked";
+    if (!ctx.profileComplete) return "locked";
     return "current";
   }
 
   if (stepNumber === 3) {
-    if (ctx.onboardingStep < 3) return "locked";
+    if (!ctx.documentsComplete) return "locked";
     return "current";
   }
 

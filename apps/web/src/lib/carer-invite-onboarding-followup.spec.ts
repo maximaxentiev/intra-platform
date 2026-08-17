@@ -24,10 +24,11 @@ describe("carer onboarding revisit navigation", () => {
     expect(form).toContain("completeStep1");
   });
 
-  it("progress shell uses persisted completion state", () => {
+  it("progress shell uses authoritative session completion flags", () => {
     const shell = readSrc("components/carer/CarerOnboardingShell.tsx");
-    expect(shell).toContain("profileCompletedAt");
+    expect(shell).toContain("profileComplete");
+    expect(shell).toContain("documentsComplete");
+    expect(shell).toContain("availabilityComplete");
     expect(shell).toContain("resolveOnboardingStepDisplayState");
-    expect(shell).not.toContain("currentStep");
   });
 });

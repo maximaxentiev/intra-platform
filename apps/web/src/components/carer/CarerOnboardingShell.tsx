@@ -5,6 +5,7 @@ import {
   CARER_ONBOARDING_STEPS,
   isOnboardingStepNavigable,
 } from "@/lib/carer-onboarding";
+import type { CarerSession } from "@/lib/carer";
 import {
   countCompletedOnboardingSteps,
   onboardingStepStateLabel,
@@ -31,20 +32,31 @@ function stepItemClassName(isViewing: boolean, state: string): string {
  */
 export function CarerOnboardingShell({
   activeStep,
-  profileCompletedAt,
-  onboardingStep,
-  onboardingCompletedAt,
+  session,
   children,
-}: OnboardingProgressContext & { children: ReactNode }) {
+}: {
+  activeStep: number;
+  session: Pick<
+    CarerSession,
+    | "profileComplete"
+    | "documentsComplete"
+    | "availabilityComplete"
+    | "profileCompletedAt"
+    | "onboardingStep"
+  >;
+  children: ReactNode;
+}) {
   const ctx: OnboardingProgressContext = {
     activeStep,
-    profileCompletedAt,
-    onboardingStep,
-    onboardingCompletedAt,
+    profileComplete: session.profileComplete,
+    documentsComplete: session.documentsComplete,
+    availabilityComplete: session.availabilityComplete,
+    profileCompletedAt: session.profileCompletedAt,
+    onboardingStep: session.onboardingStep,
   };
-  const session = { profileCompletedAt, onboardingStep };
+  const navSession = { profileCompletedAt: session.profileCompletedAt, onboardingStep: session.onboardingStep };
   const total = CARER_ONBOARDING_STEPS.length;
-  const completedCount = countCompletedOnboardingSteps(ctx);
+  const completedCount = countCompletedOnboardingSteps(session);
   const percent = Math.round((completedCount / total) * 100);
 
   return (
@@ -55,7 +67,7 @@ export function CarerOnboardingShell({
             Step {activeStep} of {total}
           </p>
           <p className="text-xs text-muted-foreground">
-            {completedCount} of {total} steps completed
+            {completedCount} of {total} steps complete
           </p>
         </div>
 
@@ -78,7 +90,7 @@ export function CarerOnboardingShell({
             const state = resolveOnboardingStepDisplayState(s.step, ctx);
             const label = onboardingStepStateLabel(state, s.step, activeStep);
             const isViewing = s.step === activeStep;
-            const navigable = isOnboardingStepNavigable(s.step, activeStep, session);
+            const navigable = isOnboardingStepNavigable(s.step, activeStep, navSession);
             const itemClass = stepItemClassName(isViewing, state);
 
             const inner = (

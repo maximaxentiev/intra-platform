@@ -1,11 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
-import { CarerDocumentsBackLink, CarerDocumentsForm } from "@/components/carer/CarerDocumentsForm";
+import { CarerDocumentsForm } from "@/components/carer/CarerDocumentsForm";
+import { Button } from "@/components/ui/button";
+import { carerAuthApi } from "@/lib/carer";
 import { carerDocumentsApi } from "@/lib/carer-documents";
+import { CARER_ONBOARDING_HUB_PATH } from "@/lib/carer-onboarding-hub";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
-import { stepPathForNumber } from "@/lib/carer-onboarding";
 
 export const Route = createFileRoute("/carer/onboarding/documents")({
   ssr: false,
@@ -18,11 +21,18 @@ export const Route = createFileRoute("/carer/onboarding/documents")({
 function CarerOnboardingDocumentsPage() {
   const { carer } = Route.useRouteContext();
   const navigate = useNavigate();
+  const router = useRouter();
 
   const documents = useQuery({
     queryKey: ["carer-documents"],
     queryFn: () => carerDocumentsApi.get(),
   });
+
+  async function handleStepComplete() {
+    await carerAuthApi.session();
+    await router.invalidate();
+    navigate({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
+  }
 
   return (
     <CarerShell
@@ -30,20 +40,24 @@ function CarerOnboardingDocumentsPage() {
       title="Documents"
       subtitle="Upload the documents Intra needs to review before you can be considered fully compliant for shifts."
     >
-      <CarerOnboardingShell
-        activeStep={2}
-        profileCompletedAt={carer.profileCompletedAt}
-        onboardingStep={carer.onboardingStep}
-        onboardingCompletedAt={carer.onboardingCompletedAt}
-      >
-        <CarerDocumentsBackLink />
+      <CarerOnboardingShell activeStep={2} session={carer}>
+        <Button
+          asChild
+          variant="ghost"
+          className="mb-4 h-10 px-0 text-muted-foreground hover:text-foreground"
+        >
+          <Link to={CARER_ONBOARDING_HUB_PATH}>
+            <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
+            Back to onboarding
+          </Link>
+        </Button>
         <CarerDocumentsForm
           mode="onboarding"
           documents={documents.data}
           isLoading={documents.isLoading}
-          step2Complete={Boolean(documents.data?.documentsCompletedAt)}
+          step2Complete={carer.documentsComplete}
           onRefresh={() => documents.refetch()}
-          onStepComplete={() => navigate({ to: stepPathForNumber(3), replace: true })}
+          onStepComplete={() => void handleStepComplete()}
         />
       </CarerOnboardingShell>
     </CarerShell>

@@ -2,7 +2,22 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+
+const TEST_TODAY = '2026-08-13';
+
+vi.mock('../availability/availability-toronto.util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../availability/availability-toronto.util')>();
+  const torontoTodayDateString = vi.fn(() => TEST_TODAY);
+  return {
+    ...actual,
+    torontoTodayDateString,
+    isDateBeforeTodayInToronto: vi.fn((calendarDate: string, today?: string) =>
+      actual.compareDateStrings(calendarDate, today ?? torontoTodayDateString()) < 0,
+    ),
+  };
+});
+
 import { AvailabilityService } from '../availability/availability.service';
 import * as torontoUtil from '../availability/availability-toronto.util';
 import {
@@ -35,7 +50,7 @@ const SESSION_B: StaffSessionPayload = {
 
 const MONDAY = '2026-08-10';
 const WEEK2 = '2026-08-17';
-const TODAY = '2026-08-13';
+const TODAY = TEST_TODAY;
 const TODAY_DAY = 3;
 
 type AccountRow = {
@@ -298,12 +313,8 @@ function createHarness(initial?: Partial<AccountRow>) {
 }
 
 describe('StaffPortalAvailabilityService onboarding state', () => {
-  beforeEach(() => {
-    vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue(TODAY);
-  });
-
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.mocked(torontoUtil.torontoTodayDateString).mockImplementation(() => TEST_TODAY);
   });
 
   describe('anchor', () => {
@@ -514,10 +525,9 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
 
     it('does not require unavailable markers or per-day completion', async () => {
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
-      const state = await harness.service.getOnboardingState(SESSION_A);
-      expect(state.canCompleteOnboarding).toBe(false);
       await expect(harness.service.completeStep3(SESSION_A)).resolves.toMatchObject({
         availabilityComplete: true,
+        onboardingComplete: false,
       });
     });
   });

@@ -4,16 +4,6 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   CARER_DAY_NAMES,
   formatShortCalendarDate,
   formatWeekRangeLabel,
@@ -23,7 +13,6 @@ import {
 import {
   CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
   carerAvailabilityApi,
-  countOnboardingWeekProgress,
   defaultOnboardingWizardWeek,
   mapAvailabilityApiError,
   type CarerGuidedAvailabilityOnboardingState,
@@ -49,13 +38,6 @@ type CarerAvailabilityOnboardingWizardProps = {
   onComplete: () => void;
 };
 
-type PendingUnavailable = {
-  weekStartDate: string;
-  dayOfWeek: number;
-  calendarDate: string;
-  windowCount: number;
-};
-
 export function CarerAvailabilityOnboardingWizard({
   onboardingState,
   isFetching = false,
@@ -67,10 +49,6 @@ export function CarerAvailabilityOnboardingWizard({
   const today = torontoTodayDateString();
 
   const [wizardWeek, setWizardWeek] = useState<WizardWeek | null>(null);
-  const [pendingUnavailable, setPendingUnavailable] = useState<PendingUnavailable | null>(null);
-  const [markingUnavailable, setMarkingUnavailable] = useState(false);
-  const [clearingDay, setClearingDay] = useState<CarerOnboardingAvailabilityDay | null>(null);
-  const [clearing, setClearing] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
 
@@ -87,7 +65,6 @@ export function CarerAvailabilityOnboardingWizard({
     () => onboardingState.days.filter((d) => d.weekIndex === activeWeek),
     [onboardingState.days, activeWeek],
   );
-  const weekProgress = countOnboardingWeekProgress(onboardingState.days, activeWeek);
 
   const refreshOnboardingState = async () => {
     await queryClient.invalidateQueries({
@@ -101,66 +78,15 @@ export function CarerAvailabilityOnboardingWizard({
     onAfterMutation: refreshOnboardingState,
   });
 
-  async function handleMarkUnavailable(day: CarerOnboardingAvailabilityDay) {
-    if (day.windows.length > 0) {
-      setPendingUnavailable({
-        weekStartDate: day.weekIndex === 1 ? onboardingState.week1Start! : onboardingState.week2Start!,
-        dayOfWeek: day.dayOfWeek,
-        calendarDate: day.calendarDate,
-        windowCount: day.windows.length,
-      });
-      return;
-    }
-    await markUnavailable(day);
-  }
-
-  async function markUnavailable(day: CarerOnboardingAvailabilityDay) {
-    const weekStartDate =
-      day.weekIndex === 1 ? onboardingState.week1Start! : onboardingState.week2Start!;
-    setMarkingUnavailable(true);
-    try {
-      await carerAvailabilityApi.markUnavailable({
-        weekStartDate,
-        dayOfWeek: day.dayOfWeek,
-      });
-      toast.success("Day marked as not available");
-      await refreshOnboardingState();
-    } catch (err) {
-      toast.error(mapAvailabilityApiError(err, "Could not mark this day as not available."));
-    } finally {
-      setMarkingUnavailable(false);
-      setPendingUnavailable(null);
-    }
-  }
-
-  async function handleClearUnavailable(day: CarerOnboardingAvailabilityDay) {
-    setClearing(true);
-    try {
-      const weekStartDate =
-        day.weekIndex === 1 ? onboardingState.week1Start! : onboardingState.week2Start!;
-      await carerAvailabilityApi.clearUnavailable({
-        weekStartDate,
-        dayOfWeek: day.dayOfWeek,
-      });
-      toast.success("Response cleared");
-      setClearingDay(null);
-      await refreshOnboardingState();
-    } catch (err) {
-      toast.error(mapAvailabilityApiError(err, "Could not clear this day's response."));
-    } finally {
-      setClearing(false);
-    }
-  }
-
-  async function handleCompleteOnboarding() {
+  async function handleCompleteAvailabilityStep() {
     setFinishError(null);
     setFinishing(true);
     try {
-      await carerAvailabilityApi.completeStep3();
+      await carerAvailabilityApi.completeOnboardingStep();
       onComplete();
     } catch (err) {
       await refreshOnboardingState();
-      const message = mapAvailabilityApiError(err, "Could not finish onboarding.");
+      const message = mapAvailabilityApiError(err, "Could not complete your availability step.");
       setFinishError(message);
       toast.error(message);
     } finally {
@@ -168,28 +94,22 @@ export function CarerAvailabilityOnboardingWizard({
     }
   }
 
-  const busy = mutations.saving || mutations.removing || markingUnavailable || clearing || finishing;
+  const busy = mutations.saving || mutations.removing || finishing;
+  const anchorReady = onboardingState.anchorEstablished;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          Add your availability so our team knows when you&apos;re available to work.
+          Share an initial two-week snapshot of when you might be available to work. You can leave
+          days blank — this step is optional and does not require availability on every day.
         </p>
-        <p className="text-sm text-muted-foreground">
-          Complete the next two weeks by adding your availability or marking days you&apos;re not
-          available.
-        </p>
+        <p className="text-sm text-muted-foreground">Your changes are saved automatically.</p>
       </div>
 
       <div className="space-y-1">
         <p className="text-lg font-semibold">Week {activeWeek} of 2</p>
         <p className="text-sm text-muted-foreground">{formatWeekRangeLabel(weekStart)}</p>
-        {weekProgress.required > 0 ? (
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {weekProgress.answered} of {weekProgress.required} required days completed
-          </p>
-        ) : null}
         {isFetching && !loadFailed ? (
           <p className="text-xs text-muted-foreground">Refreshing…</p>
         ) : null}
@@ -204,45 +124,25 @@ export function CarerAvailabilityOnboardingWizard({
             day={day}
             today={today}
             busy={busy}
-            onAdd={() =>
-              mutations.openAdd(
-                day.dayOfWeek,
-                day.calendarDate,
-              )
-            }
+            onAdd={() => mutations.openAdd(day.dayOfWeek, day.calendarDate)}
             onEdit={(slot) => mutations.openEdit(slot, day.calendarDate)}
             onRemove={(slot) => mutations.setRemovingSlot(slot)}
-            onMarkUnavailable={() => void handleMarkUnavailable(day)}
-            onClearUnavailable={() => setClearingDay(day)}
           />
         ))}
       </div>
 
       <div className="space-y-3 border-t pt-4">
         {activeWeek === 1 ? (
-          <>
-            {!onboardingState.week1Complete ? (
-              <p className="text-sm text-muted-foreground">
-                Add availability or mark each required day as not available before continuing.
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              className="h-11 w-full"
-              disabled={!onboardingState.week1Complete || busy}
-              onClick={() => setWizardWeek(2)}
-            >
-              Next week
-            </Button>
-          </>
+          <Button
+            type="button"
+            className="h-11 w-full"
+            disabled={!anchorReady || busy}
+            onClick={() => setWizardWeek(2)}
+          >
+            Next week
+          </Button>
         ) : (
           <>
-            {!onboardingState.canCompleteOnboarding ? (
-              <p className="text-sm text-muted-foreground">
-                Add availability or mark each required day as not available before finishing
-                onboarding.
-              </p>
-            ) : null}
             {finishError ? (
               <p className="text-sm text-destructive" role="alert" aria-live="polite">
                 {finishError}
@@ -261,16 +161,16 @@ export function CarerAvailabilityOnboardingWizard({
               <Button
                 type="button"
                 className="h-11 w-full sm:flex-1"
-                disabled={!onboardingState.canCompleteOnboarding || busy}
-                onClick={() => void handleCompleteOnboarding()}
+                disabled={!anchorReady || busy}
+                onClick={() => void handleCompleteAvailabilityStep()}
               >
                 {finishing ? (
                   <>
                     <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-                    Completing onboarding...
+                    Completing step...
                   </>
                 ) : (
-                  "Complete onboarding"
+                  "Complete availability step"
                 )}
               </Button>
             </div>
@@ -295,62 +195,6 @@ export function CarerAvailabilityOnboardingWizard({
         onClose={() => mutations.setRemovingSlot(null)}
         onConfirm={() => void mutations.handleRemoveConfirm()}
       />
-
-      <AlertDialog
-        open={pendingUnavailable !== null}
-        onOpenChange={(open) => !open && setPendingUnavailable(null)}
-      >
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark this day as not available?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your saved availability for this day will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11" disabled={markingUnavailable}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11"
-              disabled={markingUnavailable}
-              onClick={() => {
-                if (!pendingUnavailable) return;
-                const day = weekDays.find(
-                  (d) => d.calendarDate === pendingUnavailable.calendarDate,
-                );
-                if (day) void markUnavailable(day);
-              }}
-            >
-              {markingUnavailable ? "Saving…" : "Mark not available"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={clearingDay !== null} onOpenChange={(open) => !open && setClearingDay(null)}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change this day&apos;s response?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear your not available answer. You&apos;ll need to add availability or mark
-              the day again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11" disabled={clearing}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11"
-              disabled={clearing}
-              onClick={() => clearingDay && void handleClearUnavailable(clearingDay)}
-            >
-              {clearing ? "Clearing…" : "Clear response"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -362,8 +206,6 @@ type OnboardingDayCardProps = {
   onAdd: () => void;
   onEdit: (slot: CarerOnboardingAvailabilityDay["windows"][number]) => void;
   onRemove: (slot: CarerOnboardingAvailabilityDay["windows"][number]) => void;
-  onMarkUnavailable: () => void;
-  onClearUnavailable: () => void;
 };
 
 function OnboardingDayCard({
@@ -373,11 +215,10 @@ function OnboardingDayCard({
   onAdd,
   onEdit,
   onRemove,
-  onMarkUnavailable,
-  onClearUnavailable,
 }: OnboardingDayCardProps) {
   const dayName = CARER_DAY_NAMES[day.dayOfWeek] ?? "Day";
   const todayDay = isTodayCalendarDate(day.calendarDate, today);
+  const hasWindows = day.windows.length > 0;
 
   if (day.status === "exempt_past") {
     return (
@@ -391,17 +232,10 @@ function OnboardingDayCard({
           </h3>
           <p className="text-sm text-muted-foreground">{formatShortCalendarDate(day.calendarDate)}</p>
         </div>
-        <p className="text-sm text-muted-foreground">No response required</p>
+        <p className="text-sm text-muted-foreground">Past date</p>
       </section>
     );
   }
-
-  const statusLabel =
-    day.status === "incomplete"
-      ? "Needs a response"
-      : day.status === "available"
-        ? "Available"
-        : "Not available";
 
   return (
     <section
@@ -423,45 +257,11 @@ function OnboardingDayCard({
             ) : null}
           </h3>
           <p className="text-sm text-muted-foreground">{formatShortCalendarDate(day.calendarDate)}</p>
-          <p className="mt-1 text-sm font-medium" aria-live="polite">
-            {statusLabel}
-          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {day.status !== "unavailable" ? (
-            <CarerAvailabilityAddButton onClick={onAdd} disabled={busy} />
-          ) : null}
-          {day.status === "incomplete" || day.status === "available" ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-11"
-              disabled={busy}
-              onClick={onMarkUnavailable}
-            >
-              Not available
-            </Button>
-          ) : null}
-          {day.status === "unavailable" ? (
-            <>
-              <CarerAvailabilityAddButton onClick={onAdd} disabled={busy} />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11"
-                disabled={busy}
-                onClick={onClearUnavailable}
-              >
-                Change response
-              </Button>
-            </>
-          ) : null}
-        </div>
+        <CarerAvailabilityAddButton onClick={onAdd} disabled={busy} />
       </div>
 
-      {day.status === "available" ? (
+      {hasWindows ? (
         <CarerAvailabilityWindowList
           slots={day.windows}
           dayName={dayName}
@@ -471,13 +271,9 @@ function OnboardingDayCard({
           onEdit={onEdit}
           onRemove={onRemove}
         />
-      ) : day.status === "incomplete" ? (
-        <p className="text-sm text-muted-foreground">
-          Add your availability or mark this day as not available.
-        </p>
-      ) : day.status === "unavailable" ? (
-        <p className="text-sm font-medium">Not available</p>
-      ) : null}
+      ) : (
+        <p className="text-sm text-muted-foreground">No availability added yet.</p>
+      )}
     </section>
   );
 }

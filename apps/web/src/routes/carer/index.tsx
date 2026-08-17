@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { carerAuthApi } from "@/lib/carer";
-import { carerOnboardingResumePath, onboardingComplete } from "@/lib/carer-onboarding";
+import { CARER_ONBOARDING_HUB_PATH, onboardingComplete } from "@/lib/carer-onboarding";
 import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardingCompleteBanner";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/carer/")({
       throw redirect({ to: "/carer/login", replace: true });
     }
     if (!onboardingComplete(session)) {
-      throw redirect({ to: carerOnboardingResumePath(session), replace: true });
+      throw redirect({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
     }
     return { carer: session };
   },

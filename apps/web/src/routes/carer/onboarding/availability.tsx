@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { CarerShell } from "@/components/carer/CarerShell";
@@ -8,15 +8,15 @@ import {
   CarerAvailabilityOnboardingWizardSkeleton,
 } from "@/components/carer/CarerAvailabilityOnboardingWizard";
 import { Button } from "@/components/ui/button";
+import { carerAuthApi } from "@/lib/carer";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
-import { stepPathForNumber } from "@/lib/carer-onboarding";
+import { CARER_ONBOARDING_HUB_PATH } from "@/lib/carer-onboarding-hub";
 import {
   CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
   carerAvailabilityApi,
   mapAvailabilityApiError,
 } from "@/lib/carer-availability";
 import { CarerAvailabilityLoadError } from "@/components/carer/CarerAvailabilityShared";
-import { CARER_ONBOARDING_JUST_COMPLETED_STATE } from "@/lib/carer-onboarding-completion";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/carer/onboarding/availability")({
 function CarerOnboardingAvailabilityPage() {
   const { carer } = Route.useRouteContext();
   const navigate = useNavigate();
+  const router = useRouter();
 
   const onboardingState = useQuery({
     queryKey: CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
@@ -45,26 +46,27 @@ function CarerOnboardingAvailabilityPage() {
     ? mapAvailabilityApiError(onboardingState.error, "Could not load your onboarding availability.")
     : null;
 
+  async function handleAvailabilityStepComplete() {
+    await carerAuthApi.session();
+    await router.invalidate();
+    navigate({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
+  }
+
   return (
     <CarerShell
       session={carer}
       title="Availability"
       subtitle="Add the days and times you're available to work."
     >
-      <CarerOnboardingShell
-        activeStep={3}
-        profileCompletedAt={carer.profileCompletedAt}
-        onboardingStep={carer.onboardingStep}
-        onboardingCompletedAt={carer.onboardingCompletedAt}
-      >
+      <CarerOnboardingShell activeStep={3} session={carer}>
         <Button
           asChild
           variant="ghost"
-          className="h-10 px-0 text-muted-foreground hover:text-foreground"
+          className="mb-4 h-10 px-0 text-muted-foreground hover:text-foreground"
         >
-          <Link to={stepPathForNumber(2)}>
+          <Link to={CARER_ONBOARDING_HUB_PATH}>
             <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-            Back to Documents
+            Back to onboarding
           </Link>
         </Button>
 
@@ -89,13 +91,7 @@ function CarerOnboardingAvailabilityPage() {
             isFetching={onboardingState.isFetching}
             loadFailed={false}
             onRefresh={() => onboardingState.refetch()}
-            onComplete={() =>
-              navigate({
-                to: "/carer",
-                replace: true,
-                state: CARER_ONBOARDING_JUST_COMPLETED_STATE,
-              })
-            }
+            onComplete={() => void handleAvailabilityStepComplete()}
           />
         )}
       </CarerOnboardingShell>

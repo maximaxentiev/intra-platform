@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { carerAuthApi } from "@/lib/carer";
 import {
-  carerOnboardingResumePath,
+  CARER_ONBOARDING_HUB_PATH,
   maxAccessibleOnboardingStep,
   onboardingComplete,
   requiredStepForPath,
@@ -17,7 +17,7 @@ export async function requireCarerSessionForPortal() {
     throw redirect({ to: "/carer/login", replace: true });
   }
   if (!onboardingComplete(session)) {
-    throw redirect({ to: carerOnboardingResumePath(session), replace: true });
+    throw redirect({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
   }
   return session;
 }
@@ -44,6 +44,6 @@ export function assertOnboardingStepAccess(
   const required = requiredStepForPath(path);
   const allowed = maxAccessibleOnboardingStep(session);
   if (required > allowed) {
-    throw redirect({ to: carerOnboardingResumePath(session), replace: true });
+    throw redirect({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
   }
 }
