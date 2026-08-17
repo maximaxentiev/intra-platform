@@ -23,10 +23,12 @@ import { api } from "@/lib/api";
 import { carerShiftsApi, type CarerShift } from "@/lib/carer-shifts";
 import {
   carerShiftsHistoryQueryKey,
+  carerShiftDetailQueryKey,
   carerShiftsSummaryQueryKey,
   carerShiftsUpcomingQueryKey,
 } from "@/lib/carer-shifts-queries";
 import {
+  carerShiftDetailLinkLabel,
   carerShiftStatusLabel,
   carerShiftsRangeLabel,
 } from "@/lib/carer-shifts-display";
@@ -107,10 +109,11 @@ describe("carerShiftsApi", () => {
 });
 
 describe("carer shift query keys", () => {
-  it("uses stable query keys for summary, upcoming, and history", () => {
+  it("uses stable query keys for summary, upcoming, history, and detail", () => {
     expect(carerShiftsSummaryQueryKey()).toEqual(["carer-shifts-summary", 3]);
     expect(carerShiftsUpcomingQueryKey(1, 10)).toEqual(["carer-shifts-upcoming", 1, 10]);
     expect(carerShiftsHistoryQueryKey(2, 25)).toEqual(["carer-shifts-history", 2, 25]);
+    expect(carerShiftDetailQueryKey("shift-1")).toEqual(["carer-shift", "shift-1"]);
   });
 });
 
@@ -127,6 +130,13 @@ describe("carer shift display helpers", () => {
       carerShiftsRangeLabel({ page: 1, pageSize: 10, totalItems: 24 }),
     ).toBe("Showing 1–10 of 24 shifts");
     expect(carerShiftsRangeLabel(undefined)).toBeNull();
+  });
+
+  it("builds accessible detail link labels", () => {
+    expect(carerShiftDetailLinkLabel({ shiftDate: "2026-08-25" })).toContain(
+      "View details for",
+    );
+    expect(carerShiftDetailLinkLabel({ shiftDate: "2026-08-25" })).toContain("2026");
   });
 });
 
@@ -145,13 +155,14 @@ describe("carer shifts dashboard", () => {
     expect(dashboard).toContain("formatAvailabilityWindowDisplay");
     expect(dashboard).toContain("shift.centre.name");
     expect(dashboard).toContain("shift.roleNeeded");
-    expect(dashboard).toContain("carerShiftStatusLabel");
-    expect(dashboard).toContain("CARER_SHIFT_STATUS_TONE");
+    expect(dashboard).toContain("CarerShiftStatusBadge");
   });
 
-  it("shows empty state and View all shifts link", () => {
+  it("shows empty state, View details links, and View all shifts link", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(dashboard).toContain("No upcoming shifts assigned.");
+    expect(dashboard).toContain('to="/carer/shifts/$id"');
+    expect(dashboard).toContain("View details");
     expect(dashboard).toContain('to="/carer/shifts"');
     expect(dashboard).toContain("View all shifts");
   });
@@ -167,6 +178,11 @@ describe("carer shifts page", () => {
   it("is protected by requireCarerSessionForPortal", () => {
     const route = readSrc("routes/carer/shifts.tsx");
     expect(route).toContain("requireCarerSessionForPortal");
+    expect(route).toContain("<Outlet />");
+  });
+
+  it("renders the list page at /carer/shifts/", () => {
+    const route = readSrc("routes/carer/shifts.index.tsx");
     expect(route).toContain("CarerShiftsManager");
     expect(route).toContain("Back to portal");
   });
@@ -192,13 +208,15 @@ describe("carer shifts page", () => {
     expect(manager).toContain("setHistoryPage(1)");
   });
 
-  it("renders shift cards without internal fields or action buttons", () => {
+  it("renders shift cards with View details links and no action buttons", () => {
     const card = readSrc("components/carer/CarerShiftCard.tsx");
     const manager = readSrc("components/carer/CarerShiftsManager.tsx");
     expect(card).toContain("formatDashboardAvailabilityDateLabel");
     expect(card).toContain("formatAvailabilityWindowDisplay");
-    expect(card).toContain("carerShiftStatusLabel");
+    expect(card).toContain("CarerShiftStatusBadge");
     expect(card).toContain("shift.roleNeeded");
+    expect(card).toContain('to="/carer/shifts/$id"');
+    expect(card).toContain("View details");
     expect(card).not.toContain("assignedStaffId");
     expect(card).not.toContain("cancellationReason");
     expect(manager).not.toMatch(/\bAccept\b/);
@@ -206,13 +224,6 @@ describe("carer shifts page", () => {
     expect(manager).not.toMatch(/\bCancel shift\b/);
     expect(manager).not.toMatch(/\bClaim\b/);
     expect(manager).not.toMatch(/\bCheck in\b/);
-  });
-
-  it("does not create a shift detail route", () => {
-    const card = readSrc("components/carer/CarerShiftCard.tsx");
-    const route = readSrc("routes/carer/shifts.tsx");
-    expect(card).not.toContain("/carer/shifts/$");
-    expect(route).not.toContain("shifts/$id");
   });
 
   it("shows empty and error states for both tabs", () => {
@@ -224,13 +235,106 @@ describe("carer shifts page", () => {
   });
 });
 
+describe("carer shift detail route", () => {
+  it("registers /carer/shifts/$id with portal guard architecture", () => {
+    const layout = readSrc("routes/carer/shifts.tsx");
+    const detailRoute = readSrc("routes/carer/shifts.$id.tsx");
+    expect(layout).toContain("requireCarerSessionForPortal");
+    expect(detailRoute).toContain('createFileRoute("/carer/shifts/$id")');
+    expect(detailRoute).toContain("CarerShiftDetail");
+  });
+
+  it("loads shift detail via carerShiftsApi.get(id)", () => {
+    const detail = readSrc("components/carer/CarerShiftDetail.tsx");
+    const queries = readSrc("lib/carer-shifts-queries.ts");
+    expect(detail).toContain("useCarerShift");
+    expect(queries).toContain('["carer-shift", id]');
+    expect(queries).toContain("carerShiftsApi.get(id)");
+  });
+
+  it("blocks incomplete carers through parent requireCarerSessionForPortal", () => {
+    const guards = readSrc("lib/carer-route-guards.ts");
+    const layout = readSrc("routes/carer/shifts.tsx");
+    expect(layout).toContain("requireCarerSessionForPortal");
+    expect(guards).toContain("onboardingComplete(session)");
+    expect(guards).toContain("CARER_ONBOARDING_HUB_PATH");
+  });
+});
+
+describe("carer shift detail presentation", () => {
+  const detail = () => readSrc("components/carer/CarerShiftDetail.tsx");
+
+  it("renders upcoming, today, completed, and cancelled statuses from API", () => {
+    const src = detail();
+    expect(src).toContain("CarerShiftStatusBadge");
+    expect(src).toContain("shift.status");
+    expect(src).not.toContain('status === "upcoming"');
+    expect(src).not.toContain("torontoToday");
+  });
+
+  it("shows full date, time, centre, address, city, and optional role", () => {
+    const src = detail();
+    expect(src).toContain("formatFullCalendarDateWithYearLabel");
+    expect(src).toContain("formatAvailabilityWindowDisplay");
+    expect(src).toContain("centre.name");
+    expect(src).toContain("centre.address");
+    expect(src).toContain("centre.city");
+    expect(src).toContain("shift.roleNeeded");
+    expect(src).toContain("Role");
+  });
+
+  it("omits role section when roleNeeded is null", () => {
+    const src = detail();
+    expect(src).toContain("shift.roleNeeded ?");
+  });
+
+  it("shows cancelled supporting copy without cancellation reason", () => {
+    const src = detail();
+    expect(src).toContain('shift.status === "cancelled"');
+    expect(src).toContain("This shift has been cancelled.");
+    expect(src).not.toContain("cancellationReason");
+  });
+
+  it("provides Back to shifts navigation", () => {
+    const src = detail();
+    expect(src).toContain('to="/carer/shifts"');
+    expect(src).toContain("Back to shifts");
+  });
+});
+
+describe("carer shift detail not found and errors", () => {
+  it("shows generic not-found state for 404 without ownership leaks", () => {
+    const src = readSrc("components/carer/CarerShiftDetail.tsx");
+    expect(src).toContain("Shift not found");
+    expect(src).toContain("This shift is no longer available or is not assigned to your account.");
+    expect(src).toContain("error.status === 404");
+    expect(src).not.toContain("reassigned");
+    expect(src).not.toContain("another staff");
+  });
+
+  it("shows retryable load error for non-404 failures", () => {
+    const src = readSrc("components/carer/CarerShiftDetail.tsx");
+    expect(src).toContain("Unable to load shift details.");
+    expect(src).toContain("Try again");
+  });
+
+  it("includes deliberate loading skeleton", () => {
+    const src = readSrc("components/carer/CarerShiftDetail.tsx");
+    expect(src).toContain("CarerShiftDetailSkeleton");
+    expect(src).toContain('aria-busy="true"');
+  });
+});
+
 describe("carer shifts read-only security", () => {
   it("contains no carer shift action buttons in UI source", () => {
     const sources = [
       "components/carer/CarerShiftsDashboardSummary.tsx",
       "components/carer/CarerShiftsManager.tsx",
       "components/carer/CarerShiftCard.tsx",
+      "components/carer/CarerShiftDetail.tsx",
       "routes/carer/shifts.tsx",
+      "routes/carer/shifts.index.tsx",
+      "routes/carer/shifts.$id.tsx",
       "routes/carer/index.tsx",
     ];
     const forbidden = [
@@ -247,6 +351,23 @@ describe("carer shifts read-only security", () => {
       for (const phrase of forbidden) {
         expect(src).not.toContain(phrase);
       }
+    }
+  });
+
+  it("does not expose internal notes, contacts, or cancellation reason in detail UI", () => {
+    const src = readSrc("components/carer/CarerShiftDetail.tsx");
+    const forbidden = [
+      "cancellationReason",
+      "internalNotes",
+      "notes",
+      "contact",
+      "phone",
+      "email",
+      "Staffpoint",
+      "assignedStaffId",
+    ];
+    for (const phrase of forbidden) {
+      expect(src).not.toContain(phrase);
     }
   });
 

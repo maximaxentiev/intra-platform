@@ -210,6 +210,16 @@ export function formatFullCalendarDateLabel(dateStr: string): string {
   });
 }
 
+export function formatFullCalendarDateWithYearLabel(dateStr: string): string {
+  const { year, month, day } = parseCalendarDateString(dateStr);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function defaultSelectedDateForMonth(
   monthYear: MonthYear,
   today = torontoTodayDateString(),

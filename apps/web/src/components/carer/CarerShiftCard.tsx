@@ -1,12 +1,10 @@
-import { StatusBadge } from "@/components/StatusBadge";
+import { Link } from "@tanstack/react-router";
+import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
 import {
   formatAvailabilityWindowDisplay,
   formatDashboardAvailabilityDateLabel,
 } from "@/lib/carer-availability-dates";
-import {
-  carerShiftStatusLabel,
-  CARER_SHIFT_STATUS_TONE,
-} from "@/lib/carer-shifts-display";
+import { carerShiftDetailLinkLabel } from "@/lib/carer-shifts-display";
 import type { CarerShift } from "@/lib/carer-shifts";
 
 type CarerShiftCardProps = {
@@ -23,9 +21,7 @@ export function CarerShiftCard({ shift }: CarerShiftCardProps) {
           <p className="text-sm font-semibold">
             {formatDashboardAvailabilityDateLabel(shift.shiftDate)}
           </p>
-          <StatusBadge status={CARER_SHIFT_STATUS_TONE[shift.status]} size="sm">
-            {carerShiftStatusLabel(shift.status)}
-          </StatusBadge>
+          <CarerShiftStatusBadge status={shift.status} size="sm" />
         </div>
 
         <p className="text-sm font-medium">
@@ -41,6 +37,15 @@ export function CarerShiftCard({ shift }: CarerShiftCardProps) {
         {shift.roleNeeded ? (
           <p className="text-sm font-medium text-foreground">{shift.roleNeeded}</p>
         ) : null}
+
+        <Link
+          to="/carer/shifts/$id"
+          params={{ id: shift.id }}
+          className="inline-block text-sm font-medium text-primary hover:underline"
+          aria-label={carerShiftDetailLinkLabel(shift)}
+        >
+          View details
+        </Link>
       </div>
     </article>
   );

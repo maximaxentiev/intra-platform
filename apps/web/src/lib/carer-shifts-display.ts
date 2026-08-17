@@ -1,4 +1,5 @@
-import type { CarerShiftStatus } from "@/lib/carer-shifts";
+import { formatFullCalendarDateWithYearLabel } from "@/lib/carer-availability-dates";
+import type { CarerShift, CarerShiftStatus } from "@/lib/carer-shifts";
 
 export const CARER_SHIFT_STATUS_LABEL: Record<CarerShiftStatus, string> = {
   upcoming: "Upcoming",
@@ -20,6 +21,10 @@ export const CARER_SHIFT_STATUS_TONE: Record<
 
 export function carerShiftStatusLabel(status: CarerShiftStatus): string {
   return CARER_SHIFT_STATUS_LABEL[status];
+}
+
+export function carerShiftDetailLinkLabel(shift: Pick<CarerShift, "shiftDate">): string {
+  return `View details for ${formatFullCalendarDateWithYearLabel(shift.shiftDate)} shift`;
 }
 
 export function carerShiftsRangeLabel(

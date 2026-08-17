@@ -9,6 +9,7 @@ import {
   defaultSelectedDateForMonth,
   formatAvailabilityTimeDisplay,
   formatAvailabilityWindowDisplay,
+  formatFullCalendarDateWithYearLabel,
   formatWeekRangeLabel,
   isBeforeCurrentTorontoMonth,
   isBeforeCurrentTorontoWeek,
@@ -73,6 +74,14 @@ describe("week helpers", () => {
 });
 
 describe("day classification", () => {
+  it("formats full calendar dates with weekday, month, day, and year", () => {
+    const label = formatFullCalendarDateWithYearLabel("2026-08-25");
+    expect(label).toContain("Tuesday");
+    expect(label).toContain("August");
+    expect(label).toContain("25");
+    expect(label).toContain("2026");
+  });
+
   it("detects past and today", () => {
     expect(isPastCalendarDate("2026-08-12", "2026-08-13")).toBe(true);
     expect(isTodayCalendarDate("2026-08-13", "2026-08-13")).toBe(true);

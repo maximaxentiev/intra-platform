@@ -16,6 +16,10 @@ export function carerShiftsHistoryQueryKey(page: number, pageSize: CarerShiftPag
   return ["carer-shifts-history", page, pageSize] as const;
 }
 
+export function carerShiftDetailQueryKey(id: string) {
+  return ["carer-shift", id] as const;
+}
+
 export function useCarerShiftsSummary(limit = 3) {
   return useQuery({
     queryKey: carerShiftsSummaryQueryKey(limit),
@@ -44,5 +48,12 @@ export function useCarerShiftsHistory(
     queryKey: carerShiftsHistoryQueryKey(page, pageSize),
     queryFn: () => carerShiftsApi.history(page, pageSize),
     enabled,
+  });
+}
+
+export function useCarerShift(id: string) {
+  return useQuery({
+    queryKey: carerShiftDetailQueryKey(id),
+    queryFn: () => carerShiftsApi.get(id),
   });
 }

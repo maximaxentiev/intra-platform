@@ -1,16 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
+import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
 import {
   formatAvailabilityWindowDisplay,
   formatDashboardAvailabilityDateLabel,
 } from "@/lib/carer-availability-dates";
 import { useCarerShiftsSummary } from "@/lib/carer-shifts-queries";
-import {
-  carerShiftStatusLabel,
-  CARER_SHIFT_STATUS_TONE,
-} from "@/lib/carer-shifts-display";
+import { carerShiftDetailLinkLabel } from "@/lib/carer-shifts-display";
 
 export function CarerShiftsDashboardSummary() {
   const { data, isLoading, isError, refetch } = useCarerShiftsSummary(3);
@@ -58,9 +55,7 @@ export function CarerShiftsDashboardSummary() {
                 <p className="font-medium">
                   {formatDashboardAvailabilityDateLabel(shift.shiftDate)}
                 </p>
-                <StatusBadge status={CARER_SHIFT_STATUS_TONE[shift.status]} size="xs">
-                  {carerShiftStatusLabel(shift.status)}
-                </StatusBadge>
+                <CarerShiftStatusBadge status={shift.status} size="xs" />
               </div>
               <p className="text-muted-foreground">
                 {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
@@ -72,6 +67,14 @@ export function CarerShiftsDashboardSummary() {
               {shift.roleNeeded ? (
                 <p className="text-muted-foreground">{shift.roleNeeded}</p>
               ) : null}
+              <Link
+                to="/carer/shifts/$id"
+                params={{ id: shift.id }}
+                className="inline-block font-medium text-primary hover:underline"
+                aria-label={carerShiftDetailLinkLabel(shift)}
+              >
+                View details
+              </Link>
             </li>
           ))}
         </ul>
