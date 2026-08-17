@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
 import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
+import { Route as CarerShiftsRouteImport } from './routes/carer/shifts'
 import { Route as CarerProfileRouteImport } from './routes/carer/profile'
 import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
@@ -73,6 +74,11 @@ const DocumentsSlugRoute = DocumentsSlugRouteImport.update({
   id: '/documents/$slug',
   path: '/documents/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CarerShiftsRoute = CarerShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
+  getParentRoute: () => CarerRouteRoute,
 } as any)
 const CarerProfileRoute = CarerProfileRouteImport.update({
   id: '/profile',
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer/profile': typeof CarerProfileRoute
+  '/carer/shifts': typeof CarerShiftsRoute
   '/documents/$slug': typeof DocumentsSlugRoute
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer/profile': typeof CarerProfileRoute
+  '/carer/shifts': typeof CarerShiftsRoute
   '/documents/$slug': typeof DocumentsSlugRoute
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
   '/carer/login': typeof CarerLoginRoute
   '/carer/profile': typeof CarerProfileRoute
+  '/carer/shifts': typeof CarerShiftsRoute
   '/documents/$slug': typeof DocumentsSlugRoute
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
@@ -352,6 +361,7 @@ export interface FileRouteTypes {
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer/profile'
+    | '/carer/shifts'
     | '/documents/$slug'
     | '/carer/'
     | '/centres/$id'
@@ -383,6 +393,7 @@ export interface FileRouteTypes {
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer/profile'
+    | '/carer/shifts'
     | '/documents/$slug'
     | '/carer'
     | '/centres/$id'
@@ -420,6 +431,7 @@ export interface FileRouteTypes {
     | '/carer/forgot-password'
     | '/carer/login'
     | '/carer/profile'
+    | '/carer/shifts'
     | '/documents/$slug'
     | '/carer/'
     | '/_authenticated/centres/$id'
@@ -490,6 +502,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/documents/$slug'
       preLoaderRoute: typeof DocumentsSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/carer/shifts': {
+      id: '/carer/shifts'
+      path: '/shifts'
+      fullPath: '/carer/shifts'
+      preLoaderRoute: typeof CarerShiftsRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/carer/profile': {
       id: '/carer/profile'
@@ -793,6 +812,7 @@ interface CarerRouteRouteChildren {
   CarerForgotPasswordRoute: typeof CarerForgotPasswordRoute
   CarerLoginRoute: typeof CarerLoginRoute
   CarerProfileRoute: typeof CarerProfileRoute
+  CarerShiftsRoute: typeof CarerShiftsRoute
   CarerIndexRoute: typeof CarerIndexRoute
   CarerInviteTokenRoute: typeof CarerInviteTokenRoute
 }
@@ -804,6 +824,7 @@ const CarerRouteRouteChildren: CarerRouteRouteChildren = {
   CarerForgotPasswordRoute: CarerForgotPasswordRoute,
   CarerLoginRoute: CarerLoginRoute,
   CarerProfileRoute: CarerProfileRoute,
+  CarerShiftsRoute: CarerShiftsRoute,
   CarerIndexRoute: CarerIndexRoute,
   CarerInviteTokenRoute: CarerInviteTokenRoute,
 }
