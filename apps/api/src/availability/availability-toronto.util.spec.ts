@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as torontoUtil from './availability-toronto.util';
-import { compareDateStrings, torontoTodayDateString } from './availability-toronto.util';
+import { compareDateStrings, torontoNowTimeString, torontoTodayDateString } from './availability-toronto.util';
 
 describe('torontoTodayDateString', () => {
   afterEach(() => {
@@ -17,6 +17,24 @@ describe('torontoTodayDateString', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-13T16:00:00.000Z'));
     expect(torontoTodayDateString()).toBe('2026-08-13');
+  });
+});
+
+describe('torontoNowTimeString', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns America/Toronto wall-clock time as HH:mm:ss', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-13T18:45:30.000Z'));
+    expect(torontoNowTimeString()).toBe('14:45:30');
+  });
+
+  it('does not depend on server local timezone offset', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-15T05:30:00.000Z'));
+    expect(torontoNowTimeString()).toBe('00:30:00');
   });
 });
 

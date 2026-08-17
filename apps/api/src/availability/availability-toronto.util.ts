@@ -22,6 +22,21 @@ export function isDateBeforeTodayInToronto(calendarDate: string, today = toronto
   return compareDateStrings(calendarDate, today) < 0;
 }
 
+/** Current wall-clock time in America/Toronto as HH:mm:ss (24h). */
+export function torontoNowTimeString(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: AVAILABILITY_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  const second = parts.find((p) => p.type === 'second')?.value ?? '00';
+  return `${hour}:${minute}:${second}`;
+}
+
 export function parseCalendarDateString(value: string): { year: number; month: number; day: number } {
   const match = DATE_RE.exec(value.trim());
   if (!match) {

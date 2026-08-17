@@ -13,6 +13,8 @@ import { StaffPortalAvailabilityController } from './staff-portal-availability.c
 import { StaffPortalAvailabilityService } from './staff-portal-availability.service';
 import { StaffPortalOnboardingController } from './staff-portal-onboarding.controller';
 import { StaffPortalOnboardingService } from './staff-portal-onboarding.service';
+import { StaffPortalShiftsController } from './staff-portal-shifts.controller';
+import { StaffPortalShiftsService } from './staff-portal-shifts.service';
 
 @Module({
   imports: [AuthModule],
@@ -21,6 +23,7 @@ import { StaffPortalOnboardingService } from './staff-portal-onboarding.service'
     StaffPortalProfileController,
     StaffPortalAvailabilityController,
     StaffPortalOnboardingController,
+    StaffPortalShiftsController,
   ],
   providers: [
     StaffAuthService,
@@ -32,6 +35,7 @@ import { StaffPortalOnboardingService } from './staff-portal-onboarding.service'
     StaffPortalProfileService,
     StaffPortalOnboardingService,
     StaffPortalAvailabilityService,
+    StaffPortalShiftsService,
   ],
   exports: [
     StaffAuthService,
@@ -42,6 +46,7 @@ import { StaffPortalOnboardingService } from './staff-portal-onboarding.service'
     StaffPortalProfileService,
     StaffPortalOnboardingService,
     StaffPortalAvailabilityService,
+    StaffPortalShiftsService,
   ],
 })
 export class StaffPortalModule {}

@@ -12,6 +12,7 @@ const STAFF_PORTAL_PROTECTED_CONTROLLERS = [
   () => import('./staff-portal-availability.controller').then((m) => m.StaffPortalAvailabilityController),
   () => import('./staff-portal-profile.controller').then((m) => m.StaffPortalProfileController),
   () => import('./staff-portal-onboarding.controller').then((m) => m.StaffPortalOnboardingController),
+  () => import('./staff-portal-shifts.controller').then((m) => m.StaffPortalShiftsController),
   () =>
     import('../staff-documents/staff-portal-documents.controller').then(
       (m) => m.StaffPortalDocumentsController,
