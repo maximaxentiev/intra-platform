@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ShiftReminderService } from '../shifts/shift-reminder.service';
 import { ScheduledCommunicationsService } from './scheduled-communications.service';
 import { CommunicationsQueueService } from './communications-queue.service';
 import { DEFAULT_COMMUNICATIONS_RECONCILE_CRON } from './automated-communications.constants';
@@ -11,6 +12,7 @@ export class AutomatedCommunicationsReconcilerService {
   constructor(
     private readonly scheduled: ScheduledCommunicationsService,
     private readonly queue: CommunicationsQueueService,
+    @Optional() private readonly shiftReminders?: ShiftReminderService,
   ) {}
 
   /** Default every 10 minutes; override COMMUNICATIONS_RECONCILE_CRON in worker env if needed. */
@@ -39,9 +41,15 @@ export class AutomatedCommunicationsReconcilerService {
       else skipped += 1;
     }
 
-    if (enqueued > 0 || recoveredStale > 0) {
+    let shiftEnsured = 0;
+    if (this.shiftReminders) {
+      const shiftResult = await this.shiftReminders.reconcileFutureFilledShifts();
+      shiftEnsured = shiftResult.ensured;
+    }
+
+    if (enqueued > 0 || recoveredStale > 0 || shiftEnsured > 0) {
       this.logger.log(
-        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale}`,
+        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale} shiftReminders=${shiftEnsured}`,
       );
     }
 

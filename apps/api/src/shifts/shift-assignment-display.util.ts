@@ -11,7 +11,7 @@ export function formatShiftAssignmentDateLabel(shiftDate: string): string {
   });
 }
 
-function formatShiftAssignmentTimeDisplay(hhmm: string): string {
+export function formatShiftAssignmentTimeDisplay(hhmm: string): string {
   const normalized = hhmm.slice(0, 5);
   const [hRaw, mRaw] = normalized.split(':');
   const h = Number(hRaw);

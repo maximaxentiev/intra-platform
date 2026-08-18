@@ -1,5 +1,5 @@
 import { Module, type INestApplicationContext } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from '../config/env.validation';
 import { findRepoRootEnvFile } from '../config/root-env';
@@ -10,6 +10,8 @@ import { AutomatedCommunicationsWorkerModule } from '../automated-communications
 import { CommunicationProcessorRegistry } from '../automated-communications/communication-processor.registry';
 import { AutomatedCommunicationsProcessor } from '../automated-communications/automated-communications.processor';
 import { AutomatedCommunicationsReconcilerService } from '../automated-communications/automated-communications-reconciler.service';
+import { ShiftsModule } from '../shifts/shifts.module';
+import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { AutomatedCommunicationsReconcilerService } from '../automated-communica
     EmailModule,
     AutomatedCommunicationsModule,
     AutomatedCommunicationsWorkerModule,
+    ShiftsModule,
   ],
 })
 export class WorkerModule {}
@@ -35,6 +38,9 @@ export async function bootstrapWorker(): Promise<{
   });
 
   const registry = app.get(CommunicationProcessorRegistry);
+  const config = app.get(ConfigService);
+  registerShiftReminderProcessors(registry, config);
+
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(
       registry,

@@ -13,6 +13,7 @@ import {
 } from '../availability/availability-toronto.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staffAccounts } from '../db/schema';
+import { ShiftReminderService } from '../shifts/shift-reminder.service';
 import {
   isCarerDirectCancellationEligible,
   type ShiftInternalStatus,
@@ -42,7 +43,10 @@ type ShiftQueryRow = {
 
 @Injectable()
 export class StaffPortalShiftsService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly shiftReminders: ShiftReminderService,
+  ) {}
 
   async listUpcoming(
     session: StaffSessionPayload,
@@ -233,6 +237,8 @@ export class StaffPortalShiftsService {
       if (!row) {
         throw new BadRequestException('This shift cannot be cancelled.');
       }
+
+      await this.shiftReminders.cancelPendingForShift(shiftId, tx);
 
       const dto = toCarerShiftSummaryDto(
         {

@@ -24,6 +24,7 @@ import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-doc
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
+import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -207,7 +208,12 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
       shareLifecycle,
     );
 
-    service = new ShiftsService(db, confirmation, new ShiftMatchingService(db));
+    service = new ShiftsService(
+      db,
+      confirmation,
+      new ShiftMatchingService(db),
+      createMockShiftReminderService(),
+    );
 
     await db.delete(users).where(eq(users.id, OPS_USER_ID));
     await db.insert(users).values({

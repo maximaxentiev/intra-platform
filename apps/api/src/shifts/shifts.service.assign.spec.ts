@@ -2,12 +2,14 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
+import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { ShiftsService } from './shifts.service';
 
 describe('ShiftsService.assign idempotency', () => {
   let service: ShiftsService;
   let confirmation: ShiftAssignmentConfirmationService;
   let shiftMatching: ShiftMatchingService;
+  let shiftReminders: ReturnType<typeof createMockShiftReminderService>;
   let txUpdateWhere: ReturnType<typeof vi.fn>;
   let txSelectWhere: ReturnType<typeof vi.fn>;
 
@@ -51,7 +53,7 @@ describe('ShiftsService.assign idempotency', () => {
       evaluateStaffForShift: vi.fn().mockResolvedValue({ eligible: true, reasons: [] }),
     } as unknown as ShiftMatchingService;
 
-    service = new ShiftsService(db as never, confirmation, shiftMatching);
+    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -60,7 +62,9 @@ describe('ShiftsService.assign idempotency', () => {
 
   it('sends confirmations when assignment changes', async () => {
     txUpdateWhere.mockReturnValue({
-      returning: vi.fn().mockResolvedValue([{ id: 'shift-1' }]),
+      returning: vi.fn().mockResolvedValue([
+        { id: 'shift-1', shiftDate: '2026-09-01', startTime: '09:00:00' },
+      ]),
     });
 
     const result = await service.assign('shift-1', 'staff-1', 'ops-1');
@@ -84,7 +88,7 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(db as never, confirmation, shiftMatching);
+    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -107,7 +111,7 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(db as never, confirmation, shiftMatching);
+    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -142,6 +146,7 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
       db as never,
       confirmation,
       {} as ShiftMatchingService,
+      createMockShiftReminderService(),
     );
 
     await expect(service.sendAssignmentConfirmation('shift-1', 'ops-1')).rejects.toBeInstanceOf(
@@ -157,7 +162,7 @@ describe('ShiftsService.availableStaff', () => {
         { id: 'staff-1', legalName: 'A', isTop: true, contacted: false },
       ]),
     } as unknown as ShiftMatchingService;
-    const service = new ShiftsService({} as never, {} as never, shiftMatching);
+    const service = new ShiftsService({} as never, {} as never, shiftMatching, createMockShiftReminderService());
 
     const rows = await service.availableStaff('shift-1');
     expect(rows).toHaveLength(1);

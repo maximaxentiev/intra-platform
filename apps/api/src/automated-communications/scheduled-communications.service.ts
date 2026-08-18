@@ -52,6 +52,49 @@ export class ScheduledCommunicationsService {
     return rows[0]!;
   }
 
+  /** Idempotent schedule that reactivates cancelled/failed rows when still applicable. */
+  async ensureScheduled(
+    input: ScheduleCommunicationInput,
+    executor: DbLike = this.db,
+  ) {
+    const existing = await executor
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.idempotencyKey, input.idempotencyKey))
+      .limit(1);
+
+    if (!existing[0]) {
+      return this.schedule(input, executor);
+    }
+
+    const row = existing[0];
+    if (row.status === 'sent') {
+      return row;
+    }
+    if (row.status === 'scheduled' || row.status === 'processing') {
+      return row;
+    }
+    if (input.scheduledFor.getTime() <= Date.now()) {
+      return row;
+    }
+
+    const rows = await executor
+      .update(scheduledCommunications)
+      .set({
+        status: 'scheduled',
+        scheduledFor: input.scheduledFor,
+        cancelledAt: null,
+        lastErrorCode: null,
+        lastErrorReason: null,
+        recipientEntityId: input.recipientEntityId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(scheduledCommunications.id, row.id))
+      .returning();
+
+    return rows[0] ?? row;
+  }
+
   async cancelByIdempotencyKeys(keys: string[], executor: DbLike = this.db): Promise<number> {
     if (keys.length === 0) return 0;
 

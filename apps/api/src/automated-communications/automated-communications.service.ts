@@ -20,6 +20,11 @@ export class AutomatedCommunicationsService {
     return this.scheduled.schedule(input, executor ?? undefined);
   }
 
+  /** Schedule or reactivate an existing row — used by domain reconciliation. */
+  async ensureScheduled(input: ScheduleCommunicationInput, executor?: DbLike) {
+    return this.scheduled.ensureScheduled(input, executor ?? undefined);
+  }
+
   /** Best-effort enqueue after transaction commit. */
   async enqueueScheduledCommunication(scheduledCommunicationId: string): Promise<void> {
     const row = await this.scheduled.findById(scheduledCommunicationId);

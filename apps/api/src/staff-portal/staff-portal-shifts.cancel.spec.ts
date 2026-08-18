@@ -103,16 +103,21 @@ function createCancelHarness() {
     },
   };
 
-  const service = new StaffPortalShiftsService(db as never);
-  return { service, db, shiftRow: () => shiftRow };
+  const shiftReminders = {
+    cancelPendingForShift: vi.fn(async () => 0),
+  };
+
+  const service = new StaffPortalShiftsService(db as never, shiftReminders as never);
+  return { service, db, shiftRow: () => shiftRow, shiftReminders };
 }
 
 describe('StaffPortalShiftsService.cancelShift', () => {
   it('cancels an eligible own upcoming shift and returns cancelled DTO', async () => {
-    const { service } = createCancelHarness();
+    const { service, shiftReminders } = createCancelHarness();
     const result = await service.cancelShift(SESSION_A, SHIFT_ID, 'Family emergency');
     expect(result.status).toBe('cancelled');
     expect(result.cancellationReason).toBe('Family emergency');
+    expect(shiftReminders.cancelPendingForShift).toHaveBeenCalledWith(SHIFT_ID, expect.anything());
   });
 
   it('rejects blank reason', async () => {

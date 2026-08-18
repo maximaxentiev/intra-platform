@@ -18,6 +18,7 @@ import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-doc
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
+import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { ShiftsService } from './shifts.service';
 import {
   availability,
@@ -111,7 +112,12 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       shareLifecycle,
     );
 
-    service = new ShiftsService(db, confirmation, new ShiftMatchingService(db));
+    service = new ShiftsService(
+      db,
+      confirmation,
+      new ShiftMatchingService(db),
+      createMockShiftReminderService(),
+    );
 
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
     await db.delete(shifts).where(eq(shifts.centreId, CENTRE_ID));

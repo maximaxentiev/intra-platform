@@ -18,6 +18,7 @@ import {
 import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
+import { ShiftReminderService } from './shift-reminder.service';
 import { SHIFT_ASSIGN_INELIGIBLE_MESSAGE } from './shift-matching.types';
 import { acquireShiftStaffDateAdvisoryLock } from './shift-staff-date-advisory-lock.util';
 import {
@@ -36,6 +37,7 @@ export class ShiftsService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly assignmentConfirmations: ShiftAssignmentConfirmationService,
     private readonly shiftMatching: ShiftMatchingService,
+    private readonly shiftReminders: ShiftReminderService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -115,6 +117,17 @@ export class ShiftsService {
   }
 
   async update(id: string, dto: UpdateShiftDto) {
+    const before = await this.db
+      .select({
+        shiftDate: shifts.shiftDate,
+        startTime: shifts.startTime,
+        status: shifts.status,
+        assignedStaffId: shifts.assignedStaffId,
+      })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!before[0]) throw new NotFoundException('Shift not found.');
+
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of [
       'shiftDate',
@@ -129,10 +142,36 @@ export class ShiftsService {
     }
     const rows = await this.db.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
     if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+    const scheduleChanged =
+      (dto.shiftDate !== undefined && dto.shiftDate !== String(before[0].shiftDate)) ||
+      (dto.startTime !== undefined && dto.startTime !== String(before[0].startTime));
+
+    let scheduledReminderIds: string[] = [];
+    if (
+      scheduleChanged &&
+      rows[0].status === 'filled' &&
+      rows[0].assignedStaffId
+    ) {
+      await this.db.transaction(async (tx) => {
+        scheduledReminderIds = await this.shiftReminders.rescheduleFilledShift(
+          {
+            shiftId: id,
+            assignedStaffId: rows[0].assignedStaffId!,
+            shiftDate: String(rows[0].shiftDate),
+            startTime: String(rows[0].startTime),
+          },
+          tx,
+        );
+      });
+      await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
+    }
+
     return rows[0];
   }
 
   async remove(id: string) {
+    await this.shiftReminders.cancelPendingForShift(id);
     await this.db.delete(shifts).where(eq(shifts.id, id));
     return { ok: true };
   }
@@ -153,6 +192,7 @@ export class ShiftsService {
     }
 
     let assignmentChanged = false;
+    let scheduledReminderIds: string[] = [];
 
     await this.db.transaction(async (tx) => {
       await acquireShiftStaffDateAdvisoryLock(tx, staffId, existing[0].shiftDate);
@@ -173,14 +213,25 @@ export class ShiftsService {
         });
       }
 
+      await this.shiftReminders.cancelPendingForShift(id, tx);
+
       const updated = await tx
         .update(shifts)
         .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
         .where(and(eq(shifts.id, id), sql`${shifts.assignedStaffId} IS DISTINCT FROM ${staffId}`))
-        .returning({ id: shifts.id });
+        .returning({ id: shifts.id, shiftDate: shifts.shiftDate, startTime: shifts.startTime });
 
       if (updated[0]) {
         assignmentChanged = true;
+        scheduledReminderIds = await this.shiftReminders.scheduleForFilledShift(
+          {
+            shiftId: id,
+            assignedStaffId: staffId,
+            shiftDate: String(updated[0].shiftDate),
+            startTime: String(updated[0].startTime),
+          },
+          tx,
+        );
       }
     });
 
@@ -200,6 +251,7 @@ export class ShiftsService {
       actorUserId,
       trigger: 'assign',
     });
+    await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
     return {
       shift,
       assignment: { changed: true, alreadyAssigned: false },
@@ -233,6 +285,7 @@ export class ShiftsService {
   }
 
   async unassign(id: string) {
+    await this.shiftReminders.cancelPendingForShift(id);
     const rows = await this.db
       .update(shifts)
       .set({ assignedStaffId: null, status: 'pending', updatedAt: new Date() })
@@ -243,6 +296,11 @@ export class ShiftsService {
   }
 
   async changeStatus(id: string, dto: ChangeStatusDto) {
+    const terminalCancel =
+      dto.status === 'cancelled' || dto.status === 'completed' || dto.status === 'pending';
+    if (terminalCancel) {
+      await this.shiftReminders.cancelPendingForShift(id);
+    }
     const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
     if (dto.status === 'cancelled' && dto.cancellationReason !== undefined) {
       patch.cancellationReason = dto.cancellationReason;
@@ -325,6 +383,9 @@ export class ShiftsService {
         ),
       )
       .returning({ id: shifts.id });
+    for (const row of result) {
+      await this.shiftReminders.cancelPendingForShift(row.id);
+    }
     return result.length;
   }
 }
