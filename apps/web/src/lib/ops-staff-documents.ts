@@ -104,11 +104,6 @@ export const opsStaffDocumentsApi = {
       { issueNote },
     ),
 
-  setReminders: (staffId: string, documentType: StaffDocumentType, enabled: boolean) =>
-    api.patch<OpsStaffDocumentsList>(`/staff/${staffId}/documents/${documentType}/reminders`, {
-      enabled,
-    }),
-
   clearCategory: (staffId: string, documentType: StaffDocumentType) =>
     api.del<OpsStaffDocumentsList>(`/staff/${staffId}/documents/${documentType}`),
 };

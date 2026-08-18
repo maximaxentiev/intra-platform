@@ -30,7 +30,6 @@ export type DocumentExpiryReminderContext = {
   documentType: StaffDocumentType;
   submissionId: string;
   expiryDate: string;
-  remindersEnabled: boolean;
 };
 
 @Injectable()
@@ -44,7 +43,6 @@ export class DocumentExpiryReminderService {
 
   isEligibleForScheduling(params: {
     documentType: StaffDocumentType;
-    remindersEnabled: boolean;
     reviewStatus: string;
     expiryDate: string | null;
     set: { currentSubmissionId: string | null };
@@ -53,7 +51,6 @@ export class DocumentExpiryReminderService {
     hasPortalAccount: boolean;
   }): boolean {
     if (!isStaffDocumentReminderType(params.documentType)) return false;
-    if (!params.remindersEnabled) return false;
     if (!params.hasPortalAccount || params.accountStatus === 'disabled') return false;
     if (params.reviewStatus !== 'approved') return false;
     if (!params.expiryDate) return false;
@@ -78,7 +75,7 @@ export class DocumentExpiryReminderService {
         offsetDays: plan.offsetDays,
       });
 
-      const row = await this.automated.schedule(
+      const row = await this.automated.ensureScheduled(
         {
           idempotencyKey,
           communicationType: DOCUMENT_EXPIRY_COMMUNICATION_TYPE[plan.offsetDays],
@@ -123,7 +120,6 @@ export class DocumentExpiryReminderService {
       staffId: string;
       documentSetId: string;
       documentType: StaffDocumentType;
-      remindersEnabled: boolean;
       submission: {
         id: string;
         reviewStatus: string;
@@ -143,7 +139,6 @@ export class DocumentExpiryReminderService {
 
     const eligible = this.isEligibleForScheduling({
       documentType: params.documentType,
-      remindersEnabled: params.remindersEnabled,
       reviewStatus: params.submission.reviewStatus,
       expiryDate: params.submission.expiryDate,
       set: params.set,
@@ -165,7 +160,6 @@ export class DocumentExpiryReminderService {
         documentType: params.documentType,
         submissionId: params.submission.id,
         expiryDate: params.submission.expiryDate!,
-        remindersEnabled: params.remindersEnabled,
       },
       executor,
       now,
@@ -191,7 +185,6 @@ export class DocumentExpiryReminderService {
         setId: staffDocumentSets.id,
         staffId: staffDocumentSets.staffId,
         documentType: staffDocumentSets.documentType,
-        remindersEnabled: staffDocumentSets.remindersEnabled,
         currentSubmissionId: staffDocumentSets.currentSubmissionId,
         submissionId: staffDocumentSubmissions.id,
         reviewStatus: staffDocumentSubmissions.reviewStatus,
@@ -218,7 +211,6 @@ export class DocumentExpiryReminderService {
     for (const row of sets) {
       const eligible = this.isEligibleForScheduling({
         documentType: row.documentType,
-        remindersEnabled: row.remindersEnabled,
         reviewStatus: row.reviewStatus,
         expiryDate: row.expiryDate,
         set: { currentSubmissionId: row.currentSubmissionId },
@@ -296,7 +288,6 @@ export class DocumentExpiryReminderService {
           expiryDate: staffDocumentSubmissions.expiryDate,
           supersededAt: staffDocumentSubmissions.supersededAt,
           documentType: staffDocumentSets.documentType,
-          remindersEnabled: staffDocumentSets.remindersEnabled,
           currentSubmissionId: staffDocumentSets.currentSubmissionId,
           staffId: staffDocumentSets.staffId,
           accountStatus: staffAccounts.status,
@@ -320,7 +311,6 @@ export class DocumentExpiryReminderService {
 
       const eligible = this.isEligibleForScheduling({
         documentType: context.documentType,
-        remindersEnabled: context.remindersEnabled,
         reviewStatus: context.reviewStatus,
         expiryDate: context.expiryDate,
         set: { currentSubmissionId: context.currentSubmissionId },

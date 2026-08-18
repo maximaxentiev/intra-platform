@@ -68,7 +68,6 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
         expiryDate: staffDocumentSubmissions.expiryDate,
         supersededAt: staffDocumentSubmissions.supersededAt,
         documentType: staffDocumentSets.documentType,
-        remindersEnabled: staffDocumentSets.remindersEnabled,
         currentSubmissionId: staffDocumentSets.currentSubmissionId,
         staffId: staffDocumentSets.staffId,
         staffEmail: staff.email,
@@ -89,10 +88,6 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
     }
 
     if (!isStaffDocumentReminderType(row.documentType)) {
-      return { kind: 'stale' };
-    }
-
-    if (!row.remindersEnabled) {
       return { kind: 'stale' };
     }
 

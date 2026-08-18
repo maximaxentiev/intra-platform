@@ -40,7 +40,6 @@ import { ONBOARDING_STEP } from '../staff-portal/staff-onboarding.util';
 import type { StaffSessionPayload } from '../staff-portal/staff-session.service';
 import {
   STAFF_DOCUMENT_TYPE_VALUES,
-  isStaffDocumentReminderType,
   type StaffDocumentListStatus,
   type StaffDocumentType,
 } from './staff-document.constants';
@@ -53,7 +52,6 @@ import {
 } from './staff-document-compliance.util';
 import {
   assertProcessedDateNotInFuture,
-  deriveVscExpiryDate,
   parseDateOnly,
 } from './staff-document-dates.util';
 import { validateStaffDocumentFileContent } from './staff-document-file-signature.util';
@@ -297,7 +295,6 @@ export class StaffDocumentsService {
           staffId,
           documentSetId: ctx.set!.id,
           documentType,
-          remindersEnabled: ctx.set!.remindersEnabled,
           submission: {
             id: submissionId,
             reviewStatus: 'approved',
@@ -375,173 +372,6 @@ export class StaffDocumentsService {
     const account = await this.loadAccountByStaffId(staffId);
     const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
-  }
-
-  async setReminders(
-    staffId: string,
-    userId: string,
-    documentTypeRaw: string,
-    enabled: boolean,
-  ): Promise<StaffDocumentsOpsListDto> {
-    const documentType = assertStaffDocumentType(documentTypeRaw);
-    if (!isStaffDocumentReminderType(documentType)) {
-      throw new BadRequestException('Reminders are not configurable for this document type.');
-    }
-
-    await this.assertStaffExists(staffId);
-    const now = new Date();
-
-    const existing = await this.db
-      .select()
-      .from(staffDocumentSets)
-      .where(
-        and(
-          eq(staffDocumentSets.staffId, staffId),
-          eq(staffDocumentSets.documentType, documentType),
-        ),
-      )
-      .limit(1);
-
-    const previousEnabled = existing[0]?.remindersEnabled ?? true;
-    const accountCtx = await this.loadReminderAccountContext(staffId);
-    const ctx = await this.loadSetContext(staffId, documentType);
-    let scheduledIds: string[] = [];
-
-    await this.db.transaction(async (tx) => {
-      if (existing[0]) {
-        await tx
-          .update(staffDocumentSets)
-          .set({ remindersEnabled: enabled, updatedAt: now })
-          .where(eq(staffDocumentSets.id, existing[0]!.id));
-      } else {
-        await tx.insert(staffDocumentSets).values({
-          staffId,
-          documentType,
-          remindersEnabled: enabled,
-        });
-      }
-
-      const setRow =
-        existing[0] ??
-        (
-          await tx
-            .select()
-            .from(staffDocumentSets)
-            .where(
-              and(
-                eq(staffDocumentSets.staffId, staffId),
-                eq(staffDocumentSets.documentType, documentType),
-              ),
-            )
-            .limit(1)
-        )[0];
-
-      if (setRow && ctx.currentSubmission) {
-        scheduledIds = await this.documentReminders.syncRemindersForSet(
-          {
-            staffId,
-            documentSetId: setRow.id,
-            documentType,
-            remindersEnabled: enabled,
-            submission: ctx.currentSubmission,
-            set: setRow,
-            ...accountCtx,
-          },
-          tx,
-          now,
-        );
-      }
-    });
-
-    await this.documentReminders.enqueueScheduledIds(scheduledIds);
-
-    await this.audit.record({
-      staffId,
-      actorUserId: userId,
-      eventType: STAFF_PORTAL_AUDIT_EVENTS.opsDocumentRemindersChanged,
-      detail: { documentType, enabled, previousEnabled, source: 'ops' },
-    });
-
-    const account = await this.loadAccountByStaffId(staffId);
-    const list = await this.buildDocumentsListForStaffId(staffId, account);
-    return { staffId, ...list };
-  }
-
-  async setRemindersCarer(
-    session: StaffSessionPayload,
-    documentTypeRaw: string,
-    enabled: boolean,
-  ): Promise<StaffDocumentsListDto> {
-    const documentType = assertStaffDocumentType(documentTypeRaw);
-    if (!isStaffDocumentReminderType(documentType)) {
-      throw new BadRequestException('Reminders are not configurable for this document type.');
-    }
-
-    const account = await this.loadActiveAccount(session);
-    const now = new Date();
-    const ctx = await this.loadSetContext(account.staffId, documentType);
-
-    const existing = await this.db
-      .select()
-      .from(staffDocumentSets)
-      .where(
-        and(
-          eq(staffDocumentSets.staffId, account.staffId),
-          eq(staffDocumentSets.documentType, documentType),
-        ),
-      )
-      .limit(1);
-
-    const previousEnabled = existing[0]?.remindersEnabled ?? true;
-    let scheduledIds: string[] = [];
-
-    await this.db.transaction(async (tx) => {
-      let setRow = existing[0];
-      if (setRow) {
-        await tx
-          .update(staffDocumentSets)
-          .set({ remindersEnabled: enabled, updatedAt: now })
-          .where(eq(staffDocumentSets.id, setRow.id));
-      } else {
-        const inserted = await tx
-          .insert(staffDocumentSets)
-          .values({
-            staffId: account.staffId,
-            documentType,
-            remindersEnabled: enabled,
-          })
-          .returning();
-        setRow = inserted[0]!;
-      }
-
-      if (setRow && ctx.currentSubmission) {
-        scheduledIds = await this.documentReminders.syncRemindersForSet(
-          {
-            staffId: account.staffId,
-            documentSetId: setRow.id,
-            documentType,
-            remindersEnabled: enabled,
-            submission: ctx.currentSubmission,
-            set: setRow,
-            accountStatus: account.status,
-            hasPortalAccount: true,
-          },
-          tx,
-          now,
-        );
-      }
-    });
-
-    await this.documentReminders.enqueueScheduledIds(scheduledIds);
-
-    await this.audit.record({
-      staffId: account.staffId,
-      staffAccountId: account.id,
-      eventType: STAFF_PORTAL_AUDIT_EVENTS.staffDocumentRemindersChanged,
-      detail: { documentType, enabled, previousEnabled, source: 'carer_portal' },
-    });
-
-    return this.buildDocumentsListForStaff(account);
   }
 
   async completeStep2(session: StaffSessionPayload): Promise<StaffDocumentsListDto> {
@@ -1051,10 +881,11 @@ export class StaffDocumentsService {
         if (!fields.processedDate) {
           throw new StaffDocumentValidationError('processedDate is required.');
         }
-        assertProcessedDateNotInFuture(fields.processedDate);
-        if (fields.expiryDate) {
-          throw new StaffDocumentValidationError('expiryDate must not be supplied for VSC.');
+        if (!fields.expiryDate) {
+          throw new StaffDocumentValidationError('expiryDate is required.');
         }
+        assertProcessedDateNotInFuture(fields.processedDate);
+        parseDateOnly(fields.expiryDate);
       } else if (documentType === 'first_aid_cpr') {
         if (!fields.expiryDate) {
           throw new StaffDocumentValidationError('expiryDate is required.');
@@ -1081,10 +912,9 @@ export class StaffDocumentsService {
     fields: { processedDate?: string; expiryDate?: string },
   ): { processedDate: string | null; expiryDate: string | null } {
     if (documentType === 'vulnerable_sector_check') {
-      const processedDate = fields.processedDate!;
       return {
-        processedDate,
-        expiryDate: deriveVscExpiryDate(processedDate),
+        processedDate: fields.processedDate!,
+        expiryDate: fields.expiryDate!,
       };
     }
     if (documentType === 'first_aid_cpr') {

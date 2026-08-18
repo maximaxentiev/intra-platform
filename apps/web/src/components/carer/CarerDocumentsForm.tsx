@@ -6,7 +6,6 @@ import {
   ExternalLink,
   FileText,
   Loader2,
-  Lock,
   Upload,
   X,
 } from "lucide-react";
@@ -17,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,7 +94,6 @@ export function CarerDocumentsForm({
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
-  const [reminderPendingType, setReminderPendingType] = useState<StaffDocumentType | null>(null);
   const fileInputs = useRef<Partial<Record<StaffDocumentType, HTMLInputElement | null>>>({});
 
   useEffect(() => {
@@ -262,21 +259,7 @@ export function CarerDocumentsForm({
     setBackConfirmOpen(true);
   }
 
-  async function handleReminderToggle(type: StaffDocumentType, enabled: boolean) {
-    setReminderPendingType(type);
-    try {
-      await carerDocumentsApi.setReminders(type, enabled);
-      toast.success(enabled ? "Expiry email reminders enabled" : "Expiry email reminders disabled");
-      await onRefresh();
-    } catch (err) {
-      toast.error(mapDocumentsApiError(err, "Could not update reminder settings."));
-      await onRefresh();
-    } finally {
-      setReminderPendingType(null);
-    }
-  }
-
-  const busy = saving || advancing || reminderPendingType !== null;
+  const busy = saving || advancing;
 
   if (isLoading && !documents) {
     return (
@@ -333,8 +316,6 @@ export function CarerDocumentsForm({
             const meta = CARER_DOCUMENT_CATEGORY_META[type];
             const draft = drafts[type];
             const dirty = categoryDraftDirty(draft, savedDrafts[type]);
-            const showReminderToggle =
-              type === "vulnerable_sector_check" || type === "first_aid_cpr";
             return (
               <CarerDocumentCategoryCard
                 key={type}
@@ -345,9 +326,6 @@ export function CarerDocumentsForm({
                 meta={meta}
                 viewingFileId={viewingFileId}
                 disabled={busy}
-                showReminderToggle={showReminderToggle}
-                reminderPending={reminderPendingType === type}
-                onReminderToggle={(enabled) => void handleReminderToggle(type, enabled)}
                 fileInputRef={(el) => {
                   fileInputs.current[type] = el;
                 }}
@@ -509,9 +487,6 @@ function CarerDocumentCategoryCard({
   onRemoveNewFile,
   onRemoveRetainedFile,
   onViewFile,
-  showReminderToggle = false,
-  reminderPending = false,
-  onReminderToggle,
 }: {
   category: CarerDocumentCategory;
   draft: CategoryDraft;
@@ -520,9 +495,6 @@ function CarerDocumentCategoryCard({
   meta: (typeof CARER_DOCUMENT_CATEGORY_META)[StaffDocumentType];
   viewingFileId: string | null;
   disabled: boolean;
-  showReminderToggle?: boolean;
-  reminderPending?: boolean;
-  onReminderToggle?: (enabled: boolean) => void;
   fileInputRef: (el: HTMLInputElement | null) => void;
   onProcessedDateChange: (value: string) => void;
   onExpiryDateChange: (value: string) => void;
@@ -592,7 +564,7 @@ function CarerDocumentCategoryCard({
       </CardHeader>
 
       <CardContent className="space-y-5 pt-0">
-        {meta.dateField === "processed" ? (
+        {meta.dateField === "both" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor={`processed-${category.documentType}`}>Processed Date</Label>
@@ -613,15 +585,21 @@ function CarerDocumentCategoryCard({
               </p>
             </div>
             <div className="space-y-1.5">
-              <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
-                <Lock aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
-                Expiry Date
-              </span>
-              <div className="flex h-11 items-center rounded-md border border-dashed border-border bg-muted/40 px-3 text-sm text-muted-foreground">
-                {category.expiryDate ? formatDocumentDate(category.expiryDate) : "Not calculated yet"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Calculated by Intra — you can&apos;t edit this.
+              <Label htmlFor={`expiry-${category.documentType}`}>Expiry Date</Label>
+              <Input
+                id={`expiry-${category.documentType}`}
+                type="date"
+                className="h-11"
+                value={draft.expiryDate}
+                disabled={disabled}
+                aria-describedby={`expiry-hint-${category.documentType}`}
+                onChange={(e) => onExpiryDateChange(e.target.value)}
+              />
+              <p
+                id={`expiry-hint-${category.documentType}`}
+                className="text-xs text-muted-foreground"
+              >
+                The expiry date printed on your Vulnerable Sector Check.
               </p>
             </div>
           </div>
@@ -773,36 +751,6 @@ function CarerDocumentCategoryCard({
             <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
             <span className="min-w-0 break-words">{error}</span>
           </p>
-        ) : null}
-
-        {showReminderToggle ? (
-          <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1">
-                <Label htmlFor={`reminder-${category.documentType}`} className="text-sm font-medium">
-                  Expiry email reminders
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Receive reminder emails before this document expires.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Reminders are sent 30, 14, 7, 3, and 1 day before expiry.
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2 pt-0.5">
-                {reminderPending ? (
-                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-muted-foreground" />
-                ) : null}
-                <Switch
-                  id={`reminder-${category.documentType}`}
-                  checked={category.remindersEnabled}
-                  disabled={disabled || reminderPending}
-                  aria-label={`Expiry email reminders for ${meta.title}`}
-                  onCheckedChange={(checked) => onReminderToggle?.(checked)}
-                />
-              </div>
-            </div>
-          </div>
         ) : null}
 
       </CardContent>

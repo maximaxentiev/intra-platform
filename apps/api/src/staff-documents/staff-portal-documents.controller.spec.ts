@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CarerPortalEnabledGuard } from '../staff-portal/carer-portal-enabled.guard';
-import { isStaffDocumentReminderType } from './staff-document.constants';
 import { parseRetainFileIds } from './staff-document-multipart.util';
 
 const apiRoot = join(__dirname);
@@ -38,19 +37,10 @@ describe('retainFileIds parsing', () => {
   });
 });
 
-describe('carer document reminder toggle endpoint', () => {
-  it('exposes PATCH reminders route with staff session guards', () => {
+describe('staff portal documents controller', () => {
+  it('does not expose reminder preference endpoints', () => {
     const src = readControllerSource();
-    expect(src).toContain("@Patch(':documentType/reminders')");
-    expect(src).toContain('setRemindersCarer');
-    expect(src).toContain('@CurrentStaff()');
-    expect(src).not.toContain('staffId');
-  });
-
-  it('rejects unsupported reminder document types at service layer', () => {
-    expect(isStaffDocumentReminderType('vulnerable_sector_check')).toBe(true);
-    expect(isStaffDocumentReminderType('first_aid_cpr')).toBe(true);
-    expect(isStaffDocumentReminderType('immunizations')).toBe(false);
-    expect(isStaffDocumentReminderType('covid19_vaccination')).toBe(false);
+    expect(src).not.toContain('/reminders');
+    expect(src).not.toContain('setRemindersCarer');
   });
 });

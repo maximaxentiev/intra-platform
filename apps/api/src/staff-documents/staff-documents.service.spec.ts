@@ -120,7 +120,18 @@ function createHarness() {
     }),
   };
 
-  const service = new StaffDocumentsService(db, storage as never, { record: audit } as never);
+  const documentReminders = {
+    cancelPendingForSubmission: vi.fn().mockResolvedValue(0),
+    syncRemindersForSet: vi.fn().mockResolvedValue([]),
+    enqueueScheduledIds: vi.fn().mockResolvedValue(undefined),
+  };
+
+  const service = new StaffDocumentsService(
+    db,
+    storage as never,
+    { record: audit } as never,
+    documentReminders as never,
+  );
 
   const queueAccountLoad = () => selectQueue.push([account]);
   const queueStaffExists = () => selectQueue.push([{ id: STAFF_ID }]);
@@ -221,13 +232,47 @@ describe('StaffDocumentsService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('derives VSC expiry server-side and rejects client expiry', async () => {
+  it('persists user-entered VSC processed and expiry dates', async () => {
+    h.queueAccountLoad();
+    h.queueSetContext({
+      set: { id: 'set-vsc', currentSubmissionId: null },
+      submission: null,
+      files: [],
+    });
+    h.queueComplianceLoad({
+      sets: [{ documentType: 'vulnerable_sector_check', currentSubmissionId: 's-new', remindersEnabled: true }],
+      submissions: [
+        {
+          id: 's-new',
+          reviewStatus: 'pending_review',
+          processedDate: '2026-08-01',
+          expiryDate: '2030-01-01',
+          submittedAt: new Date(),
+          supersededAt: null,
+        },
+      ],
+      files: [{ submissionId: 's-new', id: 'f1' }],
+    });
+
+    await h.service.saveCategoryCarer(
+      session,
+      'vulnerable_sector_check',
+      { processedDate: '2026-08-01', expiryDate: '2030-01-01', retainFileIds: [] },
+      [multerFile()],
+    );
+
+    const insertedSubmission = h.submissions.at(-1);
+    expect(insertedSubmission?.processedDate).toBe('2026-08-01');
+    expect(insertedSubmission?.expiryDate).toBe('2030-01-01');
+  });
+
+  it('requires VSC expiry date on save', async () => {
     h.queueAccountLoad();
     await expect(
       h.service.saveCategoryCarer(
         session,
         'vulnerable_sector_check',
-        { processedDate: '2026-08-01', expiryDate: '2030-01-01', retainFileIds: [] },
+        { processedDate: '2026-08-01', retainFileIds: [] },
         [multerFile()],
       ),
     ).rejects.toBeInstanceOf(BadRequestException);

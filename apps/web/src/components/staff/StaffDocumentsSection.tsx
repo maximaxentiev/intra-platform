@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -311,19 +310,6 @@ export function StaffDocumentsSection({
     }
   }
 
-  async function handleReminderToggle(type: StaffDocumentType, enabled: boolean) {
-    setPendingAction(`reminder-${type}`);
-    try {
-      await opsStaffDocumentsApi.setReminders(staffId, type, enabled);
-      toast.success(enabled ? "Automated reminders enabled" : "Automated reminders disabled");
-      await refreshAll();
-    } catch (err) {
-      toast.error(mapOpsDocumentsApiError(err, "Could not update reminder settings."));
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
   async function handleViewFile(type: StaffDocumentType, fileId: string) {
     setViewingFileId(fileId);
     try {
@@ -477,8 +463,6 @@ export function StaffDocumentsSection({
           const meta = CARER_DOCUMENT_CATEGORY_META[type];
           const isOpen = openType === type;
           const isEditing = isOpen && panelMode === "edit";
-          const showReminderToggle =
-            type === "vulnerable_sector_check" || type === "first_aid_cpr";
           const needsReview =
             category.isSubmitted &&
             Boolean(category.currentSubmissionId) &&
@@ -568,12 +552,6 @@ export function StaffDocumentsSection({
                           </>
                         )}
                       </DropdownMenuItem>
-                      {showReminderToggle ? (
-                        <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
-                          <Check className="h-4 w-4 opacity-0" aria-hidden />
-                          Reminder settings
-                        </DropdownMenuItem>
-                      ) : null}
                       {canClear ? (
                         <>
                           <DropdownMenuSeparator />
@@ -602,22 +580,34 @@ export function StaffDocumentsSection({
                         </p>
                       ) : null}
 
-                      {meta.dateField === "processed" ? (
-                        <div className="space-y-1.5 sm:max-w-xs">
-                          <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
-                          <Input
-                            id={`ops-processed-${type}`}
-                            type="date"
-                            className="h-10"
-                            value={draft.processedDate}
-                            disabled={busy}
-                            onChange={(e) =>
-                              setDraft((d) => ({ ...d, processedDate: e.target.value }))
-                            }
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Expiry is calculated by Intra from this date.
-                          </p>
+                      {meta.dateField === "both" ? (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
+                            <Input
+                              id={`ops-processed-${type}`}
+                              type="date"
+                              className="h-10"
+                              value={draft.processedDate}
+                              disabled={busy}
+                              onChange={(e) =>
+                                setDraft((d) => ({ ...d, processedDate: e.target.value }))
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`ops-expiry-vsc-${type}`}>Expiry Date</Label>
+                            <Input
+                              id={`ops-expiry-vsc-${type}`}
+                              type="date"
+                              className="h-10"
+                              value={draft.expiryDate}
+                              disabled={busy}
+                              onChange={(e) =>
+                                setDraft((d) => ({ ...d, expiryDate: e.target.value }))
+                              }
+                            />
+                          </div>
                         </div>
                       ) : null}
 
@@ -847,26 +837,6 @@ export function StaffDocumentsSection({
                             <Pencil className="h-4 w-4" aria-hidden />
                             Replace
                           </Button>
-                        </div>
-                      ) : null}
-
-                      {showReminderToggle ? (
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
-                          <Label htmlFor={`reminder-${type}`} className="text-xs font-normal text-muted-foreground">
-                            Expiry email reminders
-                          </Label>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {category.remindersEnabled ? "On" : "Off"}
-                            </span>
-                            <Switch
-                              id={`reminder-${type}`}
-                              checked={category.remindersEnabled}
-                              disabled={busy}
-                              aria-label={`Automated expiry reminders for ${meta.title}`}
-                              onCheckedChange={(checked) => void handleReminderToggle(type, checked)}
-                            />
-                          </div>
                         </div>
                       ) : null}
                     </div>

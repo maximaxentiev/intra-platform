@@ -45,12 +45,12 @@ export type CarerDocumentsList = {
 
 export const CARER_DOCUMENT_CATEGORY_META: Record<
   StaffDocumentType,
-  { title: string; required: boolean; dateField: "processed" | "expiry" | null }
+  { title: string; required: boolean; dateField: "processed" | "expiry" | "both" | null }
 > = {
   vulnerable_sector_check: {
     title: "Vulnerable Sector Check",
     required: true,
-    dateField: "processed",
+    dateField: "both",
   },
   first_aid_cpr: {
     title: "First Aid & CPR Certification",
@@ -196,6 +196,10 @@ export function validateCategoryDraft(
   if (meta.dateField === "expiry" && !draft.expiryDate.trim()) {
     return "Expiry date is required.";
   }
+  if (meta.dateField === "both") {
+    if (!draft.processedDate.trim()) return "Processed date is required.";
+    if (!draft.expiryDate.trim()) return "Expiry date is required.";
+  }
 
   return null;
 }
@@ -209,8 +213,9 @@ export function buildCategorySaveFormData(
   for (const file of draft.newFiles) {
     formData.append("files", file, file.name);
   }
-  if (documentType === "vulnerable_sector_check" && draft.processedDate) {
-    formData.append("processedDate", draft.processedDate);
+  if (documentType === "vulnerable_sector_check") {
+    if (draft.processedDate) formData.append("processedDate", draft.processedDate);
+    if (draft.expiryDate) formData.append("expiryDate", draft.expiryDate);
   }
   if (documentType === "first_aid_cpr" && draft.expiryDate) {
     formData.append("expiryDate", draft.expiryDate);
@@ -240,6 +245,4 @@ export const carerDocumentsApi = {
   clearCategory: (documentType: StaffDocumentType) =>
     api.del<CarerDocumentsList>(`/staff-portal/documents/${documentType}`),
   completeStep2: () => api.post<CarerDocumentsList>("/staff-portal/documents/complete-step-2"),
-  setReminders: (documentType: StaffDocumentType, enabled: boolean) =>
-    api.patch<CarerDocumentsList>(`/staff-portal/documents/${documentType}/reminders`, { enabled }),
 };

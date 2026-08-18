@@ -76,7 +76,6 @@ describe("ops staff documents API client", () => {
     expect(typeof opsStaffDocumentsApi.get).toBe("function");
     expect(typeof opsStaffDocumentsApi.approveSubmission).toBe("function");
     expect(typeof opsStaffDocumentsApi.flagIssue).toBe("function");
-    expect(typeof opsStaffDocumentsApi.setReminders).toBe("function");
     expect(typeof opsStaffDocumentsApi.clearCategory).toBe("function");
     expect(String(opsStaffDocumentsApi.get)).not.toContain("storageKey");
   });
@@ -163,22 +162,27 @@ describe("ops upload and replace", () => {
   });
 });
 
-describe("clear submission and reminders", () => {
+describe("clear submission", () => {
   it("requires clear confirmation with history-retained copy", () => {
     const src = readSrc("components/staff/StaffDocumentsSection.tsx");
     expect(src).toContain("Historical submissions are retained");
     expect(src).toContain("Clear Submission");
   });
+});
 
-  it("shows reminder toggles only for VSC and First Aid", () => {
+describe("ops documents UI", () => {
+  it("does not expose reminder preference controls", () => {
     const src = readSrc("components/staff/StaffDocumentsSection.tsx");
-    expect(src).toContain('type === "vulnerable_sector_check" || type === "first_aid_cpr"');
-    expect(src).toContain("Expiry email reminders");
-    expect(src).toContain("setReminders");
+    expect(src).not.toContain("Expiry email reminders");
+    expect(src).not.toContain("setReminders");
+    expect(src).not.toContain("Expiry is calculated by Intra");
   });
 
-  it("PATCHes reminder preference payload", () => {
-    expect(String(opsStaffDocumentsApi.setReminders)).toContain("/reminders");
+  it("shows editable VSC processed and expiry date fields", () => {
+    const src = readSrc("components/staff/StaffDocumentsSection.tsx");
+    expect(src).toContain('dateField === "both"');
+    expect(src).toContain("Processed Date");
+    expect(src).toContain("Expiry Date");
   });
 });
 

@@ -6,7 +6,6 @@ import { ApiError } from "@/lib/api";
 import {
   buildCategorySaveFormData,
   CARER_DOCUMENT_CATEGORY_META,
-  carerDocumentsApi,
   categoryDraftDirty,
   categoryDraftFromCategory,
   documentsDraftDirty,
@@ -75,6 +74,7 @@ describe("carer document category metadata", () => {
   it("defines four required/optional categories", () => {
     expect(STAFF_DOCUMENT_TYPES).toHaveLength(4);
     expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.required).toBe(true);
+    expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.dateField).toBe("both");
     expect(CARER_DOCUMENT_CATEGORY_META.covid19_vaccination.required).toBe(false);
   });
 });
@@ -153,7 +153,7 @@ describe("validateCategoryDraft", () => {
     expect(validateCategoryDraft("immunizations", draft, [])).toMatch(/10 files/i);
   });
 
-  it("requires VSC processed date and First Aid expiry date", () => {
+  it("requires VSC processed and expiry dates", () => {
     expect(
       validateCategoryDraft(
         "vulnerable_sector_check",
@@ -162,6 +162,36 @@ describe("validateCategoryDraft", () => {
       ),
     ).toMatch(/Processed date/i);
 
+    expect(
+      validateCategoryDraft(
+        "vulnerable_sector_check",
+        {
+          retainFileIds: [],
+          newFiles: [new File(["x"], "vsc.pdf")],
+          processedDate: "2024-01-15",
+          expiryDate: "",
+        },
+        [],
+      ),
+    ).toMatch(/Expiry date/i);
+  });
+
+  it("allows VSC expiry dates independent of processed date + 3 years", () => {
+    expect(
+      validateCategoryDraft(
+        "vulnerable_sector_check",
+        {
+          retainFileIds: [],
+          newFiles: [new File(["x"], "vsc.pdf")],
+          processedDate: "2024-01-15",
+          expiryDate: "2025-06-01",
+        },
+        [],
+      ),
+    ).toBeNull();
+  });
+
+  it("requires First Aid expiry date", () => {
     expect(
       validateCategoryDraft(
         "first_aid_cpr",
@@ -185,15 +215,15 @@ describe("buildCategorySaveFormData", () => {
     expect(formData.getAll("files")).toHaveLength(1);
   });
 
-  it("sends processedDate for VSC and expiryDate for First Aid", () => {
+  it("sends processedDate and expiryDate for VSC", () => {
     const vsc = buildCategorySaveFormData("vulnerable_sector_check", {
       retainFileIds: [],
       newFiles: [new File(["x"], "vsc.pdf")],
       processedDate: "2024-01-15",
-      expiryDate: "",
+      expiryDate: "2025-06-01",
     });
     expect(vsc.get("processedDate")).toBe("2024-01-15");
-    expect(vsc.get("expiryDate")).toBeNull();
+    expect(vsc.get("expiryDate")).toBe("2025-06-01");
 
     const fa = buildCategorySaveFormData("first_aid_cpr", {
       retainFileIds: [],
@@ -247,25 +277,18 @@ describe("documents list shape", () => {
   });
 });
 
-describe("carer document reminder preferences", () => {
-  it("PATCHes reminder preference without accepting staffId", () => {
-    expect(String(carerDocumentsApi.setReminders)).toContain("/reminders");
-    expect(String(carerDocumentsApi.setReminders)).toContain("enabled");
-    expect(String(carerDocumentsApi.setReminders)).not.toContain("staffId");
-    expect(String(carerDocumentsApi.setReminders)).not.toContain("submissionId");
+describe("carer documents UI", () => {
+  it("does not expose reminder preference controls", () => {
+    const src = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(src).not.toContain("Expiry email reminders");
+    expect(src).not.toContain("setReminders");
+    expect(src).not.toContain("Calculated by Intra");
   });
 
-  it("shows expiry reminder toggles only for VSC and First Aid", () => {
+  it("shows editable VSC processed and expiry date fields", () => {
     const src = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(src).toContain('type === "vulnerable_sector_check" || type === "first_aid_cpr"');
-    expect(src).toContain("Expiry email reminders");
-    expect(src).toContain("carerDocumentsApi.setReminders");
-    expect(src).toContain("reminderPendingType");
-  });
-
-  it("uses mobile-friendly reminder toggle layout without wide tables", () => {
-    const src = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(src).toContain("min-w-0");
-    expect(src).not.toMatch(/<table/i);
+    expect(src).toContain('dateField === "both"');
+    expect(src).toContain("Processed Date");
+    expect(src).toContain("Expiry Date");
   });
 });

@@ -175,7 +175,6 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
           documentType: 'vulnerable_sector_check',
           submissionId,
           expiryDate,
-          remindersEnabled: true,
         },
         tx,
         new Date(torontoDocumentReminderInstant(expiryDate, 40).getTime() - 60_000),
@@ -198,7 +197,6 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
           documentType: 'vulnerable_sector_check',
           submissionId,
           expiryDate,
-          remindersEnabled: true,
         },
         tx,
         new Date(torontoDocumentReminderInstant(expiryDate, 40).getTime() - 60_000),
@@ -238,6 +236,78 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, submissionId));
     expect(rows.some((row) => row.status === 'scheduled')).toBe(true);
+  }, 20_000);
+
+  it('schedules CPR 2026-09-04 as 14d/7d/3d/1d only when today is 2026-08-18', async () => {
+    const cprExpiry = '2026-09-04';
+    const cprNow = new Date('2026-08-18T13:00:00.000Z');
+    const cprSetRows = await db
+      .insert(staffDocumentSets)
+      .values({
+        staffId,
+        documentType: 'first_aid_cpr',
+        remindersEnabled: false,
+      })
+      .returning({ id: staffDocumentSets.id });
+    const cprSetId = cprSetRows[0]!.id;
+
+    const cprSubmissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: cprSetId,
+        reviewStatus: 'approved',
+        expiryDate: cprExpiry,
+        submittedAt: new Date(),
+        submittedByActorType: 'carer',
+        submittedByStaffAccountId: accountId,
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+    const cprSubmissionId = cprSubmissionRows[0]!.id;
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: cprSubmissionId })
+      .where(eq(staffDocumentSets.id, cprSetId));
+
+    let scheduledIds: string[] = [];
+    await db.transaction(async (tx) => {
+      scheduledIds = await documentReminders.scheduleForApprovedSubmission(
+        {
+          staffId,
+          documentSetId: cprSetId,
+          documentType: 'first_aid_cpr',
+          submissionId: cprSubmissionId,
+          expiryDate: cprExpiry,
+        },
+        tx,
+        cprNow,
+      );
+    });
+
+    expect(scheduledIds.length).toBe(4);
+
+    const rows = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, cprSubmissionId));
+    expect(rows.filter((row) => row.status === 'scheduled').map((row) => row.communicationType)).toEqual([
+      'document_expiry_14d',
+      'document_expiry_7d',
+      'document_expiry_3d',
+      'document_expiry_1d',
+    ]);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_30d')).toBe(false);
+
+    await documentReminders.cancelPendingForSubmission(cprSubmissionId);
+
+    const result = await documentReminders.reconcileEligibleDocuments();
+    expect(result.ensured).toBeGreaterThan(0);
+
+    const reactivated = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, cprSubmissionId));
+    expect(reactivated.filter((row) => row.status === 'scheduled').length).toBe(4);
   }, 20_000);
 });
 

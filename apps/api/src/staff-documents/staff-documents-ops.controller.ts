@@ -5,7 +5,6 @@ import {
   Get,
   Header,
   Param,
-  Patch,
   Post,
   Req,
   Res,
@@ -16,7 +15,7 @@ import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
-import { FlagStaffDocumentIssueDto, SetStaffDocumentRemindersDto } from './dto/staff-documents.dto';
+import { FlagStaffDocumentIssueDto } from './dto/staff-documents.dto';
 import {
   mapStaffDocumentMulterError,
   parseRetainFileIds,
@@ -115,16 +114,6 @@ export class StaffDocumentsOpsController {
     @Body() dto: FlagStaffDocumentIssueDto,
   ) {
     return this.documents.flagIssue(staffId, user.userId, documentType, submissionId, dto.issueNote);
-  }
-
-  @Patch(':staffId/documents/:documentType/reminders')
-  setReminders(
-    @Param('staffId') staffId: string,
-    @Param('documentType') documentType: string,
-    @CurrentUser() user: SessionPayload,
-    @Body() dto: SetStaffDocumentRemindersDto,
-  ) {
-    return this.documents.setReminders(staffId, user.userId, documentType, dto.enabled);
   }
 
   @Delete(':staffId/documents/:documentType')
