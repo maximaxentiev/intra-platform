@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
+import { ApiError } from "@/lib/api";
 import {
   shiftAssignmentFeedbackMessage,
   shiftResendFeedbackMessage,
@@ -63,8 +64,7 @@ function ShiftDetail() {
 
   if (!shift) return <DetailLoading />;
 
-  // Preserve prior behaviour: only staff matching the required role are shown.
-  const availableList = (availableQ.data ?? []).filter((s) => s.role === shift.roleNeeded);
+  const availableList = availableQ.data ?? [];
 
   const assignedName =
     shift.assignedStaffId && shift.assignedLegalName
@@ -141,7 +141,12 @@ function ShiftDetail() {
       }
       qc.invalidateQueries();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Assign failed");
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(err.message);
+        void qc.invalidateQueries({ queryKey: ["shift-available", id] });
+      } else {
+        toast.error(err instanceof Error ? err.message : "Assign failed");
+      }
     } finally {
       setAssigningStaffId(null);
     }
@@ -323,11 +328,22 @@ function ShiftDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Available staff for this shift</CardTitle>
-              <p className="text-sm text-muted-foreground">Banned staff and anyone already booked at this time are excluded. <Star className="inline h-3.5 w-3.5 text-warning fill-warning -mt-0.5" /> = Top staff for this centre.</p>
+              <p className="text-sm text-muted-foreground">
+                Eligible staff are filtered automatically using availability, scheduling conflicts,
+                centre restrictions, account status, role, and document compliance.{" "}
+                <Star className="inline h-3.5 w-3.5 text-warning fill-warning -mt-0.5" /> = Top staff
+                for this centre.
+              </p>
             </CardHeader>
             <CardContent>
               {availableList.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-4">No eligible staff. Everyone active is either banned at this centre or already booked at this time.</div>
+                <div className="space-y-1 py-4 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">No eligible staff found for this shift.</p>
+                  <p>
+                    Availability, scheduling conflicts, centre restrictions, account status, role,
+                    and document compliance are considered automatically.
+                  </p>
+                </div>
               ) : (
                 <ul className="divide-y">
                   {availableList.map((s) => {

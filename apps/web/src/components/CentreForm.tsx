@@ -12,6 +12,7 @@ export type CentreFormValues = {
   name: string;
   address: string;
   city: string;
+  hourlyRate: string;
   primaryChannel: CentreChannel;
   notes: string;
 };
@@ -21,7 +22,7 @@ export function CentreForm({
   secondaryChannels = [],
   onSubmit,
 }: {
-  initial: Partial<CentreFormValues>;
+  initial: Partial<Omit<CentreFormValues, "hourlyRate"> & { hourlyRate?: string | null }>;
   secondaryChannels?: CentreChannel[];
   onSubmit: (values: CentreFormValues, secondary: CentreChannel[]) => Promise<void>;
 }) {
@@ -29,6 +30,7 @@ export function CentreForm({
     name: initial.name ?? "",
     address: initial.address ?? "",
     city: initial.city ?? "",
+    hourlyRate: initial.hourlyRate != null ? String(initial.hourlyRate) : "",
     notes: initial.notes ?? "",
     primaryChannel: initial.primaryChannel ?? "email",
   });
@@ -45,7 +47,13 @@ export function CentreForm({
     if (nextCityError) return;
     setSaving(true);
     const cleanedSecondary = secondary.filter((c) => c !== values.primaryChannel);
-    await onSubmit(values, cleanedSecondary);
+    await onSubmit(
+      {
+        ...values,
+        hourlyRate: values.hourlyRate.trim(),
+      },
+      cleanedSecondary,
+    );
     setSecondary(cleanedSecondary);
     setSaving(false);
   }
@@ -75,6 +83,19 @@ export function CentreForm({
         }}
         error={cityError}
       />
+      <div className="space-y-2">
+        <Label htmlFor="hourlyRate">Hourly Rate</Label>
+        <p className="text-sm text-muted-foreground">
+          Stores the agreed hourly charge for this Centre for future invoicing and reporting.
+        </p>
+        <Input
+          id="hourlyRate"
+          inputMode="decimal"
+          placeholder="28.50"
+          value={values.hourlyRate}
+          onChange={(e) => set("hourlyRate", e.target.value)}
+        />
+      </div>
       <div className="space-y-2">
         <Label>Primary communication channel</Label>
         <Select value={values.primaryChannel} onValueChange={(v) => onPrimaryChange(v as CentreChannel)}>

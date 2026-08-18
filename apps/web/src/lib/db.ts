@@ -99,6 +99,7 @@ export interface Centre {
   name: string;
   address: string;
   city: string;
+  hourlyRate: string | null;
   primaryChannel: CentreChannel;
   notes: string;
   createdAt: string;

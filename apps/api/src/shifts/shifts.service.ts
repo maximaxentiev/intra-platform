@@ -1,10 +1,11 @@
 import {
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { aliasedTable, and, asc, desc, eq, gte, lte, ne, sql, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
   centres,
@@ -12,12 +13,13 @@ import {
   shiftContacted,
   shifts,
   staff,
-  staffCentreBanned,
-  staffCentreTop,
   users,
 } from '../db/schema';
 import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
+import { ShiftMatchingService } from './shift-matching.service';
+import { SHIFT_ASSIGN_INELIGIBLE_MESSAGE } from './shift-matching.types';
+import { acquireShiftStaffDateAdvisoryLock } from './shift-staff-date-advisory-lock.util';
 import {
   AddCommentDto,
   ChangeStatusDto,
@@ -33,6 +35,7 @@ export class ShiftsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly assignmentConfirmations: ShiftAssignmentConfirmationService,
+    private readonly shiftMatching: ShiftMatchingService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -135,29 +138,8 @@ export class ShiftsService {
   }
 
   async assign(id: string, staffId: string, actorUserId: string): Promise<ShiftAssignResponse> {
-    const updated = await this.db
-      .update(shifts)
-      .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
-      .where(and(eq(shifts.id, id), sql`${shifts.assignedStaffId} IS DISTINCT FROM ${staffId}`))
-      .returning();
-
-    if (updated[0]) {
-      const shift = await this.get(id);
-      const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
-        shiftId: id,
-        assignedStaffId: staffId,
-        actorUserId,
-        trigger: 'assign',
-      });
-      return {
-        shift,
-        assignment: { changed: true, alreadyAssigned: false },
-        notifications,
-      };
-    }
-
     const existing = await this.db
-      .select({ assignedStaffId: shifts.assignedStaffId })
+      .select({ assignedStaffId: shifts.assignedStaffId, shiftDate: shifts.shiftDate })
       .from(shifts)
       .where(eq(shifts.id, id));
     if (!existing[0]) throw new NotFoundException('Shift not found.');
@@ -170,7 +152,59 @@ export class ShiftsService {
       };
     }
 
-    throw new NotFoundException('Shift not found.');
+    let assignmentChanged = false;
+
+    await this.db.transaction(async (tx) => {
+      await acquireShiftStaffDateAdvisoryLock(tx, staffId, existing[0].shiftDate);
+
+      const locked = await tx
+        .select({ assignedStaffId: shifts.assignedStaffId })
+        .from(shifts)
+        .where(eq(shifts.id, id))
+        .for('update');
+      if (!locked[0]) throw new NotFoundException('Shift not found.');
+      if (locked[0].assignedStaffId === staffId) return;
+
+      const eligibility = await this.shiftMatching.evaluateStaffForShift(id, staffId, tx);
+      if (!eligibility.eligible) {
+        throw new ConflictException({
+          message: SHIFT_ASSIGN_INELIGIBLE_MESSAGE,
+          reasons: eligibility.reasons,
+        });
+      }
+
+      const updated = await tx
+        .update(shifts)
+        .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
+        .where(and(eq(shifts.id, id), sql`${shifts.assignedStaffId} IS DISTINCT FROM ${staffId}`))
+        .returning({ id: shifts.id });
+
+      if (updated[0]) {
+        assignmentChanged = true;
+      }
+    });
+
+    if (!assignmentChanged) {
+      const shift = await this.get(id);
+      return {
+        shift,
+        assignment: { changed: false, alreadyAssigned: true },
+        notifications: null,
+      };
+    }
+
+    const shift = await this.get(id);
+    const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
+      shiftId: id,
+      assignedStaffId: staffId,
+      actorUserId,
+      trigger: 'assign',
+    });
+    return {
+      shift,
+      assignment: { changed: true, alreadyAssigned: false },
+      notifications,
+    };
   }
 
   async sendAssignmentConfirmation(
@@ -219,70 +253,9 @@ export class ShiftsService {
     return rows[0];
   }
 
-  // Eligible staff for a shift: active, not banned at the centre, not
-  // double-booked on the same date with an overlapping time range. Marked
-  // with isTop (centre top-staff) and contacted flags; sorted top-first.
+  /** Authoritative smart-matched eligible staff for a shift (top/contacted annotated). */
   async availableStaff(shiftId: string) {
-    const shift = await this.get(shiftId);
-
-    const [active, banned, top, contacted, sameDay] = await Promise.all([
-      this.db
-        .select({
-          id: staff.id,
-          legalName: staff.legalName,
-          displayName: staff.displayName,
-          useDisplayName: staff.useDisplayName,
-          role: staff.role,
-        })
-        .from(staff)
-        .where(eq(staff.status, 'active'))
-        .orderBy(asc(staff.legalName)),
-      this.db
-        .select({ staffId: staffCentreBanned.staffId })
-        .from(staffCentreBanned)
-        .where(eq(staffCentreBanned.centreId, shift.centreId)),
-      this.db
-        .select({ staffId: staffCentreTop.staffId })
-        .from(staffCentreTop)
-        .where(eq(staffCentreTop.centreId, shift.centreId)),
-      this.db
-        .select({ staffId: shiftContacted.staffId })
-        .from(shiftContacted)
-        .where(eq(shiftContacted.shiftId, shiftId)),
-      this.db
-        .select({
-          assignedStaffId: shifts.assignedStaffId,
-          startTime: shifts.startTime,
-          endTime: shifts.endTime,
-        })
-        .from(shifts)
-        .where(and(eq(shifts.shiftDate, shift.shiftDate), ne(shifts.id, shiftId))),
-    ]);
-
-    const bannedSet = new Set(banned.map((b) => b.staffId));
-    const topSet = new Set(top.map((t) => t.staffId));
-    const contactedSet = new Set(contacted.map((c) => c.staffId));
-
-    const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
-      aStart < bEnd && bStart < aEnd;
-    const doubleBooked = new Set<string>();
-    for (const s of sameDay) {
-      if (!s.assignedStaffId) continue;
-      if (overlaps(shift.startTime, shift.endTime, s.startTime, s.endTime)) {
-        doubleBooked.add(s.assignedStaffId);
-      }
-    }
-
-    const eligible = active
-      .filter((s) => !bannedSet.has(s.id) && !doubleBooked.has(s.id))
-      .map((s) => ({ ...s, isTop: topSet.has(s.id), contacted: contactedSet.has(s.id) }));
-
-    // Top staff first, then alphabetical by legal name.
-    eligible.sort((a, b) => {
-      if (a.isTop !== b.isTop) return a.isTop ? -1 : 1;
-      return a.legalName.localeCompare(b.legalName);
-    });
-    return eligible;
+    return this.shiftMatching.findEligibleStaffForShift(shiftId);
   }
 
   async setContacted(shiftId: string, staffId: string, contacted: boolean) {

@@ -17,15 +17,24 @@ import { RecordingEmailTransport } from '../email/email.transport';
 import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-document-share-lifecycle.service';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
+import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftsService } from './shifts.service';
+import {
+  availability,
+  staffAccounts,
+  staffDocumentFiles,
+  staffDocumentSets,
+  staffDocumentSubmissions,
+} from '../db/schema';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
 
-const SHIFT_ID = '55555555-5555-4555-8555-555555555551';
-const CENTRE_ID = '66666666-6666-4666-8666-666666666661';
-const STAFF_ID = '77777777-7777-4777-8777-777777777771';
-const OPS_USER_ID = '88888888-8888-4888-8888-888888888881';
+const SHIFT_ID = '55555555-5555-4555-8555-555555555559';
+const CENTRE_ID = '66666666-6666-4666-8666-666666666662';
+const STAFF_ID = '99999999-9999-4999-8999-999999999991';
+const OPS_USER_ID = '88888888-8888-4888-8888-888888888889';
+const ACCOUNT_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
 async function probePostgres(): Promise<boolean> {
   const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2500, max: 1 });
@@ -102,12 +111,26 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       shareLifecycle,
     );
 
-    service = new ShiftsService(db, confirmation);
+    service = new ShiftsService(db, confirmation, new ShiftMatchingService(db));
 
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
-    await db.delete(shifts).where(eq(shifts.id, SHIFT_ID));
+    await db.delete(shifts).where(eq(shifts.centreId, CENTRE_ID));
     await db.delete(centreContacts).where(eq(centreContacts.centreId, CENTRE_ID));
-    await db.delete(centres).where(eq(centres.id, CENTRE_ID));
+    await db
+      .insert(centres)
+      .values({
+        id: CENTRE_ID,
+        name: 'Assign Test Centre',
+        address: '1 Test Street',
+        city: 'Toronto',
+      })
+      .onConflictDoUpdate({
+        target: centres.id,
+        set: { name: 'Assign Test Centre', address: '1 Test Street', city: 'Toronto' },
+      });
+    await db.delete(staffDocumentSets).where(eq(staffDocumentSets.staffId, STAFF_ID));
+    await db.delete(staffAccounts).where(eq(staffAccounts.staffId, STAFF_ID));
+    await db.delete(availability).where(eq(availability.staffId, STAFF_ID));
     await db.delete(staff).where(eq(staff.id, STAFF_ID));
     await db.delete(users).where(eq(users.id, OPS_USER_ID));
 
@@ -124,13 +147,57 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       legalLastName: 'Test',
       displayName: 'Assign Test',
       email: 'assign-test@example.test',
+      role: 'ECE',
+      status: 'active',
     });
-    await db.insert(centres).values({
-      id: CENTRE_ID,
-      name: 'Assign Test Centre',
-      address: '1 Test Street',
-      city: 'Toronto',
+    await db.insert(staffAccounts).values({
+      id: ACCOUNT_ID,
+      staffId: STAFF_ID,
+      email: 'assign-test@example.test',
+      status: 'incomplete',
+      onboardingCompletedAt: new Date('2026-01-01T12:00:00.000Z'),
     });
+    await db.insert(availability).values({
+      staffId: STAFF_ID,
+      weekStartDate: '2026-08-31',
+      dayOfWeek: 1,
+      startTime: '08:00:00',
+      endTime: '18:00:00',
+    });
+    for (const [suffix, type, subSuffix, fileSuffix] of [
+      ['81', 'vulnerable_sector_check', '91', 'a1'],
+      ['82', 'first_aid_cpr', '92', 'a2'],
+      ['83', 'immunizations', '93', 'a3'],
+    ] as const) {
+      const setId = `99999999-9999-4999-8999-9999999999${suffix}`;
+      const submissionId = `99999999-9999-4999-8999-9999999999${subSuffix}`;
+      const fileId = `99999999-9999-4999-8999-9999999999${fileSuffix}`;
+      await db.insert(staffDocumentSets).values({
+        id: setId,
+        staffId: STAFF_ID,
+        documentType: type,
+      });
+      await db.insert(staffDocumentSubmissions).values({
+        id: submissionId,
+        documentSetId: setId,
+        reviewStatus: 'approved',
+        submittedAt: new Date('2026-01-01T00:00:00.000Z'),
+        submittedByActorType: 'carer',
+        reviewedAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+      await db
+        .update(staffDocumentSets)
+        .set({ currentSubmissionId: submissionId })
+        .where(eq(staffDocumentSets.id, setId));
+      await db.insert(staffDocumentFiles).values({
+        id: fileId,
+        submissionId,
+        originalFilename: 'doc.pdf',
+        contentType: 'application/pdf',
+        byteSize: 100,
+        storageKey: `test/${submissionId}.pdf`,
+      });
+    }
     await db.insert(centreContacts).values({
       centreId: CENTRE_ID,
       name: 'Primary',

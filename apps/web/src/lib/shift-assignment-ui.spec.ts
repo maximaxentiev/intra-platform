@@ -24,3 +24,33 @@ describe('ops shift assignment confirmation UI', () => {
     expect(page).toContain('assigningStaffId');
   });
 });
+
+describe('ops shift smart matching UI', () => {
+  it('does not client-filter available staff by role', () => {
+    const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
+    expect(page).not.toContain('.filter((s) => s.role === shift.roleNeeded)');
+    expect(page).toContain('availableQ.data ?? []');
+  });
+
+  it('shows smart matching helper and empty state copy', () => {
+    const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
+    expect(page).toContain('Eligible staff are filtered automatically');
+    expect(page).toContain('No eligible staff found for this shift.');
+    expect(page).toContain('document compliance are considered automatically');
+  });
+
+  it('invalidates available staff query after assign eligibility conflict', () => {
+    const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
+    expect(page).toContain('err.status === 409');
+    expect(page).toContain('["shift-available", id]');
+  });
+});
+
+describe('centre hourly rate UI', () => {
+  it('includes Hourly Rate field with helper copy', () => {
+    const form = readFileSync(join(webRoot, 'components/CentreForm.tsx'), 'utf8');
+    expect(form).toContain('Hourly Rate');
+    expect(form).toContain('future invoicing and reporting');
+    expect(form).toContain('hourlyRate');
+  });
+});
