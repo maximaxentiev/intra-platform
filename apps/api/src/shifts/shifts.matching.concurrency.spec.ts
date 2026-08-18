@@ -25,6 +25,7 @@ import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmat
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
+import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -213,6 +214,7 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
       confirmation,
       new ShiftMatchingService(db),
       createMockShiftReminderService(),
+      createMockShiftCancellationService(),
     );
 
     await db.delete(users).where(eq(users.id, OPS_USER_ID));

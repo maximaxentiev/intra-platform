@@ -106,9 +106,17 @@ function createCancelHarness() {
   const shiftReminders = {
     cancelPendingForShift: vi.fn(async () => 0),
   };
+  const shiftCancellations = {
+    scheduleForAssignedCancellation: vi.fn(async () => []),
+    enqueueScheduledIds: vi.fn(async () => undefined),
+  };
 
-  const service = new StaffPortalShiftsService(db as never, shiftReminders as never);
-  return { service, db, shiftRow: () => shiftRow, shiftReminders };
+  const service = new StaffPortalShiftsService(
+    db as never,
+    shiftReminders as never,
+    shiftCancellations as never,
+  );
+  return { service, db, shiftRow: () => shiftRow, shiftReminders, shiftCancellations };
 }
 
 describe('StaffPortalShiftsService.cancelShift', () => {

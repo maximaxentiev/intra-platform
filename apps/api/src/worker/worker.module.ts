@@ -12,6 +12,7 @@ import { AutomatedCommunicationsProcessor } from '../automated-communications/au
 import { AutomatedCommunicationsReconcilerService } from '../automated-communications/automated-communications-reconciler.service';
 import { ShiftsModule } from '../shifts/shifts.module';
 import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
+import { registerShiftCancellationProcessors } from '../shifts/shift-cancellation.processor';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ export async function bootstrapWorker(): Promise<{
   const registry = app.get(CommunicationProcessorRegistry);
   const config = app.get(ConfigService);
   registerShiftReminderProcessors(registry, config);
+  registerShiftCancellationProcessors(registry, config);
 
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(

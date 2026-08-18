@@ -19,6 +19,7 @@ import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dt
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftReminderService } from './shift-reminder.service';
+import { ShiftCancellationService } from './shift-cancellation.service';
 import { SHIFT_ASSIGN_INELIGIBLE_MESSAGE } from './shift-matching.types';
 import { acquireShiftStaffDateAdvisoryLock } from './shift-staff-date-advisory-lock.util';
 import {
@@ -38,6 +39,7 @@ export class ShiftsService {
     private readonly assignmentConfirmations: ShiftAssignmentConfirmationService,
     private readonly shiftMatching: ShiftMatchingService,
     private readonly shiftReminders: ShiftReminderService,
+    private readonly shiftCancellations: ShiftCancellationService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -296,19 +298,81 @@ export class ShiftsService {
   }
 
   async changeStatus(id: string, dto: ChangeStatusDto) {
-    const terminalCancel =
-      dto.status === 'cancelled' || dto.status === 'completed' || dto.status === 'pending';
-    if (terminalCancel) {
+    if (dto.status === 'cancelled') {
+      return this.transitionToCancelled(id, dto.cancellationReason);
+    }
+
+    if (dto.status === 'completed' || dto.status === 'pending') {
       await this.shiftReminders.cancelPendingForShift(id);
     }
+
     const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
-    if (dto.status === 'cancelled' && dto.cancellationReason !== undefined) {
-      patch.cancellationReason = dto.cancellationReason;
-    }
     if (dto.status === 'pending') patch.assignedStaffId = null;
     const rows = await this.db.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
     if (!rows[0]) throw new NotFoundException('Shift not found.');
     return rows[0];
+  }
+
+  private async transitionToCancelled(id: string, cancellationReason?: string) {
+    let scheduledCancellationIds: string[] = [];
+
+    const row = await this.db.transaction(async (tx) => {
+      const locked = await tx
+        .select({
+          id: shifts.id,
+          status: shifts.status,
+          assignedStaffId: shifts.assignedStaffId,
+          centreId: shifts.centreId,
+        })
+        .from(shifts)
+        .where(eq(shifts.id, id))
+        .for('update');
+
+      if (!locked[0]) throw new NotFoundException('Shift not found.');
+      if (locked[0].status === 'cancelled') {
+        const existing = await tx.select().from(shifts).where(eq(shifts.id, id)).limit(1);
+        return existing[0]!;
+      }
+
+      const patch: Record<string, unknown> = {
+        status: 'cancelled',
+        updatedAt: new Date(),
+      };
+      if (cancellationReason !== undefined) {
+        patch.cancellationReason = cancellationReason;
+      }
+
+      const updated = await tx
+        .update(shifts)
+        .set(patch)
+        .where(eq(shifts.id, id))
+        .returning();
+
+      const cancelled = updated[0];
+      if (!cancelled) throw new NotFoundException('Shift not found.');
+
+      await this.shiftReminders.cancelPendingForShift(id, tx);
+
+      if (cancelled.assignedStaffId) {
+        scheduledCancellationIds = await this.shiftCancellations.scheduleForAssignedCancellation(
+          {
+            shiftId: id,
+            assignedStaffId: cancelled.assignedStaffId,
+            centreId: cancelled.centreId,
+            scheduledFor: cancelled.updatedAt,
+          },
+          tx,
+        );
+      }
+
+      return cancelled;
+    });
+
+    if (scheduledCancellationIds.length > 0) {
+      await this.shiftCancellations.enqueueScheduledIds(scheduledCancellationIds);
+    }
+
+    return row;
   }
 
   /** Authoritative smart-matched eligible staff for a shift (top/contacted annotated). */

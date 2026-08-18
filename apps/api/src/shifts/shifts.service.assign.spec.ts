@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
+import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { ShiftsService } from './shifts.service';
 
 describe('ShiftsService.assign idempotency', () => {
@@ -53,7 +54,13 @@ describe('ShiftsService.assign idempotency', () => {
       evaluateStaffForShift: vi.fn().mockResolvedValue({ eligible: true, reasons: [] }),
     } as unknown as ShiftMatchingService;
 
-    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
+    service = new ShiftsService(
+      db as never,
+      confirmation,
+      shiftMatching,
+      createMockShiftReminderService(),
+      createMockShiftCancellationService(),
+    );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -88,7 +95,13 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
+    service = new ShiftsService(
+      db as never,
+      confirmation,
+      shiftMatching,
+      createMockShiftReminderService(),
+      createMockShiftCancellationService(),
+    );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -111,7 +124,13 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(db as never, confirmation, shiftMatching, createMockShiftReminderService());
+    service = new ShiftsService(
+      db as never,
+      confirmation,
+      shiftMatching,
+      createMockShiftReminderService(),
+      createMockShiftCancellationService(),
+    );
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -147,6 +166,7 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
       confirmation,
       {} as ShiftMatchingService,
       createMockShiftReminderService(),
+      createMockShiftCancellationService(),
     );
 
     await expect(service.sendAssignmentConfirmation('shift-1', 'ops-1')).rejects.toBeInstanceOf(
@@ -162,7 +182,13 @@ describe('ShiftsService.availableStaff', () => {
         { id: 'staff-1', legalName: 'A', isTop: true, contacted: false },
       ]),
     } as unknown as ShiftMatchingService;
-    const service = new ShiftsService({} as never, {} as never, shiftMatching, createMockShiftReminderService());
+    const service = new ShiftsService(
+      {} as never,
+      {} as never,
+      shiftMatching,
+      createMockShiftReminderService(),
+      createMockShiftCancellationService(),
+    );
 
     const rows = await service.availableStaff('shift-1');
     expect(rows).toHaveLength(1);

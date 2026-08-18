@@ -4,6 +4,7 @@ import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmat
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftReminderService } from './shift-reminder.service';
+import { ShiftCancellationService } from './shift-cancellation.service';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsCron } from './shifts.cron';
 import { ShiftsService } from './shifts.service';
@@ -18,7 +19,8 @@ import { ShiftsService } from './shifts.service';
     ShiftAssignmentConfirmationService,
     ShiftAssignmentNotificationsService,
     ShiftReminderService,
+    ShiftCancellationService,
   ],
-  exports: [ShiftsService, ShiftReminderService],
+  exports: [ShiftsService, ShiftReminderService, ShiftCancellationService],
 })
 export class ShiftsModule {}

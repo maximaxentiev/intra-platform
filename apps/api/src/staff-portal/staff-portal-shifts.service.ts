@@ -14,6 +14,7 @@ import {
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staffAccounts } from '../db/schema';
 import { ShiftReminderService } from '../shifts/shift-reminder.service';
+import { ShiftCancellationService } from '../shifts/shift-cancellation.service';
 import {
   isCarerDirectCancellationEligible,
   type ShiftInternalStatus,
@@ -46,6 +47,7 @@ export class StaffPortalShiftsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly shiftReminders: ShiftReminderService,
+    private readonly shiftCancellations: ShiftCancellationService,
   ) {}
 
   async listUpcoming(
@@ -165,10 +167,13 @@ export class StaffPortalShiftsService {
     const today = torontoTodayDateString();
     const nowTime = torontoNowTimeString();
 
-    return this.db.transaction(async (tx) => {
+    let scheduledCancellationIds: string[] = [];
+
+    const dto = await this.db.transaction(async (tx) => {
       const locked = await tx
         .select({
           id: shifts.id,
+          centreId: shifts.centreId,
           shiftDate: shifts.shiftDate,
           startTime: shifts.startTime,
           endTime: shifts.endTime,
@@ -231,6 +236,7 @@ export class StaffPortalShiftsService {
           roleNeeded: shifts.roleNeeded,
           status: shifts.status,
           cancellationReason: shifts.cancellationReason,
+          updatedAt: shifts.updatedAt,
         });
 
       const row = updated[0];
@@ -240,7 +246,19 @@ export class StaffPortalShiftsService {
 
       await this.shiftReminders.cancelPendingForShift(shiftId, tx);
 
-      const dto = toCarerShiftSummaryDto(
+      if (shift.assignedStaffId) {
+        scheduledCancellationIds = await this.shiftCancellations.scheduleForAssignedCancellation(
+          {
+            shiftId,
+            assignedStaffId: shift.assignedStaffId,
+            centreId: shift.centreId,
+            scheduledFor: row.updatedAt,
+          },
+          tx,
+        );
+      }
+
+      const summary = toCarerShiftSummaryDto(
         {
           id: row.id,
           shiftDate: row.shiftDate,
@@ -256,13 +274,19 @@ export class StaffPortalShiftsService {
         nowTime,
       );
 
-      if (!dto) {
+      if (!summary) {
         throw new BadRequestException('This shift cannot be cancelled.');
       }
 
-      dto.cancellationReason = trimmed;
-      return dto;
+      summary.cancellationReason = trimmed;
+      return summary;
     });
+
+    if (scheduledCancellationIds.length > 0) {
+      await this.shiftCancellations.enqueueScheduledIds(scheduledCancellationIds);
+    }
+
+    return dto;
   }
 
   private async listScoped(
