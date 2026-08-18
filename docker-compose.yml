@@ -32,6 +32,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # AOF + named volume persist queue/session data across restarts.
+    # WARNING: `docker compose down -v` deletes redisdata — PostgreSQL reconciler can rebuild scheduled jobs.
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
@@ -126,6 +128,37 @@ services:
       - traefik.http.routers.intra-platform-legacy.priority=200
       - traefik.http.routers.intra-platform-legacy.middlewares=intra-platform-legacy-redirect@docker
       - traefik.http.routers.intra-platform-legacy.service=intra-platform-web
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["node", "dist/worker/main.js"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      APP_PUBLIC_URL: https://${APP_HOST}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      DOCUMENT_SHARE_SIGNING_SECRET: ${DOCUMENT_SHARE_SIGNING_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      COMMUNICATIONS_WORKER_CONCURRENCY: ${COMMUNICATIONS_WORKER_CONCURRENCY:-5}
+      COMMUNICATIONS_RETRY_ATTEMPTS: ${COMMUNICATIONS_RETRY_ATTEMPTS:-5}
+      COMMUNICATIONS_RECONCILE_CRON: ${COMMUNICATIONS_RECONCILE_CRON:-*/10 * * * *}
+      COMMUNICATIONS_QUEUE_PREFIX: ${COMMUNICATIONS_QUEUE_PREFIX:-intra}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - backend
 
 volumes:
   pgdata:

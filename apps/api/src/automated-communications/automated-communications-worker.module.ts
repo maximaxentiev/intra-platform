@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { AutomatedCommunicationsModule } from './automated-communications.module';
+import { AutomatedCommunicationsProcessor } from './automated-communications.processor';
+import { AutomatedCommunicationsReconcilerService } from './automated-communications-reconciler.service';
+
+/** Worker-only providers (processor + reconciler). Not imported by HTTP API. */
+@Module({
+  imports: [AutomatedCommunicationsModule],
+  providers: [AutomatedCommunicationsProcessor, AutomatedCommunicationsReconcilerService],
+  exports: [AutomatedCommunicationsProcessor, AutomatedCommunicationsReconcilerService],
+})
+export class AutomatedCommunicationsWorkerModule {}

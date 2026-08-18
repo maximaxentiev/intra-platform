@@ -7,6 +7,7 @@
   "scripts": {
     "build": "npm run build --workspace=@intra/shared && nest build",
     "start": "node dist/main.js",
+    "start:worker": "node dist/worker/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "db:generate": "drizzle-kit generate",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
+    "@intra/shared": "1.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -28,6 +30,7 @@
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^11.0.0",
     "bcryptjs": "^3.0.2",
+    "bullmq": "^5.81.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
@@ -37,8 +40,7 @@
     "ioredis": "^5.4.2",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "@intra/shared": "1.0.0"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

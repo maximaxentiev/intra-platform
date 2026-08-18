@@ -3,6 +3,8 @@ export type EmailMessage = {
   subject: string;
   html: string;
   text: string;
+  /** Optional Resend Idempotency-Key header for automated communications retries. */
+  idempotencyKey?: string;
 };
 
 export type EmailSendResult = { providerId?: string };
@@ -36,12 +38,17 @@ export class ResendEmailTransport implements EmailTransport {
   ) {}
 
   async send(message: EmailMessage): Promise<EmailSendResult> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (message.idempotencyKey) {
+      headers['Idempotency-Key'] = message.idempotencyKey;
+    }
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         from: this.fromAddress,
         to: [message.to],

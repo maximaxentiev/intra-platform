@@ -21,6 +21,7 @@ import { StaffPortalModule } from './staff-portal/staff-portal.module';
 import { StaffDocumentsModule } from './staff-documents/staff-documents.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
+import { AutomatedCommunicationsModule } from './automated-communications/automated-communications.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { HealthController } from './health.controller';
     ApplicationsModule,
     StaffDocumentsModule,
     StorageModule,
+    AutomatedCommunicationsModule,
   ],
   controllers: [HealthController],
   providers: [

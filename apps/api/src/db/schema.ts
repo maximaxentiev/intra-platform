@@ -388,6 +388,58 @@ export const shiftAssignmentNotifications = pgTable(
   ],
 );
 
+/** Durable schedule/outbox for automated communications (Phase 7C+). */
+export const scheduledCommunications = pgTable(
+  'scheduled_communications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    communicationType: text('communication_type').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: uuid('entity_id').notNull(),
+    recipientType: text('recipient_type').notNull(),
+    recipientEntityId: uuid('recipient_entity_id'),
+    scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
+    status: text('status').notNull().default('scheduled'),
+    attempts: integer('attempts').notNull().default(0),
+    lastErrorCode: text('last_error_code'),
+    lastErrorReason: text('last_error_reason'),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('scheduled_communications_idempotency_key_idx').on(t.idempotencyKey),
+    index('scheduled_communications_status_scheduled_for_idx').on(t.status, t.scheduledFor),
+    index('scheduled_communications_entity_idx').on(t.entityType, t.entityId),
+  ],
+);
+
+/** Append-only send attempt history for scheduled communications. */
+export const communicationDeliveries = pgTable(
+  'communication_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scheduledCommunicationId: uuid('scheduled_communication_id')
+      .notNull()
+      .references(() => scheduledCommunications.id, { onDelete: 'restrict' }),
+    idempotencyKey: text('idempotency_key').notNull(),
+    attemptNumber: integer('attempt_number').notNull(),
+    recipientEmail: text('recipient_email').notNull().default(''),
+    status: text('status').notNull(),
+    providerId: text('provider_id'),
+    failureCode: text('failure_code'),
+    failureReason: text('failure_reason'),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true }).notNull().defaultNow(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('communication_deliveries_scheduled_communication_idx').on(t.scheduledCommunicationId),
+    index('communication_deliveries_idempotency_key_idx').on(t.idempotencyKey),
+  ],
+);
+
 export const shiftComments = pgTable(
   'shift_comments',
   {

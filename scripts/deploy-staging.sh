@@ -30,6 +30,17 @@ for i in $(seq 1 40); do
   sleep 3
 done
 
+echo "[deploy] waiting for worker..."
+for i in $(seq 1 40); do
+  if $COMPOSE ps worker --status running 2>/dev/null | grep -q running; then
+    if $COMPOSE logs worker 2>/dev/null | tail -30 | grep -q "automated communications worker started"; then
+      echo "[deploy] Worker started."
+      break
+    fi
+  fi
+  sleep 3
+done
+
 if [[ -n "${SOURCE_DATABASE_URL:-}" ]]; then
   echo "[deploy] importing via direct Postgres (SOURCE_DATABASE_URL)â€¦"
   $COMPOSE exec -T -e SOURCE_DATABASE_URL \

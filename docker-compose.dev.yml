@@ -37,6 +37,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # AOF + named volume persist data across restarts.
+    # WARNING: `docker compose down -v` deletes intra_dev_redisdata.
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:6380:6379"

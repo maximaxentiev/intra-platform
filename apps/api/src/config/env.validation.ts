@@ -31,6 +31,10 @@ export interface AppEnv {
   CARER_PORTAL_ENABLED: boolean;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  COMMUNICATIONS_WORKER_CONCURRENCY?: number;
+  COMMUNICATIONS_RETRY_ATTEMPTS?: number;
+  COMMUNICATIONS_RECONCILE_CRON?: string;
+  COMMUNICATIONS_QUEUE_PREFIX?: string;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -94,6 +98,14 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
     CARER_PORTAL_ENABLED: parseCarerPortalEnabled(config.CARER_PORTAL_ENABLED),
     RESEND_API_KEY: trimOptional(config.RESEND_API_KEY),
     EMAIL_FROM: trimOptional(config.EMAIL_FROM),
+    COMMUNICATIONS_WORKER_CONCURRENCY: config.COMMUNICATIONS_WORKER_CONCURRENCY
+      ? Number(config.COMMUNICATIONS_WORKER_CONCURRENCY)
+      : undefined,
+    COMMUNICATIONS_RETRY_ATTEMPTS: config.COMMUNICATIONS_RETRY_ATTEMPTS
+      ? Number(config.COMMUNICATIONS_RETRY_ATTEMPTS)
+      : undefined,
+    COMMUNICATIONS_RECONCILE_CRON: trimOptional(config.COMMUNICATIONS_RECONCILE_CRON),
+    COMMUNICATIONS_QUEUE_PREFIX: trimOptional(config.COMMUNICATIONS_QUEUE_PREFIX),
   };
 }
 
