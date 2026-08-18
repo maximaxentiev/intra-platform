@@ -92,6 +92,19 @@ export function isCarerHistoryShift(
   return false;
 }
 
+/** True when an assigned filled shift may be cancelled directly by the Carer. */
+export function isCarerDirectCancellationEligible(
+  internalStatus: ShiftInternalStatus,
+  shiftDate: string,
+  endTime: string,
+  today: string,
+  nowTime: string,
+): boolean {
+  if (internalStatus !== 'filled') return false;
+  const carerStatus = mapCarerShiftStatus(internalStatus, shiftDate, endTime, today, nowTime);
+  return carerStatus === 'upcoming' || carerStatus === 'today';
+}
+
 export function toCarerShiftSummaryDto(
   row: ShiftRowForCarer,
   today: string,

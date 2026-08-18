@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/session.guard';
-import { CreateShiftCancellationRequestDto } from '../shifts/dto/shift-cancellation-request.dto';
 import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
 import {
+  CancelStaffPortalShiftDto,
   ListStaffPortalShiftHistoryQuery,
   ListStaffPortalShiftsQuery,
   StaffPortalShiftsSummaryQuery,
@@ -43,18 +43,13 @@ export class StaffPortalShiftsController {
     return this.shifts.summary(session, query.limit);
   }
 
-  @Get(':id/cancellation-request')
-  getCancellationRequest(@CurrentStaff() session: StaffSessionPayload, @Param('id') id: string) {
-    return this.shifts.getCancellationRequest(session, id);
-  }
-
-  @Post(':id/cancellation-request')
-  createCancellationRequest(
+  @Post(':id/cancel')
+  cancelShift(
     @CurrentStaff() session: StaffSessionPayload,
     @Param('id') id: string,
-    @Body() dto: CreateShiftCancellationRequestDto,
+    @Body() dto: CancelStaffPortalShiftDto,
   ) {
-    return this.shifts.createCancellationRequest(session, id, dto.reason);
+    return this.shifts.cancelShift(session, id, dto.reason);
   }
 
   @Get(':id')

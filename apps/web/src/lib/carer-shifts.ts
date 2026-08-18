@@ -2,12 +2,6 @@ import { api } from "@/lib/api";
 
 export type CarerShiftStatus = "upcoming" | "today" | "completed" | "cancelled";
 
-export type CarerShiftCancellationRequest = {
-  status: "pending";
-  requestedAt: string;
-  reason?: string;
-};
-
 export type CarerShift = {
   id: string;
   shiftDate: string;
@@ -20,7 +14,7 @@ export type CarerShift = {
     address: string;
     city: string;
   };
-  cancellationRequest?: CarerShiftCancellationRequest | null;
+  cancellationReason?: string | null;
 };
 
 export type CarerShiftPageSize = 10 | 25;
@@ -49,9 +43,6 @@ export const carerShiftsApi = {
 
   get: (id: string) => api.get<CarerShift>(`/staff-portal/shifts/${id}`),
 
-  submitCancellationRequest: (id: string, reason: string) =>
-    api.post<{ id: string; shiftId: string; status: string; reason: string; requestedAt: string }>(
-      `/staff-portal/shifts/${id}/cancellation-request`,
-      { reason },
-    ),
+  cancel: (id: string, reason: string) =>
+    api.post<CarerShift>(`/staff-portal/shifts/${id}/cancel`, { reason }),
 };

@@ -8,22 +8,12 @@ import {
 } from "@/lib/carer-shifts-queries";
 import type { CarerShift } from "@/lib/carer-shifts";
 
-export type CarerCancellationRequest = {
-  id: string;
-  shiftId: string;
-  status: "pending" | "resolved";
-  reason: string;
-  requestedAt: string;
-};
-
-export function useSubmitCarerCancellationRequest(shiftId: string) {
+export function useCancelCarerShift(shiftId: string) {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: (reason: string) =>
-      api.post<CarerCancellationRequest>(`/staff-portal/shifts/${shiftId}/cancellation-request`, {
-        reason,
-      }),
+      api.post<CarerShift>(`/staff-portal/shifts/${shiftId}/cancel`, { reason }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: carerShiftDetailQueryKey(shiftId) });
       void qc.invalidateQueries({ queryKey: ["carer-shifts-upcoming"] });
@@ -35,8 +25,4 @@ export function useSubmitCarerCancellationRequest(shiftId: string) {
 
 export function isCarerCancellationEligible(shift: CarerShift): boolean {
   return shift.status === "upcoming" || shift.status === "today";
-}
-
-export function hasPendingCancellationRequest(shift: CarerShift): boolean {
-  return shift.cancellationRequest?.status === "pending";
 }

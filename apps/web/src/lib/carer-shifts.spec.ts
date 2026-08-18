@@ -107,16 +107,10 @@ describe("carerShiftsApi", () => {
     expect(api.get).toHaveBeenCalledWith("/staff-portal/shifts/shift-1");
   });
 
-  it("submits cancellation request", async () => {
-    vi.mocked(api.post).mockResolvedValue({
-      id: "req-1",
-      shiftId: "shift-1",
-      status: "pending",
-      reason: "Illness",
-      requestedAt: "2026-08-13T12:00:00.000Z",
-    });
-    await carerShiftsApi.submitCancellationRequest("shift-1", "Illness");
-    expect(api.post).toHaveBeenCalledWith("/staff-portal/shifts/shift-1/cancellation-request", {
+  it("cancels shift via direct cancel endpoint", async () => {
+    vi.mocked(api.post).mockResolvedValue(sampleShift({ status: "cancelled" }));
+    await carerShiftsApi.cancel("shift-1", "Illness");
+    expect(api.post).toHaveBeenCalledWith("/staff-portal/shifts/shift-1/cancel", {
       reason: "Illness",
     });
   });
@@ -302,11 +296,11 @@ describe("carer shift detail presentation", () => {
     expect(src).toContain("shift.roleNeeded ?");
   });
 
-  it("shows cancelled supporting copy without cancellation reason", () => {
+  it("shows cancelled supporting copy and optional own cancellation reason", () => {
     const src = detail();
     expect(src).toContain('shift.status === "cancelled"');
     expect(src).toContain("This shift has been cancelled.");
-    expect(src).not.toContain("cancellationReason");
+    expect(src).toContain("shift.cancellationReason");
   });
 
   it("provides Back to shifts navigation", () => {
@@ -339,30 +333,32 @@ describe("carer shift detail not found and errors", () => {
   });
 });
 
-describe("carer shift cancellation request UI", () => {
+describe("carer shift direct cancellation UI", () => {
   const detail = () => readSrc("components/carer/CarerShiftDetail.tsx");
 
-  it("shows cancel shift action on eligible detail only via modal", () => {
+  it("shows cancel shift action with immediate cancellation modal copy", () => {
     const src = detail();
     expect(src).toContain("Cancel shift");
-    expect(src).toContain("Request to cancel this shift");
-    expect(src).toContain("Submit cancellation request");
+    expect(src).toContain("Cancel this shift?");
     expect(src).toContain("Keep shift");
     expect(src).toContain("Reason for cancellation");
-    expect(src).toContain("operations team has been notified");
-    expect(src).not.toContain("Your shift has been cancelled");
+    expect(src).toContain("immediately remove it from your upcoming work");
+    expect(src).not.toContain("Cancellation request");
+    expect(src).not.toContain("Submit cancellation request");
+    expect(src).not.toContain("Cancellation requested");
   });
 
-  it("shows pending cancellation requested state", () => {
+  it("shows cancelled state and reason after cancellation", () => {
     const src = detail();
-    expect(src).toContain("Cancellation requested");
-    expect(src).toContain("hasPendingCancellationRequest");
-    expect(src).toContain("isCarerCancellationEligible");
+    expect(src).toContain("Shift cancelled");
+    expect(src).toContain("This shift has been cancelled.");
+    expect(src).toContain("cancellationReason");
+    expect(src).toContain("useCancelCarerShift");
   });
 
-  it("shows cancellation requested badge on cards and dashboard summary", () => {
-    expect(readSrc("components/carer/CarerShiftCard.tsx")).toContain("Cancellation requested");
-    expect(readSrc("components/carer/CarerShiftsDashboardSummary.tsx")).toContain(
+  it("does not show cancellation requested badges on list surfaces", () => {
+    expect(readSrc("components/carer/CarerShiftCard.tsx")).not.toContain("Cancellation requested");
+    expect(readSrc("components/carer/CarerShiftsDashboardSummary.tsx")).not.toContain(
       "Cancellation requested",
     );
   });
@@ -392,10 +388,9 @@ describe("carer shifts read-only security", () => {
     }
   });
 
-  it("does not expose internal notes, contacts, or ops cancellation reason in detail UI", () => {
+  it("does not expose internal notes, contacts, or ops-only fields in detail UI", () => {
     const src = readSrc("components/carer/CarerShiftDetail.tsx");
     const forbidden = [
-      "cancellationReason",
       "internalNotes",
       "Staffpoint",
       "assignedStaffId",
@@ -414,20 +409,16 @@ describe("carer shifts read-only security", () => {
   });
 });
 
-describe("ops shift cancellation request UI", () => {
-  it("shows pending cancellation banner and resolve action on shift detail", () => {
-    const src = readSrc("routes/_authenticated/shifts.$id.tsx");
-    expect(src).toContain("Cancellation requested");
-    expect(src).toContain("getCancellationRequest");
-    expect(src).toContain("Mark request resolved");
-    expect(src).toContain("requested to cancel this shift");
-  });
-
-  it("shows cancellation requested indicator and filter on shifts list", () => {
-    const src = readSrc("routes/_authenticated/shifts.index.tsx");
-    expect(src).toContain("Cancellation requested");
-    expect(src).toContain("cancellationRequested");
-    expect(src).toContain("hasPendingCancellationRequest");
+describe("ops shift cancellation regression", () => {
+  it("uses standard cancelled shift status without request workflow UI", () => {
+    const detail = readSrc("routes/_authenticated/shifts.$id.tsx");
+    const list = readSrc("routes/_authenticated/shifts.index.tsx");
+    expect(detail).toContain("cancellationReason");
+    expect(detail).not.toContain("Cancellation requested");
+    expect(detail).not.toContain("getCancellationRequest");
+    expect(detail).not.toContain("Mark request resolved");
+    expect(list).not.toContain("Cancellation requested");
+    expect(list).not.toContain("cancellationRequested");
   });
 });
 

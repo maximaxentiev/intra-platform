@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,14 +13,15 @@ import {
 } from '../availability/availability-toronto.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staffAccounts } from '../db/schema';
-import { ShiftCancellationRequestsService } from '../shifts/shift-cancellation-requests.service';
 import {
+  isCarerDirectCancellationEligible,
   type ShiftInternalStatus,
   type ShiftRowForCarer,
   toCarerShiftSummaryDto,
 } from './carer-shift.util';
-import type {
-  CarerShiftSummaryDto,
+import {
+  CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH,
+  type CarerShiftSummaryDto,
   StaffPortalShiftPageSize,
   StaffPortalShiftsPageResponseDto,
   StaffPortalShiftsSummaryResponseDto,
@@ -39,10 +42,7 @@ type ShiftQueryRow = {
 
 @Injectable()
 export class StaffPortalShiftsService {
-  constructor(
-    @Inject(DRIZZLE) private readonly db: Database,
-    private readonly cancellationRequests: ShiftCancellationRequestsService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
   async listUpcoming(
     session: StaffSessionPayload,
@@ -81,7 +81,7 @@ export class StaffPortalShiftsService {
       limit,
       0,
     );
-    return { items: await this.attachCancellationSummaries(this.mapRows(rows, today, nowTime), session.staffId) };
+    return { items: this.mapRows(rows, today, nowTime) };
   }
 
   async getDetail(
@@ -98,6 +98,7 @@ export class StaffPortalShiftsService {
         endTime: shifts.endTime,
         roleNeeded: shifts.roleNeeded,
         status: shifts.status,
+        cancellationReason: shifts.cancellationReason,
         centreName: centres.name,
         centreAddress: centres.address,
         centreCity: centres.city,
@@ -133,44 +134,129 @@ export class StaffPortalShiftsService {
       throw new NotFoundException('Shift not found.');
     }
 
-    const pending = await this.cancellationRequests.getCarerRequest(shiftId, session.staffId);
-    if (pending) {
-      dto.cancellationRequest = {
-        status: 'pending',
-        requestedAt: pending.requestedAt,
-        reason: pending.reason,
-      };
+    if (dto.status === 'cancelled' && row.cancellationReason.trim()) {
+      dto.cancellationReason = row.cancellationReason.trim();
     }
 
     return dto;
   }
 
-  async createCancellationRequest(
+  async cancelShift(
     session: StaffSessionPayload,
     shiftId: string,
     reason: string,
-  ) {
-    await this.loadOnboardedAccount(session);
-    return this.cancellationRequests.createCarerRequest({
-      shiftId,
-      staffId: session.staffId,
-      staffAccountId: session.accountId,
-      reason,
-    });
-  }
-
-  async getCancellationRequest(session: StaffSessionPayload, shiftId: string) {
+  ): Promise<CarerShiftSummaryDto> {
     await this.loadOnboardedAccount(session);
 
-    const rows = await this.db
-      .select({ id: shifts.id })
-      .from(shifts)
-      .where(and(eq(shifts.id, shiftId), eq(shifts.assignedStaffId, session.staffId)));
-    if (!rows[0]) {
-      throw new NotFoundException('Shift not found.');
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Reason is required.');
+    }
+    if (trimmed.length > CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH) {
+      throw new BadRequestException(
+        `Reason must be at most ${CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH} characters.`,
+      );
     }
 
-    return this.cancellationRequests.getCarerRequest(shiftId, session.staffId);
+    const today = torontoTodayDateString();
+    const nowTime = torontoNowTimeString();
+
+    return this.db.transaction(async (tx) => {
+      const locked = await tx
+        .select({
+          id: shifts.id,
+          shiftDate: shifts.shiftDate,
+          startTime: shifts.startTime,
+          endTime: shifts.endTime,
+          roleNeeded: shifts.roleNeeded,
+          status: shifts.status,
+          assignedStaffId: shifts.assignedStaffId,
+          centreName: centres.name,
+          centreAddress: centres.address,
+          centreCity: centres.city,
+        })
+        .from(shifts)
+        .innerJoin(centres, eq(centres.id, shifts.centreId))
+        .where(eq(shifts.id, shiftId))
+        .for('update');
+
+      const shift = locked[0];
+      if (!shift || shift.assignedStaffId !== session.staffId) {
+        throw new NotFoundException('Shift not found.');
+      }
+
+      if (shift.status === 'cancelled') {
+        throw new ConflictException('Shift is already cancelled.');
+      }
+
+      if (
+        !isCarerDirectCancellationEligible(
+          shift.status as ShiftInternalStatus,
+          shift.shiftDate,
+          shift.endTime,
+          today,
+          nowTime,
+        )
+      ) {
+        throw new BadRequestException('This shift cannot be cancelled.');
+      }
+
+      const updated = await tx
+        .update(shifts)
+        .set({
+          status: 'cancelled',
+          cancellationReason: trimmed,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(shifts.id, shiftId),
+            eq(shifts.assignedStaffId, session.staffId),
+            eq(shifts.status, 'filled'),
+            sql`(
+              ${shifts.shiftDate} > ${today}::date
+              OR (${shifts.shiftDate} = ${today}::date AND ${shifts.endTime} > ${nowTime}::time)
+            )`,
+          ),
+        )
+        .returning({
+          id: shifts.id,
+          shiftDate: shifts.shiftDate,
+          startTime: shifts.startTime,
+          endTime: shifts.endTime,
+          roleNeeded: shifts.roleNeeded,
+          status: shifts.status,
+          cancellationReason: shifts.cancellationReason,
+        });
+
+      const row = updated[0];
+      if (!row) {
+        throw new BadRequestException('This shift cannot be cancelled.');
+      }
+
+      const dto = toCarerShiftSummaryDto(
+        {
+          id: row.id,
+          shiftDate: row.shiftDate,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          roleNeeded: row.roleNeeded,
+          status: row.status as ShiftInternalStatus,
+          centreName: shift.centreName,
+          centreAddress: shift.centreAddress,
+          centreCity: shift.centreCity,
+        },
+        today,
+        nowTime,
+      );
+
+      if (!dto) {
+        throw new BadRequestException('This shift cannot be cancelled.');
+      }
+
+      dto.cancellationReason = trimmed;
+      return dto;
+    });
   }
 
   private async listScoped(
@@ -192,10 +278,7 @@ export class StaffPortalShiftsService {
     const rows = await this.fetchShiftRows(staffId, scope, today, nowTime, pageSize, offset);
 
     return {
-      items: await this.attachCancellationSummaries(
-        this.mapRows(rows, today, nowTime),
-        staffId,
-      ),
+      items: this.mapRows(rows, today, nowTime),
       page,
       pageSize,
       totalItems,
@@ -302,22 +385,6 @@ export class StaffPortalShiftsService {
         OR (s.status = 'cancelled' AND s.shift_date < ${today}::date)
       )
     `;
-  }
-
-  private async attachCancellationSummaries(
-    items: CarerShiftSummaryDto[],
-    staffId: string,
-  ): Promise<CarerShiftSummaryDto[]> {
-    if (items.length === 0) return items;
-    const pending = await this.cancellationRequests.getPendingSummaryByShiftIds(
-      items.map((i) => i.id),
-      staffId,
-    );
-    return items.map((item) => {
-      const summary = pending.get(item.id);
-      if (!summary) return item;
-      return { ...item, cancellationRequest: summary };
-    });
   }
 
   private mapRows(

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatShiftTimeForCarer,
+  isCarerDirectCancellationEligible,
   isCarerHistoryShift,
   isCarerUpcomingShift,
   mapCarerShiftStatus,
@@ -136,6 +137,31 @@ describe('overnight shift limitation', () => {
     // Stored as 22:00-06:00 on one date — classification uses raw time compare only.
     expect(isCarerUpcomingShift('filled', TODAY, '06:00:00', TODAY, '08:00:00')).toBe(false);
     expect(isCarerHistoryShift('filled', TODAY, '06:00:00', TODAY, '08:00:00')).toBe(true);
+  });
+});
+
+describe('isCarerDirectCancellationEligible', () => {
+  it('allows upcoming and today filled shifts', () => {
+    expect(isCarerDirectCancellationEligible('filled', '2026-08-20', '16:00:00', TODAY, NOW)).toBe(
+      true,
+    );
+    expect(isCarerDirectCancellationEligible('filled', TODAY, '16:00:00', TODAY, NOW)).toBe(true);
+  });
+
+  it('rejects cancelled, completed, pending, and past filled shifts', () => {
+    expect(isCarerDirectCancellationEligible('cancelled', '2026-08-20', '16:00:00', TODAY, NOW)).toBe(
+      false,
+    );
+    expect(isCarerDirectCancellationEligible('completed', '2026-08-20', '16:00:00', TODAY, NOW)).toBe(
+      false,
+    );
+    expect(isCarerDirectCancellationEligible('pending', '2026-08-20', '16:00:00', TODAY, NOW)).toBe(
+      false,
+    );
+    expect(isCarerDirectCancellationEligible('filled', '2026-08-01', '09:00:00', TODAY, NOW)).toBe(
+      false,
+    );
+    expect(isCarerDirectCancellationEligible('filled', TODAY, '09:00:00', TODAY, NOW)).toBe(false);
   });
 });
 

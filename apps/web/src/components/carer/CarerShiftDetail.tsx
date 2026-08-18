@@ -23,19 +23,11 @@ import {
   formatFullCalendarDateWithYearLabel,
 } from "@/lib/carer-availability-dates";
 import {
-  hasPendingCancellationRequest,
   isCarerCancellationEligible,
-  useSubmitCarerCancellationRequest,
+  useCancelCarerShift,
 } from "@/lib/carer-shift-cancellation";
 import type { CarerShift } from "@/lib/carer-shifts";
 import { useCarerShift } from "@/lib/carer-shifts-queries";
-
-function formatRequestTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 
 function CarerShiftDetailSkeleton() {
   return (
@@ -81,52 +73,27 @@ function CarerShiftLoadError({ onRetry }: { onRetry: () => void }) {
 function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const submit = useSubmitCarerCancellationRequest(shift.id);
+  const cancel = useCancelCarerShift(shift.id);
 
   if (!isCarerCancellationEligible(shift)) {
     return null;
   }
 
-  if (hasPendingCancellationRequest(shift)) {
-    const request = shift.cancellationRequest!;
-    return (
-      <section
-        className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/30"
-        aria-live="polite"
-      >
-        <p className="font-semibold text-foreground">Cancellation requested</p>
-        <p className="text-muted-foreground">
-          Your cancellation request has been sent to the Intra operations team.
-        </p>
-        {request.reason ? (
-          <p className="break-words text-foreground">
-            <span className="text-muted-foreground">Reason: </span>
-            {request.reason}
-          </p>
-        ) : null}
-        <p className="text-xs text-muted-foreground">
-          Requested {formatRequestTimestamp(request.requestedAt)}
-        </p>
-      </section>
-    );
-  }
-
-  async function handleSubmit() {
+  async function handleCancel() {
     const trimmed = reason.trim();
     if (!trimmed) {
       toast.error("Please enter a reason for cancellation.");
       return;
     }
     try {
-      await submit.mutateAsync(trimmed);
+      await cancel.mutateAsync(trimmed);
       setOpen(false);
       setReason("");
-      toast.success("Cancellation request sent", {
-        description:
-          "The Intra operations team has been notified. This shift remains assigned to you until the request is reviewed.",
+      toast.success("Shift cancelled", {
+        description: "This shift has been cancelled.",
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not submit cancellation request.");
+      toast.error(err instanceof Error ? err.message : "Could not cancel shift.");
     }
   }
 
@@ -134,16 +101,20 @@ function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
     <section className="space-y-3 border-t pt-5">
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger asChild>
-          <Button type="button" variant="outline" className="h-11 w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+          >
             Cancel shift
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Request to cancel this shift</AlertDialogTitle>
+            <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your request will be sent to the Intra operations team. The shift is still assigned to
-              you until the operations team confirms the cancellation.
+              Cancelling this shift will immediately remove it from your upcoming work. The Intra
+              operations team will be notified of the cancellation.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
@@ -152,25 +123,26 @@ function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
               id="cancellation-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Please tell our operations team why you need to cancel this shift."
+              placeholder="Please tell us why you need to cancel this shift."
               rows={4}
               maxLength={1000}
               className="min-h-[6rem] resize-y"
-              disabled={submit.isPending}
+              disabled={cancel.isPending}
             />
           </div>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button
-              type="button"
-              className="h-11 w-full"
-              disabled={submit.isPending}
-              onClick={() => void handleSubmit()}
-            >
-              {submit.isPending ? "Submitting…" : "Submit cancellation request"}
-            </Button>
-            <AlertDialogCancel className="h-11 w-full" disabled={submit.isPending}>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col-reverse">
+            <AlertDialogCancel className="h-11 w-full" disabled={cancel.isPending}>
               Keep shift
             </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              className="h-11 w-full"
+              disabled={cancel.isPending}
+              onClick={() => void handleCancel()}
+            >
+              {cancel.isPending ? "Cancelling…" : "Cancel shift"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -190,10 +162,16 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
       <div className="space-y-3">
         <CarerShiftStatusBadge status={shift.status} />
         {shift.status === "cancelled" ? (
-          <p className="text-sm text-muted-foreground">This shift has been cancelled.</p>
-        ) : null}
-        {hasPendingCancellationRequest(shift) ? (
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Cancellation requested</p>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">Shift cancelled</p>
+            <p className="text-sm text-muted-foreground">This shift has been cancelled.</p>
+            {shift.cancellationReason ? (
+              <p className="break-words text-sm text-foreground">
+                <span className="text-muted-foreground">Reason: </span>
+                {shift.cancellationReason}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

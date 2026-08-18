@@ -88,14 +88,8 @@ function createHarness(accountOverrides: Partial<AccountRow> = {}) {
     },
   };
 
-  const cancellationRequests = {
-    getPendingSummaryByShiftIds: vi.fn(async () => new Map()),
-    getCarerRequest: vi.fn(async () => null),
-    createCarerRequest: vi.fn(),
-  };
-
-  const service = new StaffPortalShiftsService(db as never, cancellationRequests as never);
-  return { service, db, account, cancellationRequests };
+  const service = new StaffPortalShiftsService(db as never);
+  return { service, db, account };
 }
 
 describe('StaffPortalShiftsService security', () => {

@@ -325,7 +325,7 @@ export const shiftCancellationRequestStatus = pgEnum('shift_cancellation_request
   'resolved',
 ]);
 
-/** Carer-initiated cancellation requests; resolved by Ops or shift workflow changes. */
+/** Legacy/dormant table from superseded cancellation-request workflow (migration 0010). Not used by active product code. */
 export const shiftCancellationRequests = pgTable(
   'shift_cancellation_requests',
   {
