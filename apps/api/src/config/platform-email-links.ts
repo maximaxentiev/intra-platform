@@ -40,3 +40,7 @@ export function buildCarerShiftDetailLink(shiftId: string, env: PlatformUrlEnv):
   const path = `/carer/shifts/${encodeURIComponent(shiftId)}`;
   return buildGenericPlatformEmailLink(path, env);
 }
+
+export function buildCarerDocumentsLink(env: PlatformUrlEnv): string {
+  return buildGenericPlatformEmailLink('/carer/documents', env);
+}

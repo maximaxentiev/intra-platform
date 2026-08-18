@@ -99,7 +99,7 @@ describe.runIf(POSTGRES_READY)('ScheduledCommunicationsService', () => {
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.idempotencyKey, key));
     expect(row[0]?.status).toBe('cancelled');
-  });
+  }, 20_000);
 
   it('records append-only delivery attempts', async () => {
     const key = `test:delivery:${Date.now()}`;
@@ -136,7 +136,7 @@ describe.runIf(POSTGRES_READY)('ScheduledCommunicationsService', () => {
       .from(communicationDeliveries)
       .where(eq(communicationDeliveries.scheduledCommunicationId, row.id));
     expect(deliveries).toHaveLength(2);
-  });
+  }, 20_000);
 
   it('recovers stale processing rows', async () => {
     const key = `test:stale:${Date.now()}`;

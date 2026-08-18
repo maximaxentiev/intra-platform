@@ -173,7 +173,7 @@ describe("clear submission and reminders", () => {
   it("shows reminder toggles only for VSC and First Aid", () => {
     const src = readSrc("components/staff/StaffDocumentsSection.tsx");
     expect(src).toContain('type === "vulnerable_sector_check" || type === "first_aid_cpr"');
-    expect(src).toContain("Automated expiry reminders");
+    expect(src).toContain("Expiry email reminders");
     expect(src).toContain("setReminders");
   });
 

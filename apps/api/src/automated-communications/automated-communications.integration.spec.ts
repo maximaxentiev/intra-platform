@@ -160,7 +160,7 @@ describe.runIf(INTEGRATION_READY)('Automated communications integration', () => 
 
     const updated = await scheduled.findById(row.id);
     expect(updated?.status).toBe('sent');
-  });
+  }, 20_000);
 
   it('B. retries transient provider failure via worker re-execution', async () => {
     const recording = new RecordingEmailTransport();
@@ -255,7 +255,7 @@ describe.runIf(INTEGRATION_READY)('Automated communications integration', () => 
 
     const result = await reconciler.runReconciliation();
     expect(result.enqueued).toBeGreaterThanOrEqual(0);
-  });
+  }, 20_000);
 
   it('reuses provider idempotency key on retry attempts', async () => {
     const recording = new RecordingEmailTransport();

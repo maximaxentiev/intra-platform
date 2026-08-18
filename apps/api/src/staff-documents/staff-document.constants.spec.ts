@@ -3,8 +3,10 @@ import {
   OPTIONAL_STAFF_DOCUMENT_TYPES,
   REQUIRED_STAFF_DOCUMENT_TYPES,
   STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE,
+  STAFF_DOCUMENT_REMINDER_TYPES,
   STAFF_DOCUMENT_TYPE_VALUES,
   isStaffDocumentPublicShareType,
+  isStaffDocumentReminderType,
 } from './staff-document.constants';
 
 describe('staff document schema constants', () => {
@@ -47,5 +49,13 @@ describe('staff document schema constants', () => {
       'immunizations',
     ]);
     expect(OPTIONAL_STAFF_DOCUMENT_TYPES).toEqual(['covid19_vaccination']);
+  });
+
+  it('allows expiry reminders only for VSC and First Aid', () => {
+    expect(STAFF_DOCUMENT_REMINDER_TYPES).toEqual(['vulnerable_sector_check', 'first_aid_cpr']);
+    expect(isStaffDocumentReminderType('vulnerable_sector_check')).toBe(true);
+    expect(isStaffDocumentReminderType('first_aid_cpr')).toBe(true);
+    expect(isStaffDocumentReminderType('immunizations')).toBe(false);
+    expect(isStaffDocumentReminderType('covid19_vaccination')).toBe(false);
   });
 });

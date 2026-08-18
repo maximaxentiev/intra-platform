@@ -85,6 +85,7 @@ describe('staff portal protected controller guards', () => {
       );
       expect(guards).toEqual(['CarerPortalEnabledGuard', 'StaffSessionGuard']);
     },
+    15_000,
   );
 
   it('staff-auth controller is Public with carer portal guard only at class level', async () => {

@@ -240,4 +240,6 @@ export const carerDocumentsApi = {
   clearCategory: (documentType: StaffDocumentType) =>
     api.del<CarerDocumentsList>(`/staff-portal/documents/${documentType}`),
   completeStep2: () => api.post<CarerDocumentsList>("/staff-portal/documents/complete-step-2"),
+  setReminders: (documentType: StaffDocumentType, enabled: boolean) =>
+    api.patch<CarerDocumentsList>(`/staff-portal/documents/${documentType}/reminders`, { enabled }),
 };

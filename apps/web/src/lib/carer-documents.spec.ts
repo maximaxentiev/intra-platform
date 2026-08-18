@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ApiError } from "@/lib/api";
 import {
   buildCategorySaveFormData,
   CARER_DOCUMENT_CATEGORY_META,
+  carerDocumentsApi,
   categoryDraftDirty,
   categoryDraftFromCategory,
   documentsDraftDirty,
@@ -19,6 +23,12 @@ import {
   staffDocumentContentCacheKey,
   staffDocumentContentPath,
 } from "@/lib/staff-document-content";
+
+const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function readSrc(rel: string) {
+  return readFileSync(join(webRoot, rel), "utf8");
+}
 
 function sampleCategory(
   overrides: Partial<CarerDocumentCategory> = {},
@@ -234,5 +244,28 @@ describe("documents list shape", () => {
       }),
     ]);
     expect(docs.categories[0]?.issueNote).toBe("Please upload a clearer copy.");
+  });
+});
+
+describe("carer document reminder preferences", () => {
+  it("PATCHes reminder preference without accepting staffId", () => {
+    expect(String(carerDocumentsApi.setReminders)).toContain("/reminders");
+    expect(String(carerDocumentsApi.setReminders)).toContain("enabled");
+    expect(String(carerDocumentsApi.setReminders)).not.toContain("staffId");
+    expect(String(carerDocumentsApi.setReminders)).not.toContain("submissionId");
+  });
+
+  it("shows expiry reminder toggles only for VSC and First Aid", () => {
+    const src = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(src).toContain('type === "vulnerable_sector_check" || type === "first_aid_cpr"');
+    expect(src).toContain("Expiry email reminders");
+    expect(src).toContain("carerDocumentsApi.setReminders");
+    expect(src).toContain("reminderPendingType");
+  });
+
+  it("uses mobile-friendly reminder toggle layout without wide tables", () => {
+    const src = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(src).toContain("min-w-0");
+    expect(src).not.toMatch(/<table/i);
   });
 });

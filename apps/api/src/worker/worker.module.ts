@@ -11,8 +11,10 @@ import { CommunicationProcessorRegistry } from '../automated-communications/comm
 import { AutomatedCommunicationsProcessor } from '../automated-communications/automated-communications.processor';
 import { AutomatedCommunicationsReconcilerService } from '../automated-communications/automated-communications-reconciler.service';
 import { ShiftCommunicationsModule } from '../shifts/shift-communications.module';
+import { DocumentCommunicationsModule } from '../staff-documents/document-communications.module';
 import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
 import { registerShiftCancellationProcessors } from '../shifts/shift-cancellation.processor';
+import { registerDocumentExpiryProcessors } from '../staff-documents/document-expiry-reminder.processor';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { registerShiftCancellationProcessors } from '../shifts/shift-cancellatio
     AutomatedCommunicationsModule,
     AutomatedCommunicationsWorkerModule,
     ShiftCommunicationsModule,
+    DocumentCommunicationsModule,
   ],
 })
 export class WorkerModule {}
@@ -42,6 +45,7 @@ export async function bootstrapWorker(): Promise<{
   const config = app.get(ConfigService);
   registerShiftReminderProcessors(registry, config);
   registerShiftCancellationProcessors(registry, config);
+  registerDocumentExpiryProcessors(registry, config);
 
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(

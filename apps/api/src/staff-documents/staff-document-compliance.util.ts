@@ -248,11 +248,11 @@ export function deriveStaffShiftDocumentGate(
 /** Whether set.current_submission_id drives reminders (Phase 7 contract). */
 export function isActiveReminderSubmission(
   set: { currentSubmissionId: string | null },
-  submission: { id: string; supersededAt: string | null },
+  submission: { id: string; supersededAt: string | Date | null },
 ): boolean {
   return (
     set.currentSubmissionId === submission.id &&
-    submission.supersededAt === null
+    submission.supersededAt == null
   );
 }
 

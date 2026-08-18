@@ -35,6 +35,7 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   opsDocumentIssueFlagged: 'ops_document_issue_flagged',
   opsDocumentCleared: 'ops_document_cleared',
   opsDocumentRemindersChanged: 'ops_document_reminders_changed',
+  staffDocumentRemindersChanged: 'staff_document_reminders_changed',
   onboardingStep2Completed: 'onboarding_step_2_completed',
   carerAvailabilityCreated: 'carer_availability_created',
   carerAvailabilityUpdated: 'carer_availability_updated',

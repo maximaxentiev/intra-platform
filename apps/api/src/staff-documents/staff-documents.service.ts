@@ -69,6 +69,7 @@ import {
   StaffDocumentValidationError,
   validateStaffDocumentSubmissionFiles,
 } from './staff-document-validation.util';
+import { DocumentExpiryReminderService } from './document-expiry-reminder.service';
 
 export type StaffDocumentStreamResult = {
   body: import('stream').Readable;
@@ -93,6 +94,7 @@ export class StaffDocumentsService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly storage: StorageService,
     private readonly audit: StaffPortalAuditService,
+    private readonly documentReminders: DocumentExpiryReminderService,
   ) {}
 
   async getCarerDocuments(session: StaffSessionPayload): Promise<StaffDocumentsListDto> {
@@ -275,16 +277,42 @@ export class StaffDocumentsService {
     this.assertSubmissionDatesValid(documentType, ctx.currentSubmission);
 
     const now = new Date();
-    await this.db
-      .update(staffDocumentSubmissions)
-      .set({
-        reviewStatus: 'approved',
-        reviewedAt: now,
-        reviewedByUserId: userId,
-        issueNote: '',
-        updatedAt: now,
-      })
-      .where(eq(staffDocumentSubmissions.id, submissionId));
+    const accountCtx = await this.loadReminderAccountContext(staffId);
+    let scheduledIds: string[] = [];
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(staffDocumentSubmissions)
+        .set({
+          reviewStatus: 'approved',
+          reviewedAt: now,
+          reviewedByUserId: userId,
+          issueNote: '',
+          updatedAt: now,
+        })
+        .where(eq(staffDocumentSubmissions.id, submissionId));
+
+      scheduledIds = await this.documentReminders.syncRemindersForSet(
+        {
+          staffId,
+          documentSetId: ctx.set!.id,
+          documentType,
+          remindersEnabled: ctx.set!.remindersEnabled,
+          submission: {
+            id: submissionId,
+            reviewStatus: 'approved',
+            expiryDate: ctx.currentSubmission!.expiryDate,
+            supersededAt: ctx.currentSubmission!.supersededAt,
+          },
+          set: ctx.set!,
+          ...accountCtx,
+        },
+        tx,
+        now,
+      );
+    });
+
+    await this.documentReminders.enqueueScheduledIds(scheduledIds);
 
     await this.audit.record({
       staffId,
@@ -322,16 +350,20 @@ export class StaffDocumentsService {
     }
 
     const now = new Date();
-    await this.db
-      .update(staffDocumentSubmissions)
-      .set({
-        reviewStatus: 'issue_flagged',
-        issueNote,
-        reviewedAt: now,
-        reviewedByUserId: userId,
-        updatedAt: now,
-      })
-      .where(eq(staffDocumentSubmissions.id, submissionId));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(staffDocumentSubmissions)
+        .set({
+          reviewStatus: 'issue_flagged',
+          issueNote,
+          reviewedAt: now,
+          reviewedByUserId: userId,
+          updatedAt: now,
+        })
+        .where(eq(staffDocumentSubmissions.id, submissionId));
+
+      await this.documentReminders.cancelPendingForSubmission(submissionId, tx);
+    });
 
     await this.audit.record({
       staffId,
@@ -370,29 +402,146 @@ export class StaffDocumentsService {
       )
       .limit(1);
 
-    if (existing[0]) {
-      await this.db
-        .update(staffDocumentSets)
-        .set({ remindersEnabled: enabled, updatedAt: now })
-        .where(eq(staffDocumentSets.id, existing[0].id));
-    } else {
-      await this.db.insert(staffDocumentSets).values({
-        staffId,
-        documentType,
-        remindersEnabled: enabled,
-      });
-    }
+    const previousEnabled = existing[0]?.remindersEnabled ?? true;
+    const accountCtx = await this.loadReminderAccountContext(staffId);
+    const ctx = await this.loadSetContext(staffId, documentType);
+    let scheduledIds: string[] = [];
+
+    await this.db.transaction(async (tx) => {
+      if (existing[0]) {
+        await tx
+          .update(staffDocumentSets)
+          .set({ remindersEnabled: enabled, updatedAt: now })
+          .where(eq(staffDocumentSets.id, existing[0]!.id));
+      } else {
+        await tx.insert(staffDocumentSets).values({
+          staffId,
+          documentType,
+          remindersEnabled: enabled,
+        });
+      }
+
+      const setRow =
+        existing[0] ??
+        (
+          await tx
+            .select()
+            .from(staffDocumentSets)
+            .where(
+              and(
+                eq(staffDocumentSets.staffId, staffId),
+                eq(staffDocumentSets.documentType, documentType),
+              ),
+            )
+            .limit(1)
+        )[0];
+
+      if (setRow && ctx.currentSubmission) {
+        scheduledIds = await this.documentReminders.syncRemindersForSet(
+          {
+            staffId,
+            documentSetId: setRow.id,
+            documentType,
+            remindersEnabled: enabled,
+            submission: ctx.currentSubmission,
+            set: setRow,
+            ...accountCtx,
+          },
+          tx,
+          now,
+        );
+      }
+    });
+
+    await this.documentReminders.enqueueScheduledIds(scheduledIds);
 
     await this.audit.record({
       staffId,
       actorUserId: userId,
       eventType: STAFF_PORTAL_AUDIT_EVENTS.opsDocumentRemindersChanged,
-      detail: { documentType, enabled, source: 'ops' },
+      detail: { documentType, enabled, previousEnabled, source: 'ops' },
     });
 
     const account = await this.loadAccountByStaffId(staffId);
     const list = await this.buildDocumentsListForStaffId(staffId, account);
     return { staffId, ...list };
+  }
+
+  async setRemindersCarer(
+    session: StaffSessionPayload,
+    documentTypeRaw: string,
+    enabled: boolean,
+  ): Promise<StaffDocumentsListDto> {
+    const documentType = assertStaffDocumentType(documentTypeRaw);
+    if (!isStaffDocumentReminderType(documentType)) {
+      throw new BadRequestException('Reminders are not configurable for this document type.');
+    }
+
+    const account = await this.loadActiveAccount(session);
+    const now = new Date();
+    const ctx = await this.loadSetContext(account.staffId, documentType);
+
+    const existing = await this.db
+      .select()
+      .from(staffDocumentSets)
+      .where(
+        and(
+          eq(staffDocumentSets.staffId, account.staffId),
+          eq(staffDocumentSets.documentType, documentType),
+        ),
+      )
+      .limit(1);
+
+    const previousEnabled = existing[0]?.remindersEnabled ?? true;
+    let scheduledIds: string[] = [];
+
+    await this.db.transaction(async (tx) => {
+      let setRow = existing[0];
+      if (setRow) {
+        await tx
+          .update(staffDocumentSets)
+          .set({ remindersEnabled: enabled, updatedAt: now })
+          .where(eq(staffDocumentSets.id, setRow.id));
+      } else {
+        const inserted = await tx
+          .insert(staffDocumentSets)
+          .values({
+            staffId: account.staffId,
+            documentType,
+            remindersEnabled: enabled,
+          })
+          .returning();
+        setRow = inserted[0]!;
+      }
+
+      if (setRow && ctx.currentSubmission) {
+        scheduledIds = await this.documentReminders.syncRemindersForSet(
+          {
+            staffId: account.staffId,
+            documentSetId: setRow.id,
+            documentType,
+            remindersEnabled: enabled,
+            submission: ctx.currentSubmission,
+            set: setRow,
+            accountStatus: account.status,
+            hasPortalAccount: true,
+          },
+          tx,
+          now,
+        );
+      }
+    });
+
+    await this.documentReminders.enqueueScheduledIds(scheduledIds);
+
+    await this.audit.record({
+      staffId: account.staffId,
+      staffAccountId: account.id,
+      eventType: STAFF_PORTAL_AUDIT_EVENTS.staffDocumentRemindersChanged,
+      detail: { documentType, enabled, previousEnabled, source: 'carer_portal' },
+    });
+
+    return this.buildDocumentsListForStaff(account);
   }
 
   async completeStep2(session: StaffSessionPayload): Promise<StaffDocumentsListDto> {
@@ -563,6 +712,7 @@ export class StaffDocumentsService {
             .update(staffDocumentSubmissions)
             .set({ supersededAt: now, updatedAt: now })
             .where(eq(staffDocumentSubmissions.id, ctx.currentSubmission.id));
+          await this.documentReminders.cancelPendingForSubmission(ctx.currentSubmission.id, tx);
         }
 
         await tx
@@ -613,16 +763,19 @@ export class StaffDocumentsService {
     }
 
     const now = new Date();
+    const submissionId = ctx.currentSubmission!.id;
     await this.db.transaction(async (tx) => {
       await tx
         .update(staffDocumentSubmissions)
         .set({ supersededAt: now, updatedAt: now })
-        .where(eq(staffDocumentSubmissions.id, ctx.currentSubmission!.id));
+        .where(eq(staffDocumentSubmissions.id, submissionId));
 
       await tx
         .update(staffDocumentSets)
         .set({ currentSubmissionId: null, updatedAt: now })
         .where(eq(staffDocumentSets.id, ctx.set!.id));
+
+      await this.documentReminders.cancelPendingForSubmission(submissionId, tx);
     });
 
     const eventType =
@@ -973,6 +1126,17 @@ export class StaffDocumentsService {
         );
       }
     }
+  }
+
+  private async loadReminderAccountContext(staffId: string): Promise<{
+    accountStatus: string | null;
+    hasPortalAccount: boolean;
+  }> {
+    const account = await this.loadAccountByStaffId(staffId);
+    return {
+      accountStatus: account?.status ?? null,
+      hasPortalAccount: Boolean(account),
+    };
   }
 
   private async loadActiveAccount(session: StaffSessionPayload): Promise<StaffAccount> {

@@ -11,9 +11,10 @@ import { StaffDocumentShareService } from './staff-document-share.service';
 import { StaffDocumentsOpsController } from './staff-documents-ops.controller';
 import { StaffDocumentsService } from './staff-documents.service';
 import { StaffPortalDocumentsController } from './staff-portal-documents.controller';
+import { DocumentCommunicationsModule } from './document-communications.module';
 
 @Module({
-  imports: [DrizzleModule, StorageModule, StaffPortalModule],
+  imports: [DrizzleModule, StorageModule, StaffPortalModule, DocumentCommunicationsModule],
   controllers: [
     StaffPortalDocumentsController,
     StaffDocumentsOpsController,

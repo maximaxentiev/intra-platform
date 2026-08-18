@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { validateEnv } from './config/env.validation';
 import { StaffDocumentsModule } from './staff-documents/staff-documents.module';
 import { ShiftCommunicationsModule } from './shifts/shift-communications.module';
+import { DocumentCommunicationsModule } from './staff-documents/document-communications.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { StaffModule } from './staff/staff.module';
 import { StaffPortalModule } from './staff-portal/staff-portal.module';
@@ -80,5 +81,10 @@ describe('Nest module graph bootstrap', () => {
 
   it('WorkerModule import tree has no undefined module imports', () => {
     assertModuleImportsDefined(WorkerModule, 'WorkerModule');
+  });
+
+  it('DocumentCommunicationsModule has no imports that re-enter StaffPortal/Shifts cycle', () => {
+    const imports = moduleImports(DocumentCommunicationsModule);
+    expect(imports).toEqual([]);
   });
 });

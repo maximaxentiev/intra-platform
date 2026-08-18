@@ -3,6 +3,8 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
+  Body,
   Post,
   Req,
   Res,
@@ -23,6 +25,7 @@ import {
   staffDocumentUploadInterceptor,
 } from './staff-document-multipart.util';
 import { StaffDocumentsService } from './staff-documents.service';
+import { SetStaffDocumentRemindersDto } from './dto/staff-documents.dto';
 
 @Public()
 @UseGuards(CarerPortalEnabledGuard, StaffSessionGuard)
@@ -39,6 +42,15 @@ export class StaffPortalDocumentsController {
   @Post('complete-step-2')
   completeStep2(@CurrentStaff() session: StaffSessionPayload) {
     return this.documents.completeStep2(session);
+  }
+
+  @Patch(':documentType/reminders')
+  setReminders(
+    @CurrentStaff() session: StaffSessionPayload,
+    @Param('documentType') documentType: string,
+    @Body() dto: SetStaffDocumentRemindersDto,
+  ) {
+    return this.documents.setRemindersCarer(session, documentType, dto.enabled);
   }
 
   @Post(':documentType')

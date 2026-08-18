@@ -1,6 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ShiftReminderService } from '../shifts/shift-reminder.service';
+import { DocumentExpiryReminderService } from '../staff-documents/document-expiry-reminder.service';
 import { ScheduledCommunicationsService } from './scheduled-communications.service';
 import { CommunicationsQueueService } from './communications-queue.service';
 import { DEFAULT_COMMUNICATIONS_RECONCILE_CRON } from './automated-communications.constants';
@@ -13,6 +14,7 @@ export class AutomatedCommunicationsReconcilerService {
     private readonly scheduled: ScheduledCommunicationsService,
     private readonly queue: CommunicationsQueueService,
     @Optional() private readonly shiftReminders?: ShiftReminderService,
+    @Optional() private readonly documentReminders?: DocumentExpiryReminderService,
   ) {}
 
   /** Default every 10 minutes; override COMMUNICATIONS_RECONCILE_CRON in worker env if needed. */
@@ -47,9 +49,17 @@ export class AutomatedCommunicationsReconcilerService {
       shiftEnsured = shiftResult.ensured;
     }
 
-    if (enqueued > 0 || recoveredStale > 0 || shiftEnsured > 0) {
+    let documentEnsured = 0;
+    let documentCancelled = 0;
+    if (this.documentReminders) {
+      const documentResult = await this.documentReminders.reconcileEligibleDocuments();
+      documentEnsured = documentResult.ensured;
+      documentCancelled = documentResult.cancelled;
+    }
+
+    if (enqueued > 0 || recoveredStale > 0 || shiftEnsured > 0 || documentEnsured > 0 || documentCancelled > 0) {
       this.logger.log(
-        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale} shiftReminders=${shiftEnsured}`,
+        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale} shiftReminders=${shiftEnsured} documentReminders=${documentEnsured} documentCancelled=${documentCancelled}`,
       );
     }
 

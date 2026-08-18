@@ -853,7 +853,7 @@ export function StaffDocumentsSection({
                       {showReminderToggle ? (
                         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
                           <Label htmlFor={`reminder-${type}`} className="text-xs font-normal text-muted-foreground">
-                            Automated expiry reminders
+                            Expiry email reminders
                           </Label>
                           <div className="flex shrink-0 items-center gap-2">
                             <span className="text-xs text-muted-foreground">
