@@ -342,10 +342,14 @@ describe("carer shift direct cancellation UI", () => {
     expect(src).toContain("Cancel this shift?");
     expect(src).toContain("Keep shift");
     expect(src).toContain("Reason for cancellation");
-    expect(src).toContain("immediately remove it from your upcoming work");
+    expect(src).toContain("Cancelling this shift will take effect immediately");
+    expect(src).toContain("Please provide a reason before confirming");
     expect(src).not.toContain("Cancellation request");
     expect(src).not.toContain("Submit cancellation request");
     expect(src).not.toContain("Cancellation requested");
+    expect(src).not.toContain("operations team");
+    expect(src).not.toContain("notified");
+    expect(src).not.toContain("remove it from your upcoming work");
   });
 
   it("shows cancelled state and reason after cancellation", () => {

@@ -113,8 +113,8 @@ function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cancelling this shift will immediately remove it from your upcoming work. The Intra
-              operations team will be notified of the cancellation.
+              Cancelling this shift will take effect immediately. Please provide a reason before
+              confirming.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
