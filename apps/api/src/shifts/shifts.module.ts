@@ -3,14 +3,13 @@ import { StaffDocumentsModule } from '../staff-documents/staff-documents.module'
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
-import { ShiftReminderService } from './shift-reminder.service';
-import { ShiftCancellationService } from './shift-cancellation.service';
+import { ShiftCommunicationsModule } from './shift-communications.module';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsCron } from './shifts.cron';
 import { ShiftsService } from './shifts.service';
 
 @Module({
-  imports: [StaffDocumentsModule],
+  imports: [StaffDocumentsModule, ShiftCommunicationsModule],
   controllers: [ShiftsController],
   providers: [
     ShiftsService,
@@ -18,9 +17,7 @@ import { ShiftsService } from './shifts.service';
     ShiftMatchingService,
     ShiftAssignmentConfirmationService,
     ShiftAssignmentNotificationsService,
-    ShiftReminderService,
-    ShiftCancellationService,
   ],
-  exports: [ShiftsService, ShiftReminderService, ShiftCancellationService],
+  exports: [ShiftsService, ShiftCommunicationsModule],
 })
 export class ShiftsModule {}

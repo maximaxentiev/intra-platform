@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { AutomatedCommunicationsModule } from './automated-communications.module';
 import { AutomatedCommunicationsProcessor } from './automated-communications.processor';
 import { AutomatedCommunicationsReconcilerService } from './automated-communications-reconciler.service';
-import { ShiftsModule } from '../shifts/shifts.module';
+import { ShiftCommunicationsModule } from '../shifts/shift-communications.module';
 
 /** Worker-only providers (processor + reconciler). Not imported by HTTP API. */
 @Module({
-  imports: [AutomatedCommunicationsModule, ShiftsModule],
+  imports: [AutomatedCommunicationsModule, ShiftCommunicationsModule],
   providers: [AutomatedCommunicationsProcessor, AutomatedCommunicationsReconcilerService],
   exports: [AutomatedCommunicationsProcessor, AutomatedCommunicationsReconcilerService],
 })

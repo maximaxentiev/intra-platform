@@ -10,7 +10,7 @@ import { AutomatedCommunicationsWorkerModule } from '../automated-communications
 import { CommunicationProcessorRegistry } from '../automated-communications/communication-processor.registry';
 import { AutomatedCommunicationsProcessor } from '../automated-communications/automated-communications.processor';
 import { AutomatedCommunicationsReconcilerService } from '../automated-communications/automated-communications-reconciler.service';
-import { ShiftsModule } from '../shifts/shifts.module';
+import { ShiftCommunicationsModule } from '../shifts/shift-communications.module';
 import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
 import { registerShiftCancellationProcessors } from '../shifts/shift-cancellation.processor';
 
@@ -22,7 +22,7 @@ import { registerShiftCancellationProcessors } from '../shifts/shift-cancellatio
     EmailModule,
     AutomatedCommunicationsModule,
     AutomatedCommunicationsWorkerModule,
-    ShiftsModule,
+    ShiftCommunicationsModule,
   ],
 })
 export class WorkerModule {}
