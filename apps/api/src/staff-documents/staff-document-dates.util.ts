@@ -38,10 +38,10 @@ export function addCalendarYears(date: Date, years: number): Date {
   return result;
 }
 
-/** VSC expiry = processed date + exactly 3 calendar years. */
+/** VSC expiry = processed date + exactly 1 calendar year (annual renewal). */
 export function deriveVscExpiryDate(processedDate: string): string {
   const parsed = parseDateOnly(processedDate);
-  return formatDateOnly(addCalendarYears(parsed, 3));
+  return formatDateOnly(addCalendarYears(parsed, 1));
 }
 
 export function assertProcessedDateNotInFuture(

@@ -35,6 +35,24 @@ describe('DocumentExpiryReminderService eligibility', () => {
   });
 });
 
+describe('VSC annual renewal expiry reminders', () => {
+  const expiryDate = '2027-09-04';
+  const now = new Date('2026-08-18T13:00:00.000Z');
+
+  it('plans all five intervals from calculated one-year expiry', () => {
+    const plans = planFutureDocumentExpiryReminders(expiryDate, now);
+    expect(plans.map((p) => p.offsetDays)).toEqual([30, 14, 7, 3, 1]);
+  });
+
+  it('uses 09:00 Toronto wall clock from stored expiry', () => {
+    const plans = planFutureDocumentExpiryReminders(expiryDate, now);
+    for (const plan of plans) {
+      expect(plan.scheduledFor.toISOString()).toBe(
+        torontoDocumentReminderInstant(expiryDate, plan.offsetDays).toISOString(),
+      );
+    }
+  });
+});
 describe('CPR expiry 2026-09-04 from 2026-08-18', () => {
   const expiryDate = '2026-09-04';
   const now = new Date('2026-08-18T13:00:00.000Z');

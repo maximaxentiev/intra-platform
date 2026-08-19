@@ -31,9 +31,11 @@ import {
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftDirty,
   categoryDraftFromCategory,
+  deriveVscRenewalDueDate,
   documentsDraftDirty,
   formatDocumentByteSize,
   formatDocumentDate,
+  formatVscRenewalDueLabel,
   mapDocumentsApiError,
   STAFF_DOCUMENT_TYPES,
   validateCategoryDraft,
@@ -158,7 +160,7 @@ export function CarerDocumentsForm({
   async function saveDirtyCategories(): Promise<boolean> {
     if (!documents) return false;
     const dirtyTypes = STAFF_DOCUMENT_TYPES.filter((type) =>
-      categoryDraftDirty(drafts[type], savedDrafts[type]),
+      categoryDraftDirty(drafts[type], savedDrafts[type], type),
     );
     if (!dirtyTypes.length) return true;
 
@@ -315,7 +317,7 @@ export function CarerDocumentsForm({
             const category = categoriesByType.get(type)!;
             const meta = CARER_DOCUMENT_CATEGORY_META[type];
             const draft = drafts[type];
-            const dirty = categoryDraftDirty(draft, savedDrafts[type]);
+            const dirty = categoryDraftDirty(draft, savedDrafts[type], type);
             return (
               <CarerDocumentCategoryCard
                 key={type}
@@ -506,6 +508,13 @@ function CarerDocumentCategoryCard({
   const inputId = `files-${category.documentType}`;
   const retainedFiles = category.files.filter((f) => draft.retainFileIds.includes(f.id));
   const fileCount = retainedFiles.length + draft.newFiles.length;
+  const vscRenewalDue =
+    category.documentType === "vulnerable_sector_check"
+      ? formatVscRenewalDueLabel(
+          category.expiryDate ??
+            (draft.processedDate ? deriveVscRenewalDueDate(draft.processedDate) : null),
+        )
+      : null;
   const showApprovedReplacementHint =
     category.reviewStatus === "approved" && (dirty || category.isSubmitted);
   const nextAction =
@@ -564,7 +573,7 @@ function CarerDocumentCategoryCard({
       </CardHeader>
 
       <CardContent className="space-y-5 pt-0">
-        {meta.dateField === "both" ? (
+        {meta.dateField === "processed" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor={`processed-${category.documentType}`}>Processed Date</Label>
@@ -584,24 +593,11 @@ function CarerDocumentCategoryCard({
                 As shown on your Vulnerable Sector Check.
               </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={`expiry-${category.documentType}`}>Expiry Date</Label>
-              <Input
-                id={`expiry-${category.documentType}`}
-                type="date"
-                className="h-11"
-                value={draft.expiryDate}
-                disabled={disabled}
-                aria-describedby={`expiry-hint-${category.documentType}`}
-                onChange={(e) => onExpiryDateChange(e.target.value)}
-              />
-              <p
-                id={`expiry-hint-${category.documentType}`}
-                className="text-xs text-muted-foreground"
-              >
-                The expiry date printed on your Vulnerable Sector Check.
-              </p>
-            </div>
+            {vscRenewalDue ? (
+              <div className="space-y-1.5 sm:self-end">
+                <p className="text-sm text-muted-foreground">{vscRenewalDue}</p>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

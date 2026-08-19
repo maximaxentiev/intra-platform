@@ -52,6 +52,7 @@ import {
 } from './staff-document-compliance.util';
 import {
   assertProcessedDateNotInFuture,
+  deriveVscExpiryDate,
   parseDateOnly,
 } from './staff-document-dates.util';
 import { validateStaffDocumentFileContent } from './staff-document-file-signature.util';
@@ -881,11 +882,12 @@ export class StaffDocumentsService {
         if (!fields.processedDate) {
           throw new StaffDocumentValidationError('processedDate is required.');
         }
-        if (!fields.expiryDate) {
-          throw new StaffDocumentValidationError('expiryDate is required.');
+        if (fields.expiryDate !== undefined && fields.expiryDate !== '') {
+          throw new StaffDocumentValidationError(
+            'expiryDate must not be supplied for vulnerable sector check.',
+          );
         }
         assertProcessedDateNotInFuture(fields.processedDate);
-        parseDateOnly(fields.expiryDate);
       } else if (documentType === 'first_aid_cpr') {
         if (!fields.expiryDate) {
           throw new StaffDocumentValidationError('expiryDate is required.');
@@ -914,7 +916,7 @@ export class StaffDocumentsService {
     if (documentType === 'vulnerable_sector_check') {
       return {
         processedDate: fields.processedDate!,
-        expiryDate: fields.expiryDate!,
+        expiryDate: deriveVscExpiryDate(fields.processedDate!),
       };
     }
     if (documentType === 'first_aid_cpr') {

@@ -55,9 +55,11 @@ import {
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftFromCategory,
   categoryDraftDirty,
+  deriveVscRenewalDueDate,
   expiryDisplayLabel,
   formatDocumentByteSize,
   formatDocumentDate,
+  formatVscRenewalDueLabel,
   isStaleSubmissionError,
   mapOpsDocumentsApiError,
   opsStaffDocumentsApi,
@@ -580,7 +582,7 @@ export function StaffDocumentsSection({
                         </p>
                       ) : null}
 
-                      {meta.dateField === "both" ? (
+                      {meta.dateField === "processed" ? (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1.5">
                             <Label htmlFor={`ops-processed-${type}`}>Processed Date</Label>
@@ -595,19 +597,23 @@ export function StaffDocumentsSection({
                               }
                             />
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`ops-expiry-vsc-${type}`}>Expiry Date</Label>
-                            <Input
-                              id={`ops-expiry-vsc-${type}`}
-                              type="date"
-                              className="h-10"
-                              value={draft.expiryDate}
-                              disabled={busy}
-                              onChange={(e) =>
-                                setDraft((d) => ({ ...d, expiryDate: e.target.value }))
-                              }
-                            />
-                          </div>
+                          {formatVscRenewalDueLabel(
+                            category.expiryDate ??
+                              (draft.processedDate
+                                ? deriveVscRenewalDueDate(draft.processedDate)
+                                : null),
+                          ) ? (
+                            <div className="space-y-1.5 sm:self-end">
+                              <p className="text-sm text-muted-foreground">
+                                {formatVscRenewalDueLabel(
+                                  category.expiryDate ??
+                                    (draft.processedDate
+                                      ? deriveVscRenewalDueDate(draft.processedDate)
+                                      : null),
+                                )}
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
 
@@ -735,7 +741,7 @@ export function StaffDocumentsSection({
                         <Button
                           type="button"
                           className="sm:order-2"
-                          disabled={busy || !categoryDraftDirty(draft, savedDraft)}
+                          disabled={busy || !categoryDraftDirty(draft, savedDraft, type)}
                           onClick={() => void handleSaveCategory(type)}
                         >
                           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}

@@ -32,11 +32,11 @@ describe("DocumentStatusPills presentation", () => {
 });
 
 describe("Lovable carer documents presentation guardrails", () => {
-  it("uses editable VSC processed and expiry date fields", () => {
+  it("uses editable VSC processed date with read-only renewal due", () => {
     const src = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(src).toContain('dateField === "both"');
-    expect(src).toContain("onExpiryDateChange");
-    expect(src).not.toContain("Calculated by Intra");
+    expect(src).toContain('dateField === "processed"');
+    expect(src).toContain("formatVscRenewalDueLabel");
+    expect(src).not.toContain('dateField === "both"');
   });
 
   it("preserves local draft save architecture", () => {

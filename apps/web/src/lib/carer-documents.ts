@@ -50,7 +50,7 @@ export const CARER_DOCUMENT_CATEGORY_META: Record<
   vulnerable_sector_check: {
     title: "Vulnerable Sector Check",
     required: true,
-    dateField: "both",
+    dateField: "processed",
   },
   first_aid_cpr: {
     title: "First Aid & CPR Certification",
@@ -91,9 +91,14 @@ export function categoryDraftFromCategory(category: CarerDocumentCategory): Cate
   };
 }
 
-export function categoryDraftDirty(a: CategoryDraft, b: CategoryDraft): boolean {
+export function categoryDraftDirty(
+  a: CategoryDraft,
+  b: CategoryDraft,
+  documentType: StaffDocumentType,
+): boolean {
   if (a.processedDate !== b.processedDate) return true;
-  if (a.expiryDate !== b.expiryDate) return true;
+  const meta = CARER_DOCUMENT_CATEGORY_META[documentType];
+  if (meta.dateField === "expiry" && a.expiryDate !== b.expiryDate) return true;
   if (a.newFiles.length > 0) return true;
   if (a.retainFileIds.length !== b.retainFileIds.length) return true;
   const sortedA = [...a.retainFileIds].sort();
@@ -105,7 +110,7 @@ export function documentsDraftDirty(
   drafts: Record<StaffDocumentType, CategoryDraft>,
   saved: Record<StaffDocumentType, CategoryDraft>,
 ): boolean {
-  return STAFF_DOCUMENT_TYPES.some((type) => categoryDraftDirty(drafts[type], saved[type]));
+  return STAFF_DOCUMENT_TYPES.some((type) => categoryDraftDirty(drafts[type], saved[type], type));
 }
 
 function extensionOf(filename: string): string {
@@ -129,6 +134,35 @@ export function formatDocumentDate(iso: string): string {
     month: "long",
     day: "numeric",
   });
+}
+
+/** Display-only mirror of API deriveVscExpiryDate (processed + 1 calendar year). */
+export function deriveVscRenewalDueDate(processedDate: string): string | null {
+  const trimmed = processedDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const [y, m, d] = trimmed.split("-").map(Number);
+  const parsed = new Date(Date.UTC(y, m - 1, d));
+  if (
+    parsed.getUTCFullYear() !== y ||
+    parsed.getUTCMonth() !== m - 1 ||
+    parsed.getUTCDate() !== d
+  ) {
+    return null;
+  }
+  const targetYear = y + 1;
+  let result = new Date(Date.UTC(targetYear, m - 1, d));
+  if (result.getUTCMonth() !== m - 1) {
+    result = new Date(Date.UTC(targetYear, m, 0));
+  }
+  const ry = result.getUTCFullYear();
+  const rm = String(result.getUTCMonth() + 1).padStart(2, "0");
+  const rd = String(result.getUTCDate()).padStart(2, "0");
+  return `${ry}-${rm}-${rd}`;
+}
+
+export function formatVscRenewalDueLabel(processedOrExpiryDate: string | null | undefined): string | null {
+  if (!processedOrExpiryDate) return null;
+  return `Renewal due: ${formatDocumentDate(processedOrExpiryDate)}`;
 }
 
 export function reviewStatusLabel(status: string): string {
@@ -196,10 +230,6 @@ export function validateCategoryDraft(
   if (meta.dateField === "expiry" && !draft.expiryDate.trim()) {
     return "Expiry date is required.";
   }
-  if (meta.dateField === "both") {
-    if (!draft.processedDate.trim()) return "Processed date is required.";
-    if (!draft.expiryDate.trim()) return "Expiry date is required.";
-  }
 
   return null;
 }
@@ -213,9 +243,8 @@ export function buildCategorySaveFormData(
   for (const file of draft.newFiles) {
     formData.append("files", file, file.name);
   }
-  if (documentType === "vulnerable_sector_check") {
-    if (draft.processedDate) formData.append("processedDate", draft.processedDate);
-    if (draft.expiryDate) formData.append("expiryDate", draft.expiryDate);
+  if (documentType === "vulnerable_sector_check" && draft.processedDate) {
+    formData.append("processedDate", draft.processedDate);
   }
   if (documentType === "first_aid_cpr" && draft.expiryDate) {
     formData.append("expiryDate", draft.expiryDate);

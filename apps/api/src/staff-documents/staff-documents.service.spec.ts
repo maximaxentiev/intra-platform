@@ -232,7 +232,7 @@ describe('StaffDocumentsService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('persists user-entered VSC processed and expiry dates', async () => {
+  it('derives VSC expiry from processed date only', async () => {
     h.queueAccountLoad();
     h.queueSetContext({
       set: { id: 'set-vsc', currentSubmissionId: null },
@@ -245,8 +245,8 @@ describe('StaffDocumentsService', () => {
         {
           id: 's-new',
           reviewStatus: 'pending_review',
-          processedDate: '2026-08-01',
-          expiryDate: '2030-01-01',
+          processedDate: '2026-08-19',
+          expiryDate: '2027-08-19',
           submittedAt: new Date(),
           supersededAt: null,
         },
@@ -257,22 +257,34 @@ describe('StaffDocumentsService', () => {
     await h.service.saveCategoryCarer(
       session,
       'vulnerable_sector_check',
-      { processedDate: '2026-08-01', expiryDate: '2030-01-01', retainFileIds: [] },
+      { processedDate: '2026-08-19', retainFileIds: [] },
       [multerFile()],
     );
 
     const insertedSubmission = h.submissions.at(-1);
-    expect(insertedSubmission?.processedDate).toBe('2026-08-01');
-    expect(insertedSubmission?.expiryDate).toBe('2030-01-01');
+    expect(insertedSubmission?.processedDate).toBe('2026-08-19');
+    expect(insertedSubmission?.expiryDate).toBe('2027-08-19');
   });
 
-  it('requires VSC expiry date on save', async () => {
+  it('rejects client-supplied VSC expiry date', async () => {
     h.queueAccountLoad();
     await expect(
       h.service.saveCategoryCarer(
         session,
         'vulnerable_sector_check',
-        { processedDate: '2026-08-01', retainFileIds: [] },
+        { processedDate: '2026-08-19', expiryDate: '2030-01-01', retainFileIds: [] },
+        [multerFile()],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('requires VSC processed date on save', async () => {
+    h.queueAccountLoad();
+    await expect(
+      h.service.saveCategoryCarer(
+        session,
+        'vulnerable_sector_check',
+        { retainFileIds: [] },
         [multerFile()],
       ),
     ).rejects.toBeInstanceOf(BadRequestException);

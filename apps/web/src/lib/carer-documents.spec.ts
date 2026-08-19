@@ -8,7 +8,9 @@ import {
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftDirty,
   categoryDraftFromCategory,
+  deriveVscRenewalDueDate,
   documentsDraftDirty,
+  formatVscRenewalDueLabel,
   mapDocumentsApiError,
   reviewStatusLabel,
   STAFF_DOCUMENT_MAX_FILE_BYTES,
@@ -74,7 +76,7 @@ describe("carer document category metadata", () => {
   it("defines four required/optional categories", () => {
     expect(STAFF_DOCUMENT_TYPES).toHaveLength(4);
     expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.required).toBe(true);
-    expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.dateField).toBe("both");
+    expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.dateField).toBe("processed");
     expect(CARER_DOCUMENT_CATEGORY_META.covid19_vaccination.required).toBe(false);
   });
 });
@@ -92,7 +94,7 @@ describe("category draft state", () => {
       ...saved,
       newFiles: [new File(["x"], "new.pdf", { type: "application/pdf" })],
     };
-    expect(categoryDraftDirty(dirty, saved)).toBe(true);
+    expect(categoryDraftDirty(dirty, saved, "immunizations")).toBe(true);
     expect(documentsDraftDirty(
       {
         vulnerable_sector_check: saved,
@@ -112,7 +114,19 @@ describe("category draft state", () => {
   it("detects retained file removal locally without API calls", () => {
     const saved = categoryDraftFromCategory(sampleCategory());
     const dirty = { ...saved, retainFileIds: [] };
-    expect(categoryDraftDirty(dirty, saved)).toBe(true);
+    expect(categoryDraftDirty(dirty, saved, "immunizations")).toBe(true);
+  });
+
+  it("does not treat unchanged VSC expiry as dirty when only processed date matches", () => {
+    const saved = categoryDraftFromCategory(
+      sampleCategory({
+        documentType: "vulnerable_sector_check",
+        processedDate: "2026-08-19",
+        expiryDate: "2027-08-19",
+      }),
+    );
+    const dirty = { ...saved, expiryDate: "2099-01-01" };
+    expect(categoryDraftDirty(dirty, saved, "vulnerable_sector_check")).toBe(false);
   });
 });
 
@@ -153,7 +167,7 @@ describe("validateCategoryDraft", () => {
     expect(validateCategoryDraft("immunizations", draft, [])).toMatch(/10 files/i);
   });
 
-  it("requires VSC processed and expiry dates", () => {
+  it("requires VSC processed date only", () => {
     expect(
       validateCategoryDraft(
         "vulnerable_sector_check",
@@ -168,27 +182,18 @@ describe("validateCategoryDraft", () => {
         {
           retainFileIds: [],
           newFiles: [new File(["x"], "vsc.pdf")],
-          processedDate: "2024-01-15",
+          processedDate: "2026-08-19",
           expiryDate: "",
         },
         [],
       ),
-    ).toMatch(/Expiry date/i);
+    ).toBeNull();
   });
 
-  it("allows VSC expiry dates independent of processed date + 3 years", () => {
-    expect(
-      validateCategoryDraft(
-        "vulnerable_sector_check",
-        {
-          retainFileIds: [],
-          newFiles: [new File(["x"], "vsc.pdf")],
-          processedDate: "2024-01-15",
-          expiryDate: "2025-06-01",
-        },
-        [],
-      ),
-    ).toBeNull();
+  it("derives display-only VSC renewal due from processed date", () => {
+    expect(deriveVscRenewalDueDate("2026-08-19")).toBe("2027-08-19");
+    expect(deriveVscRenewalDueDate("2028-02-29")).toBe("2029-02-28");
+    expect(formatVscRenewalDueLabel("2027-08-19")).toMatch(/Renewal due:/);
   });
 
   it("requires First Aid expiry date", () => {
@@ -215,15 +220,15 @@ describe("buildCategorySaveFormData", () => {
     expect(formData.getAll("files")).toHaveLength(1);
   });
 
-  it("sends processedDate and expiryDate for VSC", () => {
+  it("sends processedDate only for VSC", () => {
     const vsc = buildCategorySaveFormData("vulnerable_sector_check", {
       retainFileIds: [],
       newFiles: [new File(["x"], "vsc.pdf")],
-      processedDate: "2024-01-15",
-      expiryDate: "2025-06-01",
+      processedDate: "2026-08-19",
+      expiryDate: "2099-01-01",
     });
-    expect(vsc.get("processedDate")).toBe("2024-01-15");
-    expect(vsc.get("expiryDate")).toBe("2025-06-01");
+    expect(vsc.get("processedDate")).toBe("2026-08-19");
+    expect(vsc.get("expiryDate")).toBeNull();
 
     const fa = buildCategorySaveFormData("first_aid_cpr", {
       retainFileIds: [],
@@ -285,10 +290,12 @@ describe("carer documents UI", () => {
     expect(src).not.toContain("Calculated by Intra");
   });
 
-  it("shows editable VSC processed and expiry date fields", () => {
+  it("shows editable VSC processed date without editable expiry", () => {
     const src = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(src).toContain('dateField === "both"');
+    expect(src).toContain('dateField === "processed"');
     expect(src).toContain("Processed Date");
-    expect(src).toContain("Expiry Date");
+    expect(src).toContain("formatVscRenewalDueLabel");
+    expect(src).not.toContain('dateField === "both"');
+    expect(src).not.toMatch(/ops-expiry-vsc|expiry-\$\{category\.documentType\}.*Vulnerable/);
   });
 });

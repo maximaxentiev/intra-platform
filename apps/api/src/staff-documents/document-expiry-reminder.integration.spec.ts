@@ -23,6 +23,7 @@ import { DocumentExpiryReminderService } from './document-expiry-reminder.servic
 import { registerDocumentExpiryProcessors } from './document-expiry-reminder.processor';
 import { buildDocumentExpiryIdempotencyKey } from './document-expiry-reminder.types';
 import { torontoDocumentReminderInstant } from './document-expiry-toronto.util';
+import { deriveVscExpiryDate } from './staff-document-dates.util';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -82,6 +83,24 @@ function buildConfig(): ConfigService {
       return value;
     },
   } as ConfigService;
+}
+
+async function insertActiveStaffWithAccount(
+  db: NodePgDatabase<typeof schema>,
+  email: string,
+): Promise<{ staffId: string; accountId: string }> {
+  const staffRows = await db
+    .insert(staff)
+    .values({ legalName: `Doc Test ${email}`, email, phone: '4165550199' })
+    .returning({ id: staff.id });
+  const staffId = staffRows[0]!.id;
+
+  const accountRows = await db
+    .insert(staffAccounts)
+    .values({ staffId, email, status: 'active', onboardingStep: 3 })
+    .returning({ id: staffAccounts.id });
+
+  return { staffId, accountId: accountRows[0]!.id };
 }
 
 describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration', () => {
@@ -308,6 +327,202 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, cprSubmissionId));
     expect(reactivated.filter((row) => row.status === 'scheduled').length).toBe(4);
+  }, 20_000);
+
+  it('schedules VSC reminders from calculated one-year expiry (processed 2026-09-04)', async () => {
+    const processedDate = '2026-09-04';
+    const vscExpiry = deriveVscExpiryDate(processedDate);
+    expect(vscExpiry).toBe('2027-09-04');
+
+    const vscStaff = await insertActiveStaffWithAccount(
+      db,
+      `doc-vsc-schedule-${TEST_PREFIX}@example.test`,
+    );
+
+    const vscSetRows = await db
+      .insert(staffDocumentSets)
+      .values({
+        staffId: vscStaff.staffId,
+        documentType: 'vulnerable_sector_check',
+        remindersEnabled: false,
+      })
+      .returning({ id: staffDocumentSets.id });
+    const vscSetId = vscSetRows[0]!.id;
+
+    const vscSubmissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: vscSetId,
+        reviewStatus: 'approved',
+        processedDate,
+        expiryDate: vscExpiry,
+        submittedAt: new Date(),
+        submittedByActorType: 'carer',
+        submittedByStaffAccountId: vscStaff.accountId,
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+    const vscSubmissionId = vscSubmissionRows[0]!.id;
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: vscSubmissionId })
+      .where(eq(staffDocumentSets.id, vscSetId));
+
+    const scheduleNow = new Date('2026-08-18T13:00:00.000Z');
+    let scheduledIds: string[] = [];
+    await db.transaction(async (tx) => {
+      scheduledIds = await documentReminders.scheduleForApprovedSubmission(
+        {
+          staffId: vscStaff.staffId,
+          documentSetId: vscSetId,
+          documentType: 'vulnerable_sector_check',
+          submissionId: vscSubmissionId,
+          expiryDate: vscExpiry,
+        },
+        tx,
+        scheduleNow,
+      );
+    });
+
+    expect(scheduledIds.length).toBe(5);
+
+    const rows = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, vscSubmissionId));
+    expect(
+      rows
+        .filter((row) => row.status === 'scheduled')
+        .map((row) => row.communicationType)
+        .sort(),
+    ).toEqual([
+      'document_expiry_14d',
+      'document_expiry_1d',
+      'document_expiry_30d',
+      'document_expiry_3d',
+      'document_expiry_7d',
+    ]);
+  }, 20_000);
+
+  it('annual VSC replacement cancels old reminders and schedules after approval', async () => {
+    const oldProcessed = '2025-09-04';
+    const oldExpiry = deriveVscExpiryDate(oldProcessed);
+    const newProcessed = '2026-09-04';
+    const newExpiry = deriveVscExpiryDate(newProcessed);
+
+    const replaceStaff = await insertActiveStaffWithAccount(
+      db,
+      `doc-vsc-replace-${TEST_PREFIX}@example.test`,
+    );
+
+    const setRows = await db
+      .insert(staffDocumentSets)
+      .values({
+        staffId: replaceStaff.staffId,
+        documentType: 'vulnerable_sector_check',
+        remindersEnabled: true,
+      })
+      .returning({ id: staffDocumentSets.id });
+    const replaceSetId = setRows[0]!.id;
+
+    const oldSubmissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: replaceSetId,
+        reviewStatus: 'approved',
+        processedDate: oldProcessed,
+        expiryDate: oldExpiry,
+        submittedAt: new Date(),
+        submittedByActorType: 'carer',
+        submittedByStaffAccountId: replaceStaff.accountId,
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+    const oldSubmissionId = oldSubmissionRows[0]!.id;
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: oldSubmissionId })
+      .where(eq(staffDocumentSets.id, replaceSetId));
+
+    await db.transaction(async (tx) => {
+      await documentReminders.scheduleForApprovedSubmission(
+        {
+          staffId: replaceStaff.staffId,
+          documentSetId: replaceSetId,
+          documentType: 'vulnerable_sector_check',
+          submissionId: oldSubmissionId,
+          expiryDate: oldExpiry,
+        },
+        tx,
+        new Date('2026-01-01T12:00:00.000Z'),
+      );
+    });
+
+    const newSubmissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: replaceSetId,
+        reviewStatus: 'pending_review',
+        processedDate: newProcessed,
+        expiryDate: newExpiry,
+        submittedAt: new Date(),
+        submittedByActorType: 'carer',
+        submittedByStaffAccountId: replaceStaff.accountId,
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+    const newSubmissionId = newSubmissionRows[0]!.id;
+
+    await db
+      .update(staffDocumentSubmissions)
+      .set({ supersededAt: new Date() })
+      .where(eq(staffDocumentSubmissions.id, oldSubmissionId));
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: newSubmissionId })
+      .where(eq(staffDocumentSets.id, replaceSetId));
+
+    await documentReminders.cancelPendingForSubmission(oldSubmissionId);
+
+    const oldRows = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, oldSubmissionId));
+    expect(oldRows.every((row) => row.status === 'cancelled')).toBe(true);
+
+    const pendingNew = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, newSubmissionId));
+    expect(pendingNew).toHaveLength(0);
+
+    await db
+      .update(staffDocumentSubmissions)
+      .set({ reviewStatus: 'approved', reviewedAt: new Date() })
+      .where(eq(staffDocumentSubmissions.id, newSubmissionId));
+
+    let approvedIds: string[] = [];
+    await db.transaction(async (tx) => {
+      approvedIds = await documentReminders.scheduleForApprovedSubmission(
+        {
+          staffId: replaceStaff.staffId,
+          documentSetId: replaceSetId,
+          documentType: 'vulnerable_sector_check',
+          submissionId: newSubmissionId,
+          expiryDate: newExpiry,
+        },
+        tx,
+        new Date('2026-08-18T13:00:00.000Z'),
+      );
+    });
+
+    expect(approvedIds.length).toBe(5);
+
+    const newRows = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, newSubmissionId));
+    expect(newRows.filter((row) => row.status === 'scheduled').length).toBe(5);
   }, 20_000);
 });
 

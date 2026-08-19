@@ -178,11 +178,12 @@ describe("ops documents UI", () => {
     expect(src).not.toContain("Expiry is calculated by Intra");
   });
 
-  it("shows editable VSC processed and expiry date fields", () => {
+  it("shows editable VSC processed date with read-only renewal due", () => {
     const src = readSrc("components/staff/StaffDocumentsSection.tsx");
-    expect(src).toContain('dateField === "both"');
+    expect(src).toContain('dateField === "processed"');
     expect(src).toContain("Processed Date");
-    expect(src).toContain("Expiry Date");
+    expect(src).toContain("formatVscRenewalDueLabel");
+    expect(src).not.toContain('dateField === "both"');
   });
 });
 
