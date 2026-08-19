@@ -14,6 +14,7 @@ export const reportsApi = {
   centreUsage: (query?: {
     dateFrom?: string;
     dateTo?: string;
+    centreIds?: string[];
     centreId?: string;
   }) => api.get<CentreUsageResponse>("/reports/centre-usage", query),
 };

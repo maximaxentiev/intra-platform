@@ -1,4 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
@@ -7,6 +9,7 @@ import * as schema from '../db/schema';
 import { centres, shifts, staff } from '../db/schema';
 import { ReportsService } from './reports.service';
 import { ReportsShiftService } from './reports-shift.service';
+import { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportScheduledMinutes } from './report-minutes.util';
 
@@ -305,12 +308,72 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
 
     expect(result.summary.totalCentres).toBe(1);
     expect(result.summary.totalShifts).toBe(0);
+    expect(result.summary.pending).toBe(0);
+    expect(result.summary.filled).toBe(0);
+    expect(result.summary.completed).toBe(0);
+    expect(result.summary.cancelled).toBe(0);
+    expect(result.summary.fillRatePercent).toBeNull();
     expect(result.summary.totalScheduledMinutes).toBe(0);
     expect(result.summary.totalCompletedScheduledMinutes).toBe(0);
+    expect(result.centreIds).toEqual([FIXTURE.centreC]);
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]!.totalScheduledMinutes).toBe(0);
     expect(result.rows[0]!.completedScheduledMinutes).toBe(0);
     expect(typeof result.rows[0]!.totalScheduledMinutes).toBe('number');
+  });
+
+  it('filters centre usage by multiple centre IDs', async () => {
+    const result = await service.getCentreUsage({
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreIds: [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC],
+    });
+
+    expect(result.centreIds).toEqual([FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC]);
+    expect(result.rows).toHaveLength(3);
+    expect(result.summary.totalCentres).toBe(3);
+    expect(result.summary.totalShifts).toBe(12);
+    expect(typeof result.summary.pending).toBe('number');
+    expect(typeof result.summary.fillRatePercent).toBe('number');
+  });
+
+  it('deduplicates repeated centre IDs in centre usage filter', async () => {
+    const result = await service.getCentreUsage({
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreIds: [FIXTURE.centreB, FIXTURE.centreB, FIXTURE.centreC],
+    });
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.summary.totalCentres).toBe(2);
+  });
+
+  it('supports legacy single centreId filter for centre usage', async () => {
+    const result = await service.getCentreUsage({
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreId: FIXTURE.centreB,
+    });
+
+    expect(result.centreIds).toEqual([FIXTURE.centreB]);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]!.centreId).toBe(FIXTURE.centreB);
+  });
+
+  it('rejects nonexistent centre IDs in centre usage filter', async () => {
+    await expect(
+      service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [FIXTURE.centreA, '00000000-0000-4000-8000-000000000099'],
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects malformed centreIds query values', () => {
+    const dto = plainToInstance(CentreUsageQueryDto, { centreIds: 'not-a-uuid' });
+    const errors = validateSync(dto);
+    expect(errors.some((error) => error.property === 'centreIds')).toBe(true);
   });
 
   it('keeps shift fulfillment unaffected after centre usage normalization', async () => {
@@ -328,6 +391,72 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     const result = await service.getShiftFulfillment({});
     expect(result.dateFrom).toMatch(/^\d{4}-\d{2}-01$/);
     expect(result.dateTo).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  describe('aggregate fill rate across selected centres', () => {
+    const centreHigh = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5';
+    const centreLow = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa6';
+    const fillRateShiftIds: string[] = [];
+
+    beforeAll(async () => {
+      await db.insert(centres).values([
+        { id: centreHigh, name: 'Fill Rate High Centre', city: 'Toronto' },
+        { id: centreLow, name: 'Fill Rate Low Centre', city: 'Toronto' },
+      ]);
+
+      const rows = await db
+        .insert(shifts)
+        .values([
+          {
+            centreId: centreHigh,
+            shiftDate: '2026-08-12',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'filled',
+          },
+          ...Array.from({ length: 8 }, () => ({
+            centreId: centreLow,
+            shiftDate: '2026-08-12',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'pending' as const,
+          })),
+          {
+            centreId: centreLow,
+            shiftDate: '2026-08-12',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'filled',
+          },
+        ])
+        .returning({ id: shifts.id });
+
+      fillRateShiftIds.push(...rows.map((row) => row.id));
+    });
+
+    afterAll(async () => {
+      if (fillRateShiftIds.length > 0) {
+        await db.delete(shifts).where(inArray(shifts.id, fillRateShiftIds));
+      }
+      await db.delete(centres).where(inArray(centres.id, [centreHigh, centreLow]));
+    });
+
+    it('uses aggregate counts for fill rate instead of averaging centre percentages', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [centreHigh, centreLow],
+      });
+
+      const high = result.rows.find((row) => row.centreId === centreHigh)!;
+      const low = result.rows.find((row) => row.centreId === centreLow)!;
+
+      expect(high.fillRatePercent).toBe(100);
+      expect(low.fillRatePercent).toBe(11.1);
+      expect(result.summary.filled).toBe(2);
+      expect(result.summary.pending).toBe(8);
+      expect(result.summary.fillRatePercent).toBe(20);
+    });
   });
 
   describe('malformed legacy shift durations', () => {
@@ -384,7 +513,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       const result = await service.getCentreUsage({
         dateFrom: '2026-08-01',
         dateTo: '2026-08-31',
-        centreId: malformedCentre,
+        centreIds: [malformedCentre],
       });
 
       const row = result.rows[0]!;

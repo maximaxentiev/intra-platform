@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
 import { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import { ReportsShiftService } from './reports-shift.service';
 
@@ -18,7 +19,7 @@ export class ReportsController {
   }
 
   @Get('centre-usage')
-  centreUsage(@Query() query: ShiftReportQueryDto) {
+  centreUsage(@Query() query: CentreUsageQueryDto) {
     return this.reportsShift.getCentreUsage(query);
   }
 }

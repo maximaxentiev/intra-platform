@@ -13,14 +13,20 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | boolean | undefined | null>;
+type Query = Record<string, string | number | boolean | undefined | null | string[]>;
 
 function buildUrl(path: string, query?: Query): string {
   const url = `${API_URL}/api${path}`;
   if (!query) return url;
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) {
-    if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
+    if (v === undefined || v === null || v === "") continue;
+    if (Array.isArray(v)) {
+      if (v.length === 0) continue;
+      params.set(k, v.join(","));
+      continue;
+    }
+    params.set(k, String(v));
   }
   const qs = params.toString();
   return qs ? `${url}?${qs}` : url;

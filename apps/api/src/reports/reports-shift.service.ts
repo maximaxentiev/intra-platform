@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts } from '../db/schema';
+import type { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
+import { resolveCentreUsageCentreIds } from './dto/report-centre-ids.util';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
@@ -11,6 +13,7 @@ import { ReportsService } from './reports.service';
 import type {
   CentreUsageResponse,
   CentreUsageRow,
+  CentreUsageSummary,
   ShiftFulfillmentResponse,
 } from './types/shift-report.types';
 
@@ -26,6 +29,37 @@ function toSummary(counts: StatusCounts) {
   return {
     ...counts,
     fillRatePercent: computeFillRatePercent(counts.filled, counts.completed, counts.pending),
+  };
+}
+
+function buildCentreUsageSummary(rows: CentreUsageRow[]): CentreUsageSummary {
+  const totals = rows.reduce(
+    (acc, row) => ({
+      totalCentres: acc.totalCentres + 1,
+      totalShifts: acc.totalShifts + row.totalShifts,
+      pending: acc.pending + row.pending,
+      filled: acc.filled + row.filled,
+      completed: acc.completed + row.completed,
+      cancelled: acc.cancelled + row.cancelled,
+      totalScheduledMinutes: acc.totalScheduledMinutes + row.totalScheduledMinutes,
+      totalCompletedScheduledMinutes:
+        acc.totalCompletedScheduledMinutes + row.completedScheduledMinutes,
+    }),
+    {
+      totalCentres: 0,
+      totalShifts: 0,
+      pending: 0,
+      filled: 0,
+      completed: 0,
+      cancelled: 0,
+      totalScheduledMinutes: 0,
+      totalCompletedScheduledMinutes: 0,
+    },
+  );
+
+  return {
+    ...totals,
+    fillRatePercent: computeFillRatePercent(totals.filled, totals.completed, totals.pending),
   };
 }
 
@@ -93,12 +127,12 @@ export class ReportsShiftService {
     };
   }
 
-  async getCentreUsage(query: ShiftReportQueryDto): Promise<CentreUsageResponse> {
+  async getCentreUsage(query: CentreUsageQueryDto): Promise<CentreUsageResponse> {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
-    const centreId = query.centreId ?? null;
+    const centreIds = resolveCentreUsageCentreIds(query);
 
-    if (centreId) {
-      await this.reports.assertCentreExists(centreId);
+    if (centreIds?.length) {
+      await this.reports.assertCentresExist(centreIds);
     }
 
     const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
@@ -108,7 +142,7 @@ export class ReportsShiftService {
       lte(shifts.shiftDate, dateTo),
     );
 
-    const centreConditions = centreId ? eq(centres.id, centreId) : undefined;
+    const centreConditions = centreIds?.length ? inArray(centres.id, centreIds) : undefined;
 
     const rawRows = await this.db
       .select({
@@ -145,27 +179,11 @@ export class ReportsShiftService {
       completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
     }));
 
-    const summary = rows.reduce(
-      (acc, row) => ({
-        totalCentres: acc.totalCentres + 1,
-        totalShifts: acc.totalShifts + row.totalShifts,
-        totalScheduledMinutes: acc.totalScheduledMinutes + row.totalScheduledMinutes,
-        totalCompletedScheduledMinutes:
-          acc.totalCompletedScheduledMinutes + row.completedScheduledMinutes,
-      }),
-      {
-        totalCentres: 0,
-        totalShifts: 0,
-        totalScheduledMinutes: 0,
-        totalCompletedScheduledMinutes: 0,
-      },
-    );
-
     return {
       dateFrom,
       dateTo,
-      centreId,
-      summary,
+      centreIds,
+      summary: buildCentreUsageSummary(rows),
       rows,
     };
   }

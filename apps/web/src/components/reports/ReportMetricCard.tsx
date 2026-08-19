@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export function ReportMetricCard({
   label,
@@ -40,10 +41,12 @@ export function ReportMetricCard({
 
 export function ReportMetricGrid({
   children,
+  className,
 }: {
   children: ReactNode;
+  className?: string;
 }) {
-  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div>;
+  return <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-3", className)}>{children}</div>;
 }
 
 export type { LucideIcon };

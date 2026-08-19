@@ -4,8 +4,11 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { ReportFilters } from "@/components/reports/ReportFilters";
-import { ReportMetricCard, ReportMetricGrid } from "@/components/reports/ReportMetricCard";
+import { CentreUsageFilters } from "@/components/reports/CentreUsageFilters";
+import {
+  CentreUsageSummaryCards,
+  CentreUsageSummarySkeleton,
+} from "@/components/reports/CentreUsageSummaryCards";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,17 +21,23 @@ import {
 } from "@/components/ui/table";
 import { centresApi } from "@/lib/db";
 import {
-  formatOpsDateToronto,
   formatReportDurationMinutes,
   formatReportFillRatePercent,
 } from "@/lib/ops-report-formatters";
 import { defaultReportSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
-import { REPORT_SCHEDULED_HOURS_LABEL } from "@/lib/reports-types";
+import {
+  centreSelectionToApiQuery,
+  centreSelectionToSearchParams,
+  isSingleCentreSelection,
+  resolveAppliedCentreSelection,
+  type CentreSelectionState,
+} from "@/lib/reports-centre-selection";
 
 const searchSchema = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
+  centreIds: z.string().optional(),
   centreId: z.string().optional(),
 });
 
@@ -42,18 +51,20 @@ function CentreUsageReport() {
   const navigate = Route.useNavigate();
   const defaults = defaultReportSearch();
 
+  const appliedSelection = useMemo(() => resolveAppliedCentreSelection(search), [search]);
+
   const applied = useMemo(
     () => ({
       dateFrom: search.dateFrom ?? defaults.dateFrom,
       dateTo: search.dateTo ?? defaults.dateTo,
-      centreId: search.centreId ?? "all",
+      selection: appliedSelection,
     }),
-    [search, defaults.dateFrom, defaults.dateTo],
+    [search, defaults.dateFrom, defaults.dateTo, appliedSelection],
   );
 
   const [dateFrom, setDateFrom] = useState(applied.dateFrom);
   const [dateTo, setDateTo] = useState(applied.dateTo);
-  const [centreId, setCentreId] = useState(applied.centreId);
+  const [selection, setSelection] = useState<CentreSelectionState>(applied.selection);
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -61,12 +72,18 @@ function CentreUsageReport() {
   });
 
   const reportQ = useQuery({
-    queryKey: ["reports-centre-usage", applied.dateFrom, applied.dateTo, applied.centreId],
+    queryKey: [
+      "reports-centre-usage",
+      applied.dateFrom,
+      applied.dateTo,
+      applied.selection.mode,
+      applied.selection.centreIds.join(","),
+    ],
     queryFn: () =>
       reportsApi.centreUsage({
         dateFrom: applied.dateFrom,
         dateTo: applied.dateTo,
-        centreId: applied.centreId === "all" ? undefined : applied.centreId,
+        ...centreSelectionToApiQuery(applied.selection),
       }),
   });
 
@@ -75,7 +92,7 @@ function CentreUsageReport() {
       search: {
         dateFrom,
         dateTo,
-        centreId: centreId === "all" ? undefined : centreId,
+        ...centreSelectionToSearchParams(selection),
       },
     });
   }
@@ -84,13 +101,18 @@ function CentreUsageReport() {
     const next = defaultReportSearch();
     setDateFrom(next.dateFrom);
     setDateTo(next.dateTo);
-    setCentreId("all");
+    setSelection({ mode: "all", centreIds: [] });
     navigate({ search: {} });
   }
 
   const summary = reportQ.data?.summary;
   const rows = reportQ.data?.rows ?? [];
   const reportReady = !reportQ.isLoading && summary != null;
+  const singleCentreSelected = isSingleCentreSelection(applied.selection);
+  const showComparison = !singleCentreSelected;
+  const selectedCentreName =
+    singleCentreSelected && rows[0] ? rows[0].centreName : null;
+  const noShiftsInPeriod = reportReady && summary.totalShifts === 0;
 
   return (
     <div className="space-y-6">
@@ -108,14 +130,20 @@ function CentreUsageReport() {
         }
       />
 
-      <ReportFilters
+      {selectedCentreName && (
+        <p className="text-sm text-muted-foreground">
+          Showing results for <span className="font-medium text-foreground">{selectedCentreName}</span>
+        </p>
+      )}
+
+      <CentreUsageFilters
         dateFrom={dateFrom}
         dateTo={dateTo}
-        centreId={centreId}
         centres={centresQ.data ?? []}
+        selection={selection}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
-        onCentreChange={setCentreId}
+        onSelectionChange={setSelection}
         onApply={applyFilters}
         onReset={resetFilters}
       />
@@ -128,55 +156,29 @@ function CentreUsageReport() {
         </Card>
       )}
 
-      <ReportMetricGrid>
-        <ReportMetricCard
-          label="Centres shown"
-          value={summary?.totalCentres ?? 0}
-          loading={reportQ.isLoading}
-        />
-        <ReportMetricCard
-          label="Total Shifts"
-          value={summary?.totalShifts ?? 0}
-          loading={reportQ.isLoading}
-          tone="primary"
-        />
-        <ReportMetricCard
-          label="Scheduled Hours"
-          value={
-            reportReady
-              ? formatReportDurationMinutes(summary.totalScheduledMinutes)
-              : "—"
-          }
-          loading={reportQ.isLoading}
-        />
-        <ReportMetricCard
-          label={REPORT_SCHEDULED_HOURS_LABEL}
-          value={
-            reportReady
-              ? formatReportDurationMinutes(summary.totalCompletedScheduledMinutes)
-              : "—"
-          }
-          loading={reportQ.isLoading}
-        />
-      </ReportMetricGrid>
-
-      {reportQ.isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
+      {reportQ.isLoading ? (
+        <CentreUsageSummarySkeleton />
+      ) : (
+        <CentreUsageSummaryCards summary={summary} loading={false} ready={reportReady} />
       )}
 
-      {!reportQ.isLoading && rows.length === 0 && (
+      {noShiftsInPeriod && (
         <Card className="border-dashed">
           <CardContent className="p-6 text-sm text-muted-foreground">
-            No shifts were found for this period.
+            No shifts were found for the selected Centres and period.
           </CardContent>
         </Card>
       )}
 
-      {!reportQ.isLoading && rows.length > 0 && (
+      {reportQ.isLoading && showComparison && (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 rounded-lg" />
+          ))}
+        </div>
+      )}
+
+      {!reportQ.isLoading && showComparison && rows.length > 0 && (
         <>
           <div className="hidden lg:block">
             <Card className="border-border/70 shadow-xs overflow-hidden">

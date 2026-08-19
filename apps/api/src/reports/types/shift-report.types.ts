@@ -33,6 +33,11 @@ export interface CentreUsageRow {
 export interface CentreUsageSummary {
   totalCentres: number;
   totalShifts: number;
+  pending: number;
+  filled: number;
+  completed: number;
+  cancelled: number;
+  fillRatePercent: ReportFillRatePercent;
   totalScheduledMinutes: number;
   totalCompletedScheduledMinutes: number;
 }
@@ -40,7 +45,7 @@ export interface CentreUsageSummary {
 export interface CentreUsageResponse {
   dateFrom: string;
   dateTo: string;
-  centreId: string | null;
+  centreIds: string[] | null;
   summary: CentreUsageSummary;
   rows: CentreUsageRow[];
 }

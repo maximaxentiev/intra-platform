@@ -33,9 +33,10 @@ describe("ops reports UI source", () => {
   });
 
   it("uses scheduled hours labels and forbids actual/worked hours wording", () => {
+    const summaryCards = readSrc("components/reports/CentreUsageSummaryCards.tsx");
+    expect(summaryCards).toContain("Scheduled Hours");
+    expect(summaryCards).toContain("REPORT_SCHEDULED_HOURS_LABEL");
     const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
-    expect(centreUsage).toContain("Scheduled Hours");
-    expect(centreUsage).toContain("REPORT_SCHEDULED_HOURS_LABEL");
     expect(centreUsage).not.toMatch(/Actual Hours|Hours Worked|Verified Hours|Payroll Hours/i);
   });
 
@@ -54,9 +55,35 @@ describe("ops reports UI source", () => {
   });
 
   it("centre usage defers duration formatting until report data is ready", () => {
+    const summaryCards = readSrc("components/reports/CentreUsageSummaryCards.tsx");
+    expect(summaryCards).toContain("ready");
+    expect(summaryCards).toContain("formatReportDurationMinutes(summary!.totalScheduledMinutes)");
+  });
+
+  it("centre usage includes multi-select centre filter", () => {
+    const filters = readSrc("components/reports/CentreUsageFilters.tsx");
+    expect(filters).toContain("ReportCentreMultiSelect");
+    expect(filters).toContain("Select all");
+    expect(filters).toContain("Clear selection");
+    expect(filters).toContain('aria-label="Search centres"');
+  });
+
+  it("centre usage page hides comparison table for single-centre selection", () => {
     const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
-    expect(centreUsage).toContain("reportReady");
-    expect(centreUsage).toContain("formatReportDurationMinutes(summary.totalScheduledMinutes)");
+    expect(centreUsage).toContain("isSingleCentreSelection");
+    expect(centreUsage).toContain("showComparison");
+    expect(centreUsage).toContain("centreIds");
+  });
+
+  it("centre usage page renders all nine summary cards", () => {
+    const summaryCards = readSrc("components/reports/CentreUsageSummaryCards.tsx");
+    expect(summaryCards).toContain("Centres Shown");
+    expect(summaryCards).toContain("Total Shifts");
+    expect(summaryCards).toContain("Fill Rate");
+    expect(summaryCards).toContain("Pending");
+    expect(summaryCards).toContain("Filled");
+    expect(summaryCards).toContain("Completed");
+    expect(summaryCards).toContain("Cancelled");
   });
 
   it("shift fulfillment page persists filters in URL search params", () => {
