@@ -32,6 +32,7 @@ export const staffAccountStatus = pgEnum('staff_account_status', [
 ]);
 export const centreChannel = pgEnum('centre_channel', ['whatsapp', 'goto', 'email']);
 export const shiftStatus = pgEnum('shift_status', ['pending', 'filled', 'cancelled', 'completed']);
+export const shiftHoursSource = pgEnum('shift_hours_source', ['centre', 'ops']);
 export const userRole = pgEnum('user_role', ['admin', 'ops']);
 export const applicationRole = pgEnum('application_role', ['eca', 'ece_rece', 'nanny']);
 export const applicationStatus = pgEnum('application_status', [
@@ -282,6 +283,18 @@ export const shifts = pgTable(
     assignedStaffId: uuid('assigned_staff_id').references(() => staff.id, { onDelete: 'set null' }),
     cancellationReason: text('cancellation_reason').notNull().default(''),
     addedToStaffpoint: boolean('added_to_staffpoint').notNull().default(false),
+    actualStartTime: time('actual_start_time'),
+    actualEndTime: time('actual_end_time'),
+    actualTotalMinutes: integer('actual_total_minutes'),
+    hoursFinalizedAt: timestamp('hours_finalized_at', { withTimezone: true }),
+    hoursFinalizedByUserId: uuid('hours_finalized_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    currentHoursSource: shiftHoursSource('current_hours_source'),
+    currentHoursAdjustmentId: uuid('current_hours_adjustment_id').references(
+      (): AnyPgColumn => shiftHoursAdjustments.id,
+      { onDelete: 'set null' },
+    ),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -385,6 +398,66 @@ export const shiftAssignmentNotifications = pgTable(
     index('shift_assignment_notifications_shift_idx').on(t.shiftId),
     index('shift_assignment_notifications_recipient_status_idx').on(t.recipientType, t.status),
     index('shift_assignment_notifications_created_idx').on(t.createdAt),
+  ],
+);
+
+/** Secure public hours-adjustment capability state (Phase 8A foundation). */
+export const shiftHoursCapabilities = pgTable(
+  'shift_hours_capabilities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => shifts.id, { onDelete: 'cascade' }),
+    publicSlug: text('public_slug').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    assignmentEpoch: integer('assignment_epoch').notNull().default(1),
+    assignedStaffId: uuid('assigned_staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'restrict' }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    rotatedAt: timestamp('rotated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('shift_hours_capabilities_shift_id_idx').on(t.shiftId),
+    uniqueIndex('shift_hours_capabilities_public_slug_idx').on(t.publicSlug),
+  ],
+);
+
+/** Immutable shift hours adjustment history (Phase 8A). */
+export const shiftHoursAdjustments = pgTable(
+  'shift_hours_adjustments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shiftId: uuid('shift_id')
+      .notNull()
+      .references(() => shifts.id, { onDelete: 'cascade' }),
+    assignedStaffId: uuid('assigned_staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'restrict' }),
+    source: shiftHoursSource('source').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    scheduledShiftDate: date('scheduled_shift_date').notNull(),
+    scheduledStartTime: time('scheduled_start_time').notNull(),
+    scheduledEndTime: time('scheduled_end_time').notNull(),
+    scheduledTotalMinutes: integer('scheduled_total_minutes').notNull(),
+    actualStartTime: time('actual_start_time').notNull(),
+    actualEndTime: time('actual_end_time').notNull(),
+    actualTotalMinutes: integer('actual_total_minutes').notNull(),
+    assignmentEpoch: integer('assignment_epoch').notNull(),
+    capabilityId: uuid('capability_id').references(() => shiftHoursCapabilities.id, {
+      onDelete: 'set null',
+    }),
+    idempotencyKey: text('idempotency_key').notNull(),
+    note: text('note').notNull().default(''),
+    supersededAt: timestamp('superseded_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('shift_hours_adjustments_idempotency_key_idx').on(t.idempotencyKey),
+    index('shift_hours_adjustments_shift_created_idx').on(t.shiftId, t.createdAt),
   ],
 );
 

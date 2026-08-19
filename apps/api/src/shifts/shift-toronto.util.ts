@@ -37,6 +37,13 @@ export function torontoShiftStartInstant(shiftDate: string, startTime: string): 
   return new Date(toronto.getTime());
 }
 
+/**
+ * Absolute UTC instant for a Toronto wall-clock shift end (same calendar date as shiftDate).
+ */
+export function torontoShiftEndInstant(shiftDate: string, endTime: string): Date {
+  return torontoShiftStartInstant(shiftDate, endTime);
+}
+
 export function addMillisecondsToDate(instant: Date, ms: number): Date {
   return new Date(instant.getTime() + ms);
 }
