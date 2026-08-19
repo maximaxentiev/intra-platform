@@ -13,6 +13,8 @@ import {
 } from './automated-communications.constants';
 import { sanitizeCommunicationFailureReason } from './communication-retry.util';
 
+const SCHEDULE_SYNC_TOLERANCE_MS = 1000;
+
 type DbLike = Pick<Database, 'select' | 'insert' | 'update'>;
 
 @Injectable()
@@ -35,21 +37,40 @@ export class ScheduledCommunicationsService {
       return existing[0];
     }
 
-    const rows = await executor
-      .insert(scheduledCommunications)
-      .values({
-        idempotencyKey: input.idempotencyKey,
-        communicationType: input.communicationType,
-        entityType: input.entityType,
-        entityId: input.entityId,
-        recipientType: input.recipientType,
-        recipientEntityId: input.recipientEntityId ?? null,
-        scheduledFor: input.scheduledFor,
-        status: 'scheduled',
-      })
-      .returning();
+    try {
+      const rows = await executor
+        .insert(scheduledCommunications)
+        .values({
+          idempotencyKey: input.idempotencyKey,
+          communicationType: input.communicationType,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          recipientType: input.recipientType,
+          recipientEntityId: input.recipientEntityId ?? null,
+          scheduledFor: input.scheduledFor,
+          status: 'scheduled',
+        })
+        .returning();
 
-    return rows[0]!;
+      return rows[0]!;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('scheduled_communications_idempotency_key_idx')) {
+        throw error;
+      }
+
+      const retry = await executor
+        .select()
+        .from(scheduledCommunications)
+        .where(eq(scheduledCommunications.idempotencyKey, input.idempotencyKey))
+        .limit(1);
+
+      if (retry[0]) {
+        return retry[0];
+      }
+
+      throw error;
+    }
   }
 
   /** Idempotent schedule that reactivates cancelled/failed rows when still applicable. */
@@ -71,9 +92,37 @@ export class ScheduledCommunicationsService {
     if (row.status === 'sent') {
       return row;
     }
+
     if (row.status === 'scheduled' || row.status === 'processing') {
-      return row;
+      const sameSchedule =
+        Math.abs(row.scheduledFor.getTime() - input.scheduledFor.getTime()) <=
+        SCHEDULE_SYNC_TOLERANCE_MS;
+      const sameRecipient =
+        (row.recipientEntityId ?? null) === (input.recipientEntityId ?? null);
+
+      if (sameSchedule && sameRecipient) {
+        return row;
+      }
+
+      if (row.status === 'processing') {
+        return row;
+      }
+
+      const rows = await executor
+        .update(scheduledCommunications)
+        .set({
+          scheduledFor: input.scheduledFor,
+          recipientEntityId: input.recipientEntityId ?? null,
+          lastErrorCode: null,
+          lastErrorReason: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(scheduledCommunications.id, row.id))
+        .returning();
+
+      return rows[0] ?? row;
     }
+
     if (input.scheduledFor.getTime() <= Date.now()) {
       return row;
     }

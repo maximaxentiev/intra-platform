@@ -36,7 +36,7 @@ export class AutomatedCommunicationsService {
       return;
     }
     try {
-      await this.queue.enqueue({
+      await this.queue.syncJobSchedule({
         scheduledCommunicationId: row.id,
         idempotencyKey: row.idempotencyKey,
         scheduledFor: row.scheduledFor,

@@ -20,6 +20,7 @@ import {
   buildDocumentExpiryIdempotencyKey,
   DOCUMENT_EXPIRY_COMMUNICATION_TYPE,
   DOCUMENT_EXPIRY_COMMUNICATION_TYPES,
+  DOCUMENT_EXPIRY_REMINDER_OFFSETS,
 } from './document-expiry-reminder.types';
 
 type DbLike = Pick<DbExecutor, 'select' | 'insert' | 'update'>;
@@ -226,6 +227,19 @@ export class DocumentExpiryReminderService {
       }
 
       const plans = planFutureDocumentExpiryReminders(row.expiryDate!, now);
+      const activeOffsets = new Set(plans.map((plan) => plan.offsetDays));
+      const obsoleteKeys = DOCUMENT_EXPIRY_REMINDER_OFFSETS.filter(
+        (offsetDays) => !activeOffsets.has(offsetDays),
+      ).map((offsetDays) =>
+        buildDocumentExpiryIdempotencyKey({
+          submissionId: row.submissionId,
+          offsetDays,
+        }),
+      );
+      if (obsoleteKeys.length > 0) {
+        cancelled += await this.automated.cancelByIdempotencyKeys(obsoleteKeys);
+      }
+
       for (const plan of plans) {
         const idempotencyKey = buildDocumentExpiryIdempotencyKey({
           submissionId: row.submissionId,
@@ -304,7 +318,7 @@ export class DocumentExpiryReminderService {
 
       const context = submissionRows[0];
       if (!context) {
-        await this.automated.cancelByEntity('staff_document', row.entityId);
+        await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
         cancelled += 1;
         continue;
       }
@@ -320,7 +334,7 @@ export class DocumentExpiryReminderService {
       });
 
       if (!eligible) {
-        await this.automated.cancelByEntity('staff_document', row.entityId);
+        await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
         cancelled += 1;
         continue;
       }
@@ -330,7 +344,7 @@ export class DocumentExpiryReminderService {
         const offsetDays = Number(offsetMatch[1]) as 30 | 14 | 7 | 3 | 1;
         const plans = planFutureDocumentExpiryReminders(context.expiryDate, new Date());
         if (!plans.some((plan) => plan.offsetDays === offsetDays)) {
-          await this.automated.cancelByEntity('staff_document', row.entityId);
+          await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
           cancelled += 1;
         }
       }

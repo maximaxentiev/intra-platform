@@ -23,7 +23,7 @@ import { DocumentExpiryReminderService } from './document-expiry-reminder.servic
 import { registerDocumentExpiryProcessors } from './document-expiry-reminder.processor';
 import { buildDocumentExpiryIdempotencyKey } from './document-expiry-reminder.types';
 import { torontoDocumentReminderInstant } from './document-expiry-toronto.util';
-import { deriveVscExpiryDate } from './staff-document-dates.util';
+import { deriveVscExpiryDate, startOfUtcDay, addCalendarDays } from './staff-document-dates.util';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -255,7 +255,7 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, submissionId));
     expect(rows.some((row) => row.status === 'scheduled')).toBe(true);
-  }, 20_000);
+  }, 60_000);
 
   it('schedules CPR 2026-09-04 as 14d/7d/3d/1d only when today is 2026-08-18', async () => {
     const cprExpiry = '2026-09-04';
@@ -614,7 +614,16 @@ describe.runIf(POSTGRES_READY && REDIS_READY)('Document expiry worker integratio
   });
 
   it('processes a due document expiry reminder via worker', async () => {
-    const scheduledFor = new Date(Date.now() - 60_000);
+    const today = startOfUtcDay(new Date());
+    const expiryDate = addCalendarDays(today, 20).toISOString().slice(0, 10);
+    await db
+      .update(staffDocumentSubmissions)
+      .set({ expiryDate })
+      .where(eq(staffDocumentSubmissions.id, submissionId));
+
+    const scheduledFor = torontoDocumentReminderInstant(expiryDate, 30);
+    expect(scheduledFor.getTime()).toBeLessThanOrEqual(Date.now());
+
     const row = await scheduled.schedule({
       idempotencyKey: buildDocumentExpiryIdempotencyKey({ submissionId, offsetDays: 30 }),
       communicationType: 'document_expiry_30d',

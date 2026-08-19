@@ -20,12 +20,15 @@ export type EnqueueCommunicationParams = {
   scheduledFor: Date;
 };
 
+export type SyncJobScheduleResult = 'created' | 'rescheduled' | 'unchanged';
+
 @Injectable()
 export class CommunicationsQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(CommunicationsQueueService.name);
   private readonly queuePrefix: string;
   private readonly queueConnection: Redis;
   private readonly queue: Queue<CommunicationJobPayload>;
+  private readonly scheduleSyncToleranceMs = 1000;
 
   constructor(config: ConfigService) {
     const redisUrl = config.getOrThrow<string>('REDIS_URL');
@@ -52,6 +55,48 @@ export class CommunicationsQueueService implements OnModuleDestroy {
 
   computeDelayMs(scheduledFor: Date, now = new Date()): number {
     return Math.max(0, scheduledFor.getTime() - now.getTime());
+  }
+
+  private expectedJobFireTime(job: { timestamp?: number; delay?: number }): number {
+    return (job.timestamp ?? Date.now()) + (job.delay ?? 0);
+  }
+
+  async syncJobSchedule(params: EnqueueCommunicationParams): Promise<SyncJobScheduleResult> {
+    const jobId = deriveBullMqJobId(params.idempotencyKey);
+    const expectedDelay = this.computeDelayMs(params.scheduledFor);
+    const expectedFireTime = params.scheduledFor.getTime();
+    const existing = await this.queue.getJob(jobId);
+
+    if (!existing) {
+      await this.enqueue(params);
+      return 'created';
+    }
+
+    const state = await existing.getState();
+    if (state === 'active') {
+      return 'unchanged';
+    }
+
+    if (state === 'completed' || state === 'failed') {
+      await existing.remove().catch(() => undefined);
+      await this.enqueue(params);
+      return 'created';
+    }
+
+    const currentFireTime = this.expectedJobFireTime(existing);
+    const delayMatches =
+      Math.abs(currentFireTime - expectedFireTime) <= this.scheduleSyncToleranceMs;
+    const optsDelay = typeof existing.opts.delay === 'number' ? existing.opts.delay : null;
+    const delayMsMatches =
+      optsDelay !== null && Math.abs(optsDelay - expectedDelay) <= this.scheduleSyncToleranceMs;
+
+    if (delayMatches || delayMsMatches) {
+      return 'unchanged';
+    }
+
+    await existing.remove().catch(() => undefined);
+    await this.enqueue(params);
+    return 'rescheduled';
   }
 
   async enqueue(params: EnqueueCommunicationParams): Promise<void> {
@@ -82,24 +127,20 @@ export class CommunicationsQueueService implements OnModuleDestroy {
   }
 
   async ensureJobExists(params: EnqueueCommunicationParams): Promise<boolean> {
-    const jobId = deriveBullMqJobId(params.idempotencyKey);
-    const existing = await this.queue.getJob(jobId);
-    if (existing) {
-      const state = await existing.getState();
-      if (state === 'completed' || state === 'failed') {
-        await existing.remove().catch(() => undefined);
-      } else {
-        return false;
-      }
-    }
-    await this.enqueue(params);
-    return true;
+    const result = await this.syncJobSchedule(params);
+    return result === 'created' || result === 'rescheduled';
   }
 
   async getJobState(idempotencyKey: string): Promise<string | null> {
     const job = await this.queue.getJob(deriveBullMqJobId(idempotencyKey));
     if (!job) return null;
     return job.getState();
+  }
+
+  async getJobFireTime(idempotencyKey: string): Promise<number | null> {
+    const job = await this.queue.getJob(deriveBullMqJobId(idempotencyKey));
+    if (!job) return null;
+    return this.expectedJobFireTime(job);
   }
 
   async onModuleDestroy() {

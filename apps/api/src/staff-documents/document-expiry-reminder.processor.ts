@@ -24,7 +24,7 @@ import { isStaffDocumentReminderType } from './staff-document.constants';
 import { deriveExpiryDisplay } from './staff-document-dates.util';
 import { isActiveReminderSubmission } from './staff-document-compliance.util';
 import { buildDocumentExpiryCarerEmailContent } from './document-expiry-carer-email.template';
-import { planFutureDocumentExpiryReminders } from './document-expiry-reminder-scheduling.util';
+import { torontoDocumentReminderInstant } from './document-expiry-toronto.util';
 import {
   DOCUMENT_EXPIRY_COMMUNICATION_TYPE,
   parseDocumentExpiryIdempotencyKey,
@@ -46,7 +46,10 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
     context: CommunicationProcessorContext,
   ): Promise<CommunicationProcessorOutcome> {
     const commRows = await db
-      .select({ idempotencyKey: scheduledCommunications.idempotencyKey })
+      .select({
+        idempotencyKey: scheduledCommunications.idempotencyKey,
+        scheduledFor: scheduledCommunications.scheduledFor,
+      })
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.id, context.scheduledCommunicationId))
       .limit(1);
@@ -120,9 +123,18 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
       return { kind: 'stale' };
     }
 
+    const commRow = commRows[0];
+    if (!commRow) {
+      return { kind: 'stale' };
+    }
+
     const now = new Date();
-    const expectedPlans = planFutureDocumentExpiryReminders(row.expiryDate, now);
-    if (!expectedPlans.some((plan) => plan.offsetDays === parsed.offsetDays)) {
+    const expectedInstant = torontoDocumentReminderInstant(row.expiryDate, parsed.offsetDays);
+    if (Math.abs(commRow.scheduledFor.getTime() - expectedInstant.getTime()) > 1000) {
+      return { kind: 'stale' };
+    }
+
+    if (expectedInstant.getTime() > now.getTime() + 1000) {
       return { kind: 'stale' };
     }
 
