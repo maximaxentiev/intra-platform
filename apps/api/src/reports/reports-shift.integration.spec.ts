@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,6 +7,8 @@ import * as schema from '../db/schema';
 import { centres, shifts, staff } from '../db/schema';
 import { ReportsService } from './reports.service';
 import { ReportsShiftService } from './reports-shift.service';
+import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
+import { normalizeReportScheduledMinutes } from './report-minutes.util';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -176,6 +178,34 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     expect(result.summary.completed).toBe(4);
   });
 
+  it('normalizes PostgreSQL aggregate minute values before returning DTOs', async () => {
+    const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
+    const shiftJoin = and(
+      eq(shifts.centreId, centres.id),
+      gte(shifts.shiftDate, FIXTURE.dateFrom),
+      lte(shifts.shiftDate, FIXTURE.dateTo),
+    );
+
+    const [withShifts] = await db
+      .select({
+        totalScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}), 0)::int`,
+      })
+      .from(shifts)
+      .where(eq(shifts.centreId, FIXTURE.centreB));
+
+    const [zeroUsage] = await db
+      .select({
+        totalScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}), 0)::int`,
+      })
+      .from(centres)
+      .leftJoin(shifts, shiftJoin)
+      .where(eq(centres.id, FIXTURE.centreC))
+      .groupBy(centres.id);
+
+    expect(normalizeReportScheduledMinutes(withShifts!.totalScheduledMinutes)).toBe(450);
+    expect(normalizeReportScheduledMinutes(zeroUsage!.totalScheduledMinutes)).toBe(0);
+  });
+
   it('aggregates centre usage including zero-shift centres', async () => {
     const result = await service.getCentreUsage({
       dateFrom: FIXTURE.dateFrom,
@@ -199,10 +229,99 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     expect(centreB.completedScheduledMinutes).toBe(450);
 
     expect(centreC.totalShifts).toBe(0);
+    expect(centreC.pending).toBe(0);
+    expect(centreC.filled).toBe(0);
+    expect(centreC.completed).toBe(0);
+    expect(centreC.cancelled).toBe(0);
     expect(centreC.fillRatePercent).toBeNull();
+    expect(centreC.totalScheduledMinutes).toBe(0);
+    expect(centreC.completedScheduledMinutes).toBe(0);
 
     expect(result.rows[0]!.centreId).toBe(FIXTURE.centreA);
     expect(result.rows.some((r) => r.centreId === FIXTURE.centreC)).toBe(true);
+
+    const fixtureRows = result.rows.filter((row) =>
+      [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC].includes(row.centreId),
+    );
+    expect(fixtureRows).toHaveLength(3);
+
+    const fixtureSummary = fixtureRows.reduce(
+      (acc, row) => ({
+        totalShifts: acc.totalShifts + row.totalShifts,
+        totalScheduledMinutes: acc.totalScheduledMinutes + row.totalScheduledMinutes,
+        totalCompletedScheduledMinutes:
+          acc.totalCompletedScheduledMinutes + row.completedScheduledMinutes,
+      }),
+      { totalShifts: 0, totalScheduledMinutes: 0, totalCompletedScheduledMinutes: 0 },
+    );
+    expect(fixtureSummary.totalShifts).toBe(12);
+    expect(fixtureSummary.totalScheduledMinutes).toBe(11 * 480 + 450);
+    expect(fixtureSummary.totalCompletedScheduledMinutes).toBe(4 * 480 + 450);
+
+    for (const row of fixtureRows) {
+      expect(typeof row.totalScheduledMinutes).toBe('number');
+      expect(typeof row.completedScheduledMinutes).toBe('number');
+      expect(Number.isFinite(row.totalScheduledMinutes)).toBe(true);
+      expect(Number.isFinite(row.completedScheduledMinutes)).toBe(true);
+    }
+    expect(typeof result.summary.totalScheduledMinutes).toBe('number');
+    expect(typeof result.summary.totalCompletedScheduledMinutes).toBe('number');
+    expect(Number.isFinite(result.summary.totalScheduledMinutes)).toBe(true);
+    expect(Number.isFinite(result.summary.totalCompletedScheduledMinutes)).toBe(true);
+  });
+
+  it('returns zero minute aggregates for centres and summary in an empty range', async () => {
+    const result = await service.getCentreUsage({
+      dateFrom: '2026-01-01',
+      dateTo: '2026-01-31',
+    });
+
+    expect(result.summary.totalShifts).toBeGreaterThanOrEqual(0);
+    expect(result.summary.totalScheduledMinutes).toBeGreaterThanOrEqual(0);
+    expect(result.summary.totalCompletedScheduledMinutes).toBeGreaterThanOrEqual(0);
+    expect(typeof result.summary.totalScheduledMinutes).toBe('number');
+    expect(typeof result.summary.totalCompletedScheduledMinutes).toBe('number');
+
+    const fixtureRows = result.rows.filter((row) =>
+      [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC].includes(row.centreId),
+    );
+    expect(fixtureRows).toHaveLength(3);
+
+    for (const row of fixtureRows) {
+      expect(row.totalShifts).toBe(0);
+      expect(row.totalScheduledMinutes).toBe(0);
+      expect(row.completedScheduledMinutes).toBe(0);
+      expect(typeof row.totalScheduledMinutes).toBe('number');
+      expect(typeof row.completedScheduledMinutes).toBe('number');
+    }
+  });
+
+  it('returns zero summary minutes for a centre with no shifts in range', async () => {
+    const result = await service.getCentreUsage({
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreId: FIXTURE.centreC,
+    });
+
+    expect(result.summary.totalCentres).toBe(1);
+    expect(result.summary.totalShifts).toBe(0);
+    expect(result.summary.totalScheduledMinutes).toBe(0);
+    expect(result.summary.totalCompletedScheduledMinutes).toBe(0);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]!.totalScheduledMinutes).toBe(0);
+    expect(result.rows[0]!.completedScheduledMinutes).toBe(0);
+    expect(typeof result.rows[0]!.totalScheduledMinutes).toBe('number');
+  });
+
+  it('keeps shift fulfillment unaffected after centre usage normalization', async () => {
+    const result = await service.getShiftFulfillment({
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreId: FIXTURE.centreA,
+    });
+
+    expect(result.summary.total).toBe(11);
+    expect(result.summary.fillRatePercent).toBe(77.8);
   });
 
   it('defaults to current Toronto month when dates omitted', async () => {

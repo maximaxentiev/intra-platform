@@ -5,6 +5,7 @@ import { centres, shifts } from '../db/schema';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
+import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
 import { computeFillRatePercent } from './report-percentage.util';
 import { ReportsService } from './reports.service';
 import type {
@@ -82,7 +83,13 @@ export class ReportsShiftService {
       dateTo,
       centreId,
       centreName,
-      summary: toSummary(row),
+      summary: toSummary({
+        total: normalizeReportCount(row.total),
+        pending: normalizeReportCount(row.pending),
+        filled: normalizeReportCount(row.filled),
+        completed: normalizeReportCount(row.completed),
+        cancelled: normalizeReportCount(row.cancelled),
+      }),
     };
   }
 
@@ -124,14 +131,18 @@ export class ReportsShiftService {
     const rows: CentreUsageRow[] = rawRows.map((row) => ({
       centreId: row.centreId,
       centreName: row.centreName,
-      totalShifts: row.totalShifts,
-      pending: row.pending,
-      filled: row.filled,
-      completed: row.completed,
-      cancelled: row.cancelled,
-      fillRatePercent: computeFillRatePercent(row.filled, row.completed, row.pending),
-      totalScheduledMinutes: row.totalScheduledMinutes,
-      completedScheduledMinutes: row.completedScheduledMinutes,
+      totalShifts: normalizeReportCount(row.totalShifts),
+      pending: normalizeReportCount(row.pending),
+      filled: normalizeReportCount(row.filled),
+      completed: normalizeReportCount(row.completed),
+      cancelled: normalizeReportCount(row.cancelled),
+      fillRatePercent: computeFillRatePercent(
+        normalizeReportCount(row.filled),
+        normalizeReportCount(row.completed),
+        normalizeReportCount(row.pending),
+      ),
+      totalScheduledMinutes: normalizeReportScheduledMinutes(row.totalScheduledMinutes),
+      completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
     }));
 
     const summary = rows.reduce(

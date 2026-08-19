@@ -28,6 +28,7 @@ describe("ops report formatters", () => {
     expect(formatReportDurationMinutes(450)).toBe("7h 30m");
     expect(formatReportDurationMinutes(60)).toBe("1h");
     expect(formatReportDurationMinutes(45)).toBe("45m");
+    expect(formatReportDurationMinutes(0)).toBe("0m");
   });
 
   it("formats null fill rate as em dash", () => {

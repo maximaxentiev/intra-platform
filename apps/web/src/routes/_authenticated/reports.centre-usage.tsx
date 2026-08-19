@@ -90,6 +90,7 @@ function CentreUsageReport() {
 
   const summary = reportQ.data?.summary;
   const rows = reportQ.data?.rows ?? [];
+  const reportReady = !reportQ.isLoading && summary != null;
 
   return (
     <div className="space-y-6">
@@ -141,12 +142,20 @@ function CentreUsageReport() {
         />
         <ReportMetricCard
           label="Scheduled Hours"
-          value={formatReportDurationMinutes(summary?.totalScheduledMinutes ?? 0)}
+          value={
+            reportReady
+              ? formatReportDurationMinutes(summary.totalScheduledMinutes)
+              : "—"
+          }
           loading={reportQ.isLoading}
         />
         <ReportMetricCard
           label={REPORT_SCHEDULED_HOURS_LABEL}
-          value={formatReportDurationMinutes(summary?.totalCompletedScheduledMinutes ?? 0)}
+          value={
+            reportReady
+              ? formatReportDurationMinutes(summary.totalCompletedScheduledMinutes)
+              : "—"
+          }
           loading={reportQ.isLoading}
         />
       </ReportMetricGrid>

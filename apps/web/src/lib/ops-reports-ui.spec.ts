@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { currentTorontoMonthRange } from "./reports-dates";
-import { formatReportFillRatePercent } from "./ops-report-formatters";
+import { formatReportFillRatePercent, formatReportDurationMinutes } from "./ops-report-formatters";
 
 const ROOT = join(process.cwd(), "src");
 
@@ -47,6 +47,16 @@ describe("ops reports UI source", () => {
     const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
     expect(centreUsage).toContain("lg:hidden");
     expect(centreUsage).toContain("hidden lg:block");
+  });
+
+  it("renders zero scheduled minutes without throwing", () => {
+    expect(formatReportDurationMinutes(0)).toBe("0m");
+  });
+
+  it("centre usage defers duration formatting until report data is ready", () => {
+    const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
+    expect(centreUsage).toContain("reportReady");
+    expect(centreUsage).toContain("formatReportDurationMinutes(summary.totalScheduledMinutes)");
   });
 
   it("shift fulfillment page persists filters in URL search params", () => {
