@@ -6,7 +6,6 @@ import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftCommunicationsModule } from './shift-communications.module';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsCron } from './shifts.cron';
-import { ShiftHoursAdjustmentService } from './shift-hours-adjustment.service';
 import { ShiftsService } from './shifts.service';
 
 @Module({
@@ -18,8 +17,7 @@ import { ShiftsService } from './shifts.service';
     ShiftMatchingService,
     ShiftAssignmentConfirmationService,
     ShiftAssignmentNotificationsService,
-    ShiftHoursAdjustmentService,
   ],
-  exports: [ShiftsService, ShiftCommunicationsModule, ShiftHoursAdjustmentService],
+  exports: [ShiftsService, ShiftCommunicationsModule],
 })
 export class ShiftsModule {}

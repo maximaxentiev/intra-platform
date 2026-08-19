@@ -147,12 +147,6 @@ export interface Shift {
   assignedLegalName?: string | null;
   assignedDisplayName?: string | null;
   assignedUseDisplayName?: boolean | null;
-  actualStartTime?: string | null;
-  actualEndTime?: string | null;
-  actualTotalMinutes?: number | null;
-  currentHoursSource?: "centre" | "ops" | null;
-  hoursFinalizedAt?: string | null;
-  currentHoursAdjustmentId?: string | null;
 }
 
 export interface ShiftComment {

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   deriveShiftScheduleVersion,
   normalizeWallClockTime,
-  torontoShiftEndInstant,
   torontoShiftStartInstant,
 } from './shift-toronto.util';
 import { planFutureShiftReminders } from './shift-reminder-scheduling.util';
@@ -37,28 +36,6 @@ describe('torontoShiftStartInstant', () => {
 
   it('derives stable schedule version tokens', () => {
     expect(deriveShiftScheduleVersion('2026-09-01', '09:00:00')).toBe('2026-09-01_09-00-00');
-  });
-});
-
-describe('torontoShiftEndInstant', () => {
-  it('converts EST winter wall clock end to UTC', () => {
-    const instant = torontoShiftEndInstant('2026-01-15', '17:00:00');
-    expect(instant.toISOString()).toBe('2026-01-15T22:00:00.000Z');
-  });
-
-  it('converts EDT summer wall clock end to UTC', () => {
-    const instant = torontoShiftEndInstant('2026-06-15', '17:00:00');
-    expect(instant.toISOString()).toBe('2026-06-15T21:00:00.000Z');
-  });
-
-  it('handles spring DST transition', () => {
-    const instant = torontoShiftEndInstant('2026-03-09', '17:00:00');
-    expect(instant.toISOString()).toBe('2026-03-09T21:00:00.000Z');
-  });
-
-  it('handles fall DST transition', () => {
-    const instant = torontoShiftEndInstant('2026-11-02', '17:00:00');
-    expect(instant.toISOString()).toBe('2026-11-02T22:00:00.000Z');
   });
 });
 

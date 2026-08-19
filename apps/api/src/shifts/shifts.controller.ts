@@ -3,13 +3,11 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
   Put,
   Query,
-  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -24,16 +22,11 @@ import {
   UpsertShiftDto,
 } from './dto/shifts.dto';
 import { ShiftsService } from './shifts.service';
-import { ShiftHoursAdjustmentService } from './shift-hours-adjustment.service';
-import { OpsOverrideActualHoursDto } from './dto/shift-hours.dto';
 
 @ApiTags('shifts')
 @Controller('shifts')
 export class ShiftsController {
-  constructor(
-    private readonly shifts: ShiftsService,
-    private readonly shiftHours: ShiftHoursAdjustmentService,
-  ) {}
+  constructor(private readonly shifts: ShiftsService) {}
 
   @Get()
   list(@Query() q: ListShiftsQuery) {
@@ -48,30 +41,6 @@ export class ShiftsController {
   @Delete('comments/:commentId')
   deleteComment(@Param('commentId') commentId: string, @CurrentUser() user: SessionPayload) {
     return this.shifts.deleteComment(commentId, user.userId, user.role);
-  }
-
-  @Get(':id/hours-adjustments')
-  listHoursAdjustments(@Param('id') id: string) {
-    return this.shiftHours.listAdjustments(id);
-  }
-
-  @Post(':id/override-actual-hours')
-  overrideActualHours(
-    @Param('id') id: string,
-    @Body() dto: OpsOverrideActualHoursDto,
-    @CurrentUser() user: SessionPayload,
-    @Headers('idempotency-key') idempotencyKey?: string,
-  ) {
-    const key = idempotencyKey?.trim();
-    if (!key) {
-      throw new BadRequestException('Idempotency-Key header is required.');
-    }
-    return this.shiftHours.overrideActualHours({
-      shiftId: id,
-      actorUserId: user.userId,
-      input: dto,
-      idempotencyKey: key,
-    });
   }
 
   @Get(':id')
