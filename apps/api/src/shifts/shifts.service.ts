@@ -21,6 +21,7 @@ import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftReminderService } from './shift-reminder.service';
 import { ShiftCancellationService } from './shift-cancellation.service';
 import { SHIFT_ASSIGN_INELIGIBLE_MESSAGE } from './shift-matching.types';
+import { assertSameDayShiftSchedule } from './shift-schedule-validation.util';
 import { acquireShiftStaffDateAdvisoryLock } from './shift-staff-date-advisory-lock.util';
 import {
   AddCommentDto,
@@ -103,6 +104,8 @@ export class ShiftsService {
   }
 
   async create(dto: UpsertShiftDto) {
+    assertSameDayShiftSchedule(dto.startTime, dto.endTime);
+
     const rows = await this.db
       .insert(shifts)
       .values({
@@ -123,12 +126,20 @@ export class ShiftsService {
       .select({
         shiftDate: shifts.shiftDate,
         startTime: shifts.startTime,
+        endTime: shifts.endTime,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
       })
       .from(shifts)
       .where(eq(shifts.id, id));
     if (!before[0]) throw new NotFoundException('Shift not found.');
+
+    if (dto.startTime !== undefined || dto.endTime !== undefined) {
+      assertSameDayShiftSchedule(
+        dto.startTime ?? String(before[0].startTime),
+        dto.endTime ?? String(before[0].endTime),
+      );
+    }
 
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of [

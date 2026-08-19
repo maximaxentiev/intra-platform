@@ -329,4 +329,84 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     expect(result.dateFrom).toMatch(/^\d{4}-\d{2}-01$/);
     expect(result.dateTo).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+
+  describe('malformed legacy shift durations', () => {
+    const malformedCentre = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4';
+    const malformedShiftIds: string[] = [];
+
+    beforeAll(async () => {
+      await db.insert(centres).values({
+        id: malformedCentre,
+        name: 'Malformed Legacy Centre',
+        city: 'Toronto',
+      });
+
+      const rows = await db
+        .insert(shifts)
+        .values([
+          {
+            centreId: malformedCentre,
+            shiftDate: '2026-08-19',
+            startTime: '21:00:00',
+            endTime: '13:00:00',
+            status: 'cancelled',
+            assignedStaffId: FIXTURE.staffMember,
+            cancellationReason: 'Carer unavailable',
+          },
+          {
+            centreId: malformedCentre,
+            shiftDate: '2026-08-19',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'pending',
+          },
+          {
+            centreId: malformedCentre,
+            shiftDate: '2026-08-20',
+            startTime: '21:00:00',
+            endTime: '13:00:00',
+            status: 'completed',
+          },
+        ])
+        .returning({ id: shifts.id });
+
+      malformedShiftIds.push(...rows.map((row) => row.id));
+    });
+
+    afterAll(async () => {
+      if (malformedShiftIds.length > 0) {
+        await db.delete(shifts).where(inArray(shifts.id, malformedShiftIds));
+      }
+      await db.delete(centres).where(eq(centres.id, malformedCentre));
+    });
+
+    it('counts malformed cancelled shift but contributes zero scheduled minutes', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: '2026-08-01',
+        dateTo: '2026-08-31',
+        centreId: malformedCentre,
+      });
+
+      const row = result.rows[0]!;
+      expect(row.totalShifts).toBe(3);
+      expect(row.cancelled).toBe(1);
+      expect(row.pending).toBe(1);
+      expect(row.completed).toBe(1);
+      expect(row.totalScheduledMinutes).toBe(480);
+      expect(row.completedScheduledMinutes).toBe(0);
+      expect(typeof row.totalScheduledMinutes).toBe('number');
+    });
+
+    it('aggregates valid and invalid durations without error', async () => {
+      const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
+      const [raw] = await db
+        .select({
+          totalScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}), 0)::int`,
+        })
+        .from(shifts)
+        .where(eq(shifts.centreId, malformedCentre));
+
+      expect(normalizeReportScheduledMinutes(raw!.totalScheduledMinutes)).toBe(480);
+    });
+  });
 });
