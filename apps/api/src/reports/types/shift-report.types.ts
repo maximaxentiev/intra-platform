@@ -1,6 +1,4 @@
-/** Ops report API response types (Phase 9C+). */
-
-export type ReportFillRatePercent = number | null;
+import type { ReportFillRatePercent } from './report-response.types';
 
 export interface ShiftFulfillmentSummary {
   total: number;
@@ -46,5 +44,3 @@ export interface CentreUsageResponse {
   summary: CentreUsageSummary;
   rows: CentreUsageRow[];
 }
-
-export const REPORT_SCHEDULED_HOURS_LABEL = "Scheduled Hours on Completed Shifts";

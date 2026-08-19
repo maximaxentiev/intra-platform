@@ -4,6 +4,7 @@ import {
   inclusiveCalendarDaySpan,
   lastTorontoCalendarDaysRange,
   parseReportDateOnly,
+  resolveReportDateRange,
   validateReportDateRange,
 } from './report-date.util';
 
@@ -95,6 +96,18 @@ describe('currentTorontoCalendarMonthRange', () => {
       dateFrom: '2026-03-01',
       dateTo: '2026-03-31',
     });
+  });
+});
+
+describe('resolveReportDateRange', () => {
+  it('defaults to current Toronto month when dates omitted', () => {
+    const range = resolveReportDateRange();
+    expect(range.dateFrom).toMatch(/^\d{4}-\d{2}-01$/);
+    expect(range.dateTo).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('requires both dates when partially provided', () => {
+    expect(() => resolveReportDateRange('2026-08-01', undefined)).toThrow(/both be provided/);
   });
 });
 

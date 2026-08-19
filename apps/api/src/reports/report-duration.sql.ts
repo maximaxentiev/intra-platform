@@ -1,4 +1,4 @@
-import { sql, type SQL } from 'drizzle-orm';
+import { sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 
 /**
  * PostgreSQL expression for same-day shift duration in whole minutes.
@@ -7,6 +7,9 @@ import { sql, type SQL } from 'drizzle-orm';
  * Use in aggregate SELECT/GROUP BY queries; validate row-level inputs in application
  * code when loading individual shifts.
  */
-export function scheduledShiftDurationMinutesSql(startTime: SQL, endTime: SQL): SQL<number> {
+export function scheduledShiftDurationMinutesSql(
+  startTime: SQLWrapper,
+  endTime: SQLWrapper,
+): SQL<number> {
   return sql<number>`FLOOR(EXTRACT(EPOCH FROM (${endTime} - ${startTime})) / 60)::int`;
 }

@@ -130,6 +130,24 @@ export function lastTorontoCalendarDaysRange(
   };
 }
 
+/**
+ * Resolve report date bounds. When omitted, defaults to the current Toronto calendar month.
+ * When partially provided, throws — both must be supplied together.
+ */
+export function resolveReportDateRange(dateFrom?: string, dateTo?: string): {
+  dateFrom: string;
+  dateTo: string;
+} {
+  if (dateFrom === undefined && dateTo === undefined) {
+    return currentTorontoCalendarMonthRange();
+  }
+  if (dateFrom === undefined || dateTo === undefined) {
+    throw new ReportDateValidationError('dateFrom and dateTo must both be provided.');
+  }
+  validateReportDateRange(dateFrom, dateTo);
+  return { dateFrom, dateTo };
+}
+
 /** Shift report filter: inclusive bounds on shifts.shift_date. */
 export function shiftDateWithinReportRange(
   shiftDateColumn: string,

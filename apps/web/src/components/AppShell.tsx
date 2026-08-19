@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   X,
+  BarChart3,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/applications", label: "Applications", icon: ClipboardList },
   { to: "/shifts", label: "Shifts", icon: CalendarClock },
   { to: "/staff", label: "Staff", icon: Users },
