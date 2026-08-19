@@ -9,6 +9,7 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { StaffModule } from './staff/staff.module';
 import { StaffPortalModule } from './staff-portal/staff-portal.module';
 import { WorkerModule } from './worker/worker.module';
+import { ReportsModule } from './reports/reports.module';
 
 const TEST_ENV = {
   NODE_ENV: 'test',
@@ -81,6 +82,10 @@ describe('Nest module graph bootstrap', () => {
 
   it('WorkerModule import tree has no undefined module imports', () => {
     assertModuleImportsDefined(WorkerModule, 'WorkerModule');
+  });
+
+  it('ReportsModule subgraph has no undefined module imports', () => {
+    assertModuleImportsDefined(ReportsModule, 'ReportsModule');
   });
 
   it('DocumentCommunicationsModule has no imports that re-enter StaffPortal/Shifts cycle', () => {

@@ -22,6 +22,7 @@ import { StaffDocumentsModule } from './staff-documents/staff-documents.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
 import { AutomatedCommunicationsModule } from './automated-communications/automated-communications.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AutomatedCommunicationsModule } from './automated-communications/automa
     StaffDocumentsModule,
     StorageModule,
     AutomatedCommunicationsModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [
