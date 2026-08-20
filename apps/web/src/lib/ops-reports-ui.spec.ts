@@ -88,14 +88,44 @@ describe("ops reports UI source", () => {
     expect(summaryCards).toContain("Cancelled");
   });
 
-  it("shift fulfillment page uses centre multi-select and pagination", () => {
+  it("shift fulfillment page uses centre multi-select, rule builder, and pagination", () => {
     const page = readSrc("routes/_authenticated/reports.shift-fulfillment.tsx");
     const filters = readSrc("components/reports/ShiftFulfillmentFilters.tsx");
+    const ruleBuilder = readSrc("components/reports/ReportFilterRuleBuilder.tsx");
     expect(page).toContain("validateSearch");
     expect(page).toContain("centreIds");
     expect(page).toContain("ReportPagination");
     expect(page).toContain("isSingleCentreSelection");
-    expect(filters).toContain("ReportMoreFiltersSection");
+    expect(page).toContain("rulesFromCentreMetricSearch");
+    expect(page).toContain("validateReportFilterRules");
+    expect(filters).toContain("ReportFilterRuleBuilder");
+    expect(ruleBuilder).toContain("Add filter");
+    expect(filters).not.toContain("ReportMetricRangeFields");
+    expect(filters).not.toContain("ReportMoreFiltersSection");
+  });
+
+  it("centre usage page uses rule builder instead of metric min/max grid", () => {
+    const page = readSrc("routes/_authenticated/reports.centre-usage.tsx");
+    const filters = readSrc("components/reports/CentreUsageFilters.tsx");
+    const ruleBuilder = readSrc("components/reports/ReportFilterRuleBuilder.tsx");
+    expect(page).toContain("CENTRE_USAGE_METRICS");
+    expect(page).toContain("centreMetricSearchFromRules");
+    expect(filters).toContain("ReportFilterRuleBuilder");
+    expect(ruleBuilder).toContain("Add filter");
+    expect(filters).not.toContain("ReportMetricRangeFields");
+    expect(filters).not.toContain("ReportMoreFiltersSection");
+  });
+
+  it("staff usage page uses rule builder for advanced filters", () => {
+    const page = readSrc("routes/_authenticated/reports.staff-usage.tsx");
+    const filters = readSrc("components/reports/StaffUsageFilters.tsx");
+    const ruleBuilder = readSrc("components/reports/ReportFilterRuleBuilder.tsx");
+    expect(page).toContain("rulesFromStaffUsageSearch");
+    expect(page).toContain("staffUsageSearchFromRules");
+    expect(filters).toContain("ReportFilterRuleBuilder");
+    expect(ruleBuilder).toContain("Add filter");
+    expect(filters).not.toContain("ReportMetricRangeFields");
+    expect(filters).not.toContain("ReportMoreFiltersSection");
   });
 
   it("staff usage page uses allowed scheduled-hours labels only", () => {
@@ -168,6 +198,7 @@ describe("ops reports UI source", () => {
     expect(labels).toContain("Optional — Not Submitted");
     expect(page).not.toMatch(/Reminders enabled|Reminders disabled|3-year|Actual Hours|Payroll Hours/i);
     expect(filters).not.toContain("document-report-status");
+    expect(filters).not.toContain("ReportFilterRuleBuilder");
   });
 
   it("activity log page includes coverage notice, compact rows, and dual pagination", () => {

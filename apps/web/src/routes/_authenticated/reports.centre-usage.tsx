@@ -26,13 +26,17 @@ import {
   formatReportFillRatePercent,
 } from "@/lib/ops-report-formatters";
 import {
-  buildCentreMetricFilterChips,
   centreMetricFiltersToApiQuery,
   centreMetricFiltersToSearchParams,
-  clearCentreMetricFilterKey,
-  EMPTY_CENTRE_METRIC_FILTERS,
   parseCentreMetricFiltersFromSearch,
 } from "@/lib/report-centre-metric-filters";
+import {
+  CENTRE_USAGE_METRICS,
+  centreMetricSearchFromRules,
+  rulesFromCentreMetricSearch,
+  validateReportFilterRules,
+  type ReportFilterRule,
+} from "@/lib/report-filter-rules";
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
@@ -105,7 +109,10 @@ function CentreUsageReport() {
   const [dateFrom, setDateFrom] = useState(applied.dateFrom);
   const [dateTo, setDateTo] = useState(applied.dateTo);
   const [selection, setSelection] = useState<CentreSelectionState>(applied.selection);
-  const [advanced, setAdvanced] = useState({ ...EMPTY_CENTRE_METRIC_FILTERS, ...applied.metricFilters });
+  const [rules, setRules] = useState<ReportFilterRule[]>(() =>
+    rulesFromCentreMetricSearch(applied.metricFilters, CENTRE_USAGE_METRICS),
+  );
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -134,18 +141,22 @@ function CentreUsageReport() {
       }),
   });
 
-  function buildSearch(page: number, pageSize: ReportComparisonPageSize) {
+  function buildSearch(page: number, pageSize: ReportComparisonPageSize, nextRules = rules) {
+    const metricFilters = centreMetricSearchFromRules(nextRules, CENTRE_USAGE_METRICS);
     return {
       dateFrom: dateFrom === defaults.dateFrom ? undefined : dateFrom,
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       ...centreSelectionToSearchParams(selection),
-      ...centreMetricFiltersToSearchParams(advanced),
+      ...centreMetricFiltersToSearchParams(metricFilters),
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
     };
   }
 
   function applyFilters() {
+    const error = validateReportFilterRules(rules, CENTRE_USAGE_METRICS);
+    setValidationError(error);
+    if (error) return;
     navigate({ search: buildSearch(1, applied.pageSize) });
   }
 
@@ -154,13 +165,14 @@ function CentreUsageReport() {
     setDateFrom(next.dateFrom);
     setDateTo(next.dateTo);
     setSelection({ mode: "all", centreIds: [] });
-    setAdvanced(EMPTY_CENTRE_METRIC_FILTERS);
+    setRules([]);
+    setValidationError(null);
     navigate({ search: {} });
   }
 
-  function clearAdvancedFilters() {
-    setAdvanced(EMPTY_CENTRE_METRIC_FILTERS);
-    navigate({ search: buildSearch(1, applied.pageSize) });
+  function clearDataFilters() {
+    setRules([]);
+    setValidationError(null);
   }
 
   const summary = reportQ.data?.summary;
@@ -172,16 +184,6 @@ function CentreUsageReport() {
     singleCentreSelected && rows[0] ? rows[0].centreName : null;
   const filteredOutSingleCentre =
     singleCentreSelected && reportReady && rows.length === 0 && summary.totalCentres === 0;
-
-  const activeAdvancedChips = buildCentreMetricFilterChips(applied.metricFilters).map((chip) => ({
-    id: chip.id,
-    label: chip.label,
-    onRemove: () => {
-      const next = clearCentreMetricFilterKey(advanced, chip.key);
-      setAdvanced({ ...EMPTY_CENTRE_METRIC_FILTERS, ...next });
-      navigate({ search: buildSearch(1, applied.pageSize) });
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -210,15 +212,18 @@ function CentreUsageReport() {
         dateTo={dateTo}
         centres={centresQ.data ?? []}
         selection={selection}
-        advanced={advanced}
+        rules={rules}
+        validationError={validationError}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onSelectionChange={setSelection}
-        onAdvancedChange={setAdvanced}
+        onRulesChange={(nextRules) => {
+          setRules(nextRules);
+          setValidationError(validateReportFilterRules(nextRules, CENTRE_USAGE_METRICS));
+        }}
+        onClearRules={clearDataFilters}
         onApply={applyFilters}
         onReset={resetFilters}
-        activeAdvancedChips={activeAdvancedChips}
-        onClearAdvanced={activeAdvancedChips.length > 0 ? clearAdvancedFilters : undefined}
       />
 
       {reportQ.isError && (

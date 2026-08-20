@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  EMPTY_SHIFT_FULFILLMENT_ADVANCED,
-  ShiftFulfillmentFilters,
-  type ShiftFulfillmentAdvancedFilters,
-} from "@/components/reports/ShiftFulfillmentFilters";
+import { ShiftFulfillmentFilters } from "@/components/reports/ShiftFulfillmentFilters";
 import {
   ShiftFulfillmentSummaryCards,
   ShiftFulfillmentSummarySkeleton,
@@ -27,13 +23,17 @@ import {
 import { centresApi } from "@/lib/db";
 import { formatReportFillRatePercent } from "@/lib/ops-report-formatters";
 import {
-  buildCentreMetricFilterChips,
   centreMetricFiltersToApiQuery,
   centreMetricFiltersToSearchParams,
-  clearCentreMetricFilterKey,
-  EMPTY_CENTRE_METRIC_FILTERS,
   parseCentreMetricFiltersFromSearch,
 } from "@/lib/report-centre-metric-filters";
+import {
+  centreMetricSearchFromRules,
+  rulesFromCentreMetricSearch,
+  SHIFT_FULFILLMENT_METRICS,
+  validateReportFilterRules,
+  type ReportFilterRule,
+} from "@/lib/report-filter-rules";
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
@@ -102,10 +102,10 @@ function ShiftFulfillmentReport() {
   const [dateFrom, setDateFrom] = useState(applied.dateFrom);
   const [dateTo, setDateTo] = useState(applied.dateTo);
   const [selection, setSelection] = useState<CentreSelectionState>(applied.selection);
-  const [advanced, setAdvanced] = useState<ShiftFulfillmentAdvancedFilters>({
-    ...EMPTY_SHIFT_FULFILLMENT_ADVANCED,
-    ...applied.metricFilters,
-  });
+  const [rules, setRules] = useState<ReportFilterRule[]>(() =>
+    rulesFromCentreMetricSearch(applied.metricFilters, SHIFT_FULFILLMENT_METRICS),
+  );
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -134,18 +134,22 @@ function ShiftFulfillmentReport() {
       }),
   });
 
-  function buildSearch(page: number, pageSize: ReportComparisonPageSize) {
+  function buildSearch(page: number, pageSize: ReportComparisonPageSize, nextRules = rules) {
+    const metricFilters = centreMetricSearchFromRules(nextRules, SHIFT_FULFILLMENT_METRICS);
     return {
       dateFrom: dateFrom === defaults.dateFrom ? undefined : dateFrom,
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       ...centreSelectionToSearchParams(selection),
-      ...centreMetricFiltersToSearchParams(advanced),
+      ...centreMetricFiltersToSearchParams(metricFilters),
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
     };
   }
 
   function applyFilters() {
+    const error = validateReportFilterRules(rules, SHIFT_FULFILLMENT_METRICS);
+    setValidationError(error);
+    if (error) return;
     navigate({ search: buildSearch(1, applied.pageSize) });
   }
 
@@ -154,15 +158,14 @@ function ShiftFulfillmentReport() {
     setDateFrom(next.dateFrom);
     setDateTo(next.dateTo);
     setSelection({ mode: "all", centreIds: [] });
-    setAdvanced(EMPTY_SHIFT_FULFILLMENT_ADVANCED);
+    setRules([]);
+    setValidationError(null);
     navigate({ search: {} });
   }
 
-  function clearAdvancedFilters() {
-    setAdvanced(EMPTY_SHIFT_FULFILLMENT_ADVANCED);
-    navigate({
-      search: buildSearch(1, applied.pageSize),
-    });
+  function clearDataFilters() {
+    setRules([]);
+    setValidationError(null);
   }
 
   const summary = reportQ.data?.summary;
@@ -174,19 +177,6 @@ function ShiftFulfillmentReport() {
     singleCentreSelected && reportQ.data?.centreName ? reportQ.data.centreName : null;
   const filteredOutSingleCentre =
     singleCentreSelected && reportReady && rows.length === 0 && summary.totalCentres === 0;
-
-  const chipDefs = buildCentreMetricFilterChips(applied.metricFilters).filter(
-    (chip) => !chip.id.includes("scheduled"),
-  );
-  const activeAdvancedChips = chipDefs.map((chip) => ({
-    id: chip.id,
-    label: chip.label,
-    onRemove: () => {
-      const next = clearCentreMetricFilterKey(advanced, chip.key);
-      setAdvanced({ ...EMPTY_SHIFT_FULFILLMENT_ADVANCED, ...next });
-      navigate({ search: buildSearch(1, applied.pageSize) });
-    },
-  }));
 
   return (
     <div className="space-y-6">
@@ -216,15 +206,18 @@ function ShiftFulfillmentReport() {
         dateTo={dateTo}
         centres={centresQ.data ?? []}
         selection={selection}
-        advanced={advanced}
+        rules={rules}
+        validationError={validationError}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onSelectionChange={setSelection}
-        onAdvancedChange={setAdvanced}
+        onRulesChange={(nextRules) => {
+          setRules(nextRules);
+          setValidationError(validateReportFilterRules(nextRules, SHIFT_FULFILLMENT_METRICS));
+        }}
+        onClearRules={clearDataFilters}
         onApply={applyFilters}
         onReset={resetFilters}
-        activeAdvancedChips={activeAdvancedChips}
-        onClearAdvanced={activeAdvancedChips.length > 0 ? clearAdvancedFilters : undefined}
       />
 
       {reportQ.isError && (

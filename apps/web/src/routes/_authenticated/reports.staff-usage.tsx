@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  EMPTY_STAFF_USAGE_ADVANCED,
-  StaffUsageFilters,
-  type StaffUsageAdvancedFilters,
-} from "@/components/reports/StaffUsageFilters";
+import { StaffUsageFilters } from "@/components/reports/StaffUsageFilters";
 import {
   StaffUsageSummaryCards,
   StaffUsageSummarySkeleton,
@@ -34,8 +30,16 @@ import { defaultReportSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
 import {
   parseOptionalCountInput,
-  parseHoursInputToMinutes,
 } from "@/lib/report-hours-filter";
+import {
+  rulesFromStaffUsageSearch,
+  staffUsageMetricSearchFromApplied,
+  staffUsageSearchFromRules,
+  staffUsageSearchToSearchParams,
+  STAFF_USAGE_METRICS,
+  validateReportFilterRules,
+  type ReportFilterRule,
+} from "@/lib/report-filter-rules";
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
@@ -88,33 +92,30 @@ function StaffUsageReport() {
 
   const appliedSelection = useMemo(() => resolveAppliedStaffSelection(search), [search]);
 
+  const appliedMetricSearch = useMemo(
+    () => staffUsageMetricSearchFromApplied(search),
+    [search],
+  );
+
   const applied = useMemo(
     () => ({
       dateFrom: search.dateFrom ?? defaults.dateFrom,
       dateTo: search.dateTo ?? defaults.dateTo,
       selection: appliedSelection,
-      advanced: {
-        roles: search.roles ? search.roles.split(",").filter(Boolean) : [],
-        staffStatuses: search.staffStatuses ? search.staffStatuses.split(",").filter(Boolean) : [],
-        completedShiftsMin: search.completedShiftsMin ?? "",
-        completedShiftsMax: search.completedShiftsMax ?? "",
-        completedScheduledHoursMin: search.completedScheduledHoursMin ?? "",
-        completedScheduledHoursMax: search.completedScheduledHoursMax ?? "",
-        filledShiftsMin: search.filledShiftsMin ?? "",
-        filledShiftsMax: search.filledShiftsMax ?? "",
-        filledScheduledHoursMin: search.filledScheduledHoursMin ?? "",
-        filledScheduledHoursMax: search.filledScheduledHoursMax ?? "",
-      } satisfies StaffUsageAdvancedFilters,
+      metricSearch: appliedMetricSearch,
       page: search.page && search.page > 0 ? search.page : 1,
       pageSize: resolveReportComparisonPageSize(search.pageSize),
     }),
-    [search, defaults.dateFrom, defaults.dateTo, appliedSelection],
+    [search, defaults.dateFrom, defaults.dateTo, appliedSelection, appliedMetricSearch],
   );
 
   const [dateFrom, setDateFrom] = useState(applied.dateFrom);
   const [dateTo, setDateTo] = useState(applied.dateTo);
   const [selection, setSelection] = useState<StaffSelectionState>(applied.selection);
-  const [advanced, setAdvanced] = useState<StaffUsageAdvancedFilters>(applied.advanced);
+  const [rules, setRules] = useState<ReportFilterRule[]>(() =>
+    rulesFromStaffUsageSearch(applied.metricSearch),
+  );
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [drillDownPage, setDrillDownPage] = useState(1);
 
   const staffQ = useQuery({
@@ -129,7 +130,7 @@ function StaffUsageReport() {
       applied.dateTo,
       applied.selection.mode,
       applied.selection.staffIds.join(","),
-      JSON.stringify(applied.advanced),
+      JSON.stringify(applied.metricSearch),
       applied.page,
       applied.pageSize,
     ],
@@ -138,52 +139,38 @@ function StaffUsageReport() {
         dateFrom: applied.dateFrom,
         dateTo: applied.dateTo,
         ...staffSelectionToApiQuery(applied.selection),
-        roles: applied.advanced.roles.length ? applied.advanced.roles : undefined,
-        staffStatuses: applied.advanced.staffStatuses.length
-          ? applied.advanced.staffStatuses
+        roles: applied.metricSearch.roles.length ? applied.metricSearch.roles : undefined,
+        staffStatuses: applied.metricSearch.staffStatuses.length
+          ? applied.metricSearch.staffStatuses
           : undefined,
-        completedShiftsMin: parseOptionalCountInput(applied.advanced.completedShiftsMin),
-        completedShiftsMax: parseOptionalCountInput(applied.advanced.completedShiftsMax),
-        completedScheduledHoursMin: applied.advanced.completedScheduledHoursMin
-          ? Number(applied.advanced.completedScheduledHoursMin)
+        completedShiftsMin: parseOptionalCountInput(applied.metricSearch.completedShiftsMin),
+        completedShiftsMax: parseOptionalCountInput(applied.metricSearch.completedShiftsMax),
+        completedScheduledHoursMin: applied.metricSearch.completedScheduledHoursMin
+          ? Number(applied.metricSearch.completedScheduledHoursMin)
           : undefined,
-        completedScheduledHoursMax: applied.advanced.completedScheduledHoursMax
-          ? Number(applied.advanced.completedScheduledHoursMax)
+        completedScheduledHoursMax: applied.metricSearch.completedScheduledHoursMax
+          ? Number(applied.metricSearch.completedScheduledHoursMax)
           : undefined,
-        filledShiftsMin: parseOptionalCountInput(applied.advanced.filledShiftsMin),
-        filledShiftsMax: parseOptionalCountInput(applied.advanced.filledShiftsMax),
-        filledScheduledHoursMin: applied.advanced.filledScheduledHoursMin
-          ? Number(applied.advanced.filledScheduledHoursMin)
+        filledShiftsMin: parseOptionalCountInput(applied.metricSearch.filledShiftsMin),
+        filledShiftsMax: parseOptionalCountInput(applied.metricSearch.filledShiftsMax),
+        filledScheduledHoursMin: applied.metricSearch.filledScheduledHoursMin
+          ? Number(applied.metricSearch.filledScheduledHoursMin)
           : undefined,
-        filledScheduledHoursMax: applied.advanced.filledScheduledHoursMax
-          ? Number(applied.advanced.filledScheduledHoursMax)
+        filledScheduledHoursMax: applied.metricSearch.filledScheduledHoursMax
+          ? Number(applied.metricSearch.filledScheduledHoursMax)
           : undefined,
         page: applied.page,
         pageSize: applied.pageSize,
       }),
   });
 
-  function staffAdvancedToSearchParams(filters: StaffUsageAdvancedFilters) {
-    return {
-      roles: filters.roles.length ? filters.roles.join(",") : undefined,
-      staffStatuses: filters.staffStatuses.length ? filters.staffStatuses.join(",") : undefined,
-      completedShiftsMin: filters.completedShiftsMin.trim() || undefined,
-      completedShiftsMax: filters.completedShiftsMax.trim() || undefined,
-      completedScheduledHoursMin: filters.completedScheduledHoursMin.trim() || undefined,
-      completedScheduledHoursMax: filters.completedScheduledHoursMax.trim() || undefined,
-      filledShiftsMin: filters.filledShiftsMin.trim() || undefined,
-      filledShiftsMax: filters.filledShiftsMax.trim() || undefined,
-      filledScheduledHoursMin: filters.filledScheduledHoursMin.trim() || undefined,
-      filledScheduledHoursMax: filters.filledScheduledHoursMax.trim() || undefined,
-    };
-  }
-
-  function buildSearch(page: number, pageSize: ReportComparisonPageSize) {
+  function buildSearch(page: number, pageSize: ReportComparisonPageSize, nextRules = rules) {
+    const metricSearch = staffUsageSearchFromRules(nextRules);
     return {
       dateFrom: dateFrom === defaults.dateFrom ? undefined : dateFrom,
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       ...staffSelectionToSearchParams(selection),
-      ...staffAdvancedToSearchParams(advanced),
+      ...staffUsageSearchToSearchParams(metricSearch),
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
     };
@@ -211,6 +198,9 @@ function StaffUsageReport() {
   });
 
   function applyFilters() {
+    const error = validateReportFilterRules(rules, STAFF_USAGE_METRICS);
+    setValidationError(error);
+    if (error) return;
     setDrillDownPage(1);
     navigate({ search: buildSearch(1, applied.pageSize) });
   }
@@ -220,9 +210,15 @@ function StaffUsageReport() {
     setDateFrom(next.dateFrom);
     setDateTo(next.dateTo);
     setSelection({ mode: "all", staffIds: [] });
-    setAdvanced(EMPTY_STAFF_USAGE_ADVANCED);
+    setRules([]);
+    setValidationError(null);
     setDrillDownPage(1);
     navigate({ search: {} });
+  }
+
+  function clearDataFilters() {
+    setRules([]);
+    setValidationError(null);
   }
 
   function viewStaffDetails(staffId: string) {
@@ -273,11 +269,16 @@ function StaffUsageReport() {
         dateTo={dateTo}
         staffMembers={staffQ.data ?? []}
         selection={selection}
-        advanced={advanced}
+        rules={rules}
+        validationError={validationError}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onSelectionChange={setSelection}
-        onAdvancedChange={setAdvanced}
+        onRulesChange={(nextRules) => {
+          setRules(nextRules);
+          setValidationError(validateReportFilterRules(nextRules, STAFF_USAGE_METRICS));
+        }}
+        onClearRules={clearDataFilters}
         onApply={applyFilters}
         onReset={resetFilters}
       />
