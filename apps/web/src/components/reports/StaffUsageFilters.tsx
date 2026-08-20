@@ -7,10 +7,47 @@ import { ChevronsUpDown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { displayStaff, type Staff } from "@/lib/db";
 import {
+  ReportActiveFilterChips,
+  ReportMetricRangeFields,
+  ReportMoreFiltersSection,
+} from "@/components/reports/ReportFilterPrimitives";
+import {
   staffSelectionLabel,
   type StaffSelectionState,
 } from "@/lib/reports-staff-selection";
 import { cn } from "@/lib/utils";
+
+export type StaffUsageAdvancedFilters = {
+  roles: string[];
+  staffStatuses: string[];
+  completedShiftsMin: string;
+  completedShiftsMax: string;
+  completedScheduledHoursMin: string;
+  completedScheduledHoursMax: string;
+  filledShiftsMin: string;
+  filledShiftsMax: string;
+  filledScheduledHoursMin: string;
+  filledScheduledHoursMax: string;
+};
+
+export const EMPTY_STAFF_USAGE_ADVANCED: StaffUsageAdvancedFilters = {
+  roles: [],
+  staffStatuses: [],
+  completedShiftsMin: "",
+  completedShiftsMax: "",
+  completedScheduledHoursMin: "",
+  completedScheduledHoursMax: "",
+  filledShiftsMin: "",
+  filledShiftsMax: "",
+  filledScheduledHoursMin: "",
+  filledScheduledHoursMax: "",
+};
+
+const STAFF_ROLE_OPTIONS = ["ECA", "ECE", "Nanny"] as const;
+const STAFF_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+] as const;
 
 type ReportStaffMultiSelectProps = {
   staffMembers: Staff[];
@@ -171,11 +208,15 @@ type StaffUsageFiltersProps = {
   dateTo: string;
   staffMembers: Staff[];
   selection: StaffSelectionState;
+  advanced: StaffUsageAdvancedFilters;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onSelectionChange: (selection: StaffSelectionState) => void;
+  onAdvancedChange: (advanced: StaffUsageAdvancedFilters) => void;
   onApply: () => void;
   onReset: () => void;
+  activeAdvancedChips?: Array<{ id: string; label: string; onRemove?: () => void }>;
+  onClearAdvanced?: () => void;
 };
 
 export function StaffUsageFilters({
@@ -183,14 +224,38 @@ export function StaffUsageFilters({
   dateTo,
   staffMembers,
   selection,
+  advanced,
   onDateFromChange,
   onDateToChange,
   onSelectionChange,
+  onAdvancedChange,
   onApply,
   onReset,
+  activeAdvancedChips = [],
+  onClearAdvanced,
 }: StaffUsageFiltersProps) {
+  const [moreOpen, setMoreOpen] = useState(activeAdvancedChips.length > 0);
+
+  function updateAdvanced(patch: Partial<StaffUsageAdvancedFilters>) {
+    onAdvancedChange({ ...advanced, ...patch });
+  }
+
+  function toggleRole(role: string, checked: boolean) {
+    const next = checked
+      ? [...new Set([...advanced.roles, role])]
+      : advanced.roles.filter((value) => value !== role);
+    updateAdvanced({ roles: next });
+  }
+
+  function toggleStaffStatus(status: string, checked: boolean) {
+    const next = checked
+      ? [...new Set([...advanced.staffStatuses, status])]
+      : advanced.staffStatuses.filter((value) => value !== status);
+    updateAdvanced({ staffStatuses: next });
+  }
+
   return (
-    <div className="rounded-lg border border-border/70 bg-card p-4 shadow-xs">
+    <div className="rounded-lg border border-border/70 bg-card p-4 shadow-xs space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="staff-usage-date-from" className="text-xs font-medium text-muted-foreground">
@@ -227,7 +292,79 @@ export function StaffUsageFilters({
           />
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
+
+      <ReportMoreFiltersSection open={moreOpen} onOpenChange={setMoreOpen}>
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground">Staff Role</Label>
+          <div className="flex flex-wrap gap-3">
+            {STAFF_ROLE_OPTIONS.map((role) => (
+              <label key={role} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={advanced.roles.includes(role)}
+                  onCheckedChange={(value) => toggleRole(role, value === true)}
+                />
+                {role}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground">Staff Status</Label>
+          <div className="flex flex-wrap gap-3">
+            {STAFF_STATUS_OPTIONS.map((option) => (
+              <label key={option.value} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={advanced.staffStatuses.includes(option.value)}
+                  onCheckedChange={(value) => toggleStaffStatus(option.value, value === true)}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <ReportMetricRangeFields
+          label="Completed Shifts"
+          minId="su-completed-min"
+          maxId="su-completed-max"
+          minValue={advanced.completedShiftsMin}
+          maxValue={advanced.completedShiftsMax}
+          onMinChange={(value) => updateAdvanced({ completedShiftsMin: value })}
+          onMaxChange={(value) => updateAdvanced({ completedShiftsMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Scheduled Hours on Completed Shifts"
+          minId="su-comp-hours-min"
+          maxId="su-comp-hours-max"
+          minValue={advanced.completedScheduledHoursMin}
+          maxValue={advanced.completedScheduledHoursMax}
+          onMinChange={(value) => updateAdvanced({ completedScheduledHoursMin: value })}
+          onMaxChange={(value) => updateAdvanced({ completedScheduledHoursMax: value })}
+          inputMode="decimal"
+        />
+        <ReportMetricRangeFields
+          label="Filled Shifts"
+          minId="su-filled-min"
+          maxId="su-filled-max"
+          minValue={advanced.filledShiftsMin}
+          maxValue={advanced.filledShiftsMax}
+          onMinChange={(value) => updateAdvanced({ filledShiftsMin: value })}
+          onMaxChange={(value) => updateAdvanced({ filledShiftsMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Scheduled Hours on Filled Shifts"
+          minId="su-filled-hours-min"
+          maxId="su-filled-hours-max"
+          minValue={advanced.filledScheduledHoursMin}
+          maxValue={advanced.filledScheduledHoursMax}
+          onMinChange={(value) => updateAdvanced({ filledScheduledHoursMin: value })}
+          onMaxChange={(value) => updateAdvanced({ filledScheduledHoursMax: value })}
+          inputMode="decimal"
+        />
+      </ReportMoreFiltersSection>
+
+      <ReportActiveFilterChips chips={activeAdvancedChips} onClearAdvanced={onClearAdvanced} />
+
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
         <Button variant="ghost" size="sm" type="button" onClick={onReset}>
           Reset
         </Button>

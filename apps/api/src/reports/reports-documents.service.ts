@@ -21,6 +21,10 @@ import {
 import type { DocumentComplianceQueryDto } from './dto/document-compliance-query.dto';
 import { resolveStaffUsageStaffIds } from './dto/report-staff-ids.util';
 import {
+  buildDocumentPerTypeStatusFilters,
+  staffMatchesDocumentComplianceFilters,
+} from './report-document-filter.util';
+import {
   buildReminderSummariesForSubmissions,
   type DocumentReminderSummary,
 } from './report-document-reminder.util';
@@ -28,13 +32,12 @@ import {
   buildDocumentStatusMap,
   deriveDocumentReportStatus,
   deriveOverallComplianceStatus,
-  staffMatchesDocumentStatusFilter,
   type DocumentReportStatus,
 } from './report-document-status.util';
 import {
-  buildPaginatedReportResponse,
-  parseReportPagination,
-} from './report-pagination.util';
+  paginateReportRows,
+  parseComparisonReportPagination,
+} from './report-comparison-pagination.util';
 import { formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
 import { ReportsService } from './reports.service';
 import type {
@@ -130,14 +133,12 @@ export class ReportsDocumentsService {
       await this.reports.assertStaffMembersExist(staffIds);
     }
 
-    const { page, pageSize, offset } = parseReportPagination({
+    const { page, pageSize } = parseComparisonReportPagination({
       page: query.page,
       pageSize: query.pageSize ?? DOCUMENT_REPORT_DEFAULT_PAGE_SIZE,
     });
 
-    const staffConditions = staffIds?.length
-      ? inArray(staff.id, staffIds)
-      : eq(staff.status, 'active');
+    const staffConditions = this.buildStaffConditions(staffIds, query.roles, query.staffStatuses);
 
     const rosterRows = await this.db
       .select({
@@ -155,42 +156,69 @@ export class ReportsDocumentsService {
     const complianceByStaff = await this.loadComplianceByStaffIds(rosterStaffIds);
     const reminderBySubmission = await this.loadReminderSummaries(complianceByStaff);
 
-    let rows = rosterRows.map((row) =>
+    const allRows = rosterRows.map((row) =>
       this.buildRow(row, complianceByStaff.get(row.staffId)!, reminderBySubmission),
     );
 
-    if (query.status) {
-      rows = rows.filter((row) =>
-        staffMatchesDocumentStatusFilter({
-          documents: this.statusRecordFromRow(row),
-          filterStatus: query.status!,
-          documentType: query.documentType,
-        }),
-      );
-    }
+    const perDocumentStatuses = buildDocumentPerTypeStatusFilters({
+      vscStatuses: query.vscStatuses,
+      firstAidStatuses: query.firstAidStatuses,
+      immunizationsStatuses: query.immunizationsStatuses,
+      covidStatuses: query.covidStatuses,
+    });
 
-    const summary = buildSummary(rows);
-    const totalCount = rows.length;
-    const pageItems = rows.slice(offset, offset + pageSize);
+    const filteredRows = allRows.filter((row) =>
+      staffMatchesDocumentComplianceFilters(row, {
+        overallCompliance: query.overallCompliance,
+        perDocumentStatuses,
+        vscRenewalDueFrom: query.vscRenewalDueFrom,
+        vscRenewalDueTo: query.vscRenewalDueTo,
+        firstAidExpiryFrom: query.firstAidExpiryFrom,
+        firstAidExpiryTo: query.firstAidExpiryTo,
+        vscReminderStatuses: query.vscReminderStatuses,
+        firstAidReminderStatuses: query.firstAidReminderStatuses,
+        upcomingReminder: query.upcomingReminder,
+        status: query.status,
+        documentType: query.documentType,
+      }),
+    );
+
+    const summary = buildSummary(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
 
     return {
       staffIds,
       status: query.status ?? null,
       documentType: query.documentType ?? null,
       summary,
-      ...buildPaginatedReportResponse(pageItems, page, pageSize, totalCount),
+      items: paginated.items,
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
     };
   }
 
-  private statusRecordFromRow(
-    row: DocumentComplianceRow,
-  ): Record<StaffDocumentType, DocumentReportStatus> {
-    return {
-      vulnerable_sector_check: row.documents.vulnerableSectorCheck.status,
-      first_aid_cpr: row.documents.firstAidCpr.status,
-      immunizations: row.documents.immunizations.status,
-      covid19_vaccination: row.documents.covid19Vaccination.status,
-    };
+  private buildStaffConditions(
+    staffIds: string[] | null,
+    roles?: string[],
+    staffStatuses?: string[],
+  ) {
+    const conditions = [];
+
+    if (staffIds?.length) {
+      conditions.push(inArray(staff.id, staffIds));
+    } else if (staffStatuses?.length) {
+      conditions.push(inArray(staff.status, staffStatuses as ('active' | 'inactive')[]));
+    } else {
+      conditions.push(eq(staff.status, 'active'));
+    }
+
+    if (roles?.length) {
+      conditions.push(inArray(staff.role, roles));
+    }
+
+    return conditions.length === 1 ? conditions[0] : and(...conditions);
   }
 
   private buildRow(

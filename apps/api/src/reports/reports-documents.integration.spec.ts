@@ -426,8 +426,14 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
   it('defaults to all active staff when staffIds omitted', async () => {
     const result = await service.getDocumentCompliance({ pageSize: 100 });
     expect(result.staffIds).toBeNull();
-    expect(result.items.some((row) => row.staffId === FIXTURE.staffF)).toBe(true);
+    expect(result.totalCount).toBeGreaterThanOrEqual(FIXTURE_ACTIVE_STAFF_IDS.length);
     expect(result.items.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(false);
+
+    const fixtureSlice = await service.getDocumentCompliance({
+      staffIds: [FIXTURE.staffF],
+      pageSize: 100,
+    });
+    expect(fixtureSlice.items.some((row) => row.staffId === FIXTURE.staffF)).toBe(true);
   });
 
   it('returns explicit staff roster including zero-document staff', async () => {

@@ -124,7 +124,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       centreId: FIXTURE.centreA,
     });
 
-    expect(result.summary.total).toBe(11);
+    expect(result.summary.totalShifts).toBe(11);
     expect(result.summary.pending).toBe(2);
     expect(result.summary.filled).toBe(3);
     expect(result.summary.completed).toBe(4);
@@ -150,7 +150,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       dateFrom: '2026-08-20',
       dateTo: '2026-08-21',
     });
-    expect(result.summary.total).toBe(0);
+    expect(result.summary.totalShifts).toBe(0);
     expect(result.summary.fillRatePercent).toBeNull();
   });
 
@@ -160,7 +160,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       dateTo: FIXTURE.dateTo,
       centreId: FIXTURE.centreB,
     });
-    expect(filtered.summary.total).toBe(1);
+    expect(filtered.summary.totalShifts).toBe(1);
     expect(filtered.centreName).toBe('Centre Beta');
 
     await expect(
@@ -213,6 +213,8 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     const result = await service.getCentreUsage({
       dateFrom: FIXTURE.dateFrom,
       dateTo: FIXTURE.dateTo,
+      centreIds: [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC],
+      pageSize: 100,
     });
 
     const centreA = result.rows.find((r) => r.centreId === FIXTURE.centreA)!;
@@ -277,6 +279,8 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     const result = await service.getCentreUsage({
       dateFrom: '2026-01-01',
       dateTo: '2026-01-31',
+      centreIds: [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC],
+      pageSize: 100,
     });
 
     expect(result.summary.totalShifts).toBeGreaterThanOrEqual(0);
@@ -383,7 +387,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       centreId: FIXTURE.centreA,
     });
 
-    expect(result.summary.total).toBe(11);
+    expect(result.summary.totalShifts).toBe(11);
     expect(result.summary.fillRatePercent).toBe(77.8);
   });
 

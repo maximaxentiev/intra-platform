@@ -24,6 +24,10 @@ export interface StaffUsageResponse {
   staffIds: string[] | null;
   summary: StaffUsageSummary;
   rows: StaffUsageRow[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
 }
 
 export interface StaffUsageShiftRow {

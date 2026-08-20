@@ -88,11 +88,14 @@ describe("ops reports UI source", () => {
     expect(summaryCards).toContain("Cancelled");
   });
 
-  it("shift fulfillment page persists filters in URL search params", () => {
+  it("shift fulfillment page uses centre multi-select and pagination", () => {
     const page = readSrc("routes/_authenticated/reports.shift-fulfillment.tsx");
+    const filters = readSrc("components/reports/ShiftFulfillmentFilters.tsx");
     expect(page).toContain("validateSearch");
-    expect(page).toContain("dateFrom");
-    expect(page).toContain("centreId");
+    expect(page).toContain("centreIds");
+    expect(page).toContain("ReportPagination");
+    expect(page).toContain("isSingleCentreSelection");
+    expect(filters).toContain("ReportMoreFiltersSection");
   });
 
   it("staff usage page uses allowed scheduled-hours labels only", () => {
@@ -156,6 +159,7 @@ describe("ops reports UI source", () => {
     const page = readSrc("routes/_authenticated/reports.activity.tsx");
     const list = readSrc("components/reports/ActivityLogList.tsx");
     const pagination = readSrc("components/reports/ActivityLogPagination.tsx");
+    const sharedPagination = readSrc("components/reports/ReportPagination.tsx");
     const labels = readSrc("lib/activity-log-labels.ts");
     const filters = readSrc("components/reports/ActivityLogFilters.tsx");
 
@@ -175,10 +179,10 @@ describe("ops reports UI source", () => {
     expect(list).toContain("ActivityMobileRow");
     expect(list).toContain("ChevronDown");
 
-    expect(pagination).toContain("ACTIVITY_LOG_PAGE_SIZE_OPTIONS");
-    expect(pagination).toContain("Previous");
-    expect(pagination).toContain("Next");
-    expect(pagination).toContain("0 activities");
+    expect(pagination).toContain("ReportPagination");
+    expect(sharedPagination).toContain("Previous");
+    expect(sharedPagination).toContain("Next");
+    expect(sharedPagination).toContain("REPORT_COMPARISON_PAGE_SIZE_OPTIONS");
 
     expect(labels).toContain("ACTIVITY_LOG_DEFAULT_PAGE_SIZE = 10");
     expect(labels).toContain("10, 25, 50");

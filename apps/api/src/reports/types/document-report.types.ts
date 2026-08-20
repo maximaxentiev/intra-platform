@@ -6,7 +6,7 @@ import type {
   DocumentReportStatus,
 } from '../report-document-status.util';
 
-export const DOCUMENT_REPORT_DEFAULT_PAGE_SIZE = 25;
+export const DOCUMENT_REPORT_DEFAULT_PAGE_SIZE = 10;
 
 export interface DocumentReportReminderFields {
   latestReminderStatus: DocumentReportReminderStatus | null;

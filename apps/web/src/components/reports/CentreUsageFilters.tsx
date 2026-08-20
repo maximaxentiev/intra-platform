@@ -7,9 +7,15 @@ import { ChevronsUpDown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Centre } from "@/lib/db";
 import {
+  ReportActiveFilterChips,
+  ReportMetricRangeFields,
+  ReportMoreFiltersSection,
+} from "@/components/reports/ReportFilterPrimitives";
+import {
   centreSelectionLabel,
   type CentreSelectionState,
 } from "@/lib/reports-centre-selection";
+import type { CentreMetricFilterSearch } from "@/lib/report-centre-metric-filters";
 import { cn } from "@/lib/utils";
 
 type ReportCentreMultiSelectProps = {
@@ -159,11 +165,15 @@ type CentreUsageFiltersProps = {
   dateTo: string;
   centres: Centre[];
   selection: CentreSelectionState;
+  advanced: CentreMetricFilterSearch;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onSelectionChange: (selection: CentreSelectionState) => void;
+  onAdvancedChange: (advanced: CentreMetricFilterSearch) => void;
   onApply: () => void;
   onReset: () => void;
+  activeAdvancedChips?: Array<{ id: string; label: string; onRemove?: () => void }>;
+  onClearAdvanced?: () => void;
 };
 
 export function CentreUsageFilters({
@@ -171,14 +181,24 @@ export function CentreUsageFilters({
   dateTo,
   centres,
   selection,
+  advanced,
   onDateFromChange,
   onDateToChange,
   onSelectionChange,
+  onAdvancedChange,
   onApply,
   onReset,
+  activeAdvancedChips = [],
+  onClearAdvanced,
 }: CentreUsageFiltersProps) {
+  const [moreOpen, setMoreOpen] = useState(activeAdvancedChips.length > 0);
+
+  function updateAdvanced(patch: Partial<CentreMetricFilterSearch>) {
+    onAdvancedChange({ ...advanced, ...patch });
+  }
+
   return (
-    <div className="rounded-lg border border-border/70 bg-card p-4 shadow-xs">
+    <div className="rounded-lg border border-border/70 bg-card p-4 shadow-xs space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="centre-usage-date-from" className="text-xs font-medium text-muted-foreground">
@@ -215,7 +235,88 @@ export function CentreUsageFilters({
           />
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
+
+      <ReportMoreFiltersSection open={moreOpen} onOpenChange={setMoreOpen}>
+        <ReportMetricRangeFields
+          label="Total Shifts"
+          minId="cu-total-min"
+          maxId="cu-total-max"
+          minValue={advanced.totalShiftsMin ?? ""}
+          maxValue={advanced.totalShiftsMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ totalShiftsMin: value })}
+          onMaxChange={(value) => updateAdvanced({ totalShiftsMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Fill Rate (%)"
+          minId="cu-fill-min"
+          maxId="cu-fill-max"
+          minValue={advanced.fillRateMin ?? ""}
+          maxValue={advanced.fillRateMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ fillRateMin: value })}
+          onMaxChange={(value) => updateAdvanced({ fillRateMax: value })}
+          inputMode="decimal"
+        />
+        <ReportMetricRangeFields
+          label="Pending"
+          minId="cu-pending-min"
+          maxId="cu-pending-max"
+          minValue={advanced.pendingMin ?? ""}
+          maxValue={advanced.pendingMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ pendingMin: value })}
+          onMaxChange={(value) => updateAdvanced({ pendingMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Filled"
+          minId="cu-filled-min"
+          maxId="cu-filled-max"
+          minValue={advanced.filledMin ?? ""}
+          maxValue={advanced.filledMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ filledMin: value })}
+          onMaxChange={(value) => updateAdvanced({ filledMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Completed"
+          minId="cu-completed-min"
+          maxId="cu-completed-max"
+          minValue={advanced.completedMin ?? ""}
+          maxValue={advanced.completedMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ completedMin: value })}
+          onMaxChange={(value) => updateAdvanced({ completedMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Cancelled"
+          minId="cu-cancelled-min"
+          maxId="cu-cancelled-max"
+          minValue={advanced.cancelledMin ?? ""}
+          maxValue={advanced.cancelledMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ cancelledMin: value })}
+          onMaxChange={(value) => updateAdvanced({ cancelledMax: value })}
+        />
+        <ReportMetricRangeFields
+          label="Scheduled Hours"
+          minId="cu-sched-min"
+          maxId="cu-sched-max"
+          minValue={advanced.scheduledHoursMin ?? ""}
+          maxValue={advanced.scheduledHoursMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ scheduledHoursMin: value })}
+          onMaxChange={(value) => updateAdvanced({ scheduledHoursMax: value })}
+          inputMode="decimal"
+        />
+        <ReportMetricRangeFields
+          label="Completed Scheduled Hours"
+          minId="cu-comp-sched-min"
+          maxId="cu-comp-sched-max"
+          minValue={advanced.completedScheduledHoursMin ?? ""}
+          maxValue={advanced.completedScheduledHoursMax ?? ""}
+          onMinChange={(value) => updateAdvanced({ completedScheduledHoursMin: value })}
+          onMaxChange={(value) => updateAdvanced({ completedScheduledHoursMax: value })}
+          inputMode="decimal"
+        />
+      </ReportMoreFiltersSection>
+
+      <ReportActiveFilterChips chips={activeAdvancedChips} onClearAdvanced={onClearAdvanced} />
+
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
         <Button variant="ghost" size="sm" type="button" onClick={onReset}>
           Reset
         </Button>

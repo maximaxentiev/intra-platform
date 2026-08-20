@@ -5,6 +5,7 @@ import { centres, shifts, staff } from '../db/schema';
 import type { StaffUsageQueryDto } from './dto/staff-usage-query.dto';
 import type { StaffUsageShiftsQueryDto } from './dto/staff-usage-shifts-query.dto';
 import { resolveStaffUsageStaffIds } from './dto/report-staff-ids.util';
+import { paginateReportRows, parseComparisonReportPagination } from './report-comparison-pagination.util';
 import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
@@ -12,34 +13,18 @@ import {
   buildPaginatedReportResponse,
   parseReportPagination,
 } from './report-pagination.util';
+import {
+  buildStaffUsageSummaryFromRows,
+  resolveStaffUsageMetricFilters,
+  staffRowMatchesMetricFilters,
+} from './report-staff-comparison.util';
 import { formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
 import { ReportsService } from './reports.service';
 import type {
   StaffUsageResponse,
   StaffUsageRow,
   StaffUsageShiftsResponse,
-  StaffUsageSummary,
 } from './types/staff-report.types';
-
-function buildStaffUsageSummary(rows: StaffUsageRow[]): StaffUsageSummary {
-  return rows.reduce(
-    (acc, row) => ({
-      totalStaff: acc.totalStaff + 1,
-      completedShifts: acc.completedShifts + row.completedShifts,
-      completedScheduledMinutes:
-        acc.completedScheduledMinutes + row.completedScheduledMinutes,
-      filledShifts: acc.filledShifts + row.filledShifts,
-      filledScheduledMinutes: acc.filledScheduledMinutes + row.filledScheduledMinutes,
-    }),
-    {
-      totalStaff: 0,
-      completedShifts: 0,
-      completedScheduledMinutes: 0,
-      filledShifts: 0,
-      filledScheduledMinutes: 0,
-    },
-  );
-}
 
 @Injectable()
 export class ReportsStaffService {
@@ -51,6 +36,8 @@ export class ReportsStaffService {
   async getStaffUsage(query: StaffUsageQueryDto): Promise<StaffUsageResponse> {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const staffIds = resolveStaffUsageStaffIds(query);
+    const { page, pageSize } = parseComparisonReportPagination(query);
+    const metricFilters = resolveStaffUsageMetricFilters(query);
 
     if (staffIds?.length) {
       await this.reports.assertStaffMembersExist(staffIds);
@@ -63,9 +50,7 @@ export class ReportsStaffService {
       lte(shifts.shiftDate, dateTo),
     );
 
-    const staffConditions = staffIds?.length
-      ? inArray(staff.id, staffIds)
-      : eq(staff.status, 'active');
+    const staffConditions = this.buildStaffConditions(staffIds, query.roles, query.staffStatuses);
 
     const rawRows = await this.db
       .select({
@@ -97,7 +82,7 @@ export class ReportsStaffService {
         asc(staff.legalName),
       );
 
-    const rows: StaffUsageRow[] = rawRows.map((row) => ({
+    const allRows: StaffUsageRow[] = rawRows.map((row) => ({
       staffId: row.staffId,
       staffName: formatStaffReportName(row),
       role: formatStaffReportRole(row.role),
@@ -107,13 +92,43 @@ export class ReportsStaffService {
       filledScheduledMinutes: normalizeReportScheduledMinutes(row.filledScheduledMinutes),
     }));
 
+    const filteredRows = allRows.filter((row) => staffRowMatchesMetricFilters(row, metricFilters));
+    const summary = buildStaffUsageSummaryFromRows(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
+
     return {
       dateFrom,
       dateTo,
       staffIds,
-      summary: buildStaffUsageSummary(rows),
-      rows,
+      summary,
+      rows: paginated.items,
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
     };
+  }
+
+  private buildStaffConditions(
+    staffIds: string[] | null,
+    roles?: string[],
+    staffStatuses?: string[],
+  ) {
+    const conditions = [];
+
+    if (staffIds?.length) {
+      conditions.push(inArray(staff.id, staffIds));
+    } else if (staffStatuses?.length) {
+      conditions.push(inArray(staff.status, staffStatuses as ('active' | 'inactive')[]));
+    } else {
+      conditions.push(eq(staff.status, 'active'));
+    }
+
+    if (roles?.length) {
+      conditions.push(inArray(staff.role, roles));
+    }
+
+    return conditions.length === 1 ? conditions[0] : and(...conditions);
   }
 
   async getStaffUsageShifts(

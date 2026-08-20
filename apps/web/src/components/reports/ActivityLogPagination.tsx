@@ -1,11 +1,4 @@
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ReportPagination } from "@/components/reports/ReportPagination";
 import {
   ACTIVITY_LOG_PAGE_SIZE_OPTIONS,
   activityLogResultRange,
@@ -31,69 +24,24 @@ export function ActivityLogPagination({
   onPageSizeChange,
   className = "",
 }: ActivityLogPaginationProps) {
-  const { start, end, totalPages } = activityLogResultRange({ page, pageSize, totalCount });
-  const showControls = totalCount > 0;
-
   return (
-    <div
-      className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between ${className}`}
-      aria-label="Activity log pagination"
-    >
-      <p className="text-sm text-muted-foreground">
-        {totalCount === 0 ? "0 activities" : `Showing ${start}–${end} of ${totalCount} activities`}
-      </p>
-
-      {showControls ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(value) => onPageSizeChange(Number(value) as ActivityLogPageSize)}
-            >
-              <SelectTrigger className="h-9 w-[4.5rem]" aria-label="Rows per page">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTIVITY_LOG_PAGE_SIZE_OPTIONS.map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-            >
-              Previous
-            </Button>
-            <span className="min-w-[6.5rem] text-center text-sm text-muted-foreground">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={!hasMore}
-              onClick={() => onPageChange(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <ReportPagination
+      page={page}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      hasMore={hasMore}
+      entityLabel="activities"
+      emptyLabel="0 activities"
+      ariaLabel="Activity log pagination"
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      className={className}
+    />
   );
 }
 
 export function ActivityLogPaginationSkeleton({ pageSize }: { pageSize: number }) {
+  void pageSize;
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="h-5 w-40 animate-pulse rounded bg-muted" />
@@ -120,3 +68,5 @@ export function ActivityLogRowSkeleton({ count = 10 }: { count?: number }) {
     </div>
   );
 }
+
+export { activityLogResultRange, ACTIVITY_LOG_PAGE_SIZE_OPTIONS };

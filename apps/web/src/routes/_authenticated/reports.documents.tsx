@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DocumentComplianceFilters } from "@/components/reports/DocumentComplianceFilters";
+import { ReportPagination } from "@/components/reports/ReportPagination";
 import {
   DocumentComplianceSummaryCards,
   DocumentComplianceSummarySkeleton,
@@ -28,6 +29,11 @@ import { staffApi } from "@/lib/db";
 import { formatDocumentDate } from "@/lib/carer-documents";
 import { formatOpsDateTimeToronto } from "@/lib/ops-report-formatters";
 import { reportsApi } from "@/lib/reports-api";
+import {
+  REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
+  resolveReportComparisonPageSize,
+  type ReportComparisonPageSize,
+} from "@/lib/report-pagination-labels";
 import {
   CARER_DOCUMENT_CATEGORY_META,
 } from "@/lib/carer-documents";
@@ -56,6 +62,7 @@ const searchSchema = z.object({
   status: z.string().optional(),
   documentType: z.string().optional(),
   page: z.coerce.number().optional(),
+  pageSize: z.coerce.number().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/reports/documents")({
@@ -210,6 +217,7 @@ function DocumentComplianceReport() {
       status: search.status?.trim() || "",
       documentType: search.documentType?.trim() || "",
       page: search.page && search.page > 0 ? search.page : 1,
+      pageSize: resolveReportComparisonPageSize(search.pageSize),
     }),
     [search, appliedSelection],
   );
@@ -231,6 +239,7 @@ function DocumentComplianceReport() {
       applied.status,
       applied.documentType,
       applied.page,
+      applied.pageSize,
     ],
     queryFn: () =>
       reportsApi.documentCompliance({
@@ -238,7 +247,7 @@ function DocumentComplianceReport() {
         status: applied.status || undefined,
         documentType: applied.documentType || undefined,
         page: applied.page,
-        pageSize: 25,
+        pageSize: applied.pageSize,
       }),
   });
 
@@ -249,15 +258,18 @@ function DocumentComplianceReport() {
   const reportReady = !reportQ.isLoading && summary != null;
   const emptyFiltered = reportReady && items.length === 0;
 
+  function buildSearch(page: number, pageSize: ReportComparisonPageSize) {
+    return {
+      ...staffSelectionToSearchParams(selection),
+      status: status && status !== "all" ? status : undefined,
+      documentType: documentType && documentType !== "all" ? documentType : undefined,
+      page: page === 1 ? undefined : page,
+      pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
+    };
+  }
+
   function applyFilters(nextPage = 1) {
-    navigate({
-      search: {
-        ...staffSelectionToSearchParams(selection),
-        status: status && status !== "all" ? status : undefined,
-        documentType: documentType && documentType !== "all" ? documentType : undefined,
-        page: nextPage > 1 ? nextPage : undefined,
-      },
-    });
+    navigate({ search: buildSearch(nextPage, applied.pageSize) });
   }
 
   function resetFilters() {
@@ -337,8 +349,20 @@ function DocumentComplianceReport() {
         </div>
       )}
 
-      {!reportQ.isLoading && showComparison && items.length > 0 && (
+      {!reportQ.isLoading && showComparison && reportQ.data && (
         <>
+          <ReportPagination
+            page={reportQ.data.page}
+            pageSize={resolveReportComparisonPageSize(reportQ.data.pageSize)}
+            totalCount={reportQ.data.totalCount}
+            hasMore={reportQ.data.hasMore}
+            entityLabel="staff"
+            onPageChange={(page) => navigate({ search: buildSearch(page, applied.pageSize) })}
+            onPageSizeChange={(pageSize) => navigate({ search: buildSearch(1, pageSize) })}
+          />
+
+          {items.length > 0 && (
+          <>
           <div className="hidden lg:block">
             <Card className="border-border/70 shadow-xs overflow-hidden">
               <Table>
@@ -438,34 +462,18 @@ function DocumentComplianceReport() {
               </Card>
             ))}
           </div>
-
-          {reportQ.data && reportQ.data.totalCount > reportQ.data.pageSize && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Page {reportQ.data.page} · {reportQ.data.totalCount} staff
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={applied.page <= 1}
-                  onClick={() => applyFilters(applied.page - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!reportQ.data.hasMore}
-                  onClick={() => applyFilters(applied.page + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          </>
           )}
+
+          <ReportPagination
+            page={reportQ.data.page}
+            pageSize={resolveReportComparisonPageSize(reportQ.data.pageSize)}
+            totalCount={reportQ.data.totalCount}
+            hasMore={reportQ.data.hasMore}
+            entityLabel="staff"
+            onPageChange={(page) => navigate({ search: buildSearch(page, applied.pageSize) })}
+            onPageSizeChange={(pageSize) => navigate({ search: buildSearch(1, pageSize) })}
+          />
         </>
       )}
     </div>

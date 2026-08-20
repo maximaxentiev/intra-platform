@@ -195,17 +195,19 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
     await pool.end();
   });
 
-  it('aggregates staff usage for active roster by default', async () => {
+  it('aggregates staff usage metrics for selected active staff', async () => {
     const result = await service.getStaffUsage({
       dateFrom: FIXTURE.dateFrom,
       dateTo: FIXTURE.dateTo,
+      staffIds: [FIXTURE.staffA, FIXTURE.staffB, FIXTURE.staffC],
+      pageSize: 100,
     });
 
     const staffA = result.rows.find((row) => row.staffId === FIXTURE.staffA)!;
     const staffB = result.rows.find((row) => row.staffId === FIXTURE.staffB)!;
     const staffC = result.rows.find((row) => row.staffId === FIXTURE.staffC)!;
 
-    expect(result.staffIds).toBeNull();
+    expect(result.staffIds).toEqual([FIXTURE.staffA, FIXTURE.staffB, FIXTURE.staffC]);
     expect(result.rows.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(false);
 
     expect(staffA.completedShifts).toBe(3);
@@ -226,7 +228,7 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
     expect(result.summary.completedScheduledMinutes).toBe(1410);
     expect(result.summary.filledShifts).toBe(1);
     expect(result.summary.filledScheduledMinutes).toBe(240);
-    expect(result.summary.totalStaff).toBeGreaterThanOrEqual(3);
+    expect(result.summary.totalStaff).toBe(3);
 
     for (const row of [staffA, staffB, staffC]) {
       expect(typeof row.completedScheduledMinutes).toBe('number');

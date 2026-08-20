@@ -5,6 +5,18 @@ import { centres, shifts } from '../db/schema';
 import type { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
 import { resolveCentreUsageCentreIds } from './dto/report-centre-ids.util';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
+import {
+  buildCentreUsageSummaryFromRows,
+  buildShiftFulfillmentSummaryFromRows,
+  centreRowMatchesScheduledHoursFilters,
+  centreRowMatchesShiftMetricFilters,
+  resolveCentreScheduledHoursFilters,
+  resolveCentreShiftMetricFilters,
+  toCentreUsageRow,
+  toShiftFulfillmentRow,
+  type CentreMetricsFullRow,
+} from './report-centre-comparison.util';
+import { paginateReportRows, parseComparisonReportPagination } from './report-comparison-pagination.util';
 import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
@@ -13,55 +25,8 @@ import { ReportsService } from './reports.service';
 import type {
   CentreUsageResponse,
   CentreUsageRow,
-  CentreUsageSummary,
   ShiftFulfillmentResponse,
 } from './types/shift-report.types';
-
-type StatusCounts = {
-  total: number;
-  pending: number;
-  filled: number;
-  completed: number;
-  cancelled: number;
-};
-
-function toSummary(counts: StatusCounts) {
-  return {
-    ...counts,
-    fillRatePercent: computeFillRatePercent(counts.filled, counts.completed, counts.pending),
-  };
-}
-
-function buildCentreUsageSummary(rows: CentreUsageRow[]): CentreUsageSummary {
-  const totals = rows.reduce(
-    (acc, row) => ({
-      totalCentres: acc.totalCentres + 1,
-      totalShifts: acc.totalShifts + row.totalShifts,
-      pending: acc.pending + row.pending,
-      filled: acc.filled + row.filled,
-      completed: acc.completed + row.completed,
-      cancelled: acc.cancelled + row.cancelled,
-      totalScheduledMinutes: acc.totalScheduledMinutes + row.totalScheduledMinutes,
-      totalCompletedScheduledMinutes:
-        acc.totalCompletedScheduledMinutes + row.completedScheduledMinutes,
-    }),
-    {
-      totalCentres: 0,
-      totalShifts: 0,
-      pending: 0,
-      filled: 0,
-      completed: 0,
-      cancelled: 0,
-      totalScheduledMinutes: 0,
-      totalCompletedScheduledMinutes: 0,
-    },
-  );
-
-  return {
-    ...totals,
-    fillRatePercent: computeFillRatePercent(totals.filled, totals.completed, totals.pending),
-  };
-}
 
 @Injectable()
 export class ReportsShiftService {
@@ -72,69 +37,83 @@ export class ReportsShiftService {
 
   async getShiftFulfillment(query: ShiftReportQueryDto): Promise<ShiftFulfillmentResponse> {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
-    const centreId = query.centreId ?? null;
+    const centreIds = resolveCentreUsageCentreIds(query);
+    const { page, pageSize } = parseComparisonReportPagination(query);
+    const metricFilters = resolveCentreShiftMetricFilters(query);
 
-    if (centreId) {
-      await this.reports.assertCentreExists(centreId);
+    if (centreIds?.length) {
+      await this.reports.assertCentresExist(centreIds);
     }
 
-    const conditions = [gte(shifts.shiftDate, dateFrom), lte(shifts.shiftDate, dateTo)];
-    if (centreId) {
-      conditions.push(eq(shifts.centreId, centreId));
-    }
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const filteredRows = allRows.filter((row) => centreRowMatchesShiftMetricFilters(row, metricFilters));
+    const summary = buildShiftFulfillmentSummaryFromRows(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
 
-    const [counts] = await this.db
-      .select({
-        total: sql<number>`count(*)::int`,
-        pending: sql<number>`count(*) filter (where ${shifts.status} = 'pending')::int`,
-        filled: sql<number>`count(*) filter (where ${shifts.status} = 'filled')::int`,
-        completed: sql<number>`count(*) filter (where ${shifts.status} = 'completed')::int`,
-        cancelled: sql<number>`count(*) filter (where ${shifts.status} = 'cancelled')::int`,
-      })
-      .from(shifts)
-      .where(and(...conditions));
-
+    const legacyCentreId = query.centreId ?? null;
     let centreName: string | null = null;
-    if (centreId) {
-      const [centre] = await this.db
-        .select({ name: centres.name })
-        .from(centres)
-        .where(eq(centres.id, centreId))
-        .limit(1);
-      centreName = centre?.name ?? null;
+    if (legacyCentreId) {
+      centreName = filteredRows.find((row) => row.centreId === legacyCentreId)?.centreName ?? null;
+      if (!centreName && centreIds?.length === 1) {
+        centreName = allRows.find((row) => row.centreId === centreIds[0])?.centreName ?? null;
+      }
+    } else if (centreIds?.length === 1) {
+      centreName = allRows.find((row) => row.centreId === centreIds[0])?.centreName ?? null;
     }
-
-    const row = counts ?? {
-      total: 0,
-      pending: 0,
-      filled: 0,
-      completed: 0,
-      cancelled: 0,
-    };
 
     return {
       dateFrom,
       dateTo,
-      centreId,
+      centreIds,
+      centreId: legacyCentreId ?? (centreIds?.length === 1 ? centreIds[0]! : null),
       centreName,
-      summary: toSummary({
-        total: normalizeReportCount(row.total),
-        pending: normalizeReportCount(row.pending),
-        filled: normalizeReportCount(row.filled),
-        completed: normalizeReportCount(row.completed),
-        cancelled: normalizeReportCount(row.cancelled),
-      }),
+      summary,
+      rows: paginated.items.map(toShiftFulfillmentRow),
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
     };
   }
 
   async getCentreUsage(query: CentreUsageQueryDto): Promise<CentreUsageResponse> {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const centreIds = resolveCentreUsageCentreIds(query);
+    const { page, pageSize } = parseComparisonReportPagination(query);
+    const metricFilters = resolveCentreShiftMetricFilters(query);
+    const hoursFilters = resolveCentreScheduledHoursFilters(query);
 
     if (centreIds?.length) {
       await this.reports.assertCentresExist(centreIds);
     }
 
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const filteredRows = allRows.filter(
+      (row) =>
+        centreRowMatchesShiftMetricFilters(row, metricFilters) &&
+        centreRowMatchesScheduledHoursFilters(row, hoursFilters),
+    );
+    const summary = buildCentreUsageSummaryFromRows(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
+
+    return {
+      dateFrom,
+      dateTo,
+      centreIds,
+      summary,
+      rows: paginated.items.map(toCentreUsageRow),
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
+    };
+  }
+
+  private async fetchCentreMetricsRows(
+    dateFrom: string,
+    dateTo: string,
+    centreIds: string[] | null,
+  ): Promise<CentreMetricsFullRow[]> {
     const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
     const shiftJoin = and(
       eq(shifts.centreId, centres.id),
@@ -162,29 +141,23 @@ export class ReportsShiftService {
       .groupBy(centres.id, centres.name)
       .orderBy(desc(sql`count(${shifts.id})`), asc(centres.name));
 
-    const rows: CentreUsageRow[] = rawRows.map((row) => ({
-      centreId: row.centreId,
-      centreName: row.centreName,
-      totalShifts: normalizeReportCount(row.totalShifts),
-      pending: normalizeReportCount(row.pending),
-      filled: normalizeReportCount(row.filled),
-      completed: normalizeReportCount(row.completed),
-      cancelled: normalizeReportCount(row.cancelled),
-      fillRatePercent: computeFillRatePercent(
-        normalizeReportCount(row.filled),
-        normalizeReportCount(row.completed),
-        normalizeReportCount(row.pending),
-      ),
-      totalScheduledMinutes: normalizeReportScheduledMinutes(row.totalScheduledMinutes),
-      completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
-    }));
+    return rawRows.map((row) => {
+      const filled = normalizeReportCount(row.filled);
+      const completed = normalizeReportCount(row.completed);
+      const pending = normalizeReportCount(row.pending);
 
-    return {
-      dateFrom,
-      dateTo,
-      centreIds,
-      summary: buildCentreUsageSummary(rows),
-      rows,
-    };
+      return {
+        centreId: row.centreId,
+        centreName: row.centreName,
+        totalShifts: normalizeReportCount(row.totalShifts),
+        pending,
+        filled,
+        completed,
+        cancelled: normalizeReportCount(row.cancelled),
+        fillRatePercent: computeFillRatePercent(filled, completed, pending),
+        totalScheduledMinutes: normalizeReportScheduledMinutes(row.totalScheduledMinutes),
+        completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
+      };
+    });
   }
 }
