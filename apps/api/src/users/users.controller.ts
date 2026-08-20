@@ -31,13 +31,17 @@ export class UsersController {
 
   @Roles('admin')
   @Post('users')
-  invite(@Body() dto: InviteUserDto) {
-    return this.users.invite(dto);
+  invite(@Body() dto: InviteUserDto, @CurrentUser() user: SessionPayload) {
+    return this.users.invite(dto, user.userId);
   }
 
   @Roles('admin')
   @Patch('users/:id')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.users.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.users.update(id, dto, user.userId);
   }
 }

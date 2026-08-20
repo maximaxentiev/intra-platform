@@ -148,6 +148,21 @@ export function resolveReportDateRange(dateFrom?: string, dateTo?: string): {
   return { dateFrom, dateTo };
 }
 
+/** Activity Log default: last 30 Toronto calendar days inclusive. */
+export function resolveActivityLogDateRange(dateFrom?: string, dateTo?: string): {
+  dateFrom: string;
+  dateTo: string;
+} {
+  if (dateFrom === undefined && dateTo === undefined) {
+    return lastTorontoCalendarDaysRange(30);
+  }
+  if (dateFrom === undefined || dateTo === undefined) {
+    throw new ReportDateValidationError('dateFrom and dateTo must both be provided.');
+  }
+  validateReportDateRange(dateFrom, dateTo);
+  return { dateFrom, dateTo };
+}
+
 /** Shift report filter: inclusive bounds on shifts.shift_date. */
 export function shiftDateWithinReportRange(
   shiftDateColumn: string,

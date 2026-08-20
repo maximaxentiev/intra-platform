@@ -563,6 +563,34 @@ export const applicationActivity = pgTable(
   (t) => [index('application_activity_application_idx').on(t.applicationId, t.createdAt)],
 );
 
+/** Append-only Ops/system audit trail (Phase 9F forward-looking). */
+export const platformAuditEvents = pgTable(
+  'platform_audit_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    actorType: text('actor_type').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: uuid('entity_id'),
+    staffId: uuid('staff_id').references(() => staff.id, { onDelete: 'set null' }),
+    shiftId: uuid('shift_id').references(() => shifts.id, { onDelete: 'set null' }),
+    centreId: uuid('centre_id').references(() => centres.id, { onDelete: 'set null' }),
+    targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'set null' }),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (t) => [
+    index('platform_audit_occurred_at_idx').on(t.occurredAt),
+    index('platform_audit_action_idx').on(t.action),
+    index('platform_audit_entity_idx').on(t.entityType, t.entityId),
+    index('platform_audit_staff_occurred_idx').on(t.staffId, t.occurredAt),
+    index('platform_audit_centre_occurred_idx').on(t.centreId, t.occurredAt),
+    index('platform_audit_shift_occurred_idx').on(t.shiftId, t.occurredAt),
+    index('platform_audit_actor_occurred_idx').on(t.actorUserId, t.occurredAt),
+  ],
+);
+
 export const staffPortalAuditEvents = pgTable(
   'staff_portal_audit_events',
   {
@@ -672,6 +700,7 @@ export type ShiftComment = typeof shiftComments.$inferSelect;
 export type Application = typeof applications.$inferSelect;
 export type ApplicationDocument = typeof applicationDocuments.$inferSelect;
 export type ApplicationActivity = typeof applicationActivity.$inferSelect;
+export type PlatformAuditEvent = typeof platformAuditEvents.$inferSelect;
 export type StaffAccount = typeof staffAccounts.$inferSelect;
 export type StaffPortalAuditEvent = typeof staffPortalAuditEvents.$inferSelect;
 export type StaffDocumentSet = typeof staffDocumentSets.$inferSelect;

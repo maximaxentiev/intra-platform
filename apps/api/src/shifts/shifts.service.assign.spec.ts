@@ -4,7 +4,12 @@ import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmat
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
+import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ShiftsService } from './shifts.service';
+
+function mockPlatformAudit() {
+  return { record: vi.fn().mockResolvedValue(undefined) } as unknown as PlatformAuditService;
+}
 
 describe('ShiftsService.assign idempotency', () => {
   let service: ShiftsService;
@@ -60,6 +65,7 @@ describe('ShiftsService.assign idempotency', () => {
       shiftMatching,
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      mockPlatformAudit(),
     );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
@@ -101,6 +107,7 @@ describe('ShiftsService.assign idempotency', () => {
       shiftMatching,
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      mockPlatformAudit(),
     );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
@@ -130,6 +137,7 @@ describe('ShiftsService.assign idempotency', () => {
       shiftMatching,
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      mockPlatformAudit(),
     );
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
@@ -167,6 +175,7 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
       {} as ShiftMatchingService,
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      mockPlatformAudit(),
     );
 
     await expect(service.sendAssignmentConfirmation('shift-1', 'ops-1')).rejects.toBeInstanceOf(
@@ -188,6 +197,7 @@ describe('ShiftsService.availableStaff', () => {
       shiftMatching,
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      mockPlatformAudit(),
     );
 
     const rows = await service.availableStaff('shift-1');

@@ -38,9 +38,10 @@ const REPORT_CARDS = [
   },
   {
     title: "Activity Log",
-    description: "Coming soon",
+    description: "Review recorded Staff, Shift, document, communication, and administrative activity.",
+    to: "/reports/activity",
     icon: ClipboardList,
-    available: false,
+    available: true,
   },
 ] as const;
 

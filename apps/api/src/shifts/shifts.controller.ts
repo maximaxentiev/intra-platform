@@ -34,8 +34,8 @@ export class ShiftsController {
   }
 
   @Post()
-  create(@Body() dto: UpsertShiftDto) {
-    return this.shifts.create(dto);
+  create(@Body() dto: UpsertShiftDto, @CurrentUser() user: SessionPayload) {
+    return this.shifts.create(dto, user.userId);
   }
 
   @Delete('comments/:commentId')
@@ -49,8 +49,12 @@ export class ShiftsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateShiftDto) {
-    return this.shifts.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateShiftDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.update(id, dto, user.userId);
   }
 
   @Delete(':id')
@@ -73,13 +77,17 @@ export class ShiftsController {
   }
 
   @Post(':id/unassign')
-  unassign(@Param('id') id: string) {
-    return this.shifts.unassign(id);
+  unassign(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shifts.unassign(id, user.userId);
   }
 
   @Post(':id/status')
-  changeStatus(@Param('id') id: string, @Body() dto: ChangeStatusDto) {
-    return this.shifts.changeStatus(id, dto);
+  changeStatus(
+    @Param('id') id: string,
+    @Body() dto: ChangeStatusDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.changeStatus(id, dto, user.userId);
   }
 
   @Get(':id/available-staff')

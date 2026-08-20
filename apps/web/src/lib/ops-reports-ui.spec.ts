@@ -20,16 +20,17 @@ describe("ops reports UI source", () => {
     expect(reportsIdx).toBeGreaterThan(dashboardIdx);
   });
 
-  it("landing page shows five cards with four enabled reports", () => {
+  it("landing page shows five cards with five enabled reports", () => {
     const landing = readSrc("routes/_authenticated/reports.index.tsx");
     expect(landing).toContain("Shift Fulfillment");
     expect(landing).toContain("Centre Usage");
     expect(landing).toContain("Staff Usage");
     expect(landing).toContain("Document Compliance");
     expect(landing).toContain("Activity Log");
-    expect(landing).toContain("Coming soon");
-    expect(landing).toContain('/reports/staff-usage');
+    expect(landing).toContain('to: "/reports/activity"');
+    expect(landing).toMatch(/title: "Activity Log"[\s\S]*available: true/);
     expect(landing).toContain('/reports/documents');
+    expect(landing).toContain('/reports/activity');
     expect(landing).not.toContain("Applications");
   });
 
@@ -149,6 +150,24 @@ describe("ops reports UI source", () => {
     const labels = readSrc("lib/reports-document-labels.ts");
     expect(labels).toContain("Optional — Not Submitted");
     expect(page).not.toMatch(/Reminders enabled|Reminders disabled|3-year|Actual Hours|Payroll Hours/i);
+  });
+
+  it("activity log page includes coverage notice, filters, timeline, and pagination", () => {
+    const page = readSrc("routes/_authenticated/reports.activity.tsx");
+    const filters = readSrc("components/reports/ActivityLogFilters.tsx");
+    expect(page).toContain("Activity history is based on events recorded by the platform");
+    expect(page).toContain("defaultActivityLogSearch");
+    expect(page).toContain("ActivityRow");
+    expect(page).toContain("formatOpsDateTimeToronto");
+    expect(page).toContain("Recorded before actor auditing");
+    expect(page).toContain("System");
+    expect(page).toContain("hasMore");
+    expect(page).toContain('to="/staff/$id"');
+    expect(page).toContain('to="/centres/$id"');
+    expect(page).toContain('to="/shifts/$id"');
+    expect(filters).toContain("All categories");
+    expect(filters).toContain("All actors");
+    expect(page).not.toMatch(/historically complete|complete audit trail/i);
   });
 });
 

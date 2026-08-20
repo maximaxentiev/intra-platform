@@ -181,3 +181,49 @@ export interface DocumentComplianceResponse {
   totalCount: number;
   hasMore: boolean;
 }
+
+export type ActivityLogCategory =
+  | "shifts"
+  | "staff"
+  | "documents"
+  | "communications"
+  | "centres"
+  | "users"
+  | "system";
+
+export type ActivityLogActorType = "ops_user" | "staff" | "system" | "unknown";
+
+export interface ActivityLogActor {
+  type: ActivityLogActorType;
+  id: string | null;
+  name: string | null;
+}
+
+export interface ActivityLogItem {
+  id: string;
+  occurredAt: string;
+  category: ActivityLogCategory;
+  action: string;
+  title: string;
+  description: string | null;
+  actor: ActivityLogActor;
+  staff?: { id: string; name: string };
+  centre?: { id: string; name: string };
+  shift?: { id: string; shiftDate: string };
+  metadata?: Record<string, unknown>;
+}
+
+export interface ActivityLogResponse {
+  dateFrom: string;
+  dateTo: string;
+  category: ActivityLogCategory | null;
+  actorType: ActivityLogActorType | null;
+  staffId: string | null;
+  centreId: string | null;
+  shiftId: string | null;
+  items: ActivityLogItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+}

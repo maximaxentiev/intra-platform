@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PlatformAuditModule } from '../platform-audit/platform-audit.module';
 import { StaffDocumentsModule } from '../staff-documents/staff-documents.module';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
@@ -9,7 +10,7 @@ import { ShiftsCron } from './shifts.cron';
 import { ShiftsService } from './shifts.service';
 
 @Module({
-  imports: [StaffDocumentsModule, ShiftCommunicationsModule],
+  imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule],
   controllers: [ShiftsController],
   providers: [
     ShiftsService,

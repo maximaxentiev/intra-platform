@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { SessionPayload } from '../auth/session.service';
 import { CentresService } from './centres.service';
 import {
   ReorderContactsDto,
@@ -37,18 +39,22 @@ export class CentresController {
   }
 
   @Post()
-  create(@Body() dto: UpsertCentreDto) {
-    return this.centres.create(dto);
+  create(@Body() dto: UpsertCentreDto, @CurrentUser() user: SessionPayload) {
+    return this.centres.create(dto, user.userId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpsertCentreDto) {
-    return this.centres.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpsertCentreDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.centres.update(id, dto, user.userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.centres.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.centres.remove(id, user.userId);
   }
 
   @Get(':id/secondary-channels')

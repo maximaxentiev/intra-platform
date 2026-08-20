@@ -24,6 +24,14 @@ import { SHIFT_ASSIGN_INELIGIBLE_MESSAGE } from './shift-matching.types';
 import { assertSameDayShiftSchedule } from './shift-schedule-validation.util';
 import { acquireShiftStaffDateAdvisoryLock } from './shift-staff-date-advisory-lock.util';
 import {
+  assignmentAuditAction,
+  buildShiftUpdateMetadata,
+  cancellationReasonPreview,
+  shiftAuditSnapshot,
+} from './shift-audit.util';
+import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
+import { PlatformAuditService } from '../platform-audit/platform-audit.service';
+import {
   AddCommentDto,
   ChangeStatusDto,
   ListShiftsQuery,
@@ -41,6 +49,7 @@ export class ShiftsService {
     private readonly shiftMatching: ShiftMatchingService,
     private readonly shiftReminders: ShiftReminderService,
     private readonly shiftCancellations: ShiftCancellationService,
+    private readonly platformAudit: PlatformAuditService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -103,30 +112,55 @@ export class ShiftsService {
     return rows[0];
   }
 
-  async create(dto: UpsertShiftDto) {
+  async create(dto: UpsertShiftDto, actorUserId: string) {
     assertSameDayShiftSchedule(dto.startTime, dto.endTime);
 
-    const rows = await this.db
-      .insert(shifts)
-      .values({
-        centreId: dto.centreId,
-        shiftDate: dto.shiftDate,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-        roleNeeded: dto.roleNeeded ?? '',
-        notes: dto.notes ?? '',
-        addedToStaffpoint: dto.addedToStaffpoint ?? false,
-      })
-      .returning({ id: shifts.id });
-    return rows[0];
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .insert(shifts)
+        .values({
+          centreId: dto.centreId,
+          shiftDate: dto.shiftDate,
+          startTime: dto.startTime,
+          endTime: dto.endTime,
+          roleNeeded: dto.roleNeeded ?? '',
+          notes: dto.notes ?? '',
+          addedToStaffpoint: dto.addedToStaffpoint ?? false,
+        })
+        .returning({ id: shifts.id, centreId: shifts.centreId, shiftDate: shifts.shiftDate, startTime: shifts.startTime, endTime: shifts.endTime });
+
+      const created = rows[0]!;
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.shiftCreated,
+          actorType: 'ops_user',
+          actorUserId,
+          shiftId: created.id,
+          centreId: created.centreId,
+          entityId: created.id,
+          metadata: {
+            shiftDate: String(created.shiftDate),
+            startTime: String(created.startTime),
+            endTime: String(created.endTime),
+          },
+        },
+        tx,
+      );
+
+      return { id: created.id };
+    });
   }
 
-  async update(id: string, dto: UpdateShiftDto) {
+  async update(id: string, dto: UpdateShiftDto, actorUserId: string) {
     const before = await this.db
       .select({
         shiftDate: shifts.shiftDate,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
+        centreId: shifts.centreId,
+        roleNeeded: shifts.roleNeeded,
+        notes: shifts.notes,
+        addedToStaffpoint: shifts.addedToStaffpoint,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
       })
@@ -153,20 +187,37 @@ export class ShiftsService {
     ] as const) {
       if (dto[key] !== undefined) patch[key] = dto[key];
     }
-    const rows = await this.db.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
-    if (!rows[0]) throw new NotFoundException('Shift not found.');
-
-    const scheduleChanged =
-      (dto.shiftDate !== undefined && dto.shiftDate !== String(before[0].shiftDate)) ||
-      (dto.startTime !== undefined && dto.startTime !== String(before[0].startTime));
 
     let scheduledReminderIds: string[] = [];
-    if (
-      scheduleChanged &&
-      rows[0].status === 'filled' &&
-      rows[0].assignedStaffId
-    ) {
-      await this.db.transaction(async (tx) => {
+    const row = await this.db.transaction(async (tx) => {
+      const rows = await tx.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
+      if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+      const metadata = buildShiftUpdateMetadata(
+        shiftAuditSnapshot(before[0]!),
+        shiftAuditSnapshot(rows[0]!),
+      );
+      if (metadata) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftUpdated,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: rows[0].assignedStaffId,
+            entityId: id,
+            metadata,
+          },
+          tx,
+        );
+      }
+
+      const scheduleChanged =
+        (dto.shiftDate !== undefined && dto.shiftDate !== String(before[0].shiftDate)) ||
+        (dto.startTime !== undefined && dto.startTime !== String(before[0].startTime));
+
+      if (scheduleChanged && rows[0].status === 'filled' && rows[0].assignedStaffId) {
         scheduledReminderIds = await this.shiftReminders.rescheduleFilledShift(
           {
             shiftId: id,
@@ -176,11 +227,16 @@ export class ShiftsService {
           },
           tx,
         );
-      });
+      }
+
+      return rows[0];
+    });
+
+    if (scheduledReminderIds.length > 0) {
       await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
     }
 
-    return rows[0];
+    return row;
   }
 
   async remove(id: string) {
@@ -191,7 +247,11 @@ export class ShiftsService {
 
   async assign(id: string, staffId: string, actorUserId: string): Promise<ShiftAssignResponse> {
     const existing = await this.db
-      .select({ assignedStaffId: shifts.assignedStaffId, shiftDate: shifts.shiftDate })
+      .select({
+        assignedStaffId: shifts.assignedStaffId,
+        shiftDate: shifts.shiftDate,
+        centreId: shifts.centreId,
+      })
       .from(shifts)
       .where(eq(shifts.id, id));
     if (!existing[0]) throw new NotFoundException('Shift not found.');
@@ -204,6 +264,7 @@ export class ShiftsService {
       };
     }
 
+    const previousStaffId = existing[0].assignedStaffId;
     let assignmentChanged = false;
     let scheduledReminderIds: string[] = [];
 
@@ -211,7 +272,7 @@ export class ShiftsService {
       await acquireShiftStaffDateAdvisoryLock(tx, staffId, existing[0].shiftDate);
 
       const locked = await tx
-        .select({ assignedStaffId: shifts.assignedStaffId })
+        .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId })
         .from(shifts)
         .where(eq(shifts.id, id))
         .for('update');
@@ -232,10 +293,32 @@ export class ShiftsService {
         .update(shifts)
         .set({ assignedStaffId: staffId, status: 'filled', updatedAt: new Date() })
         .where(and(eq(shifts.id, id), sql`${shifts.assignedStaffId} IS DISTINCT FROM ${staffId}`))
-        .returning({ id: shifts.id, shiftDate: shifts.shiftDate, startTime: shifts.startTime });
+        .returning({ id: shifts.id, shiftDate: shifts.shiftDate, startTime: shifts.startTime, centreId: shifts.centreId });
 
       if (updated[0]) {
         assignmentChanged = true;
+        const action = assignmentAuditAction(previousStaffId, staffId);
+        if (action) {
+          await this.platformAudit.record(
+            {
+              action,
+              actorType: 'ops_user',
+              actorUserId,
+              shiftId: id,
+              centreId: updated[0].centreId,
+              staffId,
+              entityId: id,
+              metadata: {
+                previousStaffId: previousStaffId ?? undefined,
+                newStaffId: staffId,
+                assignedStaffId: staffId,
+                shiftDate: String(updated[0].shiftDate),
+              },
+            },
+            tx,
+          );
+        }
+
         scheduledReminderIds = await this.shiftReminders.scheduleForFilledShift(
           {
             shiftId: id,
@@ -297,34 +380,104 @@ export class ShiftsService {
     return { notifications };
   }
 
-  async unassign(id: string) {
+  async unassign(id: string, actorUserId: string) {
+    const existing = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!existing[0]) throw new NotFoundException('Shift not found.');
+
     await this.shiftReminders.cancelPendingForShift(id);
-    const rows = await this.db
-      .update(shifts)
-      .set({ assignedStaffId: null, status: 'pending', updatedAt: new Date() })
-      .where(eq(shifts.id, id))
-      .returning();
-    if (!rows[0]) throw new NotFoundException('Shift not found.');
-    return rows[0];
+
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .update(shifts)
+        .set({ assignedStaffId: null, status: 'pending', updatedAt: new Date() })
+        .where(eq(shifts.id, id))
+        .returning();
+      if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+      if (existing[0].assignedStaffId) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftUnassigned,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: existing[0].assignedStaffId,
+            entityId: id,
+            metadata: {
+              previousStaffId: existing[0].assignedStaffId,
+            },
+          },
+          tx,
+        );
+      }
+
+      return rows[0];
+    });
   }
 
-  async changeStatus(id: string, dto: ChangeStatusDto) {
+  async changeStatus(id: string, dto: ChangeStatusDto, actorUserId: string) {
     if (dto.status === 'cancelled') {
-      return this.transitionToCancelled(id, dto.cancellationReason);
+      return this.transitionToCancelled(id, dto.cancellationReason, actorUserId);
     }
 
     if (dto.status === 'completed' || dto.status === 'pending') {
       await this.shiftReminders.cancelPendingForShift(id);
     }
 
-    const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
-    if (dto.status === 'pending') patch.assignedStaffId = null;
-    const rows = await this.db.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
-    if (!rows[0]) throw new NotFoundException('Shift not found.');
-    return rows[0];
+    const existing = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId, status: shifts.status })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!existing[0]) throw new NotFoundException('Shift not found.');
+
+    return this.db.transaction(async (tx) => {
+      const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
+      if (dto.status === 'pending') patch.assignedStaffId = null;
+      const rows = await tx.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
+      if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+      if (dto.status === 'completed') {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftCompletedManual,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: rows[0].assignedStaffId,
+            entityId: id,
+          },
+          tx,
+        );
+      } else if (dto.status === 'pending' && existing[0].assignedStaffId) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftUnassigned,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: existing[0].assignedStaffId,
+            entityId: id,
+            metadata: { previousStaffId: existing[0].assignedStaffId },
+          },
+          tx,
+        );
+      }
+
+      return rows[0];
+    });
   }
 
-  private async transitionToCancelled(id: string, cancellationReason?: string) {
+  private async transitionToCancelled(
+    id: string,
+    cancellationReason: string | undefined,
+    actorUserId: string,
+  ) {
     let scheduledCancellationIds: string[] = [];
 
     const row = await this.db.transaction(async (tx) => {
@@ -361,6 +514,22 @@ export class ShiftsService {
 
       const cancelled = updated[0];
       if (!cancelled) throw new NotFoundException('Shift not found.');
+
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.shiftCancelled,
+          actorType: 'ops_user',
+          actorUserId,
+          shiftId: id,
+          centreId: cancelled.centreId,
+          staffId: cancelled.assignedStaffId,
+          entityId: id,
+          metadata: {
+            cancellationReasonPreview: cancellationReasonPreview(cancellationReason),
+          },
+        },
+        tx,
+      );
 
       await this.shiftReminders.cancelPendingForShift(id, tx);
 
@@ -448,19 +617,38 @@ export class ShiftsService {
 
   // Cron target: complete filled shifts whose end datetime has passed.
   async autoCompletePastShifts(): Promise<number> {
-    const result = await this.db
-      .update(shifts)
-      .set({ status: 'completed', updatedAt: new Date() })
-      .where(
-        and(
-          eq(shifts.status, 'filled'),
-          sql`(${shifts.shiftDate} + ${shifts.endTime}) <= now()`,
-        ),
-      )
-      .returning({ id: shifts.id });
-    for (const row of result) {
-      await this.shiftReminders.cancelPendingForShift(row.id);
-    }
-    return result.length;
+    return this.db.transaction(async (tx) => {
+      const result = await tx
+        .update(shifts)
+        .set({ status: 'completed', updatedAt: new Date() })
+        .where(
+          and(
+            eq(shifts.status, 'filled'),
+            sql`(${shifts.shiftDate} + ${shifts.endTime}) <= now()`,
+          ),
+        )
+        .returning({
+          id: shifts.id,
+          centreId: shifts.centreId,
+          assignedStaffId: shifts.assignedStaffId,
+        });
+
+      for (const row of result) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftCompletedAuto,
+            actorType: 'system',
+            shiftId: row.id,
+            centreId: row.centreId,
+            staffId: row.assignedStaffId,
+            entityId: row.id,
+          },
+          tx,
+        );
+        await this.shiftReminders.cancelPendingForShift(row.id, tx);
+      }
+
+      return result.length;
+    });
   }
 }

@@ -51,6 +51,7 @@ import { Route as AuthenticatedReportsStaffUsageRouteImport } from './routes/_au
 import { Route as AuthenticatedReportsShiftFulfillmentRouteImport } from './routes/_authenticated/reports.shift-fulfillment'
 import { Route as AuthenticatedReportsDocumentsRouteImport } from './routes/_authenticated/reports.documents'
 import { Route as AuthenticatedReportsCentreUsageRouteImport } from './routes/_authenticated/reports.centre-usage'
+import { Route as AuthenticatedReportsActivityRouteImport } from './routes/_authenticated/reports.activity'
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
@@ -275,6 +276,12 @@ const AuthenticatedReportsCentreUsageRoute =
     path: '/centre-usage',
     getParentRoute: () => AuthenticatedReportsRoute,
   } as any)
+const AuthenticatedReportsActivityRoute =
+  AuthenticatedReportsActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AuthenticatedReportsRoute,
+  } as any)
 const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -310,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
@@ -348,6 +356,7 @@ export interface FileRoutesByTo {
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
@@ -395,6 +404,7 @@ export interface FileRoutesById {
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/_authenticated/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/_authenticated/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/_authenticated/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/carer/'
     | '/centres/$id'
     | '/centres/new'
+    | '/reports/activity'
     | '/reports/centre-usage'
     | '/reports/documents'
     | '/reports/shift-fulfillment'
@@ -480,6 +491,7 @@ export interface FileRouteTypes {
     | '/carer'
     | '/centres/$id'
     | '/centres/new'
+    | '/reports/activity'
     | '/reports/centre-usage'
     | '/reports/documents'
     | '/reports/shift-fulfillment'
@@ -526,6 +538,7 @@ export interface FileRouteTypes {
     | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
+    | '/_authenticated/reports/activity'
     | '/_authenticated/reports/centre-usage'
     | '/_authenticated/reports/documents'
     | '/_authenticated/reports/shift-fulfillment'
@@ -852,6 +865,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsCentreUsageRouteImport
       parentRoute: typeof AuthenticatedReportsRoute
     }
+    '/_authenticated/reports/activity': {
+      id: '/_authenticated/reports/activity'
+      path: '/activity'
+      fullPath: '/reports/activity'
+      preLoaderRoute: typeof AuthenticatedReportsActivityRouteImport
+      parentRoute: typeof AuthenticatedReportsRoute
+    }
     '/_authenticated/centres/new': {
       id: '/_authenticated/centres/new'
       path: '/new'
@@ -885,6 +905,7 @@ const AuthenticatedCentresRouteWithChildren =
   AuthenticatedCentresRoute._addFileChildren(AuthenticatedCentresRouteChildren)
 
 interface AuthenticatedReportsRouteChildren {
+  AuthenticatedReportsActivityRoute: typeof AuthenticatedReportsActivityRoute
   AuthenticatedReportsCentreUsageRoute: typeof AuthenticatedReportsCentreUsageRoute
   AuthenticatedReportsDocumentsRoute: typeof AuthenticatedReportsDocumentsRoute
   AuthenticatedReportsShiftFulfillmentRoute: typeof AuthenticatedReportsShiftFulfillmentRoute
@@ -893,6 +914,7 @@ interface AuthenticatedReportsRouteChildren {
 }
 
 const AuthenticatedReportsRouteChildren: AuthenticatedReportsRouteChildren = {
+  AuthenticatedReportsActivityRoute: AuthenticatedReportsActivityRoute,
   AuthenticatedReportsCentreUsageRoute: AuthenticatedReportsCentreUsageRoute,
   AuthenticatedReportsDocumentsRoute: AuthenticatedReportsDocumentsRoute,
   AuthenticatedReportsShiftFulfillmentRoute:

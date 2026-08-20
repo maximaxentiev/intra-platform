@@ -59,13 +59,17 @@ export class StaffController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpsertStaffDto) {
-    return this.staff.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpsertStaffDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.staff.update(id, dto, user.userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.staff.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.staff.remove(id, user.userId);
   }
 
   @Post(':id/portal-invitations')

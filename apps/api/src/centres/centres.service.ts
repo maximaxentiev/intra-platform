@@ -16,12 +16,20 @@ import {
   UpsertContactDto,
 } from './dto/centres.dto';
 import { assertCityForCreate, assertCityForUpdate } from '../common/city-validation';
+import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
+import {
+  PlatformAuditService,
+  buildFieldChanges,
+} from '../platform-audit/platform-audit.service';
 
 type Channel = 'whatsapp' | 'goto' | 'email';
 
 @Injectable()
 export class CentresService {
-  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: Database,
+    private readonly platformAudit: PlatformAuditService,
+  ) {}
 
   // List with the primary (lowest sort_order) contact name for the directory.
   async list() {
@@ -48,23 +56,37 @@ export class CentresService {
     return rows[0];
   }
 
-  async create(dto: UpsertCentreDto) {
+  async create(dto: UpsertCentreDto, actorUserId: string) {
     const city = dto.city?.trim() ? assertCityForCreate(dto.city) : '';
-    const rows = await this.db
-      .insert(centres)
-      .values({
-        name: dto.name,
-        address: dto.address ?? '',
-        city,
-        hourlyRate: dto.hourlyRate ?? null,
-        primaryChannel: dto.primaryChannel,
-        notes: dto.notes ?? '',
-      })
-      .returning();
-    return rows[0];
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .insert(centres)
+        .values({
+          name: dto.name,
+          address: dto.address ?? '',
+          city,
+          hourlyRate: dto.hourlyRate ?? null,
+          primaryChannel: dto.primaryChannel,
+          notes: dto.notes ?? '',
+        })
+        .returning();
+      const created = rows[0]!;
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.centreCreated,
+          actorType: 'ops_user',
+          actorUserId,
+          centreId: created.id,
+          entityId: created.id,
+          metadata: { name: created.name },
+        },
+        tx,
+      );
+      return created;
+    });
   }
 
-  async update(id: string, dto: UpsertCentreDto) {
+  async update(id: string, dto: UpsertCentreDto, actorUserId: string) {
     const existing = await this.get(id);
     let city = dto.city ?? '';
     if (dto.city !== undefined && dto.city.trim()) {
@@ -73,25 +95,72 @@ export class CentresService {
       city = '';
     }
 
-    const rows = await this.db
-      .update(centres)
-      .set({
-        name: dto.name,
-        address: dto.address ?? '',
-        city,
-        hourlyRate: dto.hourlyRate ?? null,
-        primaryChannel: dto.primaryChannel,
-        notes: dto.notes ?? '',
-        updatedAt: new Date(),
-      })
-      .where(eq(centres.id, id))
-      .returning();
-    if (!rows[0]) throw new NotFoundException('Centre not found.');
+    const rows = await this.db.transaction(async (tx) => {
+      const updatedRows = await tx
+        .update(centres)
+        .set({
+          name: dto.name,
+          address: dto.address ?? '',
+          city,
+          hourlyRate: dto.hourlyRate ?? null,
+          primaryChannel: dto.primaryChannel,
+          notes: dto.notes ?? '',
+          updatedAt: new Date(),
+        })
+        .where(eq(centres.id, id))
+        .returning();
+      if (!updatedRows[0]) throw new NotFoundException('Centre not found.');
+
+      const changes = buildFieldChanges(
+        {
+          name: existing.name,
+          address: existing.address,
+          city: existing.city,
+          primaryChannel: existing.primaryChannel,
+        },
+        {
+          name: updatedRows[0].name,
+          address: updatedRows[0].address,
+          city: updatedRows[0].city,
+          primaryChannel: updatedRows[0].primaryChannel,
+        },
+        ['name', 'address', 'city', 'primaryChannel'],
+      );
+      if (changes) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.centreUpdated,
+            actorType: 'ops_user',
+            actorUserId,
+            centreId: id,
+            entityId: id,
+            metadata: { changes },
+          },
+          tx,
+        );
+      }
+
+      return updatedRows;
+    });
     return rows[0];
   }
 
-  async remove(id: string) {
-    await this.db.delete(centres).where(eq(centres.id, id));
+  async remove(id: string, actorUserId: string) {
+    const existing = await this.get(id);
+    await this.db.transaction(async (tx) => {
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.centreDeleted,
+          actorType: 'ops_user',
+          actorUserId,
+          centreId: id,
+          entityId: id,
+          metadata: { name: existing.name },
+        },
+        tx,
+      );
+      await tx.delete(centres).where(eq(centres.id, id));
+    });
     return { ok: true };
   }
 

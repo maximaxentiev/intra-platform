@@ -49,6 +49,19 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
     db = drizzle(pool, { schema });
     service = new ReportsStaffService(db, new ReportsService(db));
 
+    await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centre));
+    await db
+      .delete(staff)
+      .where(
+        inArray(staff.id, [
+          FIXTURE.staffA,
+          FIXTURE.staffB,
+          FIXTURE.staffC,
+          FIXTURE.staffInactive,
+        ]),
+      );
+    await db.delete(centres).where(eq(centres.id, FIXTURE.centre));
+
     await db.insert(centres).values({
       id: FIXTURE.centre,
       name: 'Staff Usage Centre',

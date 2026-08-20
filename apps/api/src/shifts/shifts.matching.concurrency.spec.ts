@@ -26,6 +26,8 @@ import { ShiftAssignmentNotificationsService } from './shift-assignment-notifica
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
+import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
+import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -186,6 +188,7 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 10 });
     db = drizzle(pool, { schema, casing: 'snake_case' });
+    await ensurePlatformAuditTable(pool);
 
     const email = new EmailService({
       get: (key: string) => {
@@ -215,6 +218,7 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
       new ShiftMatchingService(db),
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      new PlatformAuditService(db),
     );
 
     await db.delete(users).where(eq(users.id, OPS_USER_ID));

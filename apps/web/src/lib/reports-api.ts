@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import type {
+  ActivityLogResponse,
   CentreUsageResponse,
   DocumentComplianceResponse,
   ShiftFulfillmentResponse,
@@ -46,4 +47,16 @@ export const reportsApi = {
     page?: number;
     pageSize?: number;
   }) => api.get<DocumentComplianceResponse>("/reports/documents", query),
+
+  activityLog: (query?: {
+    dateFrom?: string;
+    dateTo?: string;
+    category?: string;
+    actorType?: string;
+    staffId?: string;
+    centreId?: string;
+    shiftId?: string;
+    page?: number;
+    pageSize?: number;
+  }) => api.get<ActivityLogResponse>("/reports/activity", query),
 };

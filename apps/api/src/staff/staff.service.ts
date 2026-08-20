@@ -29,6 +29,8 @@ import {
   staffPortalAuditBlocksDeletion,
 } from '../staff-portal/staff-portal-audit.service';
 import { StaffDocumentsService } from '../staff-documents/staff-documents.service';
+import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
+import { PlatformAuditService, buildFieldChanges } from '../platform-audit/platform-audit.service';
 
 @Injectable()
 export class StaffService {
@@ -36,6 +38,7 @@ export class StaffService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly portalAudit: StaffPortalAuditService,
     private readonly staffDocuments: StaffDocumentsService,
+    private readonly platformAudit: PlatformAuditService,
   ) {}
 
   async list() {
@@ -200,7 +203,7 @@ export class StaffService {
     return rows[0];
   }
 
-  async update(id: string, dto: UpsertStaffDto) {
+  async update(id: string, dto: UpsertStaffDto, actorUserId: string) {
     const existing = (
       await this.db.select().from(staff).where(eq(staff.id, id))
     )[0];
@@ -211,16 +214,48 @@ export class StaffService {
       values.city = assertCityForUpdate(values.city, existing.city);
     }
 
-    const rows = await this.db
-      .update(staff)
-      .set({ ...values, updatedAt: new Date() })
-      .where(eq(staff.id, id))
-      .returning();
-    if (!rows[0]) throw new NotFoundException('Staff not found.');
-    return rows[0];
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .update(staff)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(staff.id, id))
+        .returning();
+      if (!rows[0]) throw new NotFoundException('Staff not found.');
+
+      const changes = buildFieldChanges(
+        {
+          legalName: existing.legalName,
+          role: existing.role,
+          status: existing.status,
+          email: existing.email,
+        },
+        {
+          legalName: rows[0].legalName,
+          role: rows[0].role,
+          status: rows[0].status,
+          email: rows[0].email,
+        },
+        ['legalName', 'role', 'status', 'email'],
+      );
+      if (changes) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.staffUpdated,
+            actorType: 'ops_user',
+            actorUserId,
+            staffId: id,
+            entityId: id,
+            metadata: { changes },
+          },
+          tx,
+        );
+      }
+
+      return rows[0];
+    });
   }
 
-  async remove(id: string) {
+  async remove(id: string, actorUserId: string) {
     const account = (
       await this.db.select().from(staffAccounts).where(eq(staffAccounts.staffId, id))
     )[0];
@@ -243,7 +278,20 @@ export class StaffService {
       );
     }
 
-    await this.db.delete(staff).where(eq(staff.id, id));
+    await this.db.transaction(async (tx) => {
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.staffDeleted,
+          actorType: 'ops_user',
+          actorUserId,
+          staffId: id,
+          entityId: id,
+          metadata: { name: (await tx.select({ legalName: staff.legalName }).from(staff).where(eq(staff.id, id)))[0]?.legalName },
+        },
+        tx,
+      );
+      await tx.delete(staff).where(eq(staff.id, id));
+    });
     return { ok: true };
   }
 

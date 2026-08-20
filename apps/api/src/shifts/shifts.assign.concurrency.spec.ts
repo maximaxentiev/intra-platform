@@ -20,6 +20,8 @@ import { ShiftAssignmentNotificationsService } from './shift-assignment-notifica
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
+import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
+import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ShiftsService } from './shifts.service';
 import {
   availability,
@@ -61,6 +63,7 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 10 });
     db = drizzle(pool, { schema, casing: 'snake_case' });
+    await ensurePlatformAuditTable(pool);
 
     await pool.query(`
       CREATE TYPE IF NOT EXISTS shift_assignment_notification_recipient_type AS ENUM ('centre', 'carer');
@@ -119,6 +122,7 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       new ShiftMatchingService(db),
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
+      new PlatformAuditService(db),
     );
 
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
