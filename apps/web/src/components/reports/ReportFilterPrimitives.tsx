@@ -105,6 +105,102 @@ type ReportMoreFiltersSectionProps = {
   children: React.ReactNode;
 };
 
+export function ReportFilterSectionHeading({ children }: { children: React.ReactNode }) {
+  return <h4 className="col-span-full text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</h4>;
+}
+
+type ReportCheckboxFilterGroupProps = {
+  legend: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  values: string[];
+  onToggle: (value: string, checked: boolean) => void;
+  optionalNotSubmittedLabel?: string;
+};
+
+export function ReportCheckboxFilterGroup({
+  legend,
+  options,
+  values,
+  onToggle,
+  optionalNotSubmittedLabel,
+}: ReportCheckboxFilterGroupProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-medium text-muted-foreground">{legend}</legend>
+      <div className="flex flex-col gap-2">
+        {options.map((option) => (
+          <label key={option.value} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border border-input"
+              checked={values.includes(option.value)}
+              onChange={(event) => onToggle(option.value, event.target.checked)}
+              aria-label={`${legend}: ${option.label}`}
+            />
+            <span>
+              {optionalNotSubmittedLabel && option.value === "not_submitted"
+                ? optionalNotSubmittedLabel
+                : option.label}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+type ReportDateRangeFieldsProps = {
+  label: string;
+  fromId: string;
+  toId: string;
+  fromValue: string;
+  toValue: string;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+};
+
+export function ReportDateRangeFields({
+  label,
+  fromId,
+  toId,
+  fromValue,
+  toValue,
+  onFromChange,
+  onToChange,
+}: ReportDateRangeFieldsProps) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor={fromId} className="text-xs text-muted-foreground">
+            From
+          </Label>
+          <Input
+            id={fromId}
+            type="date"
+            value={fromValue}
+            onChange={(event) => onFromChange(event.target.value)}
+            className="h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={toId} className="text-xs text-muted-foreground">
+            To
+          </Label>
+          <Input
+            id={toId}
+            type="date"
+            value={toValue}
+            onChange={(event) => onToChange(event.target.value)}
+            className="h-9"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ReportMoreFiltersSection({
   open,
   onOpenChange,

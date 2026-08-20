@@ -28,15 +28,24 @@ import {
 import { staffApi } from "@/lib/db";
 import { formatDocumentDate } from "@/lib/carer-documents";
 import { formatOpsDateTimeToronto } from "@/lib/ops-report-formatters";
+import {
+  buildDocumentComplianceFilterChips,
+  clearAdvancedDocumentComplianceFilters,
+  documentComplianceFiltersToApiQuery,
+  documentComplianceFiltersToSearchParams,
+  EMPTY_DOCUMENT_COMPLIANCE_FILTERS,
+  isAdvancedDocumentComplianceFilterActive,
+  parseDocumentComplianceFiltersFromSearch,
+  validateDocumentComplianceDateRanges,
+  type DocumentComplianceFilterState,
+} from "@/lib/report-document-filters";
 import { reportsApi } from "@/lib/reports-api";
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
   type ReportComparisonPageSize,
 } from "@/lib/report-pagination-labels";
-import {
-  CARER_DOCUMENT_CATEGORY_META,
-} from "@/lib/carer-documents";
+import { CARER_DOCUMENT_CATEGORY_META } from "@/lib/carer-documents";
 import {
   DOCUMENT_MATRIX_COLUMNS,
   documentReminderStatusLabel,
@@ -56,14 +65,30 @@ import type {
   DocumentReportFirstAidCategory,
 } from "@/lib/reports-types";
 
-const searchSchema = z.object({
+const filterSearchFields = {
   staffIds: z.string().optional(),
   staffId: z.string().optional(),
   status: z.string().optional(),
   documentType: z.string().optional(),
+  overallCompliance: z.string().optional(),
+  roles: z.string().optional(),
+  staffStatuses: z.string().optional(),
+  vscStatuses: z.string().optional(),
+  firstAidStatuses: z.string().optional(),
+  immunizationsStatuses: z.string().optional(),
+  covidStatuses: z.string().optional(),
+  vscRenewalDueFrom: z.string().optional(),
+  vscRenewalDueTo: z.string().optional(),
+  firstAidExpiryFrom: z.string().optional(),
+  firstAidExpiryTo: z.string().optional(),
+  vscReminderStatuses: z.string().optional(),
+  firstAidReminderStatuses: z.string().optional(),
+  upcomingReminder: z.string().optional(),
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
-});
+};
+
+const searchSchema = z.object(filterSearchFields);
 
 export const Route = createFileRoute("/_authenticated/reports/documents")({
   validateSearch: (search) => searchSchema.parse(search),
@@ -210,21 +235,24 @@ function DocumentComplianceReport() {
   const navigate = Route.useNavigate();
 
   const appliedSelection = useMemo(() => resolveAppliedStaffSelection(search), [search]);
+  const appliedFilters = useMemo(
+    () => parseDocumentComplianceFiltersFromSearch(search),
+    [search],
+  );
 
   const applied = useMemo(
     () => ({
       selection: appliedSelection,
-      status: search.status?.trim() || "",
-      documentType: search.documentType?.trim() || "",
+      filters: appliedFilters,
       page: search.page && search.page > 0 ? search.page : 1,
       pageSize: resolveReportComparisonPageSize(search.pageSize),
     }),
-    [search, appliedSelection],
+    [search, appliedSelection, appliedFilters],
   );
 
   const [selection, setSelection] = useState<StaffSelectionState>(applied.selection);
-  const [status, setStatus] = useState(applied.status);
-  const [documentType, setDocumentType] = useState(applied.documentType);
+  const [filters, setFilters] = useState<DocumentComplianceFilterState>(applied.filters);
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
 
   const staffQ = useQuery({
     queryKey: ["staff-list"],
@@ -236,16 +264,14 @@ function DocumentComplianceReport() {
       "reports-documents",
       applied.selection.mode,
       applied.selection.staffIds.join(","),
-      applied.status,
-      applied.documentType,
+      JSON.stringify(applied.filters),
       applied.page,
       applied.pageSize,
     ],
     queryFn: () =>
       reportsApi.documentCompliance({
         ...staffSelectionToApiQuery(applied.selection),
-        status: applied.status || undefined,
-        documentType: applied.documentType || undefined,
+        ...documentComplianceFiltersToApiQuery(applied.filters),
         page: applied.page,
         pageSize: applied.pageSize,
       }),
@@ -256,38 +282,70 @@ function DocumentComplianceReport() {
   const summary = reportQ.data?.summary;
   const items = reportQ.data?.items ?? [];
   const reportReady = !reportQ.isLoading && summary != null;
-  const emptyFiltered = reportReady && items.length === 0;
+  const filteredOutSingleStaff =
+    singleStaffSelected && reportReady && items.length === 0 && (summary?.staffShown ?? 0) === 0;
+  const emptyFiltered = reportReady && items.length === 0 && !filteredOutSingleStaff;
 
-  function buildSearch(page: number, pageSize: ReportComparisonPageSize) {
+  function buildSearch(
+    page: number,
+    pageSize: ReportComparisonPageSize,
+    nextFilters: DocumentComplianceFilterState = filters,
+  ) {
     return {
       ...staffSelectionToSearchParams(selection),
-      status: status && status !== "all" ? status : undefined,
-      documentType: documentType && documentType !== "all" ? documentType : undefined,
+      ...documentComplianceFiltersToSearchParams(nextFilters),
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
     };
   }
 
-  function applyFilters(nextPage = 1) {
-    navigate({ search: buildSearch(nextPage, applied.pageSize) });
+  function applyFilters() {
+    const validationError = validateDocumentComplianceDateRanges(filters);
+    setDateValidationError(validationError);
+    if (validationError) return;
+    navigate({ search: buildSearch(1, applied.pageSize) });
   }
 
   function resetFilters() {
     setSelection({ mode: "all", staffIds: [] });
-    setStatus("");
-    setDocumentType("");
+    setFilters(EMPTY_DOCUMENT_COMPLIANCE_FILTERS);
+    setDateValidationError(null);
     navigate({ search: {} });
+  }
+
+  function clearAdvancedFilters() {
+    const nextFilters = clearAdvancedDocumentComplianceFilters(applied.filters);
+    setFilters(nextFilters);
+    setDateValidationError(validateDocumentComplianceDateRanges(nextFilters));
+    navigate({ search: buildSearch(1, applied.pageSize, nextFilters) });
   }
 
   function viewStaffDetails(staffId: string) {
     navigate({
       search: {
         staffIds: staffId,
-        status: applied.status || undefined,
-        documentType: applied.documentType || undefined,
+        ...documentComplianceFiltersToSearchParams(applied.filters),
+        page: undefined,
+        pageSize: applied.pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : applied.pageSize,
       },
     });
   }
+
+  const chipDefs = buildDocumentComplianceFilterChips(applied.filters);
+  const activeFilterChips = chipDefs.map((chip) => ({
+    id: chip.id,
+    label: chip.label,
+    onRemove: () => {
+      const nextFilters = chip.clear(applied.filters);
+      setFilters(nextFilters);
+      setDateValidationError(validateDocumentComplianceDateRanges(nextFilters));
+      navigate({
+        search: buildSearch(1, applied.pageSize, nextFilters),
+      });
+    },
+  }));
+
+  const hasAdvancedFilters = isAdvancedDocumentComplianceFilterActive(applied.filters);
 
   return (
     <div className="space-y-6">
@@ -308,13 +366,17 @@ function DocumentComplianceReport() {
       <DocumentComplianceFilters
         staffMembers={staffQ.data ?? []}
         selection={selection}
-        status={status}
-        documentType={documentType}
+        filters={filters}
+        dateValidationError={dateValidationError}
+        activeFilterChips={activeFilterChips}
         onSelectionChange={setSelection}
-        onStatusChange={setStatus}
-        onDocumentTypeChange={setDocumentType}
-        onApply={() => applyFilters(1)}
+        onFiltersChange={(next) => {
+          setFilters(next);
+          setDateValidationError(validateDocumentComplianceDateRanges(next));
+        }}
+        onApply={applyFilters}
         onReset={resetFilters}
+        onClearAdvanced={hasAdvancedFilters ? clearAdvancedFilters : undefined}
       />
 
       {reportQ.isError && (
@@ -329,6 +391,14 @@ function DocumentComplianceReport() {
         <DocumentComplianceSummarySkeleton />
       ) : (
         <DocumentComplianceSummaryCards summary={summary} loading={false} ready={reportReady} />
+      )}
+
+      {filteredOutSingleStaff && (
+        <Card className="border-dashed">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            The selected Staff member does not match the current filters.
+          </CardContent>
+        </Card>
       )}
 
       {emptyFiltered && (
@@ -362,107 +432,107 @@ function DocumentComplianceReport() {
           />
 
           {items.length > 0 && (
-          <>
-          <div className="hidden lg:block">
-            <Card className="border-border/70 shadow-xs overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Overall</TableHead>
-                    {DOCUMENT_MATRIX_COLUMNS.map((column) => (
-                      <TableHead key={column.key}>{column.label}</TableHead>
-                    ))}
-                    <TableHead className="text-right">Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((row) => (
-                    <TableRow key={row.staffId}>
-                      <TableCell>
-                        <div className="font-medium">{row.staffName}</div>
-                        <div className="text-xs text-muted-foreground">{row.role}</div>
-                      </TableCell>
-                      <TableCell>
+            <>
+              <div className="hidden lg:block">
+                <Card className="border-border/70 shadow-xs overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff</TableHead>
+                        <TableHead>Overall</TableHead>
+                        {DOCUMENT_MATRIX_COLUMNS.map((column) => (
+                          <TableHead key={column.key}>{column.label}</TableHead>
+                        ))}
+                        <TableHead className="text-right">Details</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((row) => (
+                        <TableRow key={row.staffId}>
+                          <TableCell>
+                            <div className="font-medium">{row.staffName}</div>
+                            <div className="text-xs text-muted-foreground">{row.role}</div>
+                          </TableCell>
+                          <TableCell>
+                            <OverallComplianceBadge status={row.overallComplianceStatus} />
+                          </TableCell>
+                          {DOCUMENT_MATRIX_COLUMNS.map((column) => {
+                            const doc = row.documents[column.key];
+                            const expiry = compactExpiryLabel(column.key, doc);
+                            return (
+                              <TableCell key={column.key}>
+                                <div className="space-y-1">
+                                  <DocumentReportStatusBadge
+                                    status={doc.status}
+                                    optional={
+                                      column.key === "covid19Vaccination" ? true : undefined
+                                    }
+                                  />
+                                  {expiry ? (
+                                    <div className="text-xs text-muted-foreground">{expiry}</div>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0"
+                              onClick={() => viewStaffDetails(row.staffId)}
+                            >
+                              View details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+
+              <div className="space-y-3 lg:hidden">
+                {items.map((row) => (
+                  <Card key={row.staffId} className="border-border/70 shadow-xs">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium">{row.staffName}</div>
+                          <div className="text-sm text-muted-foreground">Role: {row.role}</div>
+                        </div>
                         <OverallComplianceBadge status={row.overallComplianceStatus} />
-                      </TableCell>
-                      {DOCUMENT_MATRIX_COLUMNS.map((column) => {
-                        const doc = row.documents[column.key];
-                        const expiry = compactExpiryLabel(column.key, doc);
-                        return (
-                          <TableCell key={column.key}>
-                            <div className="space-y-1">
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {DOCUMENT_MATRIX_COLUMNS.map((column) => {
+                          const doc = row.documents[column.key];
+                          return (
+                            <div key={column.key} className="flex flex-wrap items-center gap-2">
+                              <span className="min-w-24 text-muted-foreground">{column.label}</span>
                               <DocumentReportStatusBadge
                                 status={doc.status}
                                 optional={
                                   column.key === "covid19Vaccination" ? true : undefined
                                 }
                               />
-                              {expiry ? (
-                                <div className="text-xs text-muted-foreground">{expiry}</div>
-                              ) : null}
                             </div>
-                          </TableCell>
-                        );
-                      })}
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0"
-                          onClick={() => viewStaffDetails(row.staffId)}
-                        >
-                          View details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          </div>
-
-          <div className="space-y-3 lg:hidden">
-            {items.map((row) => (
-              <Card key={row.staffId} className="border-border/70 shadow-xs">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium">{row.staffName}</div>
-                      <div className="text-sm text-muted-foreground">Role: {row.role}</div>
-                    </div>
-                    <OverallComplianceBadge status={row.overallComplianceStatus} />
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    {DOCUMENT_MATRIX_COLUMNS.map((column) => {
-                      const doc = row.documents[column.key];
-                      return (
-                        <div key={column.key} className="flex flex-wrap items-center gap-2">
-                          <span className="min-w-24 text-muted-foreground">{column.label}</span>
-                          <DocumentReportStatusBadge
-                            status={doc.status}
-                            optional={
-                              column.key === "covid19Vaccination" ? true : undefined
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewStaffDetails(row.staffId)}
-                  >
-                    View details
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          </>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewStaffDetails(row.staffId)}
+                      >
+                        View details
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
 
           <ReportPagination

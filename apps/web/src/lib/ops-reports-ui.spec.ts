@@ -136,12 +136,26 @@ describe("ops reports UI source", () => {
     expect(landing).toContain("available: true");
   });
 
-  it("document compliance page includes filters, summary cards, and mobile layout", () => {
+  it("document compliance page includes advanced filters, summary cards, and mobile layout", () => {
     const page = readSrc("routes/_authenticated/reports.documents.tsx");
     const filters = readSrc("components/reports/DocumentComplianceFilters.tsx");
+    const filterLib = readSrc("lib/report-document-filters.ts");
     const summaryCards = readSrc("components/reports/DocumentComplianceSummaryCards.tsx");
     expect(filters).toContain("ReportStaffMultiSelect");
-    expect(filters).toContain("document-report-status");
+    expect(filters).toContain("Overall Compliance");
+    expect(filters).toContain("ReportMoreFiltersSection");
+    expect(filters).toContain("VSC Renewal Due");
+    expect(filters).toContain("First Aid Expiry");
+    expect(filters).toContain("Upcoming Reminder");
+    expect(filterLib).toContain("vscStatuses");
+    expect(filterLib).toContain("overallCompliance");
+    expect(filterLib).toContain("upcomingReminder");
+    expect(page).toContain("parseDocumentComplianceFiltersFromSearch");
+    expect(page).toContain("documentComplianceFiltersToApiQuery");
+    expect(page).toContain("buildDocumentComplianceFilterChips");
+    expect(filters).toContain("ReportActiveFilterChips");
+    expect(page).toContain("The selected Staff member does not match the current filters");
+    expect(page).toContain("ReportPagination");
     expect(summaryCards).toContain("Staff Shown");
     expect(summaryCards).toContain("Issue Flagged");
     expect(page).toContain("staffIds");
@@ -153,6 +167,7 @@ describe("ops reports UI source", () => {
     const labels = readSrc("lib/reports-document-labels.ts");
     expect(labels).toContain("Optional — Not Submitted");
     expect(page).not.toMatch(/Reminders enabled|Reminders disabled|3-year|Actual Hours|Payroll Hours/i);
+    expect(filters).not.toContain("document-report-status");
   });
 
   it("activity log page includes coverage notice, compact rows, and dual pagination", () => {
