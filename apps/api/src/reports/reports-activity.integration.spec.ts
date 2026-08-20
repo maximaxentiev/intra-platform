@@ -284,4 +284,60 @@ describe.skipIf(!POSTGRES_READY)('Reports activity PostgreSQL integration', () =
     expect(result.dateFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(result.dateTo).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+
+  it('defaults to pageSize 10 when omitted', async () => {
+    const result = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+    });
+    expect(result.pageSize).toBe(10);
+    expect(result.page).toBe(1);
+  });
+
+  it('accepts pageSize 25 and 50', async () => {
+    const page25 = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      pageSize: 25,
+    });
+    expect(page25.pageSize).toBe(25);
+
+    const page50 = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      pageSize: 50,
+    });
+    expect(page50.pageSize).toBe(50);
+  });
+
+  it('returns correct page 2 slice with pageSize 10', async () => {
+    const page1 = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      pageSize: 10,
+      page: 1,
+    });
+    const page2 = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      pageSize: 10,
+      page: 2,
+    });
+
+    expect(page1.totalCount).toBe(page2.totalCount);
+    expect(page1.items.length).toBeLessThanOrEqual(10);
+    if (page1.totalCount > 10) {
+      expect(page2.items.length).toBeGreaterThan(0);
+      expect(page1.items[0]?.id).not.toBe(page2.items[0]?.id);
+    }
+  });
+
+  it('applies category filter before pagination', async () => {
+    const all = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      pageSize: 100,
+    });
+    const documents = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      category: 'documents',
+      pageSize: 100,
+    });
+    expect(documents.totalCount).toBeLessThanOrEqual(all.totalCount);
+    expect(documents.items.every((item) => item.category === 'documents')).toBe(true);
+  });
 });

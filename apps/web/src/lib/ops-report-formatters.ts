@@ -24,6 +24,32 @@ export function formatOpsDateTimeToronto(isoOrDate: string | Date): string {
   }).format(date);
 }
 
+/** Compact audit-log timestamp — omits year when it matches current Toronto year. */
+export function formatOpsCompactDateTimeToronto(
+  isoOrDate: string | Date,
+  now: Date = new Date(),
+): string {
+  const date = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  const currentYear = new Intl.DateTimeFormat("en-CA", {
+    timeZone: OPS_REPORT_TIMEZONE,
+    year: "numeric",
+  }).format(now);
+  const eventYear = new Intl.DateTimeFormat("en-CA", {
+    timeZone: OPS_REPORT_TIMEZONE,
+    year: "numeric",
+  }).format(date);
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: OPS_REPORT_TIMEZONE,
+    year: currentYear === eventYear ? undefined : "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
 /** Integer minutes → readable duration (never decimal hours). */
 export function formatReportDurationMinutes(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes < 0) {

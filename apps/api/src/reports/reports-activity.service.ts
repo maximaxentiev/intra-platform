@@ -8,9 +8,8 @@ import { EXCLUDED_PORTAL_AUDIT_EVENT_TYPES } from './activity-log-portal-map.uti
 import { resolveActivityLogDateRange } from './report-date.util';
 import {
   buildPaginatedReportResponse,
-  parseReportPagination,
-  REPORT_DEFAULT_PAGE_SIZE,
-} from './report-pagination.util';
+  parseActivityLogPagination,
+} from './activity-log-pagination.util';
 import { torontoDateEndExclusiveInstant, torontoDateStartInstant } from './report-timezone.util';
 import type { ActivityLogRawRow, ActivityLogResponse } from './types/activity-log.types';
 
@@ -24,9 +23,9 @@ export class ReportsActivityService {
 
   async getActivityLog(query: ActivityLogQueryDto): Promise<ActivityLogResponse> {
     const { dateFrom, dateTo } = resolveActivityLogDateRange(query.dateFrom, query.dateTo);
-    const { page, pageSize, offset } = parseReportPagination({
+    const { page, pageSize, offset } = parseActivityLogPagination({
       page: query.page,
-      pageSize: query.pageSize ?? REPORT_DEFAULT_PAGE_SIZE,
+      pageSize: query.pageSize,
     });
 
     const fromInstant = torontoDateStartInstant(dateFrom);

@@ -1,6 +1,9 @@
 /** Default Activity Log window — last 30 Toronto calendar days inclusive. */
 export const ACTIVITY_LOG_DEFAULT_DAYS = 30;
 
+/** Default Activity Log page size (distinct from other reports). */
+export const ACTIVITY_LOG_DEFAULT_PAGE_SIZE = 10;
+
 export const ACTIVITY_LOG_CATEGORIES = [
   'shifts',
   'staff',

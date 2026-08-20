@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatOpsCompactDateTimeToronto,
   formatOpsDateTimeToronto,
   formatOpsDateToronto,
   formatReportDurationMinutes,
@@ -34,5 +35,14 @@ describe("ops report formatters", () => {
   it("formats null fill rate as em dash", () => {
     expect(formatReportFillRatePercent(null)).toBe("—");
     expect(formatReportFillRatePercent(87.5)).toBe("87.5%");
+  });
+
+  it("formats compact datetime without year when current Toronto year matches", () => {
+    const formatted = formatOpsCompactDateTimeToronto(
+      "2026-08-13T18:45:00.000Z",
+      new Date("2026-08-20T12:00:00.000Z"),
+    );
+    expect(formatted).toContain("Aug");
+    expect(formatted).not.toContain("2026");
   });
 });

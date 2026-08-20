@@ -152,22 +152,39 @@ describe("ops reports UI source", () => {
     expect(page).not.toMatch(/Reminders enabled|Reminders disabled|3-year|Actual Hours|Payroll Hours/i);
   });
 
-  it("activity log page includes coverage notice, filters, timeline, and pagination", () => {
+  it("activity log page includes coverage notice, compact rows, and dual pagination", () => {
     const page = readSrc("routes/_authenticated/reports.activity.tsx");
+    const list = readSrc("components/reports/ActivityLogList.tsx");
+    const pagination = readSrc("components/reports/ActivityLogPagination.tsx");
+    const labels = readSrc("lib/activity-log-labels.ts");
     const filters = readSrc("components/reports/ActivityLogFilters.tsx");
+
     expect(page).toContain("Activity history is based on events recorded by the platform");
     expect(page).toContain("defaultActivityLogSearch");
-    expect(page).toContain("ActivityRow");
-    expect(page).toContain("formatOpsDateTimeToronto");
-    expect(page).toContain("Recorded before actor auditing");
-    expect(page).toContain("System");
-    expect(page).toContain("hasMore");
-    expect(page).toContain('to="/staff/$id"');
-    expect(page).toContain('to="/centres/$id"');
-    expect(page).toContain('to="/shifts/$id"');
+    expect(page).toContain("ACTIVITY_LOG_DEFAULT_PAGE_SIZE");
+    expect(page).toContain("ActivityLogPagination");
+    expect(page).toContain("ActivityLogList");
+    expect(page).toContain("pageSize");
+    expect(page).not.toMatch(/historically complete|complete audit trail/i);
+
+    expect(list).toContain('href: "/staff/$id"');
+    expect(list).toContain('href: "/centres/$id"');
+    expect(list).toContain('href: "/shifts/$id"');
+    expect(list).toContain("formatOpsCompactDateTimeToronto");
+    expect(list).toContain("<table");
+    expect(list).toContain("ActivityMobileRow");
+    expect(list).toContain("ChevronDown");
+
+    expect(pagination).toContain("ACTIVITY_LOG_PAGE_SIZE_OPTIONS");
+    expect(pagination).toContain("Previous");
+    expect(pagination).toContain("Next");
+    expect(pagination).toContain("0 activities");
+
+    expect(labels).toContain("ACTIVITY_LOG_DEFAULT_PAGE_SIZE = 10");
+    expect(labels).toContain("10, 25, 50");
+
     expect(filters).toContain("All categories");
     expect(filters).toContain("All actors");
-    expect(page).not.toMatch(/historically complete|complete audit trail/i);
   });
 });
 
