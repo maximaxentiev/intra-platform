@@ -102,3 +102,82 @@ export interface StaffUsageShiftsResponse {
   totalCount: number;
   hasMore: boolean;
 }
+
+export type DocumentReportStatus =
+  | "issue_flagged"
+  | "pending_review"
+  | "expired"
+  | "expiring_soon"
+  | "approved"
+  | "not_submitted";
+
+export type DocumentOverallComplianceStatus =
+  | "needs_attention"
+  | "expiring_soon"
+  | "compliant";
+
+export type DocumentReportReminderStatus = "sent" | "failed" | "scheduled";
+
+export interface DocumentReportReminderFields {
+  latestReminderStatus: DocumentReportReminderStatus | null;
+  latestReminderSentAt: string | null;
+  nextReminderAt: string | null;
+}
+
+export interface DocumentReportCategoryBase {
+  status: DocumentReportStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export interface DocumentReportVscCategory extends DocumentReportCategoryBase, DocumentReportReminderFields {
+  processedDate: string | null;
+  expiryDate: string | null;
+}
+
+export interface DocumentReportFirstAidCategory extends DocumentReportCategoryBase, DocumentReportReminderFields {
+  expiryDate: string | null;
+}
+
+export interface DocumentReportImmunizationsCategory extends DocumentReportCategoryBase {}
+
+export interface DocumentReportCovidCategory extends DocumentReportCategoryBase {
+  optional: true;
+}
+
+export interface DocumentReportDocuments {
+  vulnerableSectorCheck: DocumentReportVscCategory;
+  firstAidCpr: DocumentReportFirstAidCategory;
+  immunizations: DocumentReportImmunizationsCategory;
+  covid19Vaccination: DocumentReportCovidCategory;
+}
+
+export interface DocumentComplianceRow {
+  staffId: string;
+  staffName: string;
+  role: string;
+  overallComplianceStatus: DocumentOverallComplianceStatus;
+  documents: DocumentReportDocuments;
+}
+
+export interface DocumentComplianceSummary {
+  staffShown: number;
+  compliant: number;
+  expiringSoon: number;
+  needsAttention: number;
+  pendingReview: number;
+  issueFlagged: number;
+  expired: number;
+}
+
+export interface DocumentComplianceResponse {
+  staffIds: string[] | null;
+  status: DocumentReportStatus | null;
+  documentType: string | null;
+  summary: DocumentComplianceSummary;
+  items: DocumentComplianceRow[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+}

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   CentreUsageResponse,
+  DocumentComplianceResponse,
   ShiftFulfillmentResponse,
   StaffUsageResponse,
   StaffUsageShiftsResponse,
@@ -36,4 +37,13 @@ export const reportsApi = {
       pageSize?: number;
     },
   ) => api.get<StaffUsageShiftsResponse>(`/reports/staff-usage/${staffId}/shifts`, query),
+
+  documentCompliance: (query?: {
+    staffIds?: string[];
+    staffId?: string;
+    status?: string;
+    documentType?: string;
+    page?: number;
+    pageSize?: number;
+  }) => api.get<DocumentComplianceResponse>("/reports/documents", query),
 };

@@ -20,7 +20,7 @@ describe("ops reports UI source", () => {
     expect(reportsIdx).toBeGreaterThan(dashboardIdx);
   });
 
-  it("landing page shows five cards with three enabled reports", () => {
+  it("landing page shows five cards with four enabled reports", () => {
     const landing = readSrc("routes/_authenticated/reports.index.tsx");
     expect(landing).toContain("Shift Fulfillment");
     expect(landing).toContain("Centre Usage");
@@ -29,6 +29,7 @@ describe("ops reports UI source", () => {
     expect(landing).toContain("Activity Log");
     expect(landing).toContain("Coming soon");
     expect(landing).toContain('/reports/staff-usage');
+    expect(landing).toContain('/reports/documents');
     expect(landing).not.toContain("Applications");
   });
 
@@ -123,6 +124,31 @@ describe("ops reports UI source", () => {
     expect(summaryCards).toContain("Staff Shown");
     expect(summaryCards).toContain("Completed Shifts");
     expect(summaryCards).toContain("Filled Shifts");
+  });
+
+  it("document compliance landing card is enabled", () => {
+    const landing = readSrc("routes/_authenticated/reports.index.tsx");
+    expect(landing).toContain('to: "/reports/documents"');
+    expect(landing).toContain("available: true");
+  });
+
+  it("document compliance page includes filters, summary cards, and mobile layout", () => {
+    const page = readSrc("routes/_authenticated/reports.documents.tsx");
+    const filters = readSrc("components/reports/DocumentComplianceFilters.tsx");
+    const summaryCards = readSrc("components/reports/DocumentComplianceSummaryCards.tsx");
+    expect(filters).toContain("ReportStaffMultiSelect");
+    expect(filters).toContain("document-report-status");
+    expect(summaryCards).toContain("Staff Shown");
+    expect(summaryCards).toContain("Issue Flagged");
+    expect(page).toContain("staffIds");
+    expect(page).toContain("isSingleStaffSelection");
+    expect(page).toContain("showComparison");
+    expect(page).toContain("Renewal due");
+    expect(page).toContain("No upcoming reminder");
+    expect(page).toContain("lg:hidden");
+    const labels = readSrc("lib/reports-document-labels.ts");
+    expect(labels).toContain("Optional — Not Submitted");
+    expect(page).not.toMatch(/Reminders enabled|Reminders disabled|3-year|Actual Hours|Payroll Hours/i);
   });
 });
 

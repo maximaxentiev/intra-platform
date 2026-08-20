@@ -31,9 +31,10 @@ const REPORT_CARDS = [
   },
   {
     title: "Document Compliance",
-    description: "Coming soon",
+    description: "Review current Staff document status, expiry, and reminder delivery.",
+    to: "/reports/documents",
     icon: FileText,
-    available: false,
+    available: true,
   },
   {
     title: "Activity Log",

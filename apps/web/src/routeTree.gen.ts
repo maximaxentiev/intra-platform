@@ -49,6 +49,7 @@ import { Route as AuthenticatedShiftsNewRouteImport } from './routes/_authentica
 import { Route as AuthenticatedShiftsIdRouteImport } from './routes/_authenticated/shifts.$id'
 import { Route as AuthenticatedReportsStaffUsageRouteImport } from './routes/_authenticated/reports.staff-usage'
 import { Route as AuthenticatedReportsShiftFulfillmentRouteImport } from './routes/_authenticated/reports.shift-fulfillment'
+import { Route as AuthenticatedReportsDocumentsRouteImport } from './routes/_authenticated/reports.documents'
 import { Route as AuthenticatedReportsCentreUsageRouteImport } from './routes/_authenticated/reports.centre-usage'
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
@@ -262,6 +263,12 @@ const AuthenticatedReportsShiftFulfillmentRoute =
     path: '/shift-fulfillment',
     getParentRoute: () => AuthenticatedReportsRoute,
   } as any)
+const AuthenticatedReportsDocumentsRoute =
+  AuthenticatedReportsDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => AuthenticatedReportsRoute,
+  } as any)
 const AuthenticatedReportsCentreUsageRoute =
   AuthenticatedReportsCentreUsageRouteImport.update({
     id: '/centre-usage',
@@ -304,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
+  '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
   '/reports/staff-usage': typeof AuthenticatedReportsStaffUsageRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -341,6 +349,7 @@ export interface FileRoutesByTo {
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
+  '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
   '/reports/staff-usage': typeof AuthenticatedReportsStaffUsageRoute
   '/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -387,6 +396,7 @@ export interface FileRoutesById {
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
   '/_authenticated/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
+  '/_authenticated/reports/documents': typeof AuthenticatedReportsDocumentsRoute
   '/_authenticated/reports/shift-fulfillment': typeof AuthenticatedReportsShiftFulfillmentRoute
   '/_authenticated/reports/staff-usage': typeof AuthenticatedReportsStaffUsageRoute
   '/_authenticated/shifts/$id': typeof AuthenticatedShiftsIdRoute
@@ -433,6 +443,7 @@ export interface FileRouteTypes {
     | '/centres/$id'
     | '/centres/new'
     | '/reports/centre-usage'
+    | '/reports/documents'
     | '/reports/shift-fulfillment'
     | '/reports/staff-usage'
     | '/shifts/$id'
@@ -470,6 +481,7 @@ export interface FileRouteTypes {
     | '/centres/$id'
     | '/centres/new'
     | '/reports/centre-usage'
+    | '/reports/documents'
     | '/reports/shift-fulfillment'
     | '/reports/staff-usage'
     | '/shifts/$id'
@@ -515,6 +527,7 @@ export interface FileRouteTypes {
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
     | '/_authenticated/reports/centre-usage'
+    | '/_authenticated/reports/documents'
     | '/_authenticated/reports/shift-fulfillment'
     | '/_authenticated/reports/staff-usage'
     | '/_authenticated/shifts/$id'
@@ -825,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsShiftFulfillmentRouteImport
       parentRoute: typeof AuthenticatedReportsRoute
     }
+    '/_authenticated/reports/documents': {
+      id: '/_authenticated/reports/documents'
+      path: '/documents'
+      fullPath: '/reports/documents'
+      preLoaderRoute: typeof AuthenticatedReportsDocumentsRouteImport
+      parentRoute: typeof AuthenticatedReportsRoute
+    }
     '/_authenticated/reports/centre-usage': {
       id: '/_authenticated/reports/centre-usage'
       path: '/centre-usage'
@@ -866,6 +886,7 @@ const AuthenticatedCentresRouteWithChildren =
 
 interface AuthenticatedReportsRouteChildren {
   AuthenticatedReportsCentreUsageRoute: typeof AuthenticatedReportsCentreUsageRoute
+  AuthenticatedReportsDocumentsRoute: typeof AuthenticatedReportsDocumentsRoute
   AuthenticatedReportsShiftFulfillmentRoute: typeof AuthenticatedReportsShiftFulfillmentRoute
   AuthenticatedReportsStaffUsageRoute: typeof AuthenticatedReportsStaffUsageRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
@@ -873,6 +894,7 @@ interface AuthenticatedReportsRouteChildren {
 
 const AuthenticatedReportsRouteChildren: AuthenticatedReportsRouteChildren = {
   AuthenticatedReportsCentreUsageRoute: AuthenticatedReportsCentreUsageRoute,
+  AuthenticatedReportsDocumentsRoute: AuthenticatedReportsDocumentsRoute,
   AuthenticatedReportsShiftFulfillmentRoute:
     AuthenticatedReportsShiftFulfillmentRoute,
   AuthenticatedReportsStaffUsageRoute: AuthenticatedReportsStaffUsageRoute,
