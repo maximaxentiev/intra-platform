@@ -9,6 +9,10 @@ import * as schema from '../db/schema';
 import { centres, shifts, staff } from '../db/schema';
 import { ReportsService } from './reports.service';
 import { ReportsShiftService } from './reports-shift.service';
+import { ReportsStaffService } from './reports-staff.service';
+import { ReportsDocumentsService } from './reports-documents.service';
+import { ReportsActivityService } from './reports-activity.service';
+import { ReportsExportService } from './reports-export.service';
 import { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportScheduledMinutes } from './report-minutes.util';
@@ -30,6 +34,11 @@ async function probePostgres(): Promise<boolean> {
 
 const POSTGRES_READY = await probePostgres();
 
+function csvDataRowCount(content: string): number {
+  const lines = content.replace(/^\uFEFF/, '').trimEnd().split('\n');
+  return Math.max(0, lines.length - 1);
+}
+
 const FIXTURE = {
   centreA: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
   centreB: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
@@ -44,12 +53,20 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
   let pool: Pool;
   let db: NodePgDatabase<typeof schema>;
   let service: ReportsShiftService;
+  let exportService: ReportsExportService;
   const shiftIds: string[] = [];
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
     db = drizzle(pool, { schema });
-    service = new ReportsShiftService(db, new ReportsService(db));
+    const reportsService = new ReportsService(db);
+    service = new ReportsShiftService(db, reportsService);
+    exportService = new ReportsExportService(
+      service,
+      new ReportsStaffService(db, reportsService),
+      new ReportsDocumentsService(db, reportsService),
+      new ReportsActivityService(db),
+    );
 
     await db.insert(centres).values([
       { id: FIXTURE.centreA, name: 'Centre Alpha', city: 'Toronto' },
@@ -540,6 +557,64 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
         .where(eq(shifts.centreId, malformedCentre));
 
       expect(normalizeReportScheduledMinutes(raw!.totalScheduledMinutes)).toBe(480);
+    });
+  });
+
+  describe('CSV export', () => {
+    it('shift fulfillment export matches filtered totalCount and ignores pagination', async () => {
+      const query = {
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC],
+        pendingMin: 1,
+        page: 2,
+        pageSize: 1,
+      };
+      const json = await service.getShiftFulfillment(query);
+      const csv = await exportService.exportShiftFulfillment(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
+      expect(csv.filename).toBe('shift-fulfillment-2026-08-01-to-2026-08-31.csv');
+      expect(csv.content).toContain('Centre,Total Shifts,Fill Rate (%)');
+      expect(csv.content).toContain('Centre Alpha');
+      expect(csv.content).not.toContain('storage_key');
+    });
+
+    it('centre usage export includes decimal scheduled hours and matches totalCount', async () => {
+      const query = {
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC],
+        scheduledHoursMin: 1,
+        page: 1,
+        pageSize: 1,
+      };
+      const json = await service.getCentreUsage(query);
+      const csv = await exportService.exportCentreUsage(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
+      expect(csv.filename).toBe('centre-usage-2026-08-01-to-2026-08-31.csv');
+      expect(csv.content).toContain('Scheduled Hours');
+      expect(csv.content).toContain('Scheduled Hours on Completed Shifts');
+      expect(csv.content).toMatch(/Centre Beta,1,100,0,0,1,0,7\.5,7\.5/);
+    });
+
+    it('returns header-only CSV for zero matching shift fulfillment rows', async () => {
+      const query = {
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [FIXTURE.centreA],
+        pendingMin: 9999,
+      };
+      const json = await service.getShiftFulfillment(query);
+      const csv = await exportService.exportShiftFulfillment(query);
+
+      expect(json.totalCount).toBe(0);
+      expect(csv.rowCount).toBe(0);
+      expect(csvDataRowCount(csv.content)).toBe(0);
+      expect(csv.content).toContain('Centre,Total Shifts');
     });
   });
 });

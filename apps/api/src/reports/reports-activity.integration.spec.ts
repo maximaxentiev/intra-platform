@@ -18,6 +18,11 @@ import {
   users,
 } from '../db/schema';
 import { ReportsActivityService } from './reports-activity.service';
+import { ReportsService } from './reports.service';
+import { ReportsShiftService } from './reports-shift.service';
+import { ReportsStaffService } from './reports-staff.service';
+import { ReportsDocumentsService } from './reports-documents.service';
+import { ReportsExportService } from './reports-export.service';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -35,6 +40,11 @@ async function probePostgres(): Promise<boolean> {
 }
 
 const POSTGRES_READY = await probePostgres();
+
+function csvDataRowCount(content: string): number {
+  const lines = content.replace(/^\uFEFF/, '').trimEnd().split('\n');
+  return Math.max(0, lines.length - 1);
+}
 
 const ACTIVITY_FIXTURE_RANGE = {
   dateFrom: '2026-08-10',
@@ -59,6 +69,7 @@ describe.skipIf(!POSTGRES_READY)('Reports activity PostgreSQL integration', () =
   let pool: Pool;
   let db: NodePgDatabase<typeof schema>;
   let service: ReportsActivityService;
+  let exportService: ReportsExportService;
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
@@ -66,6 +77,13 @@ describe.skipIf(!POSTGRES_READY)('Reports activity PostgreSQL integration', () =
     await ensureCommunicationsTables(pool);
     await ensurePlatformAuditTable(pool);
     service = new ReportsActivityService(db);
+    const reportsService = new ReportsService(db);
+    exportService = new ReportsExportService(
+      new ReportsShiftService(db, reportsService),
+      new ReportsStaffService(db, reportsService),
+      new ReportsDocumentsService(db, reportsService),
+      service,
+    );
 
     await db.delete(shiftComments).where(eq(shiftComments.id, FIXTURE.shiftComment));
     await db.delete(communicationDeliveries).where(eq(communicationDeliveries.id, FIXTURE.commDelivery));
@@ -339,5 +357,24 @@ describe.skipIf(!POSTGRES_READY)('Reports activity PostgreSQL integration', () =
     });
     expect(documents.totalCount).toBeLessThanOrEqual(all.totalCount);
     expect(documents.items.every((item) => item.category === 'documents')).toBe(true);
+  });
+
+  describe('CSV export', () => {
+    it('activity log export matches filtered totalCount and ignores pagination', async () => {
+      const query = {
+        ...ACTIVITY_FIXTURE_RANGE,
+        category: 'documents' as const,
+        page: 2,
+        pageSize: 1,
+      };
+      const json = await service.getActivityLog(query);
+      const csv = await exportService.exportActivityLog(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
+      expect(csv.filename).toBe('activity-log-2026-08-10-to-2026-08-12.csv');
+      expect(csv.content).toContain('Timestamp,Category,Action,Activity');
+      expect(csv.content).not.toContain('metadata');
+    });
   });
 });

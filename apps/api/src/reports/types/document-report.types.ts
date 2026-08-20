@@ -46,6 +46,7 @@ export interface DocumentComplianceRow {
   staffId: string;
   staffName: string;
   role: string;
+  staffStatus: string;
   overallComplianceStatus: DocumentOverallComplianceStatus;
   documents: DocumentReportDocuments;
 }

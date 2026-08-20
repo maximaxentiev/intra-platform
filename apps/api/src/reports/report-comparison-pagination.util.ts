@@ -27,10 +27,12 @@ export function paginateReportRows<T>(
   pageSize: number,
 ): { items: T[]; totalCount: number; page: number; pageSize: number; hasMore: boolean } {
   const totalCount = rows.length;
-  const offset = (page - 1) * pageSize;
+  const totalPages = totalCount === 0 ? 1 : Math.ceil(totalCount / pageSize);
+  const normalizedPage = totalCount === 0 ? 1 : Math.min(Math.max(1, page), totalPages);
+  const offset = (normalizedPage - 1) * pageSize;
   const items = rows.slice(offset, offset + pageSize);
   return {
-    ...buildPaginatedReportResponse(items, page, pageSize, totalCount),
+    ...buildPaginatedReportResponse(items, normalizedPage, pageSize, totalCount),
   };
 }
 

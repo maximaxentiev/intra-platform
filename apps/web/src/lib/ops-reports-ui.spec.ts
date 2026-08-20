@@ -236,6 +236,21 @@ describe("ops reports UI source", () => {
     expect(filters).toContain("All categories");
     expect(filters).toContain("All actors");
   });
+
+  it("all five report pages expose Export CSV near the page header", () => {
+    const pages = [
+      "routes/_authenticated/reports.shift-fulfillment.tsx",
+      "routes/_authenticated/reports.centre-usage.tsx",
+      "routes/_authenticated/reports.staff-usage.tsx",
+      "routes/_authenticated/reports.documents.tsx",
+      "routes/_authenticated/reports.activity.tsx",
+    ];
+    for (const page of pages) {
+      const source = readSrc(page);
+      expect(source).toContain("ReportExportButton");
+      expect(source).toContain("reportExportPaths");
+    }
+  });
 });
 
 describe("reports date defaults", () => {

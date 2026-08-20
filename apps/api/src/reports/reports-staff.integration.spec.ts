@@ -10,6 +10,10 @@ import { centres, shifts, staff } from '../db/schema';
 import { StaffUsageQueryDto } from './dto/staff-usage-query.dto';
 import { ReportsService } from './reports.service';
 import { ReportsStaffService } from './reports-staff.service';
+import { ReportsShiftService } from './reports-shift.service';
+import { ReportsDocumentsService } from './reports-documents.service';
+import { ReportsActivityService } from './reports-activity.service';
+import { ReportsExportService } from './reports-export.service';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -28,6 +32,11 @@ async function probePostgres(): Promise<boolean> {
 
 const POSTGRES_READY = await probePostgres();
 
+function csvDataRowCount(content: string): number {
+  const lines = content.replace(/^\uFEFF/, '').trimEnd().split('\n');
+  return Math.max(0, lines.length - 1);
+}
+
 const FIXTURE = {
   centre: 'cccccccc-cccc-4ccc-8ccc-cccccccccc01',
   staffA: 'dddddddd-dddd-4ddd-8ddd-dddddddddd01',
@@ -42,12 +51,20 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
   let pool: Pool;
   let db: NodePgDatabase<typeof schema>;
   let service: ReportsStaffService;
+  let exportService: ReportsExportService;
   const shiftIds: string[] = [];
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
     db = drizzle(pool, { schema });
-    service = new ReportsStaffService(db, new ReportsService(db));
+    const reportsService = new ReportsService(db);
+    service = new ReportsStaffService(db, reportsService);
+    exportService = new ReportsExportService(
+      new ReportsShiftService(db, reportsService),
+      service,
+      new ReportsDocumentsService(db, reportsService),
+      new ReportsActivityService(db),
+    );
 
     await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centre));
     await db
@@ -329,5 +346,27 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
 
     expect(result.totalCount).toBe(3);
     expect(result.items.every((item) => item.scheduledMinutes >= 0)).toBe(true);
+  });
+
+  describe('CSV export', () => {
+    it('staff usage export matches filtered totalCount and ignores pagination', async () => {
+      const query = {
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        roles: ['ECE'],
+        completedShiftsMin: 1,
+        page: 2,
+        pageSize: 1,
+      };
+      const json = await service.getStaffUsage(query);
+      const csv = await exportService.exportStaffUsage(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
+      expect(csv.filename).toBe('staff-usage-2026-08-01-to-2026-08-31.csv');
+      expect(csv.content).toContain('Staff,Role,Status');
+      expect(csv.content).toContain('Alice Active');
+      expect(csv.content).not.toMatch(/Actual Hours|Payroll Hours|Verified Hours/i);
+    });
   });
 });

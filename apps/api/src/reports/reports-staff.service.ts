@@ -34,9 +34,32 @@ export class ReportsStaffService {
   ) {}
 
   async getStaffUsage(query: StaffUsageQueryDto): Promise<StaffUsageResponse> {
+    const { dateFrom, dateTo, staffIds, filteredRows } = await this.resolveStaffUsageFilteredRows(query);
+    const { page, pageSize } = parseComparisonReportPagination(query);
+    const summary = buildStaffUsageSummaryFromRows(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
+
+    return {
+      dateFrom,
+      dateTo,
+      staffIds,
+      summary,
+      rows: paginated.items,
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
+    };
+  }
+
+  async getStaffUsageExportRows(query: StaffUsageQueryDto) {
+    const { dateFrom, dateTo, filteredRows } = await this.resolveStaffUsageFilteredRows(query);
+    return { dateFrom, dateTo, rows: filteredRows };
+  }
+
+  private async resolveStaffUsageFilteredRows(query: StaffUsageQueryDto) {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const staffIds = resolveStaffUsageStaffIds(query);
-    const { page, pageSize } = parseComparisonReportPagination(query);
     const metricFilters = resolveStaffUsageMetricFilters(query);
 
     if (staffIds?.length) {
@@ -59,6 +82,7 @@ export class ReportsStaffService {
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         role: staff.role,
+        status: staff.status,
         completedShifts: sql<number>`count(${shifts.id}) filter (where ${shifts.status} = 'completed')::int`,
         filledShifts: sql<number>`count(${shifts.id}) filter (where ${shifts.status} = 'filled')::int`,
         completedScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}) filter (where ${shifts.status} = 'completed'), 0)::int`,
@@ -73,6 +97,7 @@ export class ReportsStaffService {
         staff.displayName,
         staff.useDisplayName,
         staff.role,
+        staff.status,
       )
       .orderBy(
         desc(sql`count(${shifts.id}) filter (where ${shifts.status} = 'completed')`),
@@ -86,6 +111,7 @@ export class ReportsStaffService {
       staffId: row.staffId,
       staffName: formatStaffReportName(row),
       role: formatStaffReportRole(row.role),
+      status: row.status,
       completedShifts: normalizeReportCount(row.completedShifts),
       filledShifts: normalizeReportCount(row.filledShifts),
       completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
@@ -93,20 +119,7 @@ export class ReportsStaffService {
     }));
 
     const filteredRows = allRows.filter((row) => staffRowMatchesMetricFilters(row, metricFilters));
-    const summary = buildStaffUsageSummaryFromRows(filteredRows);
-    const paginated = paginateReportRows(filteredRows, page, pageSize);
-
-    return {
-      dateFrom,
-      dateTo,
-      staffIds,
-      summary,
-      rows: paginated.items,
-      page: paginated.page,
-      pageSize: paginated.pageSize,
-      totalCount: paginated.totalCount,
-      hasMore: paginated.hasMore,
-    };
+    return { dateFrom, dateTo, staffIds, filteredRows };
   }
 
   private buildStaffConditions(

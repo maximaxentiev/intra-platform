@@ -10,6 +10,7 @@ import {
   ShiftFulfillmentSummarySkeleton,
 } from "@/components/reports/ShiftFulfillmentSummaryCards";
 import { ReportPagination } from "@/components/reports/ReportPagination";
+import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -41,6 +42,7 @@ import {
 } from "@/lib/report-pagination-labels";
 import { defaultReportSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
+import { reportExportPaths } from "@/lib/report-export";
 import {
   centreSelectionToApiQuery,
   centreSelectionToSearchParams,
@@ -184,13 +186,26 @@ function ShiftFulfillmentReport() {
         title="Shift Fulfillment"
         subtitle="Filled, completed, pending, and cancelled shifts by Centre."
         actions={
-          <Link
-            to="/reports"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            All reports
-          </Link>
+          <>
+            <ReportExportButton
+              exportPath={reportExportPaths.shiftFulfillment}
+              query={{
+                dateFrom: applied.dateFrom,
+                dateTo: applied.dateTo,
+                ...centreSelectionToApiQuery(applied.selection),
+                ...centreMetricFiltersToApiQuery(applied.metricFilters),
+              }}
+              ready={reportReady}
+              totalCount={reportQ.data?.totalCount}
+            />
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              All reports
+            </Link>
+          </>
         }
       />
 

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DocumentComplianceFilters } from "@/components/reports/DocumentComplianceFilters";
+import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ReportPagination } from "@/components/reports/ReportPagination";
 import {
   DocumentComplianceSummaryCards,
@@ -40,6 +41,7 @@ import {
   type DocumentComplianceFilterState,
 } from "@/lib/report-document-filters";
 import { reportsApi } from "@/lib/reports-api";
+import { reportExportPaths } from "@/lib/report-export";
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
@@ -353,13 +355,24 @@ function DocumentComplianceReport() {
         title="Document Compliance"
         subtitle="Review current Staff document status, expiry, and reminder delivery."
         actions={
-          <Link
-            to="/reports"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            All reports
-          </Link>
+          <>
+            <ReportExportButton
+              exportPath={reportExportPaths.documentCompliance}
+              query={{
+                ...staffSelectionToApiQuery(applied.selection),
+                ...documentComplianceFiltersToApiQuery(applied.filters),
+              }}
+              ready={reportReady}
+              totalCount={reportQ.data?.totalCount}
+            />
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              All reports
+            </Link>
+          </>
         }
       />
 

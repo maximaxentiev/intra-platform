@@ -14,6 +14,7 @@ import { ReportsService } from './reports.service';
     ReportsStaffService,
     ReportsDocumentsService,
     ReportsActivityService,
+    ReportsExportService,
   ],
   exports: [
     ReportsService,
@@ -21,6 +22,7 @@ import { ReportsService } from './reports.service';
     ReportsStaffService,
     ReportsDocumentsService,
     ReportsActivityService,
+    ReportsExportService,
   ],
 })
 export class ReportsModule {}

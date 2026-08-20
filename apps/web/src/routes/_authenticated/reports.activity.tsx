@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ActivityLogFilters } from "@/components/reports/ActivityLogFilters";
+import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ActivityLogEmptyState, ActivityLogList } from "@/components/reports/ActivityLogList";
 import {
   ActivityLogPagination,
@@ -22,6 +23,7 @@ import { centresApi, staffApi } from "@/lib/db";
 import { formatOpsDateToronto } from "@/lib/ops-report-formatters";
 import { defaultActivityLogSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
+import { reportExportPaths } from "@/lib/report-export";
 
 const searchSchema = z.object({
   dateFrom: z.string().optional(),
@@ -53,6 +55,7 @@ function ActivityLogReport() {
       actorType: search.actorType ?? "all",
       staffId: search.staffId ?? "all",
       centreId: search.centreId ?? "all",
+      shiftId: search.shiftId ?? undefined,
       page: search.page ?? 1,
       pageSize: resolveActivityLogPageSize(search.pageSize),
     }),
@@ -165,19 +168,37 @@ function ActivityLogReport() {
       }
     : null;
 
+  const reportReady = !reportQ.isLoading && reportQ.data != null;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Activity Log"
         subtitle="Review recorded Staff, Shift, document, communication, and administrative activity."
         actions={
-          <Link
-            to="/reports"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            All reports
-          </Link>
+          <>
+            <ReportExportButton
+              exportPath={reportExportPaths.activityLog}
+              query={{
+                dateFrom: applied.dateFrom,
+                dateTo: applied.dateTo,
+                category: applied.category === "all" ? undefined : applied.category,
+                actorType: applied.actorType === "all" ? undefined : applied.actorType,
+                staffId: applied.staffId === "all" ? undefined : applied.staffId,
+                centreId: applied.centreId === "all" ? undefined : applied.centreId,
+                shiftId: applied.shiftId,
+              }}
+              ready={reportReady}
+              totalCount={reportQ.data?.totalCount}
+            />
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              All reports
+            </Link>
+          </>
         }
       />
 

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { inArray, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staff, users } from '../db/schema';
@@ -11,7 +11,10 @@ import {
   parseActivityLogPagination,
 } from './activity-log-pagination.util';
 import { torontoDateEndExclusiveInstant, torontoDateStartInstant } from './report-timezone.util';
-import type { ActivityLogRawRow, ActivityLogResponse } from './types/activity-log.types';
+import type { ActivityLogItem, ActivityLogRawRow, ActivityLogResponse } from './types/activity-log.types';
+
+/** Safety cap for Activity Log CSV exports — prevents unbounded memory use. */
+export const ACTIVITY_LOG_EXPORT_MAX_ROWS = 50_000;
 
 const EXCLUDED_PORTAL_LIST = [...EXCLUDED_PORTAL_AUDIT_EVENT_TYPES]
   .map((value) => `'${value}'`)
@@ -28,6 +31,85 @@ export class ReportsActivityService {
       pageSize: query.pageSize,
     });
 
+    const { filterClauses, activityUnion } = this.buildActivityQueryParts(dateFrom, dateTo, query);
+
+    const countResult = await this.db.execute(sql`
+      WITH activity AS (${activityUnion})
+      SELECT COUNT(*)::int AS total FROM activity
+      ${this.buildActivityWhereSql(filterClauses)}
+    `);
+    const totalCount = Number((countResult.rows[0] as { total?: number })?.total ?? 0);
+
+    const pageResult = await this.db.execute(sql`
+      WITH activity AS (${activityUnion})
+      SELECT * FROM activity
+      ${this.buildActivityWhereSql(filterClauses)}
+      ORDER BY occurred_at DESC, source_key DESC
+      LIMIT ${pageSize} OFFSET ${offset}
+    `);
+
+    const rawRows = pageResult.rows as unknown as ActivityLogRawRow[];
+    const names = await this.loadDisplayNames(rawRows);
+    const items = rawRows.map((row) => presentActivityLogItem(row, names));
+
+    return {
+      dateFrom,
+      dateTo,
+      category: query.category ?? null,
+      actorType: query.actorType ?? null,
+      staffId: query.staffId ?? null,
+      centreId: query.centreId ?? null,
+      shiftId: query.shiftId ?? null,
+      ...buildPaginatedReportResponse(items, page, pageSize, totalCount),
+    };
+  }
+
+  async getActivityLogExportItems(query: ActivityLogQueryDto): Promise<{
+    dateFrom: string;
+    dateTo: string;
+    items: ActivityLogItem[];
+  }> {
+    const { dateFrom, dateTo } = resolveActivityLogDateRange(query.dateFrom, query.dateTo);
+    const { filterClauses, activityUnion } = this.buildActivityQueryParts(dateFrom, dateTo, query);
+
+    const countResult = await this.db.execute(sql`
+      WITH activity AS (${activityUnion})
+      SELECT COUNT(*)::int AS total FROM activity
+      ${this.buildActivityWhereSql(filterClauses)}
+    `);
+    const totalCount = Number((countResult.rows[0] as { total?: number })?.total ?? 0);
+
+    if (totalCount > ACTIVITY_LOG_EXPORT_MAX_ROWS) {
+      throw new BadRequestException(
+        `This Activity Log export matches ${totalCount.toLocaleString()} events, which exceeds the ${ACTIVITY_LOG_EXPORT_MAX_ROWS.toLocaleString()} row export limit. Narrow your filters and try again.`,
+      );
+    }
+
+    const exportResult = await this.db.execute(sql`
+      WITH activity AS (${activityUnion})
+      SELECT * FROM activity
+      ${this.buildActivityWhereSql(filterClauses)}
+      ORDER BY occurred_at DESC, source_key DESC
+    `);
+
+    const rawRows = exportResult.rows as unknown as ActivityLogRawRow[];
+    const names = await this.loadDisplayNames(rawRows);
+    const items = rawRows.map((row) => presentActivityLogItem(row, names));
+
+    return { dateFrom, dateTo, items };
+  }
+
+  private buildActivityWhereSql(filterClauses: ReturnType<typeof sql>[]) {
+    return filterClauses.length > 0
+      ? sql`WHERE ${sql.join(filterClauses, sql` AND `)}`
+      : sql``;
+  }
+
+  private buildActivityQueryParts(
+    dateFrom: string,
+    dateTo: string,
+    query: ActivityLogQueryDto,
+  ) {
     const fromInstant = torontoDateStartInstant(dateFrom);
     const toExclusive = torontoDateEndExclusiveInstant(dateTo);
 
@@ -48,12 +130,12 @@ export class ReportsActivityService {
       filterClauses.push(sql`shift_id = ${query.shiftId}`);
     }
 
-    const whereSql =
-      filterClauses.length > 0
-        ? sql`WHERE ${sql.join(filterClauses, sql` AND `)}`
-        : sql``;
+    const activityUnion = this.buildActivityUnionSql(fromInstant, toExclusive);
+    return { filterClauses, activityUnion };
+  }
 
-    const activityUnion = sql`
+  private buildActivityUnionSql(fromInstant: Date, toExclusive: Date) {
+    return sql`
         SELECT
           ('platform:' || p.id::text) AS source_key,
           p.occurred_at,
@@ -178,36 +260,6 @@ export class ReportsActivityService {
             WHERE p.shift_id = s.id AND p.action = 'shift_created'
           )
     `;
-
-    const countResult = await this.db.execute(sql`
-      WITH activity AS (${activityUnion})
-      SELECT COUNT(*)::int AS total FROM activity
-      ${whereSql}
-    `);
-    const totalCount = Number((countResult.rows[0] as { total?: number })?.total ?? 0);
-
-    const pageResult = await this.db.execute(sql`
-      WITH activity AS (${activityUnion})
-      SELECT * FROM activity
-      ${whereSql}
-      ORDER BY occurred_at DESC, source_key DESC
-      LIMIT ${pageSize} OFFSET ${offset}
-    `);
-
-    const rawRows = pageResult.rows as unknown as ActivityLogRawRow[];
-    const names = await this.loadDisplayNames(rawRows);
-    const items = rawRows.map((row) => presentActivityLogItem(row, names));
-
-    return {
-      dateFrom,
-      dateTo,
-      category: query.category ?? null,
-      actorType: query.actorType ?? null,
-      staffId: query.staffId ?? null,
-      centreId: query.centreId ?? null,
-      shiftId: query.shiftId ?? null,
-      ...buildPaginatedReportResponse(items, page, pageSize, totalCount),
-    };
   }
 
   private async loadDisplayNames(rows: ActivityLogRawRow[]) {

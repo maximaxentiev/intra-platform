@@ -54,6 +54,7 @@ type StaffRosterRow = {
   displayName: string;
   useDisplayName: boolean;
   role: string | null;
+  status: string;
 };
 
 function emptyReminderSummary(): DocumentReminderSummary {
@@ -127,16 +128,39 @@ export class ReportsDocumentsService {
   ) {}
 
   async getDocumentCompliance(query: DocumentComplianceQueryDto): Promise<DocumentComplianceResponse> {
+    const { staffIds, filteredRows } = await this.resolveDocumentComplianceFilteredRows(query);
+    const { page, pageSize } = parseComparisonReportPagination({
+      page: query.page,
+      pageSize: query.pageSize ?? DOCUMENT_REPORT_DEFAULT_PAGE_SIZE,
+    });
+
+    const summary = buildSummary(filteredRows);
+    const paginated = paginateReportRows(filteredRows, page, pageSize);
+
+    return {
+      staffIds,
+      status: query.status ?? null,
+      documentType: query.documentType ?? null,
+      summary,
+      items: paginated.items,
+      page: paginated.page,
+      pageSize: paginated.pageSize,
+      totalCount: paginated.totalCount,
+      hasMore: paginated.hasMore,
+    };
+  }
+
+  async getDocumentComplianceExportRows(query: DocumentComplianceQueryDto) {
+    const { filteredRows } = await this.resolveDocumentComplianceFilteredRows(query);
+    return { rows: filteredRows };
+  }
+
+  private async resolveDocumentComplianceFilteredRows(query: DocumentComplianceQueryDto) {
     const staffIds = resolveStaffUsageStaffIds(query);
 
     if (staffIds?.length) {
       await this.reports.assertStaffMembersExist(staffIds);
     }
-
-    const { page, pageSize } = parseComparisonReportPagination({
-      page: query.page,
-      pageSize: query.pageSize ?? DOCUMENT_REPORT_DEFAULT_PAGE_SIZE,
-    });
 
     const staffConditions = this.buildStaffConditions(staffIds, query.roles, query.staffStatuses);
 
@@ -147,6 +171,7 @@ export class ReportsDocumentsService {
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         role: staff.role,
+        status: staff.status,
       })
       .from(staff)
       .where(staffConditions)
@@ -157,7 +182,7 @@ export class ReportsDocumentsService {
     const reminderBySubmission = await this.loadReminderSummaries(complianceByStaff);
 
     const allRows = rosterRows.map((row) =>
-      this.buildRow(row, complianceByStaff.get(row.staffId)!, reminderBySubmission),
+      this.buildRow(row, complianceByStaff.get(row.staffId)!, reminderBySubmission, row.status),
     );
 
     const perDocumentStatuses = buildDocumentPerTypeStatusFilters({
@@ -183,20 +208,7 @@ export class ReportsDocumentsService {
       }),
     );
 
-    const summary = buildSummary(filteredRows);
-    const paginated = paginateReportRows(filteredRows, page, pageSize);
-
-    return {
-      staffIds,
-      status: query.status ?? null,
-      documentType: query.documentType ?? null,
-      summary,
-      items: paginated.items,
-      page: paginated.page,
-      pageSize: paginated.pageSize,
-      totalCount: paginated.totalCount,
-      hasMore: paginated.hasMore,
-    };
+    return { staffIds, filteredRows };
   }
 
   private buildStaffConditions(
@@ -225,6 +237,7 @@ export class ReportsDocumentsService {
     row: StaffRosterRow,
     categories: Map<StaffDocumentType, StaffDocumentCategoryCompliance>,
     reminderBySubmission: Map<string, DocumentReminderSummary>,
+    staffStatus: string,
   ): DocumentComplianceRow {
     const vsc = categories.get('vulnerable_sector_check')!;
     const firstAid = categories.get('first_aid_cpr')!;
@@ -242,6 +255,7 @@ export class ReportsDocumentsService {
       staffId: row.staffId,
       staffName: formatStaffReportName(row),
       role: formatStaffReportRole(row.role),
+      staffStatus,
       overallComplianceStatus: deriveOverallComplianceStatus(categories),
       documents: {
         vulnerableSectorCheck: buildDocumentCategoryFields(vsc, vscReminder),

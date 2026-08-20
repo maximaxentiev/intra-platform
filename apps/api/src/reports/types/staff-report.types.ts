@@ -4,6 +4,7 @@ export interface StaffUsageRow {
   staffId: string;
   staffName: string;
   role: string;
+  status: string;
   completedShifts: number;
   completedScheduledMinutes: number;
   filledShifts: number;

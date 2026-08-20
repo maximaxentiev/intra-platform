@@ -21,6 +21,10 @@ import {
 import type { StaffDocumentType } from '../staff-documents/staff-document.constants';
 import { ReportsDocumentsService } from './reports-documents.service';
 import { ReportsService } from './reports.service';
+import { ReportsShiftService } from './reports-shift.service';
+import { ReportsStaffService } from './reports-staff.service';
+import { ReportsActivityService } from './reports-activity.service';
+import { ReportsExportService } from './reports-export.service';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -38,6 +42,11 @@ async function probePostgres(): Promise<boolean> {
 }
 
 const POSTGRES_READY = await probePostgres();
+
+function csvDataRowCount(content: string): number {
+  const lines = content.replace(/^\uFEFF/, '').trimEnd().split('\n');
+  return Math.max(0, lines.length - 1);
+}
 
 const FIXTURE = {
   staffA: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee01',
@@ -115,6 +124,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
   let pool: Pool;
   let db: NodePgDatabase<typeof schema>;
   let service: ReportsDocumentsService;
+  let exportService: ReportsExportService;
   const setIds: string[] = [];
   const submissionIds: string[] = [];
   const fileIds: string[] = [];
@@ -125,7 +135,14 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
     db = drizzle(pool, { schema });
     await ensureCommunicationsTables(pool);
-    service = new ReportsDocumentsService(db, new ReportsService(db));
+    const reportsService = new ReportsService(db);
+    service = new ReportsDocumentsService(db, reportsService);
+    exportService = new ReportsExportService(
+      new ReportsShiftService(db, reportsService),
+      new ReportsStaffService(db, reportsService),
+      service,
+      new ReportsActivityService(db),
+    );
 
     await db.delete(staff).where(inArray(staff.id, [...FIXTURE_ACTIVE_STAFF_IDS, FIXTURE.staffInactive]));
 
@@ -546,5 +563,24 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
 
     expect(queriesFor25).toBeLessThanOrEqual(6);
     expect(queriesFor5).toBe(queriesFor25);
+  });
+
+  describe('CSV export', () => {
+    it('document compliance export matches filtered totalCount and omits sensitive fields', async () => {
+      const query = {
+        status: 'compliant' as const,
+        page: 2,
+        pageSize: 2,
+      };
+      const json = await service.getDocumentCompliance(query);
+      const csv = await exportService.exportDocumentCompliance(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
+      expect(csv.filename).toMatch(/^document-compliance-\d{4}-\d{2}-\d{2}\.csv$/);
+      expect(csv.content).toContain('Staff Name,Role,Staff Status,Overall Compliance');
+      expect(csv.content).toContain('VSC Status');
+      expect(csv.content).not.toMatch(/storage_key|share_url|token|s3/i);
+    });
   });
 });

@@ -36,17 +36,9 @@ export class ReportsShiftService {
   ) {}
 
   async getShiftFulfillment(query: ShiftReportQueryDto): Promise<ShiftFulfillmentResponse> {
-    const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
-    const centreIds = resolveCentreUsageCentreIds(query);
+    const { dateFrom, dateTo, centreIds, filteredRows, metricFilters } =
+      await this.resolveShiftFulfillmentFilteredRows(query);
     const { page, pageSize } = parseComparisonReportPagination(query);
-    const metricFilters = resolveCentreShiftMetricFilters(query);
-
-    if (centreIds?.length) {
-      await this.reports.assertCentresExist(centreIds);
-    }
-
-    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
-    const filteredRows = allRows.filter((row) => centreRowMatchesShiftMetricFilters(row, metricFilters));
     const summary = buildShiftFulfillmentSummaryFromRows(filteredRows);
     const paginated = paginateReportRows(filteredRows, page, pageSize);
 
@@ -55,9 +47,11 @@ export class ReportsShiftService {
     if (legacyCentreId) {
       centreName = filteredRows.find((row) => row.centreId === legacyCentreId)?.centreName ?? null;
       if (!centreName && centreIds?.length === 1) {
+        const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
         centreName = allRows.find((row) => row.centreId === centreIds[0])?.centreName ?? null;
       }
     } else if (centreIds?.length === 1) {
+      const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
       centreName = allRows.find((row) => row.centreId === centreIds[0])?.centreName ?? null;
     }
 
@@ -77,22 +71,9 @@ export class ReportsShiftService {
   }
 
   async getCentreUsage(query: CentreUsageQueryDto): Promise<CentreUsageResponse> {
-    const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
-    const centreIds = resolveCentreUsageCentreIds(query);
+    const { dateFrom, dateTo, centreIds, filteredRows } =
+      await this.resolveCentreUsageFilteredRows(query);
     const { page, pageSize } = parseComparisonReportPagination(query);
-    const metricFilters = resolveCentreShiftMetricFilters(query);
-    const hoursFilters = resolveCentreScheduledHoursFilters(query);
-
-    if (centreIds?.length) {
-      await this.reports.assertCentresExist(centreIds);
-    }
-
-    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
-    const filteredRows = allRows.filter(
-      (row) =>
-        centreRowMatchesShiftMetricFilters(row, metricFilters) &&
-        centreRowMatchesScheduledHoursFilters(row, hoursFilters),
-    );
     const summary = buildCentreUsageSummaryFromRows(filteredRows);
     const paginated = paginateReportRows(filteredRows, page, pageSize);
 
@@ -107,6 +88,61 @@ export class ReportsShiftService {
       totalCount: paginated.totalCount,
       hasMore: paginated.hasMore,
     };
+  }
+
+  /** Full filtered centre rows for shift fulfillment export (ignores pagination). */
+  async getShiftFulfillmentExportRows(query: ShiftReportQueryDto) {
+    const resolved = await this.resolveShiftFulfillmentFilteredRows(query);
+    return {
+      dateFrom: resolved.dateFrom,
+      dateTo: resolved.dateTo,
+      rows: resolved.filteredRows.map(toShiftFulfillmentRow),
+    };
+  }
+
+  /** Full filtered centre rows for centre usage export (ignores pagination). */
+  async getCentreUsageExportRows(query: CentreUsageQueryDto) {
+    const resolved = await this.resolveCentreUsageFilteredRows(query);
+    return {
+      dateFrom: resolved.dateFrom,
+      dateTo: resolved.dateTo,
+      rows: resolved.filteredRows.map(toCentreUsageRow),
+    };
+  }
+
+  private async resolveShiftFulfillmentFilteredRows(query: ShiftReportQueryDto) {
+    const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
+    const centreIds = resolveCentreUsageCentreIds(query);
+    const metricFilters = resolveCentreShiftMetricFilters(query);
+
+    if (centreIds?.length) {
+      await this.reports.assertCentresExist(centreIds);
+    }
+
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const filteredRows = allRows.filter((row) => centreRowMatchesShiftMetricFilters(row, metricFilters));
+
+    return { dateFrom, dateTo, centreIds, filteredRows, metricFilters };
+  }
+
+  private async resolveCentreUsageFilteredRows(query: CentreUsageQueryDto) {
+    const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
+    const centreIds = resolveCentreUsageCentreIds(query);
+    const metricFilters = resolveCentreShiftMetricFilters(query);
+    const hoursFilters = resolveCentreScheduledHoursFilters(query);
+
+    if (centreIds?.length) {
+      await this.reports.assertCentresExist(centreIds);
+    }
+
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const filteredRows = allRows.filter(
+      (row) =>
+        centreRowMatchesShiftMetricFilters(row, metricFilters) &&
+        centreRowMatchesScheduledHoursFilters(row, hoursFilters),
+    );
+
+    return { dateFrom, dateTo, centreIds, filteredRows };
   }
 
   private async fetchCentreMetricsRows(

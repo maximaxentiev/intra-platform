@@ -10,6 +10,7 @@ import {
   StaffUsageSummarySkeleton,
 } from "@/components/reports/StaffUsageSummaryCards";
 import { ReportPagination } from "@/components/reports/ReportPagination";
+import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +29,7 @@ import {
 } from "@/lib/ops-report-formatters";
 import { defaultReportSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
+import { reportExportPaths } from "@/lib/report-export";
 import {
   parseOptionalCountInput,
 } from "@/lib/report-hours-filter";
@@ -247,13 +249,26 @@ function StaffUsageReport() {
         title="Staff Usage"
         subtitle="Review completed and upcoming shift usage by Staff member."
         actions={
-          <Link
-            to="/reports"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            All reports
-          </Link>
+          <>
+            <ReportExportButton
+              exportPath={reportExportPaths.staffUsage}
+              query={{
+                dateFrom: applied.dateFrom,
+                dateTo: applied.dateTo,
+                ...staffSelectionToApiQuery(applied.selection),
+                ...staffUsageSearchToSearchParams(applied.metricSearch),
+              }}
+              ready={reportReady}
+              totalCount={reportQ.data?.totalCount}
+            />
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              All reports
+            </Link>
+          </>
         }
       />
 
