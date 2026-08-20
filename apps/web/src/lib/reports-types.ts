@@ -53,3 +53,52 @@ export interface CentreUsageResponse {
 }
 
 export const REPORT_SCHEDULED_HOURS_LABEL = "Scheduled Hours on Completed Shifts";
+export const REPORT_SCHEDULED_HOURS_ON_FILLED_SHIFTS_LABEL =
+  "Scheduled Hours on Filled Shifts";
+
+export interface StaffUsageRow {
+  staffId: string;
+  staffName: string;
+  role: string;
+  completedShifts: number;
+  completedScheduledMinutes: number;
+  filledShifts: number;
+  filledScheduledMinutes: number;
+}
+
+export interface StaffUsageSummary {
+  totalStaff: number;
+  completedShifts: number;
+  completedScheduledMinutes: number;
+  filledShifts: number;
+  filledScheduledMinutes: number;
+}
+
+export interface StaffUsageResponse {
+  dateFrom: string;
+  dateTo: string;
+  staffIds: string[] | null;
+  summary: StaffUsageSummary;
+  rows: StaffUsageRow[];
+}
+
+export interface StaffUsageShiftRow {
+  shiftId: string;
+  shiftDate: string;
+  centreName: string;
+  role: string;
+  scheduledStartTime: string;
+  scheduledEndTime: string;
+  scheduledMinutes: number;
+}
+
+export interface StaffUsageShiftsResponse {
+  dateFrom: string;
+  dateTo: string;
+  staffId: string;
+  items: StaffUsageShiftRow[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+}

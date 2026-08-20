@@ -24,9 +24,10 @@ const REPORT_CARDS = [
   },
   {
     title: "Staff Usage",
-    description: "Coming soon",
+    description: "Review completed and upcoming shift usage by Staff member.",
+    to: "/reports/staff-usage",
     icon: Users,
-    available: false,
+    available: true,
   },
   {
     title: "Document Compliance",

@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 import type {
   CentreUsageResponse,
   ShiftFulfillmentResponse,
+  StaffUsageResponse,
+  StaffUsageShiftsResponse,
 } from "@/lib/reports-types";
 
 export const reportsApi = {
@@ -17,4 +19,21 @@ export const reportsApi = {
     centreIds?: string[];
     centreId?: string;
   }) => api.get<CentreUsageResponse>("/reports/centre-usage", query),
+
+  staffUsage: (query?: {
+    dateFrom?: string;
+    dateTo?: string;
+    staffIds?: string[];
+    staffId?: string;
+  }) => api.get<StaffUsageResponse>("/reports/staff-usage", query),
+
+  staffUsageShifts: (
+    staffId: string,
+    query?: {
+      dateFrom?: string;
+      dateTo?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) => api.get<StaffUsageShiftsResponse>(`/reports/staff-usage/${staffId}/shifts`, query),
 };

@@ -20,7 +20,7 @@ describe("ops reports UI source", () => {
     expect(reportsIdx).toBeGreaterThan(dashboardIdx);
   });
 
-  it("landing page shows five cards with only two enabled", () => {
+  it("landing page shows five cards with three enabled reports", () => {
     const landing = readSrc("routes/_authenticated/reports.index.tsx");
     expect(landing).toContain("Shift Fulfillment");
     expect(landing).toContain("Centre Usage");
@@ -28,7 +28,7 @@ describe("ops reports UI source", () => {
     expect(landing).toContain("Document Compliance");
     expect(landing).toContain("Activity Log");
     expect(landing).toContain("Coming soon");
-    expect(landing).not.toContain("/reports/staff-usage");
+    expect(landing).toContain('/reports/staff-usage');
     expect(landing).not.toContain("Applications");
   });
 
@@ -91,6 +91,38 @@ describe("ops reports UI source", () => {
     expect(page).toContain("validateSearch");
     expect(page).toContain("dateFrom");
     expect(page).toContain("centreId");
+  });
+
+  it("staff usage page uses allowed scheduled-hours labels only", () => {
+    const staffUsage = readSrc("routes/_authenticated/reports.staff-usage.tsx");
+    const summaryCards = readSrc("components/reports/StaffUsageSummaryCards.tsx");
+    expect(summaryCards).toContain("REPORT_SCHEDULED_HOURS_LABEL");
+    expect(summaryCards).toContain("REPORT_SCHEDULED_HOURS_ON_FILLED_SHIFTS_LABEL");
+    expect(staffUsage).not.toMatch(/Actual Hours|Hours Worked|Verified Hours|Payroll Hours/i);
+  });
+
+  it("staff usage includes multi-select staff filter and URL state", () => {
+    const filters = readSrc("components/reports/StaffUsageFilters.tsx");
+    const page = readSrc("routes/_authenticated/reports.staff-usage.tsx");
+    expect(filters).toContain("ReportStaffMultiSelect");
+    expect(filters).toContain('aria-label="Search staff"');
+    expect(page).toContain("staffIds");
+    expect(page).toContain("isSingleStaffSelection");
+  });
+
+  it("staff usage hides comparison table for single staff and shows drill-down", () => {
+    const page = readSrc("routes/_authenticated/reports.staff-usage.tsx");
+    expect(page).toContain("showComparison");
+    expect(page).toContain("Completed Shifts");
+    expect(page).toContain("staffUsageShifts");
+    expect(page).toContain("View details");
+  });
+
+  it("staff usage summary cards include five metrics", () => {
+    const summaryCards = readSrc("components/reports/StaffUsageSummaryCards.tsx");
+    expect(summaryCards).toContain("Staff Shown");
+    expect(summaryCards).toContain("Completed Shifts");
+    expect(summaryCards).toContain("Filled Shifts");
   });
 });
 

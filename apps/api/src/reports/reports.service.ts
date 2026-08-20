@@ -43,4 +43,19 @@ export class ReportsService {
       throw new NotFoundException('Staff not found.');
     }
   }
+
+  async assertStaffMembersExist(staffIds: string[]): Promise<void> {
+    const uniqueIds = [...new Set(staffIds)];
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    const rows = await this.db
+      .select({ id: staff.id })
+      .from(staff)
+      .where(inArray(staff.id, uniqueIds));
+    if (rows.length !== uniqueIds.length) {
+      throw new NotFoundException('Staff not found.');
+    }
+  }
 }
