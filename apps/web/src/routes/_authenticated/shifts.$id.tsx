@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
@@ -11,17 +11,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Star, Trash2, UserCheck, XCircle } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MoreHorizontal, Star, Trash2, UserCheck } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ShiftComments } from "@/components/ShiftComments";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -36,6 +52,24 @@ type EditVals = {
   notes: string;
   addedToStaffpoint: boolean;
 };
+
+const STATUS_SUMMARY: Record<ShiftStatus, string> = {
+  pending: "Pending until staff is assigned.",
+  filled: "Staff assigned.",
+  completed: "Automatically completed after the scheduled end time.",
+  cancelled: "This shift was cancelled.",
+};
+
+function FieldGroup({ legend, children }: { legend: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {legend}
+      </legend>
+      {children}
+    </fieldset>
+  );
+}
 
 function ShiftDetail() {
   const { id } = Route.useParams();
@@ -61,6 +95,7 @@ function ShiftDetail() {
   const [edit, setEdit] = useState<EditVals | null>(null);
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (!shift) return <DetailLoading />;
 
@@ -200,6 +235,10 @@ function ShiftDetail() {
     }
   }
 
+  const status = shift.status as ShiftStatus;
+  const isHistorical = status === "completed" || status === "cancelled";
+  const otherCandidates = availableList.filter((s) => s.id !== shift.assignedStaffId);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -210,191 +249,308 @@ function ShiftDetail() {
         subtitle={`${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)} · ${shift.roleNeeded || "No role"}`}
         meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}
         actions={
-          <AlertDialog>
-            <AlertDialogTrigger asChild><Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this shift?</AlertDialogTitle>
-                <AlertDialogDescription>This permanently removes the shift record.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteShift}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="More shift actions">
+                  <MoreHorizontal className="h-4 w-4" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                  Delete shift
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <ConfirmDestructiveDialog
+              open={deleteOpen}
+              onOpenChange={setDeleteOpen}
+              title="Delete this shift?"
+              consequence="This permanently removes the shift record. It cannot be undone."
+              confirmLabel="Delete shift"
+              onConfirm={deleteShift}
+            />
+          </>
         }
       />
 
-
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-1">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Shift details</CardTitle>
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(v => !v); setEdit(null); }}>{editing ? "Cancel" : "Edit"}</Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!editing ? (
-                <div className="space-y-2 text-sm">
-                  <div><span className="text-muted-foreground">Centre:</span> {shift.centreName}</div>
-                  <div><span className="text-muted-foreground">Date:</span> {shift.shiftDate}</div>
-                  <div><span className="text-muted-foreground">Time:</span> {fmtTime(shift.startTime)} – {fmtTime(shift.endTime)}</div>
-                  <div><span className="text-muted-foreground">Role:</span> {shift.roleNeeded || "—"}</div>
-                  <div><span className="text-muted-foreground">Notes:</span> {shift.notes || "—"}</div>
-                  <div><span className="text-muted-foreground">Added to Staffpoint:</span> {shift.addedToStaffpoint ? "Yes" : "No"}</div>
-                  <div><span className="text-muted-foreground">Assigned:</span> {assignedName ?? <span className="italic">Unassigned</span>}
-                    {assignedName && <Button size="sm" variant="link" onClick={unassign}>Unassign</Button>}
-                  </div>
-                  {shift.assignedStaffId && shift.status === "filled" && assignedName ? (
+        <div className="space-y-6 lg:col-span-2">
+          {/* Assignment — the primary operational workflow */}
+          <SectionCard
+            id="assignment"
+            title={assignedName ? "Assignment" : "Available staff"}
+            description={
+              assignedName
+                ? "This shift is staffed."
+                : "Eligible based on availability, conflicts, centre restrictions and compliance."
+            }
+            padded={false}
+          >
+            {assignedName && (
+              <div className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-success-soft/60 px-4 py-3">
+                <UserCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Assigned staff
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">{assignedName}</p>
+                </div>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  {status === "filled" && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="mt-2"
                       disabled={resendingConfirmations}
                       onClick={() => void resendConfirmations()}
                     >
                       {resendingConfirmations ? "Sending…" : "Resend confirmations"}
                     </Button>
-                  ) : null}
-                  {shift.status === "cancelled" && shift.cancellationReason && (
-                    <div><span className="text-muted-foreground">Cancellation reason:</span> {shift.cancellationReason}</div>
+                  )}
+                  {!isHistorical && (
+                    <Button type="button" variant="ghost" size="sm" onClick={unassign}>
+                      Unassign
+                    </Button>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-3">
+              </div>
+            )}
+
+            {isHistorical && !assignedName ? (
+              <div className="px-4 py-3.5">
+                <EmptyState
+                  title="No staff was assigned"
+                  description="This shift closed without an assignment."
+                />
+              </div>
+            ) : otherCandidates.length === 0 ? (
+              <div className="px-4 py-3.5">
+                <EmptyState
+                  title={assignedName ? "No other eligible staff" : "No eligible staff found for this shift."}
+                  description={
+                    assignedName
+                      ? "Nobody else currently satisfies all assignment requirements."
+                      : "Availability, scheduling conflicts, centre restrictions, account status, role, and document compliance are considered automatically."
+                  }
+                  action={
+                    !assignedName ? (
+                      <Button asChild variant="outline" size="sm">
+                        <Link to="/availability">Team availability</Link>
+                      </Button>
+                    ) : undefined
+                  }
+                  className="text-left"
+                />
+              </div>
+            ) : (
+              <>
+                {assignedName && (
+                  <p className="px-4 pt-3 text-[13px] text-muted-foreground">
+                    Other eligible staff. Eligible staff are filtered automatically using availability,
+                    scheduling conflicts, centre restrictions, account status, role, and document compliance.
+                  </p>
+                )}
+                <ul className="divide-y divide-border/60">
+                  {otherCandidates.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/40 motion-reduce:transition-none"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{displayStaff(s)}</p>
+                        <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                          <span>{s.role || "No role"}</span>
+                          {s.isTop && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-foreground">
+                              <Star className="h-3 w-3 fill-warning text-warning" aria-hidden />
+                              Top staff
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-[13px]">
+                          <Checkbox
+                            checked={s.contacted}
+                            onCheckedChange={() => toggleContacted(s.id, s.contacted)}
+                            aria-label={`Mark ${displayStaff(s)} as contacted`}
+                          />
+                          Contacted
+                        </label>
+                        <Button
+                          size="sm"
+                          disabled={assigningStaffId === s.id || assigningStaffId != null}
+                          onClick={() => assignStaff(s.id, displayStaff(s))}
+                          aria-label={`Assign ${displayStaff(s)} to this shift`}
+                        >
+                          {assigningStaffId === s.id ? "Assigning…" : "Assign"}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </SectionCard>
+
+          {/* Supporting information */}
+          <SectionCard
+            id="shift-details"
+            title="Shift details"
+            action={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditing((v) => !v);
+                  setEdit(null);
+                }}
+              >
+                {editing ? "Cancel" : "Edit"}
+              </Button>
+            }
+          >
+            {!editing ? (
+              <PropertyList
+                items={[
+                  { label: "Centre", value: shift.centreName },
+                  { label: "Date", value: shift.shiftDate },
+                  { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
+                  { label: "Role", value: shift.roleNeeded },
+                  { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
+                  { label: "Assigned staff", value: assignedName ?? undefined },
+                  { label: "Notes", value: shift.notes, className: "sm:col-span-2" },
+                  ...(status === "cancelled" && shift.cancellationReason
+                    ? [
+                        {
+                          label: "Cancellation reason",
+                          value: shift.cancellationReason,
+                          className: "sm:col-span-2",
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : (
+              <div className="space-y-5">
+                <FieldGroup legend="Where">
                   <div className="space-y-2">
                     <Label>Centre</Label>
                     <SearchableCentreSelect
                       value={editVals.centreId}
-                      onChange={v => setEdit({ ...editVals, centreId: v })}
+                      onChange={(v) => setEdit({ ...editVals, centreId: v })}
                     />
                   </div>
-                  <div className="space-y-2"><Label>Date</Label><Input type="date" value={editVals.shiftDate} onChange={e => setEdit({ ...editVals, shiftDate: e.target.value })} /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2"><Label>Start</Label><Input type="time" value={editVals.startTime} onChange={e => setEdit({ ...editVals, startTime: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>End</Label><Input type="time" value={editVals.endTime} onChange={e => setEdit({ ...editVals, endTime: e.target.value })} /></div>
+                </FieldGroup>
+                <FieldGroup legend="When">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-date">Date</Label>
+                      <Input id="edit-date" type="date" value={editVals.shiftDate} onChange={(e) => setEdit({ ...editVals, shiftDate: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-start">Start time</Label>
+                      <Input id="edit-start" type="time" value={editVals.startTime} onChange={(e) => setEdit({ ...editVals, startTime: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-end">End time</Label>
+                      <Input id="edit-end" type="time" value={editVals.endTime} onChange={(e) => setEdit({ ...editVals, endTime: e.target.value })} />
+                    </div>
                   </div>
+                </FieldGroup>
+                <FieldGroup legend="Requirements">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Role needed</Label>
+                      <Select value={editVals.roleNeeded || undefined} onValueChange={(v) => setEdit({ ...editVals, roleNeeded: v })}>
+                        <SelectTrigger aria-label="Role needed"><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ECA">ECA</SelectItem>
+                          <SelectItem value="ECE">ECE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Added to Staffpoint</Label>
+                      <Select
+                        value={editVals.addedToStaffpoint ? "yes" : "no"}
+                        onValueChange={(v) => setEdit({ ...editVals, addedToStaffpoint: v === "yes" })}
+                      >
+                        <SelectTrigger aria-label="Added to Staffpoint"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no">No</SelectItem>
+                          <SelectItem value="yes">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </FieldGroup>
+                <FieldGroup legend="Internal">
                   <div className="space-y-2">
-                    <Label>Role needed</Label>
-                    <Select value={editVals.roleNeeded || undefined} onValueChange={v => setEdit({ ...editVals, roleNeeded: v })}>
-                      <SelectTrigger><SelectValue placeholder="Choose role..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ECA">ECA</SelectItem>
-                        <SelectItem value="ECE">ECE</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="edit-notes">Notes</Label>
+                    <Textarea id="edit-notes" rows={3} value={editVals.notes} onChange={(e) => setEdit({ ...editVals, notes: e.target.value })} />
                   </div>
-                  <div className="space-y-2"><Label>Notes</Label><Textarea rows={3} value={editVals.notes} onChange={e => setEdit({ ...editVals, notes: e.target.value })} /></div>
-                  <div className="space-y-2">
-                    <Label>Added to Staffpoint</Label>
-                    <Select
-                      value={editVals.addedToStaffpoint ? "yes" : "no"}
-                      onValueChange={v => setEdit({ ...editVals, addedToStaffpoint: v === "yes" })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no">No</SelectItem>
-                        <SelectItem value="yes">Yes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={saveEdits}>Save changes</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Change status</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <Select value={shift.status} onValueChange={v => v === "cancelled" ? undefined : changeStatus(v as ShiftStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="filled" disabled={!shift.assignedStaffId}>Filled (needs an assignee)</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-              <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
-              <p className="text-xs text-muted-foreground">Filled shifts are automatically marked Completed once their end time passes.</p>
-            </CardContent>
-          </Card>
+                </FieldGroup>
+                <Button onClick={saveEdits}>Save changes</Button>
+              </div>
+            )}
+          </SectionCard>
         </div>
 
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available staff for this shift</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Eligible staff are filtered automatically using availability, scheduling conflicts,
-                centre restrictions, account status, role, and document compliance.{" "}
-                <Star className="inline h-3.5 w-3.5 text-warning fill-warning -mt-0.5" /> = Top staff
-                for this centre.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {availableList.length === 0 ? (
-                <div className="space-y-1 py-4 text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground">No eligible staff found for this shift.</p>
-                  <p>
-                    Availability, scheduling conflicts, centre restrictions, account status, role,
-                    and document compliance are considered automatically.
+        {/* Lifecycle */}
+        <div className="lg:col-span-1">
+          <SectionCard id="lifecycle" title="Shift status">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
+              </div>
+              <p className="text-[13px] text-muted-foreground">{STATUS_SUMMARY[status]}</p>
+
+              {status === "cancelled" && shift.cancellationReason && (
+                <p className="text-[13px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Reason:</span> {shift.cancellationReason}
+                </p>
+              )}
+
+              {!isHistorical && (
+                <div className="space-y-2 border-t border-border/70 pt-3">
+                  <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => changeStatus("completed")}
+                  >
+                    Mark completed
+                  </Button>
+                  <p className="text-[13px] text-muted-foreground">
+                    Filled shifts are automatically marked Completed once their end time passes.
                   </p>
                 </div>
-              ) : (
-                <ul className="divide-y">
-                  {availableList.map((s) => {
-                    const isAssigned = shift.assignedStaffId === s.id;
-                    return (
-                    <li
-                      key={s.id}
-                      className={`flex flex-wrap items-center justify-between gap-2 py-2.5 px-3 rounded-md transition-colors ${
-                        isAssigned
-                          ? "bg-success-soft border border-success/30 ring-1 ring-success/20"
-                          : s.isTop
-                            ? "bg-warning-soft/60"
-                            : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {s.isTop && <Star className="h-4 w-4 shrink-0 text-warning fill-warning" />}
-                        <div className="min-w-0">
-                          <div className={`text-sm font-medium truncate ${isAssigned ? "text-success" : ""}`}>{displayStaff(s)}</div>
-                          <div className="text-xs text-muted-foreground">{s.role || "No role"}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                          <Checkbox checked={s.contacted} onCheckedChange={() => toggleContacted(s.id, s.contacted)} />
-                          Contacted
-                        </label>
-                        {isAssigned ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success text-success-foreground px-3 py-1 text-xs font-medium">
-                            <UserCheck className="h-3.5 w-3.5" />
-                            Assigned
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={assigningStaffId === s.id || assigningStaffId != null}
-                            onClick={() => assignStaff(s.id, displayStaff(s))}
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            {assigningStaffId === s.id ? "Assigning…" : "Assign"}
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-
-                    );
-                  })}
-                </ul>
               )}
-            </CardContent>
-          </Card>
+
+              {isHistorical && (
+                <div className="border-t border-border/70 pt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => changeStatus("pending")}
+                  >
+                    Reopen as pending
+                  </Button>
+                </div>
+              )}
+            </div>
+          </SectionCard>
         </div>
       </div>
 
@@ -409,14 +565,24 @@ function CancelShiftButton({ onCancel }: { onCancel: (reason: string) => void })
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full"><XCircle className="h-4 w-4 mr-2" /> Cancel this shift</Button>
+        <Button variant="outline" size="sm" className="w-full">Cancel shift</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
-          <AlertDialogDescription>Optionally add a reason for internal records.</AlertDialogDescription>
+          <AlertDialogDescription>
+            The shift stays on record as Cancelled and any assigned staff member is kept for history.
+          </AlertDialogDescription>
         </AlertDialogHeader>
-        <Textarea placeholder="Reason (optional)" value={reason} onChange={e => setReason(e.target.value)} />
+        <div className="space-y-2">
+          <Label htmlFor="cancel-reason">Reason (optional)</Label>
+          <Textarea
+            id="cancel-reason"
+            placeholder="Reason (optional)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep shift</AlertDialogCancel>
           <AlertDialogAction onClick={() => { onCancel(reason); setOpen(false); }}>Cancel shift</AlertDialogAction>
