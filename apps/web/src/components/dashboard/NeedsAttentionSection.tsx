@@ -31,17 +31,11 @@ export function NeedsAttentionSection({
       description="Items that may require action from Ops."
     >
       {!anything ? (
-        <Card className="border-success/25 bg-success-soft/40 py-0 shadow-xs">
-          <div className="flex items-start gap-3 p-4">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">You're all caught up</p>
-              <p className="text-sm text-muted-foreground">
-                Nothing currently requires your attention.
-              </p>
-            </div>
-          </div>
-        </Card>
+        <div className="flex min-h-[44px] flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-success/20 bg-success-soft/30 px-3 py-2.5">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+          <p className="text-sm font-medium text-foreground">You're all caught up</p>
+          <p className="text-xs text-muted-foreground">Nothing requires your attention.</p>
+        </div>
       ) : (
         <Card className="divide-y divide-border border-border/70 py-0 shadow-xs">
           {attention.urgentPendingShifts.map((shift) => {
