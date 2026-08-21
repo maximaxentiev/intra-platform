@@ -1,8 +1,26 @@
 # Version 2 Release Notes
 
-Intra Platform Version 2 delivers the Ops staffing portal, Carer portal, document compliance, automated communications, operational reporting with CSV export, and prospective platform auditing.
+**Status:** Version 2 is **complete**, **deployed**, and **manually validated**.
 
-**Latest migration:** `0014_platform_audit_events.sql`
+**Live host:** [https://platform.intra.ca](https://platform.intra.ca)
+
+**Final application commit:** `04be7c0b92aaa8c93c422e83316f0dab06a2cd40` — *Add Centre Usage shift detail*
+
+**Latest migration:** `0014_platform_audit_events.sql` (no migrations after 0014)
+
+Intra Platform Version 2 delivers the Ops staffing portal, Carer portal, document compliance, automated communications, operational reporting with CSV export, Centre Usage shift-level detail, and prospective platform auditing.
+
+---
+
+## Release closure
+
+Version 2 scope is closed. The deployed environment at **platform.intra.ca** was manually validated, including:
+
+- API, web, and worker services
+- All five Ops reports and CSV exports
+- Centre Usage Shift Detail (selected Centres, Completed default, filters, pagination, Shift Detail CSV)
+
+Before release closure, **database backup and restore-list verification** was completed on the production database backing the live deployment.
 
 ---
 
@@ -47,7 +65,8 @@ All reports use **America/Toronto** calendar semantics, standardized pagination 
 | Report | JSON route | CSV export route |
 |--------|------------|------------------|
 | Shift Fulfillment | `GET /api/reports/shift-fulfillment` | `GET /api/reports/shift-fulfillment/export` |
-| Centre Usage | `GET /api/reports/centre-usage` | `GET /api/reports/centre-usage/export` |
+| Centre Usage (summary) | `GET /api/reports/centre-usage` | `GET /api/reports/centre-usage/export` |
+| Centre Usage (shift detail) | `GET /api/reports/centre-usage/shifts` | `GET /api/reports/centre-usage/shifts/export` |
 | Staff Usage | `GET /api/reports/staff-usage` | `GET /api/reports/staff-usage/export` |
 | Document Compliance | `GET /api/reports/documents` | `GET /api/reports/documents/export` |
 | Activity Log | `GET /api/reports/activity` | `GET /api/reports/activity/export` |
@@ -58,6 +77,18 @@ Features across reports:
 - Document Compliance advanced filters (OR within group, AND across groups)
 - Activity Log compact table with dual pagination
 - Summary cards aggregate the **full filtered population**, not the current page
+
+### Centre Usage Shift Detail
+Post–Version 2 reporting enhancement (included in final release commit):
+
+- **Shift Detail** section appears when one or more Centres are explicitly selected (hidden for All Centres)
+- Default status filter: **Completed**
+- Independent **Status** and **Staff** filters (do not change aggregate Centre Usage summary cards)
+- Independent pagination (`shiftPage` / `shiftPageSize`, default 10; 10/25/50)
+- **Export Shift Detail CSV** for the full filtered shift population
+- Columns: date, centre, staff, role (`roleNeeded`), status, scheduled time, **Scheduled Hours**
+- Uses **Scheduled Hours** terminology only — not actual, billable, payroll, or verified hours
+- Structured shift-level data suitable as a foundation for **future invoicing**; no billing rates, amounts, invoice records, or automatic invoice generation
 
 ### Platform auditing
 - Durable `platform_audit_events` table (migration 0014)
@@ -76,19 +107,20 @@ Features across reports:
 ## Explicitly deferred
 
 ### Phase 8 — Hours Adjustment
-Not included in Version 2:
+Intentionally deferred — not part of Version 2:
+
 - Actual shift hours / payroll / verified hours
 - Centre adjustment links
 - Adjusted hours workflows
 
-Staff Usage and Centre Usage continue to report **Scheduled Hours** and **Scheduled Hours on Completed Shifts** only.
+Staff Usage and Centre Usage continue to report **Scheduled Hours** and **Scheduled Hours on Completed Shifts** only. Centre Usage Shift Detail exports scheduled duration, not worked or billable hours.
 
 ---
 
 ## Explicitly excluded
 
 ### Applications
-Applications reporting, migration, and product work remain out of Version 2 scope.
+Applications reporting, migration, and product work are **excluded** from the revised Version 2 scope.
 
 ---
 
@@ -128,21 +160,24 @@ Historical activity reflects **durable recorded events only**. Expanded platform
 - **Web** — TanStack Start/Vite static build
 - **Worker** — required for automated communications and scheduled jobs
 
-### Staging deployment
-From repo root on the droplet (see `scripts/deploy-staging.sh`):
-1. Ensure `.env` is present (see `.env.example` for variable **names**)
+### Live deployment
+- **Primary host:** [https://platform.intra.ca](https://platform.intra.ca)
+- **Legacy redirect host:** `ops-test.intra.ca` (redirect only; not the primary application host)
+- **Docker Compose project:** `intra-ops-test`
+- **Deployment script:** `scripts/deploy-staging.sh` (retained name; this is the current deployment entry point)
+
+The Compose project name **`intra-ops-test` must not be renamed** — it owns the existing persistent database volumes and production data.
+
+To redeploy from the repo root on the droplet:
+
+1. Ensure `.env` is present (see `.env.example` for variable **names**; set `APP_HOST=platform.intra.ca` and `LEGACY_APP_HOST=ops-test.intra.ca`)
 2. Run `./scripts/deploy-staging.sh`
-3. Compose project: `intra-ops-test`
-4. Script builds API, web, worker; waits for API health and worker startup
-5. Optional data import via `SOURCE_DATABASE_URL` or Supabase credentials
-
-**Do not deploy without explicit approval.** Version 2 closure commit does not imply production release.
-
-### Production
-Follow repository deployment documentation if present; same compose/migration pattern applies. Migrations run once through normal API startup.
+3. Script builds API, web, and worker; waits for API health and worker startup
+4. Migrations apply once through normal API startup
+5. Optional data import via `SOURCE_DATABASE_URL` or Supabase credentials (typically not needed on an existing live database)
 
 ### Rollback
-Redeploy previous image/build tag. Database rollback is forward-only via migrations; test rollback on staging before production schema changes.
+Redeploy a previous image/build tag from git. Database schema rollback is forward-only via migrations; restore from backup if a schema/data rollback is required.
 
 ### Environment variables (names only)
 See `.env.example`: database, Redis, session cookie, `APP_PUBLIC_URL`, `EMAIL_FROM`, document signing secret, S3/storage, feature flags such as `CARER_PORTAL_ENABLED`, etc. Never commit secret values.
@@ -155,15 +190,26 @@ See `.env.example`: database, Redis, session cookie, `APP_PUBLIC_URL`, `EMAIL_FR
 
 ---
 
+## Post-release security action
+
+Previously exposed environment credentials **must be rotated** as operational security work. This is not a Version 2 product feature and does not require an application release.
+
+- Rotate affected secrets in the hosting environment and `.env` on the droplet
+- Update dependent services (database, Redis, email, object storage, signing secrets, API keys) as applicable
+- **Do not** record credential values in this repository or in release notes
+
+---
+
 ## Known limitations
 
 1. Activity Log historical gap before platform audit rollout
 2. Activity Log CSV export limit: 50,000 rows
 3. No Applications reporting
 4. No actual/payroll hours (Phase 8 deferred)
-5. Malformed legacy shifts (`end_time <= start_time`) contribute **0** scheduled minutes but remain in shift counts
-6. Overnight shifts are not supported on create/edit
+5. No automatic invoicing or Centre hourly-rate billing calculations
+6. Malformed legacy shifts (`end_time <= start_time`) contribute **0** scheduled minutes but remain in shift counts
+7. Overnight shifts are not supported on create/edit
 
 ---
 
-*Version 2 reporting and hardening — Phase 9G complete.*
+*Version 2 — complete, deployed to platform.intra.ca, validated.*
