@@ -9,6 +9,7 @@ import {
   parseDocumentComplianceFiltersFromSearch,
   validateDocumentComplianceDateRanges,
 } from "./report-document-filters";
+import type { DocumentComplianceFilterState } from "./report-document-filters";
 
 describe("report-document-filters", () => {
   it("parses legacy status and documentType into per-document state", () => {
