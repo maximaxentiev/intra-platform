@@ -371,14 +371,47 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
     await db.insert(shifts).values(shiftRows);
 
     const filledToday = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee02';
+    const recentAssignmentFailureAt = new Date('2026-08-21T10:00:00.000Z');
+    const oldAssignmentFailureAt = new Date('2026-08-19T12:00:00.000Z');
+    const boundaryAssignmentFailureAt = new Date('2026-08-20T16:00:00.000Z');
+    const beforeBoundaryAssignmentFailureAt = new Date('2026-08-20T15:59:59.999Z');
+
     await db.insert(shiftAssignmentNotifications).values([
       {
         shiftId: filledToday,
         assignedStaffId: FIXTURE.staffAssigned,
         recipientType: 'centre',
-        recipientEmail: 'centre@example.com',
+        recipientEmail: 'centre-recent@example.com',
         trigger: 'assign',
         status: 'failed',
+        createdAt: recentAssignmentFailureAt,
+      },
+      {
+        shiftId: filledToday,
+        assignedStaffId: FIXTURE.staffAssigned,
+        recipientType: 'centre',
+        recipientEmail: 'centre-old@example.com',
+        trigger: 'assign',
+        status: 'failed',
+        createdAt: oldAssignmentFailureAt,
+      },
+      {
+        shiftId: filledToday,
+        assignedStaffId: FIXTURE.staffAssigned,
+        recipientType: 'centre',
+        recipientEmail: 'centre-boundary@example.com',
+        trigger: 'assign',
+        status: 'failed',
+        createdAt: boundaryAssignmentFailureAt,
+      },
+      {
+        shiftId: filledToday,
+        assignedStaffId: FIXTURE.staffAssigned,
+        recipientType: 'centre',
+        recipientEmail: 'centre-before-boundary@example.com',
+        trigger: 'assign',
+        status: 'failed',
+        createdAt: beforeBoundaryAssignmentFailureAt,
       },
       {
         shiftId: filledToday,
@@ -387,14 +420,18 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
         recipientEmail: 'carer@example.com',
         trigger: 'assign',
         status: 'sent',
-        sentAt: new Date('2026-08-20T12:00:00.000Z'),
+        sentAt: new Date('2026-08-21T12:00:00.000Z'),
+        createdAt: new Date('2026-08-21T12:00:00.000Z'),
       },
     ]);
 
-    const [failedComm] = await db
+    const recentAutomatedFailureAt = new Date('2026-08-21T12:00:00.000Z');
+    const oldAutomatedFailureAt = new Date('2026-08-19T12:00:00.000Z');
+
+    const [recentFailedComm] = await db
       .insert(scheduledCommunications)
       .values({
-        idempotencyKey: 'dashboard-test-failed-comm',
+        idempotencyKey: 'dashboard-test-failed-comm-recent',
         communicationType: 'shift_reminder_1d',
         entityType: 'shift',
         entityId: filledToday,
@@ -403,8 +440,24 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
         scheduledFor: new Date('2026-08-20T12:00:00.000Z'),
         status: 'failed',
         attempts: 5,
+        updatedAt: recentAutomatedFailureAt,
+        createdAt: recentAutomatedFailureAt,
       })
       .returning();
+
+    await db.insert(scheduledCommunications).values({
+      idempotencyKey: 'dashboard-test-failed-comm-old',
+      communicationType: 'shift_reminder_2h',
+      entityType: 'shift',
+      entityId: filledToday,
+      recipientType: 'carer',
+      recipientEntityId: FIXTURE.staffAssigned,
+      scheduledFor: new Date('2026-08-18T12:00:00.000Z'),
+      status: 'failed',
+      attempts: 5,
+      updatedAt: oldAutomatedFailureAt,
+      createdAt: oldAutomatedFailureAt,
+    });
 
     const [retrySucceededComm] = await db
       .insert(scheduledCommunications)
@@ -440,12 +493,12 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
         sentAt: new Date('2026-08-19T12:05:00.000Z'),
       },
       {
-        scheduledCommunicationId: failedComm.id,
-        idempotencyKey: 'dashboard-test-failed-comm-1',
+        scheduledCommunicationId: recentFailedComm.id,
+        idempotencyKey: 'dashboard-test-failed-comm-recent-1',
         attemptNumber: 1,
         recipientEmail: 'carer@example.com',
         status: 'failed',
-        attemptedAt: new Date('2026-08-20T12:00:00.000Z'),
+        attemptedAt: recentAutomatedFailureAt,
       },
     ]);
 
@@ -469,12 +522,13 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
       inArray(communicationDeliveries.idempotencyKey, [
         'dashboard-test-retry-succeeded-1',
         'dashboard-test-retry-succeeded-2',
-        'dashboard-test-failed-comm-1',
+        'dashboard-test-failed-comm-recent-1',
       ]),
     );
     await db.delete(scheduledCommunications).where(
       inArray(scheduledCommunications.idempotencyKey, [
-        'dashboard-test-failed-comm',
+        'dashboard-test-failed-comm-recent',
+        'dashboard-test-failed-comm-old',
         'dashboard-test-retry-succeeded',
       ]),
     );
@@ -603,15 +657,48 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
     expect(result.staffReadiness.disabled).toBeGreaterThanOrEqual(1);
   });
 
-  it('counts authoritative communication failures without retry-inflated duplicates', async () => {
+  it('counts communication failures within the rolling 24-hour window only', async () => {
     const result = await service.overview(FIXTURE.fixedNow);
-    expect(result.attention.communications.failedAssignmentConfirmations).toBeGreaterThanOrEqual(1);
-    expect(result.attention.communications.failedAutomatedCommunications).toBeGreaterThanOrEqual(1);
-    expect(result.attention.communications.totalFailures).toBe(
-      result.attention.communications.failedAssignmentConfirmations +
-        result.attention.communications.failedAutomatedCommunications,
-    );
+    expect(result.attention.communications.windowHours).toBe(24);
+    expect(result.attention.communications.failedAssignmentConfirmations).toBe(2);
+    expect(result.attention.communications.failedAutomatedCommunications).toBe(1);
+    expect(result.attention.communications.totalFailures).toBe(3);
     expect(result.attention.communications.recentFailures.length).toBeLessThanOrEqual(5);
+    for (const failure of result.attention.communications.recentFailures) {
+      expect(new Date(failure.occurredAt).getTime()).toBeGreaterThanOrEqual(
+        FIXTURE.fixedNow.getTime() - 24 * 60 * 60 * 1000,
+      );
+    }
+  });
+
+  it('excludes successful communications and retry-success scheduled communications', async () => {
+    const result = await service.overview(FIXTURE.fixedNow);
+    expect(
+      result.attention.communications.recentFailures.some(
+        (item) => item.communicationType === 'shift_reminder_3d',
+      ),
+    ).toBe(false);
+    expect(
+      result.attention.communications.recentFailures.some(
+        (item) => item.type === 'assignment_confirmation' && item.staffName === null,
+      ),
+    ).toBe(false);
+  });
+
+  it('includes boundary failures at exactly 24 hours and excludes older failures', async () => {
+    const result = await service.overview(FIXTURE.fixedNow);
+    const assignmentFailures = result.attention.communications.recentFailures.filter(
+      (item) => item.type === 'assignment_confirmation',
+    );
+    expect(assignmentFailures.some((item) => item.occurredAt === '2026-08-20T16:00:00.000Z')).toBe(
+      true,
+    );
+    expect(
+      assignmentFailures.some((item) => item.occurredAt === '2026-08-19T12:00:00.000Z'),
+    ).toBe(false);
+    expect(
+      assignmentFailures.some((item) => item.occurredAt === '2026-08-20T15:59:59.999Z'),
+    ).toBe(false);
   });
 
   it('returns up to 6 recent activity items newest first from existing audit data', async () => {

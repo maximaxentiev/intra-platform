@@ -6,6 +6,9 @@ export const DASHBOARD_URGENT_PENDING_LIMIT = 5;
 export const DASHBOARD_NEXT7_PENDING_LIMIT = 5;
 export const DASHBOARD_RECENT_ACTIVITY_LIMIT = 6;
 export const DASHBOARD_RECENT_FAILURES_LIMIT = 5;
+export const DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS = 24;
+export const DASHBOARD_COMMUNICATION_FAILURE_WINDOW_MS =
+  DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS * 60 * 60 * 1000;
 
 export interface ShiftStatusCounts {
   total: number;
@@ -72,6 +75,7 @@ export interface DashboardCommunicationFailureItem {
 }
 
 export interface DashboardAttentionCommunications {
+  windowHours: typeof DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS;
   failedAssignmentConfirmations: number;
   failedAutomatedCommunications: number;
   totalFailures: number;

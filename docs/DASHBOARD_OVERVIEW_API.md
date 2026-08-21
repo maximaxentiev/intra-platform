@@ -68,12 +68,21 @@ Portal account status counts for **active** staff only, using `resolvePortalAcco
 
 ### Communications
 
-Authoritative failure counts only:
+Authoritative failure counts from the **last 24 hours** only (`windowHours: 24`), using actual failure timestamps:
+
+- Assignment notifications: `COALESCE(sent_at, created_at)`
+- Scheduled communications: `updated_at` when status is `failed`
+
+Counts include only:
 
 - `shift_assignment_notifications.status = failed`
 - `scheduled_communications.status = failed` (excluding `test_*` types)
 
 Does **not** count transient failed delivery attempts when the scheduled communication ultimately succeeded.
+
+Historical failures remain visible in the Activity Log.
+
+`recentFailures` uses the same rolling 24-hour window (max 5 items).
 
 ### Recent activity
 

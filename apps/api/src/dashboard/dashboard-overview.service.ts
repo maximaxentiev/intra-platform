@@ -19,6 +19,8 @@ import {
   urgentPendingCoarseDateUpperBound,
 } from './dashboard-date.util';
 import {
+  DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS,
+  DASHBOARD_COMMUNICATION_FAILURE_WINDOW_MS,
   DASHBOARD_NEXT7_PENDING_LIMIT,
   DASHBOARD_RECENT_ACTIVITY_LIMIT,
   DASHBOARD_RECENT_FAILURES_LIMIT,
@@ -38,6 +40,10 @@ import {
   torontoShiftStartIso,
 } from './dashboard-urgency.util';
 import { resolvePortalAccountDisplayStatus } from '../staff-portal/portal-account-status.util';
+
+function toFailureOccurredAtIso(value: Date | string): string {
+  return new Date(value).toISOString();
+}
 
 type ShiftRow = {
   id: string;
@@ -171,7 +177,7 @@ export class DashboardOverviewService {
       this.loadPendingShiftRowsInDateRange(calendar.next7DaysFrom, calendar.next7DaysTo),
       this.documentsReport.getActiveStaffComplianceSummary(),
       this.loadStaffReadiness(),
-      this.loadCommunicationFailures(),
+      this.loadCommunicationFailures(now),
       this.activityReport.getActivityLog({
         page: 1,
         pageSize: DASHBOARD_RECENT_ACTIVITY_LIMIT,
@@ -329,16 +335,33 @@ export class DashboardOverviewService {
     return readiness;
   }
 
-  private async loadCommunicationFailures(): Promise<{
+  private communicationFailureWindowStart(now: Date): Date {
+    return new Date(now.getTime() - DASHBOARD_COMMUNICATION_FAILURE_WINDOW_MS);
+  }
+
+  private assignmentFailureOccurredAtSql() {
+    return sql`COALESCE(${shiftAssignmentNotifications.sentAt}, ${shiftAssignmentNotifications.createdAt})`;
+  }
+
+  private async loadCommunicationFailures(now: Date): Promise<{
+    windowHours: typeof DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS;
     failedAssignmentConfirmations: number;
     failedAutomatedCommunications: number;
     totalFailures: number;
     recentFailures: DashboardCommunicationFailureItem[];
   }> {
+    const windowStart = this.communicationFailureWindowStart(now);
+    const assignmentFailureAt = this.assignmentFailureOccurredAtSql();
+
     const [assignmentCountRow] = await this.db
       .select({ count: count() })
       .from(shiftAssignmentNotifications)
-      .where(eq(shiftAssignmentNotifications.status, 'failed'));
+      .where(
+        and(
+          eq(shiftAssignmentNotifications.status, 'failed'),
+          gte(assignmentFailureAt, windowStart),
+        ),
+      );
 
     const [automatedCountRow] = await this.db
       .select({ count: count() })
@@ -346,6 +369,7 @@ export class DashboardOverviewService {
       .where(
         and(
           eq(scheduledCommunications.status, 'failed'),
+          gte(scheduledCommunications.updatedAt, windowStart),
           sql`${scheduledCommunications.communicationType} NOT LIKE 'test_%'`,
         ),
       );
@@ -354,9 +378,10 @@ export class DashboardOverviewService {
     const failedAutomatedCommunications = Number(automatedCountRow?.count ?? 0);
     const totalFailures = failedAssignmentConfirmations + failedAutomatedCommunications;
 
-    const recentFailures = await this.loadRecentCommunicationFailures();
+    const recentFailures = await this.loadRecentCommunicationFailures(now);
 
     return {
+      windowHours: DASHBOARD_COMMUNICATION_FAILURE_WINDOW_HOURS,
       failedAssignmentConfirmations,
       failedAutomatedCommunications,
       totalFailures,
@@ -364,10 +389,15 @@ export class DashboardOverviewService {
     };
   }
 
-  private async loadRecentCommunicationFailures(): Promise<DashboardCommunicationFailureItem[]> {
+  private async loadRecentCommunicationFailures(
+    now: Date,
+  ): Promise<DashboardCommunicationFailureItem[]> {
+    const windowStart = this.communicationFailureWindowStart(now);
+    const assignmentFailureAt = this.assignmentFailureOccurredAtSql();
+
     const assignmentRows = await this.db
       .select({
-        occurredAt: sql<string>`COALESCE(${shiftAssignmentNotifications.sentAt}, ${shiftAssignmentNotifications.createdAt})`,
+        occurredAt: assignmentFailureAt,
         shiftId: shiftAssignmentNotifications.shiftId,
         centreId: shifts.centreId,
         centreName: centres.name,
@@ -380,10 +410,13 @@ export class DashboardOverviewService {
       .leftJoin(shifts, eq(shifts.id, shiftAssignmentNotifications.shiftId))
       .leftJoin(centres, eq(centres.id, shifts.centreId))
       .leftJoin(staff, eq(staff.id, shiftAssignmentNotifications.assignedStaffId))
-      .where(eq(shiftAssignmentNotifications.status, 'failed'))
-      .orderBy(
-        sql`COALESCE(${shiftAssignmentNotifications.sentAt}, ${shiftAssignmentNotifications.createdAt}) DESC`,
+      .where(
+        and(
+          eq(shiftAssignmentNotifications.status, 'failed'),
+          gte(assignmentFailureAt, windowStart),
+        ),
       )
+      .orderBy(sql`${assignmentFailureAt} DESC`)
       .limit(DASHBOARD_RECENT_FAILURES_LIMIT);
 
     const automatedRows = await this.db
@@ -411,6 +444,7 @@ export class DashboardOverviewService {
       .where(
         and(
           eq(scheduledCommunications.status, 'failed'),
+          gte(scheduledCommunications.updatedAt, windowStart),
           sql`${scheduledCommunications.communicationType} NOT LIKE 'test_%'`,
         ),
       )
@@ -420,7 +454,7 @@ export class DashboardOverviewService {
     const merged: DashboardCommunicationFailureItem[] = [
       ...assignmentRows.map((row) => ({
         type: 'assignment_confirmation' as const,
-        occurredAt: new Date(row.occurredAt).toISOString(),
+        occurredAt: toFailureOccurredAtIso(row.occurredAt as Date | string),
         shiftId: row.shiftId,
         centreId: row.centreId ?? null,
         centreName: row.centreName ?? null,
@@ -436,7 +470,7 @@ export class DashboardOverviewService {
       })),
       ...automatedRows.map((row) => ({
         type: 'automated_communication' as const,
-        occurredAt: new Date(row.occurredAt).toISOString(),
+        occurredAt: toFailureOccurredAtIso(row.occurredAt as Date | string),
         shiftId: row.shiftId,
         centreId: row.centreId ?? null,
         centreName: row.centreName ?? null,

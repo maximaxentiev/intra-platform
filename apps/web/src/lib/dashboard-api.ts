@@ -84,6 +84,7 @@ export interface DashboardOverviewResponse {
       expired: number;
     };
     communications: {
+      windowHours: 24,
       failedAssignmentConfirmations: number;
       failedAutomatedCommunications: number;
       totalFailures: number;
