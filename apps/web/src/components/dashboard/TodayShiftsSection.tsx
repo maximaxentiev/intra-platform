@@ -11,11 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DashboardEmpty,
-  DashboardFooterLink,
-  DashboardSection,
-} from "./DashboardPrimitives";
+import { DashboardFooterLink, DashboardSection } from "./DashboardPrimitives";
 import type { DashboardOverviewResponse, DashboardTodayShiftItem } from "@/lib/dashboard-api";
 import {
   describeShiftUrgency,
