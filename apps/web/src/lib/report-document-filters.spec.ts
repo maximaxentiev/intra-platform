@@ -113,7 +113,7 @@ describe("report-document-filters", () => {
   });
 
   it("supports individual chip removal", () => {
-    const filters = {
+    const filters: DocumentComplianceFilterState = {
       ...EMPTY_DOCUMENT_COMPLIANCE_FILTERS,
       overallCompliance: ["needs_attention", "compliant"],
       roles: ["ECE", "Nanny"],
