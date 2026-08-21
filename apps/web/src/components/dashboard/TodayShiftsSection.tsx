@@ -11,11 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DashboardEmpty,
-  DashboardFooterLink,
-  DashboardSection,
-} from "./DashboardPrimitives";
+import { DashboardFooterLink, DashboardSection } from "./DashboardPrimitives";
 import type { DashboardOverviewResponse, DashboardTodayShiftItem } from "@/lib/dashboard-api";
 import {
   describeShiftUrgency,
@@ -58,17 +54,18 @@ export function TodayShiftsSection({
       }
     >
       {shifts.length === 0 ? (
-        <DashboardEmpty
-          title="No shifts scheduled today"
-          description="There are no shifts on the schedule for today."
-          action={
-            <Button asChild size="sm">
-              <Link to="/shifts/new">
-                <Plus className="h-4 w-4" aria-hidden="true" /> Create shift
-              </Link>
-            </Button>
-          }
-        />
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-dashed border-border bg-surface-muted px-3 py-2.5">
+          <p className="text-sm font-medium text-foreground">
+            No shifts scheduled today{" "}
+            <span className="font-normal text-muted-foreground">· nothing to staff.</span>
+          </p>
+          <Link
+            to="/shifts/new"
+            className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Create shift
+          </Link>
+        </div>
       ) : (
         <Card className="border-border/70 py-0 shadow-xs">
           {/* Desktop table */}

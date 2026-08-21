@@ -27,12 +27,12 @@ export function DashboardSection({
         <div className="min-w-0">
           <h2
             id={`${id}-heading`}
-            className="text-base font-semibold tracking-tight text-foreground"
+            className="text-[15px] font-semibold tracking-tight text-foreground"
           >
             {title}
           </h2>
           {description && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}
@@ -131,7 +131,7 @@ export function DashboardEmpty({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-surface-muted px-4 py-6 text-center">
+    <div className="rounded-lg border border-dashed border-border bg-surface-muted px-4 py-3.5 text-center">
       <p className="text-sm font-medium text-foreground">{title}</p>
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-3 flex justify-center">{action}</div>}
