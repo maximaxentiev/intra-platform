@@ -69,3 +69,7 @@ export function centreSelectionLabel(
 export function isSingleCentreSelection(selection: CentreSelectionState): boolean {
   return selection.mode === "subset" && selection.centreIds.length === 1;
 }
+
+export function hasExplicitCentreSelection(selection: CentreSelectionState): boolean {
+  return selection.mode === "subset" && selection.centreIds.length > 0;
+}

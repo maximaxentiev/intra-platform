@@ -9,7 +9,7 @@ function buildExportUrl(path: string, query?: ExportQuery): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value === undefined || value === null || value === "") continue;
-    if (key === "page" || key === "pageSize") continue;
+    if (key === "page" || key === "pageSize" || key === "shiftPage" || key === "shiftPageSize") continue;
     if (Array.isArray(value)) {
       if (value.length === 0) continue;
       params.set(key, value.join(","));
@@ -67,6 +67,7 @@ export async function downloadReportCsv(path: string, query?: ExportQuery): Prom
 export const reportExportPaths = {
   shiftFulfillment: "/reports/shift-fulfillment/export",
   centreUsage: "/reports/centre-usage/export",
+  centreUsageShiftDetail: "/reports/centre-usage/shifts/export",
   staffUsage: "/reports/staff-usage/export",
   documentCompliance: "/reports/documents/export",
   activityLog: "/reports/activity/export",

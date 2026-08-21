@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ActivityLogQueryDto } from './dto/activity-log-query.dto';
 import { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
+import { CentreUsageShiftsQueryDto } from './dto/centre-usage-shifts-query.dto';
 import { DocumentComplianceQueryDto } from './dto/document-compliance-query.dto';
 import { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import { StaffUsageQueryDto } from './dto/staff-usage-query.dto';
@@ -55,6 +56,16 @@ export class ReportsController {
   @Get('centre-usage/export')
   async exportCentreUsage(@Query() query: CentreUsageQueryDto, @Res() res: Response) {
     sendCsvExport(res, await this.reportsExport.exportCentreUsage(query));
+  }
+
+  @Get('centre-usage/shifts')
+  centreUsageShifts(@Query() query: CentreUsageShiftsQueryDto) {
+    return this.reportsShift.getCentreUsageShifts(query);
+  }
+
+  @Get('centre-usage/shifts/export')
+  async exportCentreUsageShifts(@Query() query: CentreUsageShiftsQueryDto, @Res() res: Response) {
+    sendCsvExport(res, await this.reportsExport.exportCentreUsageShifts(query));
   }
 
   @Get('staff-usage')

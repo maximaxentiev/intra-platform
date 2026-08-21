@@ -74,6 +74,42 @@ export interface CentreUsageResponse {
   hasMore: boolean;
 }
 
+export type CentreUsageShiftRowStatus = "pending" | "filled" | "completed" | "cancelled";
+
+export interface CentreUsageShiftRow {
+  shiftId: string;
+  shiftDate: string;
+  centreId: string;
+  centreName: string;
+  staffId: string | null;
+  staffName: string;
+  role: string;
+  status: CentreUsageShiftRowStatus;
+  startTime: string;
+  endTime: string;
+  scheduledMinutes: number;
+}
+
+export interface CentreUsageShiftsSummary {
+  totalShifts: number;
+  totalScheduledMinutes: number;
+  uniqueStaff: number;
+}
+
+export interface CentreUsageShiftsResponse {
+  dateFrom: string;
+  dateTo: string;
+  centreIds: string[];
+  status: string;
+  staffIds: string[] | null;
+  summary: CentreUsageShiftsSummary;
+  rows: CentreUsageShiftRow[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+}
+
 export const REPORT_SCHEDULED_HOURS_LABEL = "Scheduled Hours on Completed Shifts";
 export const REPORT_SCHEDULED_HOURS_ON_FILLED_SHIFTS_LABEL =
   "Scheduled Hours on Filled Shifts";

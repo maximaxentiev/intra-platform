@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   ActivityLogResponse,
   CentreUsageResponse,
+  CentreUsageShiftsResponse,
   DocumentComplianceResponse,
   ShiftFulfillmentResponse,
   StaffUsageResponse,
@@ -52,6 +53,18 @@ export const reportsApi = {
     } & CentreMetricQuery &
       PaginationQuery,
   ) => api.get<CentreUsageResponse>("/reports/centre-usage", query),
+
+  centreUsageShifts: (
+    query: {
+      dateFrom?: string;
+      dateTo?: string;
+      centreIds: string[];
+      status?: string;
+      staffIds?: string[];
+      page?: number;
+      pageSize?: number;
+    },
+  ) => api.get<CentreUsageShiftsResponse>("/reports/centre-usage/shifts", query),
 
   staffUsage: (
     query?: {

@@ -10,6 +10,7 @@ type ReportExportButtonProps = {
   disabled?: boolean;
   ready?: boolean;
   totalCount?: number;
+  label?: string;
 };
 
 export function ReportExportButton({
@@ -18,6 +19,7 @@ export function ReportExportButton({
   disabled = false,
   ready = true,
   totalCount,
+  label = "Export CSV",
 }: ReportExportButtonProps) {
   const [exporting, setExporting] = useState(false);
   const noData = ready && totalCount === 0;
@@ -47,7 +49,7 @@ export function ReportExportButton({
       onClick={handleExport}
     >
       <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
-      {exporting ? "Exporting…" : "Export CSV"}
+      {exporting ? "Exporting…" : label}
     </Button>
   );
 }

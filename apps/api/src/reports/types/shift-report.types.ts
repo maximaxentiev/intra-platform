@@ -71,3 +71,39 @@ export interface CentreUsageResponse {
   totalCount: number;
   hasMore: boolean;
 }
+
+export type CentreUsageShiftRowStatus = 'pending' | 'filled' | 'completed' | 'cancelled';
+
+export interface CentreUsageShiftRow {
+  shiftId: string;
+  shiftDate: string;
+  centreId: string;
+  centreName: string;
+  staffId: string | null;
+  staffName: string;
+  role: string;
+  status: CentreUsageShiftRowStatus;
+  startTime: string;
+  endTime: string;
+  scheduledMinutes: number;
+}
+
+export interface CentreUsageShiftsSummary {
+  totalShifts: number;
+  totalScheduledMinutes: number;
+  uniqueStaff: number;
+}
+
+export interface CentreUsageShiftsResponse {
+  dateFrom: string;
+  dateTo: string;
+  centreIds: string[];
+  status: string;
+  staffIds: string[] | null;
+  summary: CentreUsageShiftsSummary;
+  rows: CentreUsageShiftRow[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+}

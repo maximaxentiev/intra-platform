@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
-import { centres, shifts } from '../db/schema';
+import { centres, shifts, staff } from '../db/schema';
 import type { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
+import type { CentreUsageShiftsQueryDto } from './dto/centre-usage-shifts-query.dto';
 import { resolveCentreUsageCentreIds } from './dto/report-centre-ids.util';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import {
@@ -21,10 +22,17 @@ import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
 import { computeFillRatePercent } from './report-percentage.util';
+import { formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
+import {
+  formatReportShiftStatusLabel,
+  resolveCentreUsageShiftDetailStatus,
+  type ReportShiftStatus,
+} from './report-shift-status.util';
 import { ReportsService } from './reports.service';
 import type {
   CentreUsageResponse,
   CentreUsageRow,
+  CentreUsageShiftsResponse,
   ShiftFulfillmentResponse,
 } from './types/shift-report.types';
 
@@ -107,6 +115,181 @@ export class ReportsShiftService {
       dateFrom: resolved.dateFrom,
       dateTo: resolved.dateTo,
       rows: resolved.filteredRows.map(toCentreUsageRow),
+    };
+  }
+
+  async getCentreUsageShifts(query: CentreUsageShiftsQueryDto): Promise<CentreUsageShiftsResponse> {
+    const resolved = await this.resolveCentreUsageShiftsQuery(query);
+    const { page, pageSize, offset } = parseComparisonReportPagination(query);
+
+    const [countRow] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(shifts)
+      .where(resolved.whereClause);
+
+    const rawRows = await this.db
+      .select({
+        shiftId: shifts.id,
+        shiftDate: shifts.shiftDate,
+        centreId: shifts.centreId,
+        centreName: centres.name,
+        staffId: shifts.assignedStaffId,
+        legalName: staff.legalName,
+        displayName: staff.displayName,
+        useDisplayName: staff.useDisplayName,
+        roleNeeded: shifts.roleNeeded,
+        status: shifts.status,
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+        scheduledMinutes: resolved.durationMinutes,
+      })
+      .from(shifts)
+      .innerJoin(centres, eq(centres.id, shifts.centreId))
+      .leftJoin(staff, eq(staff.id, shifts.assignedStaffId))
+      .where(resolved.whereClause)
+      .orderBy(asc(centres.name), asc(shifts.shiftDate), asc(shifts.startTime), asc(shifts.id))
+      .limit(pageSize)
+      .offset(offset);
+
+    const totalCount = normalizeReportCount(countRow?.total ?? 0);
+    const rows = rawRows.map((row) => ({
+      shiftId: row.shiftId,
+      shiftDate: String(row.shiftDate),
+      centreId: row.centreId,
+      centreName: row.centreName,
+      staffId: row.staffId,
+      staffName: row.staffId
+        ? formatStaffReportName({
+            legalName: row.legalName!,
+            displayName: row.displayName ?? '',
+            useDisplayName: row.useDisplayName ?? false,
+          })
+        : 'Unassigned',
+      role: formatStaffReportRole(row.roleNeeded),
+      status: row.status as ReportShiftStatus,
+      startTime: String(row.startTime),
+      endTime: String(row.endTime),
+      scheduledMinutes: normalizeReportScheduledMinutes(row.scheduledMinutes),
+    }));
+
+    return {
+      dateFrom: resolved.dateFrom,
+      dateTo: resolved.dateTo,
+      centreIds: resolved.centreIds,
+      status: resolved.status,
+      staffIds: resolved.staffIds,
+      summary: resolved.summary,
+      rows,
+      page,
+      pageSize,
+      totalCount,
+      hasMore: page * pageSize < totalCount,
+    };
+  }
+
+  /** Full filtered shift rows for centre usage shift detail export (ignores pagination). */
+  async getCentreUsageShiftsExportRows(query: CentreUsageShiftsQueryDto) {
+    const resolved = await this.resolveCentreUsageShiftsQuery(query);
+
+    const rawRows = await this.db
+      .select({
+        shiftId: shifts.id,
+        shiftDate: shifts.shiftDate,
+        centreName: centres.name,
+        staffId: shifts.assignedStaffId,
+        legalName: staff.legalName,
+        displayName: staff.displayName,
+        useDisplayName: staff.useDisplayName,
+        roleNeeded: shifts.roleNeeded,
+        status: shifts.status,
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+        scheduledMinutes: resolved.durationMinutes,
+      })
+      .from(shifts)
+      .innerJoin(centres, eq(centres.id, shifts.centreId))
+      .leftJoin(staff, eq(staff.id, shifts.assignedStaffId))
+      .where(resolved.whereClause)
+      .orderBy(asc(centres.name), asc(shifts.shiftDate), asc(shifts.startTime), asc(shifts.id));
+
+    const rows = rawRows.map((row) => ({
+      shiftId: row.shiftId,
+      shiftDate: String(row.shiftDate),
+      centreName: row.centreName,
+      staffName: row.staffId
+        ? formatStaffReportName({
+            legalName: row.legalName!,
+            displayName: row.displayName ?? '',
+            useDisplayName: row.useDisplayName ?? false,
+          })
+        : 'Unassigned',
+      role: formatStaffReportRole(row.roleNeeded),
+      statusLabel: formatReportShiftStatusLabel(row.status as ReportShiftStatus),
+      startTime: String(row.startTime),
+      endTime: String(row.endTime),
+      scheduledMinutes: normalizeReportScheduledMinutes(row.scheduledMinutes),
+    }));
+
+    return {
+      dateFrom: resolved.dateFrom,
+      dateTo: resolved.dateTo,
+      rows,
+    };
+  }
+
+  private async resolveCentreUsageShiftsQuery(query: CentreUsageShiftsQueryDto) {
+    const centreIds = resolveCentreUsageCentreIds({ centreIds: query.centreIds });
+    if (!centreIds?.length) {
+      throw new BadRequestException('At least one centre ID is required.');
+    }
+
+    await this.reports.assertCentresExist(centreIds);
+
+    const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
+    const status = resolveCentreUsageShiftDetailStatus(query.status);
+    const staffIds = query.staffIds?.length ? [...new Set(query.staffIds)] : null;
+    const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
+
+    const conditions = [
+      inArray(shifts.centreId, centreIds),
+      gte(shifts.shiftDate, dateFrom),
+      lte(shifts.shiftDate, dateTo),
+    ];
+
+    if (status !== 'all') {
+      conditions.push(eq(shifts.status, status));
+    }
+
+    if (staffIds?.length) {
+      conditions.push(inArray(shifts.assignedStaffId, staffIds));
+    }
+
+    const whereClause = and(...conditions)!;
+
+    const [summaryRow] = await this.db
+      .select({
+        totalShifts: sql<number>`count(*)::int`,
+        totalScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}), 0)::int`,
+        uniqueStaff: sql<number>`count(distinct ${shifts.assignedStaffId}) filter (where ${shifts.assignedStaffId} is not null)::int`,
+      })
+      .from(shifts)
+      .where(whereClause);
+
+    return {
+      dateFrom,
+      dateTo,
+      centreIds,
+      status,
+      staffIds,
+      whereClause,
+      durationMinutes,
+      summary: {
+        totalShifts: normalizeReportCount(summaryRow?.totalShifts ?? 0),
+        totalScheduledMinutes: normalizeReportScheduledMinutes(
+          summaryRow?.totalScheduledMinutes ?? 0,
+        ),
+        uniqueStaff: normalizeReportCount(summaryRow?.uniqueStaff ?? 0),
+      },
     };
   }
 

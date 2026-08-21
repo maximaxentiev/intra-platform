@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { ActivityLogQueryDto } from './dto/activity-log-query.dto';
 import type { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
+import type { CentreUsageShiftsQueryDto } from './dto/centre-usage-shifts-query.dto';
 import type { DocumentComplianceQueryDto } from './dto/document-compliance-query.dto';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import type { StaffUsageQueryDto } from './dto/staff-usage-query.dto';
@@ -15,6 +16,7 @@ import {
   csvNumberCell,
   csvTextCell,
   formatCsvDateOnly,
+  formatCsvTimeOnly,
   formatTorontoTimestampForCsv,
   minutesToCsvHours,
   reportCsvFilename,
@@ -93,6 +95,40 @@ export class ReportsExportService {
     return {
       content: buildCsvContent(headers, body),
       filename: reportCsvFilename('centre-usage', dateFrom, dateTo),
+      rowCount: rows.length,
+    };
+  }
+
+  async exportCentreUsageShifts(
+    query: CentreUsageShiftsQueryDto,
+  ): Promise<ReportCsvExportResult> {
+    const { dateFrom, dateTo, rows } =
+      await this.reportsShift.getCentreUsageShiftsExportRows(query);
+    const headers = [
+      'Date',
+      'Centre',
+      'Staff',
+      'Role',
+      'Status',
+      'Scheduled Start',
+      'Scheduled End',
+      'Scheduled Hours',
+      'Shift ID',
+    ];
+    const body = rows.map((row) => [
+      csvTextCell(formatCsvDateOnly(row.shiftDate)),
+      csvTextCell(row.centreName),
+      csvTextCell(row.staffName),
+      csvTextCell(row.role),
+      csvTextCell(row.statusLabel),
+      csvTextCell(formatCsvTimeOnly(row.startTime)),
+      csvTextCell(formatCsvTimeOnly(row.endTime)),
+      csvNumberCell(minutesToCsvHours(row.scheduledMinutes)),
+      csvTextCell(row.shiftId),
+    ]);
+    return {
+      content: buildCsvContent(headers, body),
+      filename: reportCsvFilename('centre-usage-shift-detail', dateFrom, dateTo),
       rowCount: rows.length,
     };
   }

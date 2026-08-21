@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { CentreUsageFilters } from "@/components/reports/CentreUsageFilters";
+import { CentreUsageShiftDetail } from "@/components/reports/CentreUsageShiftDetail";
 import {
   CentreUsageSummaryCards,
   CentreUsageSummarySkeleton,
@@ -49,10 +50,17 @@ import { reportExportPaths } from "@/lib/report-export";
 import {
   centreSelectionToApiQuery,
   centreSelectionToSearchParams,
+  hasExplicitCentreSelection,
   isSingleCentreSelection,
   resolveAppliedCentreSelection,
   type CentreSelectionState,
 } from "@/lib/reports-centre-selection";
+import {
+  resolveAppliedShiftDetailSearch,
+  shiftDetailToSearchParams,
+  type CentreUsageShiftDetailSearch,
+} from "@/lib/centre-usage-shift-detail";
+import { staffApi } from "@/lib/db";
 
 const metricFilterSchema = {
   totalShiftsMin: z.string().optional(),
@@ -71,6 +79,10 @@ const metricFilterSchema = {
   scheduledHoursMax: z.string().optional(),
   completedScheduledHoursMin: z.string().optional(),
   completedScheduledHoursMax: z.string().optional(),
+  shiftStatus: z.string().optional(),
+  shiftStaffIds: z.string().optional(),
+  shiftPage: z.coerce.number().optional(),
+  shiftPageSize: z.coerce.number().optional(),
 };
 
 const searchSchema = z.object({
@@ -95,6 +107,8 @@ function CentreUsageReport() {
 
   const appliedSelection = useMemo(() => resolveAppliedCentreSelection(search), [search]);
   const appliedMetricFilters = useMemo(() => parseCentreMetricFiltersFromSearch(search), [search]);
+
+  const appliedShiftDetail = useMemo(() => resolveAppliedShiftDetailSearch(search), [search]);
 
   const applied = useMemo(
     () => ({
@@ -121,6 +135,11 @@ function CentreUsageReport() {
     queryFn: () => centresApi.list(),
   });
 
+  const staffQ = useQuery({
+    queryKey: ["staff-list"],
+    queryFn: () => staffApi.list(),
+  });
+
   const reportQ = useQuery({
     queryKey: [
       "reports-centre-usage",
@@ -143,9 +162,14 @@ function CentreUsageReport() {
       }),
   });
 
-  function buildSearch(page: number, pageSize: ReportComparisonPageSize, nextRules = rules) {
+  function buildSearch(
+    page: number,
+    pageSize: ReportComparisonPageSize,
+    nextRules = rules,
+    shiftDetail: CentreUsageShiftDetailSearch = appliedShiftDetail,
+  ) {
     const metricFilters = centreMetricSearchFromRules(nextRules, CENTRE_USAGE_METRICS);
-    return {
+    const base = {
       dateFrom: dateFrom === defaults.dateFrom ? undefined : dateFrom,
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       ...centreSelectionToSearchParams(selection),
@@ -153,13 +177,31 @@ function CentreUsageReport() {
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
     };
+    if (hasExplicitCentreSelection(selection)) {
+      return { ...base, ...shiftDetailToSearchParams(shiftDetail) };
+    }
+    return base;
+  }
+
+  function updateShiftDetail(next: Partial<CentreUsageShiftDetailSearch>) {
+    navigate({
+      search: buildSearch(applied.page, applied.pageSize, rules, {
+        ...appliedShiftDetail,
+        ...next,
+      }),
+    });
   }
 
   function applyFilters() {
     const error = validateReportFilterRules(rules, CENTRE_USAGE_METRICS);
     setValidationError(error);
     if (error) return;
-    navigate({ search: buildSearch(1, applied.pageSize) });
+    navigate({ search: buildSearch(1, applied.pageSize, rules, {
+      shiftStatus: "completed",
+      shiftStaffIds: [],
+      shiftPage: 1,
+      shiftPageSize: appliedShiftDetail.shiftPageSize,
+    }) });
   }
 
   function resetFilters() {
@@ -181,6 +223,7 @@ function CentreUsageReport() {
   const rows = reportQ.data?.rows ?? [];
   const reportReady = !reportQ.isLoading && summary != null;
   const singleCentreSelected = isSingleCentreSelection(applied.selection);
+  const showShiftDetail = hasExplicitCentreSelection(applied.selection);
   const showComparison = !singleCentreSelected;
   const selectedCentreName =
     singleCentreSelected && rows[0] ? rows[0].centreName : null;
@@ -386,6 +429,18 @@ function CentreUsageReport() {
                 onPageSizeChange={(pageSize) => navigate({ search: buildSearch(1, pageSize) })}
               />
             </>
+          )}
+
+          {showShiftDetail && (
+            <CentreUsageShiftDetail
+              dateFrom={applied.dateFrom}
+              dateTo={applied.dateTo}
+              centreIds={applied.selection.centreIds}
+              singleCentreSelected={singleCentreSelected}
+              detail={appliedShiftDetail}
+              staffMembers={staffQ.data ?? []}
+              onDetailChange={updateShiftDetail}
+            />
           )}
         </>
       )}

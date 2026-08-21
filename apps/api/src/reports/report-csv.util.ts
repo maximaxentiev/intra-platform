@@ -52,3 +52,9 @@ export function formatCsvDateOnly(value: string | null | undefined): string {
   if (!value) return '';
   return value.slice(0, 10);
 }
+
+/** Time portion for CSV (HH:mm from stored time). */
+export function formatCsvTimeOnly(value: string | null | undefined): string {
+  if (!value) return '';
+  return value.slice(0, 5);
+}
