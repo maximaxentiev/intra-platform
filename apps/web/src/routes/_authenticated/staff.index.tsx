@@ -1,18 +1,42 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { staffApi, displayStaff, type Staff, type PortalAccountDisplayStatus } from "@/lib/db";
-import { PORTAL_ACCOUNT_STATUS_LABELS } from "@/lib/portal-account-status";
+import { staffApi, displayStaff, type Staff } from "@/lib/db";
+import {
+  PORTAL_ACCOUNT_STATUS_LABELS,
+  type PortalAccountDisplayStatus,
+} from "@/lib/portal-account-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
-import { Plus, Users, Search } from "lucide-react";
+import {
+  EmptyState,
+  FilterChipBar,
+  ListLoading,
+  dataTable,
+  DataTableEmptyRow,
+  DataTableLoadingRows,
+} from "@/components/ui-kit";
+import {
+  EMPTY_STAFF_FILTERS,
+  buildStaffFilterChips,
+  clearStaffFilterChip,
+  filterStaffList,
+  hasActiveStaffFilters,
+  staffContactLines,
+  staffPortalStatusOf,
+  staffResultCountLabel,
+  staffRoleOptions,
+  type StaffFilterState,
+} from "@/lib/staff-list-ui";
+import { AlertCircle, ChevronRight, Plus, Search, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/staff/")({
   component: StaffIndex,
@@ -26,34 +50,62 @@ const PORTAL_FILTER_OPTIONS: PortalAccountDisplayStatus[] = [
   "disabled",
 ];
 
-function portalStatusOf(s: Staff): PortalAccountDisplayStatus {
-  return (s.portalAccountStatus ?? "no_account") as PortalAccountDisplayStatus;
-}
-
 function StaffIndex() {
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all");
-  const [role, setRole] = useState("all");
-  const [portal, setPortal] = useState("all");
-  const { data, isLoading } = useQuery({
+  // Live client-side filters — no Apply button, no URL search state.
+  const [filters, setFilters] = useState<StaffFilterState>(EMPTY_STAFF_FILTERS);
+  const set = <K extends keyof StaffFilterState>(key: K, value: StaffFilterState[K]) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["staff-list"],
     queryFn: () => staffApi.list(),
   });
+
   const list: Staff[] = data ?? [];
-  const roles = Array.from(new Set(list.map((s) => s.role).filter(Boolean))).sort();
-  const filtered = list.filter((s) => {
-    if (status !== "all" && s.status !== status) return false;
-    if (role !== "all" && s.role !== role) return false;
-    if (portal !== "all" && portalStatusOf(s) !== portal) return false;
-    if (
-      q &&
-      !displayStaff(s).toLowerCase().includes(q.toLowerCase()) &&
-      !s.legalName.toLowerCase().includes(q.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-  const hasFilters = q !== "" || status !== "all" || role !== "all" || portal !== "all";
+  const roles = staffRoleOptions(list);
+  const filtered = filterStaffList(list, filters);
+  const active = hasActiveStaffFilters(filters);
+  const chips = buildStaffFilterChips(filters).map((chip) => ({
+    id: chip.id,
+    field: chip.field,
+    label: chip.label,
+    onRemove: () => setFilters((prev) => clearStaffFilterChip(prev, chip.id)),
+  }));
+
+  const resultContext = isLoading
+    ? "Loading…"
+    : isError
+      ? "Results unavailable"
+      : staffResultCountLabel(filtered.length, list.length);
+
+  function clearFilters() {
+    setFilters(EMPTY_STAFF_FILTERS);
+  }
+
+  const emptyState = active ? (
+    <EmptyState
+      title="No staff match these filters"
+      description="Adjust or clear the filters to see more results."
+      action={
+        <Button size="sm" variant="outline" onClick={clearFilters}>
+          Clear filters
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={Users}
+      title="No staff yet"
+      description="Add your first staff member to get started."
+      action={
+        <Button asChild size="sm">
+          <Link to="/staff/new">
+            <Plus className="h-4 w-4" aria-hidden /> Add staff
+          </Link>
+        </Button>
+      }
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -66,201 +118,261 @@ function StaffIndex() {
               <Link to="/staff/import">Import CSV</Link>
             </Button>
             <Button asChild>
-              <Link to="/staff/new"><Plus className="h-4 w-4 mr-1.5" /> Add staff</Link>
+              <Link to="/staff/new">
+                <Plus className="h-4 w-4 mr-1.5" /> Add staff
+              </Link>
             </Button>
           </div>
         }
       />
 
-      <Card className="p-3 sm:p-4 border-border/70 shadow-xs">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_10rem_12rem_12rem] items-center">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search by name…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="pl-9 h-10"
-              aria-label="Search staff"
-            />
+      {/* Live filters — results update as you type / select. */}
+      <Card className="gap-0 border-border/70 px-3.5 py-3 shadow-xs sm:px-4">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_10rem_10rem_12rem]">
+          <div className="space-y-1.5">
+            <Label htmlFor="staff-search" className="text-xs font-medium text-muted-foreground">
+              Search
+            </Label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                id="staff-search"
+                placeholder="Search by name…"
+                value={filters.q}
+                onChange={(e) => set("q", e.target.value)}
+                className="h-9 pl-9"
+              />
+            </div>
           </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-10" aria-label="Filter by employment status">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="h-10" aria-label="Filter by role">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {roles.map((r) => (
-                <SelectItem key={r as string} value={r as string}>{r as string}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={portal} onValueChange={setPortal}>
-            <SelectTrigger className="h-10" aria-label="Filter by portal account status">
-              <SelectValue placeholder="Portal account" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All portal statuses</SelectItem>
-              {PORTAL_FILTER_OPTIONS.map((p) => (
-                <SelectItem key={p} value={p}>{PORTAL_ACCOUNT_STATUS_LABELS[p]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Employment</Label>
+            <Select
+              value={filters.status}
+              onValueChange={(v) => set("status", v as StaffFilterState["status"])}
+            >
+              <SelectTrigger className="h-9" aria-label="Filter by employment status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Role</Label>
+            <Select value={filters.role} onValueChange={(v) => set("role", v)}>
+              <SelectTrigger className="h-9" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {roles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Portal account</Label>
+            <Select
+              value={filters.portal}
+              onValueChange={(v) => set("portal", v as StaffFilterState["portal"])}
+            >
+              <SelectTrigger className="h-9" aria-label="Filter by portal account status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All portal statuses</SelectItem>
+                {PORTAL_FILTER_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PORTAL_ACCOUNT_STATUS_LABELS[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-[13px] text-muted-foreground" aria-live="polite">
+            {resultContext}
+          </p>
+          {chips.length > 0 && <FilterChipBar chips={chips} onClearAll={clearFilters} />}
         </div>
       </Card>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
+      {isError ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Staff directory could not be loaded</p>
+            <p className="text-[13px] text-muted-foreground">
+              The request failed. No staff results are being shown.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? "Retrying…" : "Retry"}
+          </Button>
         </div>
-      ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center border-dashed bg-surface-muted">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary">
-            <Users className="h-6 w-6" />
-          </div>
-          <h3 className="mt-4 text-base font-semibold">
-            {hasFilters ? "No staff match your filters" : "No staff yet"}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {hasFilters ? "Adjust or clear filters to see more results." : "Add your first staff member to get started."}
-          </p>
-          {!hasFilters && (
-            <Button asChild className="mt-4">
-              <Link to="/staff/new"><Plus className="h-4 w-4 mr-1.5" /> Add staff</Link>
-            </Button>
-          )}
-        </Card>
       ) : (
-        <div className="space-y-3">
-          <div className="text-xs text-muted-foreground">
-            Showing {filtered.length} of {list.length} staff
-          </div>
-
-          {/* Desktop table — lg+ only; seven columns are too dense below that width */}
-          <Card className="hidden lg:block border-border/70 shadow-xs overflow-x-auto p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium w-28">Role</th>
-                  <th className="px-3 py-2 font-medium w-40">Phone</th>
-                  <th className="px-3 py-2 font-medium">Email</th>
-                  <th className="px-3 py-2 font-medium w-32">Employment</th>
-                  <th className="px-3 py-2 font-medium w-36">Portal account</th>
-                  <th className="px-3 py-2 font-medium w-44">Document Status</th>
-                  <th className="px-3 py-2 font-medium w-20 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((s) => (
-                  <tr key={s.id} className="border-t border-border/60 hover:bg-muted/30">
-                    <td className="px-3 py-2 max-w-[16rem]">
+        <>
+          {/* Mobile / tablet: compact navigable cards */}
+          <div className="lg:hidden">
+            {isLoading ? (
+              <ListLoading rows={5} label="Loading staff" />
+            ) : filtered.length === 0 ? (
+              emptyState
+            ) : (
+              <ul className="space-y-2">
+                {filtered.map((s) => {
+                  const contact = staffContactLines(s);
+                  const portal = staffPortalStatusOf(s);
+                  return (
+                    <li key={s.id}>
                       <Link
                         to="/staff/$id"
                         params={{ id: s.id }}
-                        className="font-medium hover:text-primary hover:underline block truncate"
-                        title={displayStaff(s)}
+                        aria-label={`Open profile for ${displayStaff(s)}`}
+                        className="flex items-start gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-3 shadow-xs transition-colors hover:bg-muted/50 active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
                       >
-                        {displayStaff(s)}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-[15px] font-semibold">{displayStaff(s)}</span>
+                            <StatusBadge
+                              status={s.status === "active" ? "active" : "inactive"}
+                              size="xs"
+                            >
+                              {s.status}
+                            </StatusBadge>
+                          </div>
+                          <div className="text-[13px] text-muted-foreground">
+                            {s.role || "No role assigned"}
+                          </div>
+                          {contact.primary && (
+                            <div className="min-w-0 text-[13px] text-foreground break-all">
+                              {contact.primary}
+                            </div>
+                          )}
+                          {contact.secondary && (
+                            <div className="text-[13px] tabular-nums text-muted-foreground">
+                              {contact.secondary}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <PortalStatusBadge status={portal} size="xs" />
+                            <DocumentStatusBadge
+                              status={s.documentStatus ?? "no_documents_submitted"}
+                              size="xs"
+                            />
+                          </div>
+                        </div>
+                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                       </Link>
-                    </td>
-                    <td className="px-3 py-2">
-                      {s.role ? s.role : <span className="text-muted-foreground italic">No role assigned</span>}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap tabular-nums">
-                      {s.phone || <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-3 py-2 max-w-[18rem]">
-                      {s.email ? (
-                        <>
-                          <span className="block truncate" title={s.email} aria-hidden>
-                            {s.email}
-                          </span>
-                          <span className="sr-only">{s.email}</span>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge status={s.status === "active" ? "active" : "inactive"} size="xs">
-                        {s.status}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span
-                        aria-label={`Portal account: ${PORTAL_ACCOUNT_STATUS_LABELS[portalStatusOf(s)]}`}
-                      >
-                        <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <DocumentStatusBadge status={s.documentStatus ?? "no_documents_submitted"} size="xs" />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-                        <Link to="/staff/$id" params={{ id: s.id }}>View</Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-
-          {/* Mobile / tablet list */}
-          <div className="lg:hidden space-y-2">
-            {filtered.map((s) => (
-              <Card key={s.id} className="p-3 border-border/70 shadow-xs">
-                <div className="flex items-start justify-between gap-3 min-w-0">
-                  <div className="min-w-0">
-                    <Link
-                      to="/staff/$id"
-                      params={{ id: s.id }}
-                      className="font-semibold text-[15px] hover:text-primary block truncate"
-                    >
-                      {displayStaff(s)}
-                    </Link>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {s.role || "No role assigned"}
-                    </div>
-                  </div>
-                  <Button asChild size="sm" variant="outline" className="shrink-0 h-9">
-                    <Link to="/staff/$id" params={{ id: s.id }}>View</Link>
-                  </Button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <StatusBadge status={s.status === "active" ? "active" : "inactive"} size="xs">
-                    {s.status}
-                  </StatusBadge>
-                  <PortalStatusBadge status={portalStatusOf(s)} size="xs" />
-                  <DocumentStatusBadge status={s.documentStatus ?? "no_documents_submitted"} size="xs" />
-                </div>
-                <dl className="mt-2 min-w-0 space-y-0.5 text-xs text-muted-foreground">
-                  <div className="flex min-w-0 gap-1.5">
-                    <dt className="shrink-0">Phone:</dt>
-                    <dd className="min-w-0 break-words tabular-nums">{s.phone || "—"}</dd>
-                  </div>
-                  <div className="flex min-w-0 gap-1.5">
-                    <dt className="shrink-0">Email:</dt>
-                    <dd className="min-w-0 break-all">{s.email || "—"}</dd>
-                  </div>
-                </dl>
-
-              </Card>
-            ))}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-        </div>
+
+          {/* Desktop: compact directory table */}
+          <div className={`hidden lg:block ${dataTable.shell}`}>
+            <div className={dataTable.scroll}>
+              <Table>
+                <TableHeader className={dataTable.header}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={dataTable.headerCell}>Name</TableHead>
+                    <TableHead className={dataTable.headerCell}>Role</TableHead>
+                    <TableHead className={dataTable.headerCell}>Contact</TableHead>
+                    <TableHead className={dataTable.headerCell}>Employment</TableHead>
+                    <TableHead className={dataTable.headerCell}>Portal</TableHead>
+                    <TableHead className={dataTable.headerCell}>Documents</TableHead>
+                    <TableHead className={dataTable.headerCell}>
+                      <span className="sr-only">Open</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && <DataTableLoadingRows rows={6} columns={7} />}
+                  {!isLoading && filtered.length === 0 && (
+                    <DataTableEmptyRow columns={7}>{emptyState}</DataTableEmptyRow>
+                  )}
+                  {!isLoading &&
+                    filtered.map((s) => {
+                      const contact = staffContactLines(s);
+                      const portal = staffPortalStatusOf(s);
+                      return (
+                        <TableRow
+                          key={s.id}
+                          className={`relative ${dataTable.row} ${dataTable.rowInteractive}`}
+                        >
+                          <TableCell className={`${dataTable.cell} max-w-[18rem] font-medium`}>
+                            <Link
+                              to="/staff/$id"
+                              params={{ id: s.id }}
+                              aria-label={`Open profile for ${displayStaff(s)}`}
+                              className="block truncate after:absolute after:inset-0 focus-visible:outline-none"
+                            >
+                              {displayStaff(s)}
+                            </Link>
+                          </TableCell>
+                          <TableCell className={dataTable.cell}>
+                            {s.role || <span className={dataTable.cellMuted}>—</span>}
+                          </TableCell>
+                          <TableCell className={`${dataTable.cell} max-w-[18rem] py-1.5`}>
+                            {contact.primary ? (
+                              <span className="block min-w-0">
+                                <span className="block truncate">{contact.primary}</span>
+                                {contact.secondary && (
+                                  <span className="block truncate text-[13px] tabular-nums text-muted-foreground">
+                                    {contact.secondary}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className={dataTable.cellMuted}>—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
+                            <StatusBadge
+                              status={s.status === "active" ? "active" : "inactive"}
+                              size="xs"
+                            >
+                              {s.status}
+                            </StatusBadge>
+                          </TableCell>
+                          <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
+                            <PortalStatusBadge status={portal} size="xs" />
+                          </TableCell>
+                          <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
+                            <DocumentStatusBadge
+                              status={s.documentStatus ?? "no_documents_submitted"}
+                              size="xs"
+                            />
+                          </TableCell>
+                          <TableCell className={`${dataTable.cell} ${dataTable.cellActions}`}>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
