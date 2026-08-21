@@ -85,8 +85,8 @@ function TimeRangeRow({
     <div
       className={
         past
-          ? "flex flex-col gap-2 rounded-md border border-[#cfcfcf] bg-[#ececec] p-2.5 text-muted-foreground shadow-sm"
-          : "flex flex-col gap-2 rounded-md border border-[#e8d5a8] bg-[#fff4db] p-2.5 shadow-sm"
+          ? "flex flex-col gap-2 rounded-md border border-border bg-muted p-2.5 text-muted-foreground shadow-sm"
+          : "flex flex-col gap-2 rounded-md border border-warning/25 bg-warning-soft p-2.5 shadow-sm"
       }
     >
       <div className="space-y-1">
@@ -98,7 +98,7 @@ function TimeRangeRow({
           value={start}
           onChange={e => setStart(e.target.value)}
           onBlur={saveStart}
-          className={`h-9 w-full border bg-white text-sm text-foreground ${past ? "border-[#d4d4d4] opacity-90" : "border-[#e0cfa0]"}`}
+          className={`h-9 w-full border bg-surface text-sm text-foreground ${past ? "border-border opacity-90" : "border-warning/30"}`}
         />
       </div>
       <div className="space-y-1">
@@ -110,7 +110,7 @@ function TimeRangeRow({
           value={end}
           onChange={e => setEnd(e.target.value)}
           onBlur={saveEnd}
-          className={`h-9 w-full border bg-white text-sm text-foreground ${past ? "border-[#d4d4d4] opacity-90" : "border-[#e0cfa0]"}`}
+          className={`h-9 w-full border bg-surface text-sm text-foreground ${past ? "border-border opacity-90" : "border-warning/30"}`}
         />
       </div>
       <Button
