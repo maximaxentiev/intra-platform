@@ -258,7 +258,7 @@ function ShiftDetail() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  variant="destructive"
+                  className="text-destructive focus:text-destructive"
                   onSelect={(e) => {
                     e.preventDefault();
                     setDeleteOpen(true);
