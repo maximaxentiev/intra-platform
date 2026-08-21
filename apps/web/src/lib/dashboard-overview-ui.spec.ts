@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { DashboardOverviewResponse } from "./dashboard-api";
 import {
   activityActorLine,
+  next7DaysCoverageMessage,
+  staffReadinessHeadline,
+  unexplainedComplianceNote,
   communicationAttentionMessage,
   communicationFailureLabel,
   complianceHeadline,
@@ -209,5 +212,68 @@ describe("recent activity", () => {
         actor: { name: null, type: "system" },
       }),
     ).toBe("10:42 AM · by system");
+  });
+});
+
+describe("next 7 days coverage semantics", () => {
+  it("says nothing is scheduled when there are no upcoming shifts", () => {
+    expect(next7DaysCoverageMessage({ total: 0, pending: 0 })).toBe(
+      "No shifts scheduled in the next 7 days.",
+    );
+  });
+
+  it("says everything is covered when shifts exist and none are pending", () => {
+    expect(next7DaysCoverageMessage({ total: 5, pending: 0 })).toBe(
+      "All upcoming shifts are currently covered.",
+    );
+  });
+
+  it("returns null when pending shifts remain", () => {
+    expect(next7DaysCoverageMessage({ total: 5, pending: 2 })).toBeNull();
+  });
+});
+
+describe("workforce readiness copy", () => {
+  it("renders an unambiguous staff readiness headline", () => {
+    expect(staffReadinessHeadline(1)).toBe("1 active staff member");
+    expect(staffReadinessHeadline(12)).toBe("12 active staff members");
+  });
+
+  it("explains an unexplained compliance gap", () => {
+    expect(
+      unexplainedComplianceNote({
+        compliant: 0,
+        staffShown: 1,
+        pendingReview: 0,
+        issueFlagged: 0,
+        expired: 0,
+      }),
+    ).toBe(
+      "1 staff member is not fully compliant. Review compliance for missing or incomplete requirements.",
+    );
+  });
+
+  it("stays silent when issue counters already explain the gap", () => {
+    expect(
+      unexplainedComplianceNote({
+        compliant: 4,
+        staffShown: 5,
+        pendingReview: 1,
+        issueFlagged: 0,
+        expired: 0,
+      }),
+    ).toBeNull();
+  });
+
+  it("stays silent when everyone is compliant", () => {
+    expect(
+      unexplainedComplianceNote({
+        compliant: 5,
+        staffShown: 5,
+        pendingReview: 0,
+        issueFlagged: 0,
+        expired: 0,
+      }),
+    ).toBeNull();
   });
 });
