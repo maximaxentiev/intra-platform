@@ -9,6 +9,7 @@ import {
   parseDocumentComplianceFiltersFromSearch,
   validateDocumentComplianceDateRanges,
 } from "./report-document-filters";
+import type { DocumentComplianceFilterState } from "./report-document-filters";
 
 describe("report-document-filters", () => {
   it("parses legacy status and documentType into per-document state", () => {
@@ -113,11 +114,11 @@ describe("report-document-filters", () => {
   });
 
   it("supports individual chip removal", () => {
-    const filters = {
+    const filters: DocumentComplianceFilterState = {
       ...EMPTY_DOCUMENT_COMPLIANCE_FILTERS,
-      overallCompliance: ["needs_attention", "compliant"] as const,
+      overallCompliance: ["needs_attention", "compliant"],
       roles: ["ECE", "Nanny"],
-      vscStatuses: ["expired", "expiring_soon"] as const,
+      vscStatuses: ["expired", "expiring_soon"],
     };
     const chips = buildDocumentComplianceFilterChips(filters);
     const roleChip = chips.find((chip) => chip.id === "role-ECE");

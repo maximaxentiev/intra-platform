@@ -66,7 +66,7 @@ export function documentReminderStatusLabel(status: DocumentReportReminderStatus
   return status;
 }
 
-export function documentCategoryShortLabel(key: keyof DocumentReportDocumentsKeys): string {
+export function documentCategoryShortLabel(key: DocumentReportDocumentsKeys): string {
   switch (key) {
     case "vulnerableSectorCheck":
       return "VSC";
