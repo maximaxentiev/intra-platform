@@ -139,8 +139,11 @@ function applyLegacyStatusToState(
 }
 
 export function parseDocumentComplianceFiltersFromSearch(
-  search: Record<string, string | number | undefined>,
+  rawSearch: Record<string, string | number | undefined>,
 ): DocumentComplianceFilterState {
+  const search: Record<string, string | undefined> = Object.fromEntries(
+    Object.entries(rawSearch).map(([key, value]) => [key, typeof value === "string" ? value : undefined]),
+  );
   let state: DocumentComplianceFilterState = {
     ...EMPTY_DOCUMENT_COMPLIANCE_FILTERS,
     overallCompliance: parseCommaList(search.overallCompliance) as DocumentOverallComplianceStatus[],

@@ -64,8 +64,11 @@ export function centreMetricFiltersToSearchParams(
 }
 
 export function parseCentreMetricFiltersFromSearch(
-  search: Record<string, string | number | undefined>,
+  rawSearch: Record<string, string | number | undefined>,
 ): CentreMetricFilterSearch {
+  const search: Record<string, string | undefined> = Object.fromEntries(
+    Object.entries(rawSearch).map(([key, value]) => [key, typeof value === "string" ? value : undefined]),
+  );
   return {
     totalShiftsMin: search.totalShiftsMin,
     totalShiftsMax: search.totalShiftsMax,
