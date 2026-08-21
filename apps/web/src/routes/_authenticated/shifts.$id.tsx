@@ -253,7 +253,12 @@ function ShiftDetail() {
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="More shift actions">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="More shift actions"
+                >
                   <MoreHorizontal className="h-4 w-4" aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
@@ -523,13 +528,12 @@ function ShiftDetail() {
 
               {!isHistorical && (
                 <div className="space-y-2 border-t border-border/70 pt-3">
-                  <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
                   {status === "filled" && (
                     <>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full"
+                        className="w-full text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                         onClick={() => changeStatus("completed")}
                       >
                         Mark completed
@@ -539,6 +543,7 @@ function ShiftDetail() {
                       </p>
                     </>
                   )}
+                  <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
                 </div>
               )}
 
@@ -573,7 +578,13 @@ function CancelShiftButton({ onCancel }: { onCancel: (reason: string) => void })
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full">Cancel shift</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive"
+        >
+          Cancel shift
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

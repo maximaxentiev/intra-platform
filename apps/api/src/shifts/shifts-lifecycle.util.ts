@@ -15,3 +15,10 @@ export function assertManualCompletionAllowed(currentStatus: string): void {
     throw new BadRequestException('Only filled shifts can be marked completed manually.');
   }
 }
+
+/** Generic status → pending clears assignee; Ops uses dedicated unassign instead. */
+export function rejectGenericPendingTransition(): never {
+  throw new BadRequestException(
+    'Changing status to pending is not supported. Use unassign to remove staff from a filled shift.',
+  );
+}

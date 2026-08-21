@@ -32,6 +32,7 @@ import {
 import {
   assertManualCompletionAllowed,
   normalizeRequiredCancellationReason,
+  rejectGenericPendingTransition,
 } from './shifts-lifecycle.util';
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
@@ -428,7 +429,11 @@ export class ShiftsService {
       return this.transitionToCancelled(id, dto.cancellationReason, actorUserId);
     }
 
-    if (dto.status === 'completed' || dto.status === 'pending') {
+    if (dto.status === 'pending') {
+      rejectGenericPendingTransition();
+    }
+
+    if (dto.status === 'completed') {
       await this.shiftReminders.cancelPendingForShift(id);
     }
 
@@ -443,9 +448,11 @@ export class ShiftsService {
     }
 
     return this.db.transaction(async (tx) => {
-      const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
-      if (dto.status === 'pending') patch.assignedStaffId = null;
-      const rows = await tx.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
+      const rows = await tx
+        .update(shifts)
+        .set({ status: dto.status, updatedAt: new Date() })
+        .where(eq(shifts.id, id))
+        .returning();
       if (!rows[0]) throw new NotFoundException('Shift not found.');
 
       if (dto.status === 'completed') {
@@ -458,20 +465,6 @@ export class ShiftsService {
             centreId: rows[0].centreId,
             staffId: rows[0].assignedStaffId,
             entityId: id,
-          },
-          tx,
-        );
-      } else if (dto.status === 'pending' && existing[0].assignedStaffId) {
-        await this.platformAudit.record(
-          {
-            action: PLATFORM_AUDIT_ACTIONS.shiftUnassigned,
-            actorType: 'ops_user',
-            actorUserId,
-            shiftId: id,
-            centreId: rows[0].centreId,
-            staffId: existing[0].assignedStaffId,
-            entityId: id,
-            metadata: { previousStaffId: existing[0].assignedStaffId },
           },
           tx,
         );

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assertManualCompletionAllowed,
   normalizeRequiredCancellationReason,
+  rejectGenericPendingTransition,
 } from './shifts-lifecycle.util';
 
 describe('normalizeRequiredCancellationReason', () => {
@@ -26,5 +27,11 @@ describe('assertManualCompletionAllowed', () => {
     for (const status of ['pending', 'cancelled', 'completed']) {
       expect(() => assertManualCompletionAllowed(status)).toThrow(BadRequestException);
     }
+  });
+});
+
+describe('rejectGenericPendingTransition', () => {
+  it('always rejects with BadRequestException', () => {
+    expect(() => rejectGenericPendingTransition()).toThrow(BadRequestException);
   });
 });

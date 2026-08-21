@@ -332,11 +332,12 @@ becomes a platform standard only once a real workflow depends on it.
 | `MetricTile` | Dashboard tiles, Report metric cards |
 | `LoadingState` (`ListLoading`, `DetailLoadingState`) | Shifts list (mobile), detail screens |
 | `dataTable` conventions + `DataTableLoadingRows` / `DataTableEmptyRow` | Shifts list (desktop) |
-| `FilterPanel` + `FilterChipBar` | Shifts list |
+| `FilterPanel` + `FilterChipBar` | Shifts list (compact chip / result / action footer) |
 | `EmptyState` (compact) | Shifts list, Shift detail assignment |
 | `SectionCard` | Shift detail, Create shift, Shift internal comments |
 | `PropertyList` | Shift detail |
 | `ConfirmDestructiveDialog` | Shift deletion |
+| `Tooltip` (field helper on label) | Shifts list (Staffpoint column), Create shift (Staffpoint) |
 | Reduced-motion handling | Global (`src/styles.css`) |
 
 ### Planned — adopt during page migration

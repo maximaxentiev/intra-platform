@@ -74,10 +74,10 @@ export function FilterPanel({
         </div>
       )}
 
-      {chips && <div className="mt-3">{chips}</div>}
+      {chips && <div className="mt-2">{chips}</div>}
 
       {(onApply || onClear || resultContext) && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-1.5 border-t border-border/70 pt-2">
           <p className="text-[13px] text-muted-foreground" aria-live="polite">
             {resultContext}
           </p>

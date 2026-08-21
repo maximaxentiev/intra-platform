@@ -178,4 +178,65 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
     const row = await db.select().from(shifts).where(eq(shifts.id, created.id)).limit(1);
     expect(row[0]?.status).toBe('pending');
   });
+
+  it('creates shifts in pending status', async () => {
+    const created = await createPendingShift('2026-10-05');
+    const row = await db.select().from(shifts).where(eq(shifts.id, created.id)).limit(1);
+    expect(row[0]?.status).toBe('pending');
+    expect(row[0]?.assignedStaffId).toBeNull();
+  });
+
+  it('unassigns via the dedicated endpoint', async () => {
+    const created = await createPendingShift('2026-10-06');
+    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+
+    const unassigned = await service.unassign(created.id, FIXTURE.opsUser);
+    expect(unassigned.status).toBe('pending');
+    expect(unassigned.assignedStaffId).toBeNull();
+  });
+
+  it('rejects generic status transition to pending', async () => {
+    const created = await createPendingShift('2026-10-07');
+    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+
+    await expect(
+      service.changeStatus(created.id, { status: 'pending' }, FIXTURE.opsUser),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const row = await db.select().from(shifts).where(eq(shifts.id, created.id)).limit(1);
+    expect(row[0]?.status).toBe('filled');
+    expect(row[0]?.assignedStaffId).toBe(FIXTURE.staffA);
+  });
+
+  it('preserves cancelled assignment history when pending is rejected', async () => {
+    const created = await createPendingShift('2026-10-08');
+    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await service.changeStatus(
+      created.id,
+      { status: 'cancelled', cancellationReason: 'Centre closed' },
+      FIXTURE.opsUser,
+    );
+
+    await expect(
+      service.changeStatus(created.id, { status: 'pending' }, FIXTURE.opsUser),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const row = await db.select().from(shifts).where(eq(shifts.id, created.id)).limit(1);
+    expect(row[0]?.status).toBe('cancelled');
+    expect(row[0]?.assignedStaffId).toBe(FIXTURE.staffA);
+  });
+
+  it('preserves completed assignment history when pending is rejected', async () => {
+    const created = await createPendingShift('2026-10-09');
+    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await service.changeStatus(created.id, { status: 'completed' }, FIXTURE.opsUser);
+
+    await expect(
+      service.changeStatus(created.id, { status: 'pending' }, FIXTURE.opsUser),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const row = await db.select().from(shifts).where(eq(shifts.id, created.id)).limit(1);
+    expect(row[0]?.status).toBe('completed');
+    expect(row[0]?.assignedStaffId).toBe(FIXTURE.staffA);
+  });
 });

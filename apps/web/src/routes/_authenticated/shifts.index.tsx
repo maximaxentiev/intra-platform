@@ -252,7 +252,7 @@ function ShiftsIndex() {
       </div>
 
       {/* Mobile filters */}
-      <div className="space-y-2 md:hidden">
+      <div className="space-y-1.5 md:hidden">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[13px] text-muted-foreground" aria-live="polite">{resultContext}</p>
           <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>

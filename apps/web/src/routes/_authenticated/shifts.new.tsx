@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionCard } from "@/components/ui-kit";
+import { Info } from "lucide-react";
+
+const STAFFPOINT_HELP =
+  "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
 
 export const Route = createFileRoute("/_authenticated/shifts/new")({
   component: NewShift,
@@ -66,7 +71,7 @@ function NewShift() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-[740px] space-y-6">
       <PageHeader
         eyebrow="New"
         backTo="/shifts"
@@ -114,7 +119,21 @@ function NewShift() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Added to Staffpoint</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Added to Staffpoint</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                        aria-label={`About Staffpoint. ${STAFFPOINT_HELP}`}
+                      >
+                        <Info className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">{STAFFPOINT_HELP}</TooltipContent>
+                  </Tooltip>
+                </div>
                 <Select
                   value={values.addedToStaffpoint ? "yes" : "no"}
                   onValueChange={(v) => set("addedToStaffpoint", v === "yes")}

@@ -140,6 +140,17 @@ describe("shift detail redesign", () => {
     expect(detail).toContain("Mark completed");
   });
 
+  it("uses restrained lifecycle action styling", () => {
+    expect(detail).toContain("text-muted-foreground hover:bg-muted/60 hover:text-foreground");
+    expect(detail).toContain("border-destructive/25 text-destructive hover:bg-destructive/5");
+  });
+
+  it("keeps the overflow menu tertiary with an intentional hit area", () => {
+    expect(detail).toContain('aria-label="More shift actions"');
+    expect(detail).toContain("h-9 w-9");
+    expect(detail).toContain("focus-visible:ring-2");
+  });
+
   it("requires a non-empty cancellation reason before submission", () => {
     expect(detail).toContain("normalizeCancellationReason");
     expect(detail).toContain("Cancellation reason *");
@@ -179,6 +190,12 @@ describe("create shift redesign", () => {
 
   it("keeps the create-then-assign explanation", () => {
     expect(create).toContain("Create the shift first, then find and assign staff on the next screen.");
+  });
+
+  it("uses a modest desktop max width and explains Staffpoint", () => {
+    expect(create).toContain("max-w-[740px]");
+    expect(create).toContain("STAFFPOINT_HELP");
+    expect(create).toContain("TooltipContent");
   });
 
   it("renames the submit action to Create shift", () => {
