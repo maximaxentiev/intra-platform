@@ -214,3 +214,37 @@ export function complianceHeadline(documents: {
 export function pluralizeStaff(count: number): string {
   return count === 1 ? "1 staff member" : `${count} staff members`;
 }
+
+/** Copy for the Next 7 Days list: distinguishes "nothing scheduled" from "all covered". */
+export function next7DaysCoverageMessage(next7Days: {
+  total: number;
+  pending: number;
+}): string | null {
+  if (next7Days.total === 0) return "No shifts scheduled in the next 7 days.";
+  if (next7Days.pending === 0) return "All upcoming shifts are currently covered.";
+  return null;
+}
+
+/** Unambiguous staff readiness headline: "1 active staff member". */
+export function staffReadinessHeadline(activeStaff: number): string {
+  return activeStaff === 1 ? "1 active staff member" : `${activeStaff} active staff members`;
+}
+
+/**
+ * Neutral explanation when active staff exceeds compliant staff but no issue
+ * counters explain the gap. Purely derived from values already returned.
+ */
+export function unexplainedComplianceNote(documents: {
+  compliant: number;
+  staffShown: number;
+  pendingReview: number;
+  issueFlagged: number;
+  expired: number;
+}): string | null {
+  const gap = documents.staffShown - documents.compliant;
+  if (gap <= 0) return null;
+  if (documents.pendingReview > 0 || documents.issueFlagged > 0 || documents.expired > 0) {
+    return null;
+  }
+  return `${pluralizeStaff(gap)} ${gap === 1 ? "is" : "are"} not fully compliant. Review compliance for missing or incomplete requirements.`;
+}
