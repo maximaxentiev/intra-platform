@@ -18,7 +18,9 @@ describe("ops staff portal UI layout", () => {
 
   it("staff list shows portal account status badges", () => {
     const src = readSrc("routes/_authenticated/staff.index.tsx");
-    expect(src).toContain("portalAccountStatus");
+    // The status is resolved through the shared staff-list display helper.
+    expect(readSrc("lib/staff-list-ui.ts")).toContain("portalAccountStatus");
+    expect(src).toContain("PortalStatusBadge");
     expect(src).toContain("PORTAL_ACCOUNT_STATUS_LABELS");
     expect(src).toContain("DocumentStatusBadge");
     expect(src).toContain("documentStatus");
