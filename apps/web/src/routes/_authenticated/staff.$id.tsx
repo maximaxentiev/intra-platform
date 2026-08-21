@@ -1,21 +1,23 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { staffApi, displayStaff, fmtTime, safeDocumentHref } from "@/lib/db";
+import { staffApi, displayStaff } from "@/lib/db";
 import { opsStaffDocumentsApi } from "@/lib/ops-staff-documents";
 import { PortalAccountSection } from "@/components/PortalAccountSection";
-import { StaffForm } from "@/components/StaffForm";
+import { StaffProfileCard } from "@/components/staff/StaffProfileCard";
+import { StaffOperationalSummary } from "@/components/staff/StaffOperationalSummary";
+import { StaffCentrePreferences } from "@/components/staff/StaffCentrePreferences";
+import { StaffShiftsTab } from "@/components/staff/StaffShiftsTab";
 import { StaffDocumentsSection } from "@/components/staff/StaffDocumentsSection";
-import { MultiCentreSelect } from "@/components/MultiCentreSelect";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AvailabilityEditor } from "@/components/AvailabilityEditor";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
-import { StatusBadge } from "@/components/StatusBadge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ConfirmDestructiveDialog } from "@/components/ui-kit";
 import { toast } from "sonner";
-import { Star, Ban, Trash2, ExternalLink } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/staff/$id")({
   component: StaffDetail,
@@ -25,6 +27,7 @@ function StaffDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const staffQ = useQuery({
     queryKey: ["staff", id],
@@ -38,10 +41,6 @@ function StaffDetail() {
     queryKey: ["staff-banned", id],
     queryFn: () => staffApi.bannedCentres(id),
   });
-  const shiftsQ = useQuery({
-    queryKey: ["staff-shifts", id],
-    queryFn: () => staffApi.shifts(id),
-  });
   const documentsQ = useQuery({
     queryKey: ["staff-documents", id],
     queryFn: () => opsStaffDocumentsApi.get(id),
@@ -51,7 +50,6 @@ function StaffDetail() {
   const staff = staffQ.data;
   const topIds = topQ.data ?? [];
   const bannedIds = bannedQ.data ?? [];
-  const docsHref = safeDocumentHref(staff.documentsUrl);
 
   async function deleteStaff() {
     try {
@@ -64,75 +62,67 @@ function StaffDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         eyebrow="Staff"
         backTo="/staff"
         backLabel="Back to Staff"
         title={displayStaff(staff)}
-        subtitle={staff.role || "No role set"}
-        meta={<StatusBadge status={staff.status === "active" ? "active" : "inactive"}>{staff.status}</StatusBadge>}
+        subtitle={[staff.role || "No role set", staff.city].filter(Boolean).join(" · ")}
         actions={
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this staff member?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Deletion is only available before a carer portal account or invitation history exists.
-                  If they have portal access, disable it and set employment to inactive instead.
-                  Otherwise this removes their profile, availability, and centre preferences. Assigned
-                  shifts remain but lose this assignment.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteStaff}>Delete staff</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label="More staff actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> Delete staff
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       />
 
+      <ConfirmDestructiveDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this staff member?"
+        consequence="This permanently removes their profile, availability, and centre preferences. Assigned shifts remain but lose this assignment."
+        details="Deletion is only available before a carer portal account or invitation history exists. If they have portal access, disable it and set employment to inactive instead."
+        confirmLabel="Delete staff"
+        onConfirm={deleteStaff}
+      />
 
-      <Tabs defaultValue="details">
-        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar px-4 sm:px-0">
+      <StaffOperationalSummary
+        employmentStatus={staff.status}
+        portalAccount={staff.portalAccount ?? null}
+        documentStatus={documentsQ.data?.documentStatus}
+        documentsLoading={documentsQ.isLoading}
+        documentsUnavailable={documentsQ.isError}
+      />
+
+      <Tabs defaultValue="profile">
+        <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
           <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="centres">Top &amp; Banned Centres</TabsTrigger>
             <TabsTrigger value="availability">Availability</TabsTrigger>
+            <TabsTrigger value="centres">Centre preferences</TabsTrigger>
             <TabsTrigger value="shifts">Shifts</TabsTrigger>
           </TabsList>
         </div>
 
-
-        <TabsContent value="details" className="pt-4 space-y-4">
+        <TabsContent value="profile" className="space-y-4 pt-4">
+          <StaffProfileCard staff={staff} />
           <PortalAccountSection staffId={id} portalAccount={staff.portalAccount ?? null} />
-          <Card>
-            <CardHeader><CardTitle>Contact &amp; role</CardTitle></CardHeader>
-            <CardContent>
-              <StaffForm
-                initial={staff}
-                onSubmit={async (values) => {
-                  try {
-                    await staffApi.update(id, values);
-                    toast.success("Staff saved");
-                    qc.invalidateQueries();
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Save failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-          {docsHref && (
-            <a href={docsHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
-              <ExternalLink className="h-4 w-4" /> Open compliance documents
-            </a>
-          )}
         </TabsContent>
 
         <TabsContent value="documents" className="pt-4">
@@ -146,70 +136,47 @@ function StaffDetail() {
           />
         </TabsContent>
 
-        <TabsContent value="centres" className="pt-4 space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-warning fill-warning" /> Top Centres</CardTitle></CardHeader>
-            <CardContent>
-              <MultiCentreSelect
-                selectedIds={topIds}
-                excludeIds={bannedIds}
-                onChange={async (newIds) => {
-                  try {
-                    await staffApi.setTopCentres(id, newIds);
-                    qc.invalidateQueries();
-                    toast.success("Top centres updated");
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Update failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Ban className="h-5 w-5 text-destructive" /> Banned Centres</CardTitle></CardHeader>
-            <CardContent>
-              <MultiCentreSelect
-                selectedIds={bannedIds}
-                excludeIds={topIds}
-                onChange={async (newIds) => {
-                  try {
-                    await staffApi.setBannedCentres(id, newIds);
-                    qc.invalidateQueries();
-                    toast.success("Banned centres updated");
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Update failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="availability" className="pt-4">
           <AvailabilityEditor staffId={id} />
         </TabsContent>
 
+        <TabsContent value="centres" className="space-y-4 pt-4">
+          <StaffCentrePreferences
+            title="Top centres"
+            description="Preferred placements. Prioritised when matching this carer to shifts."
+            emptyText="No preferred centres yet."
+            selectedIds={topIds}
+            excludeIds={bannedIds}
+            onChange={async (newIds) => {
+              try {
+                await staffApi.setTopCentres(id, newIds);
+                qc.invalidateQueries();
+                toast.success("Top centres updated");
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Update failed");
+              }
+            }}
+          />
+          <StaffCentrePreferences
+            title="Banned centres"
+            description="This carer will not be matched to shifts at these centres."
+            emptyText="No banned centres."
+            selectedIds={bannedIds}
+            excludeIds={topIds}
+            onChange={async (newIds) => {
+              try {
+                await staffApi.setBannedCentres(id, newIds);
+                qc.invalidateQueries();
+                toast.success("Banned centres updated");
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Update failed");
+              }
+            }}
+          />
+        </TabsContent>
+
         <TabsContent value="shifts" className="pt-4">
-          <Card>
-            <CardHeader><CardTitle>Shifts assigned</CardTitle></CardHeader>
-            <CardContent>
-              {(shiftsQ.data ?? []).length === 0 ? (
-                <div className="text-sm text-muted-foreground">No shifts assigned yet.</div>
-              ) : (
-                <div className="divide-y">
-                  {(shiftsQ.data ?? []).map((s) => (
-                    <Link key={s.id} to="/shifts/$id" params={{ id: s.id }} className="flex items-center justify-between py-2 hover:bg-muted/50 px-2 -mx-2 rounded">
-                      <div>
-                        <div className="text-sm font-medium">{s.shiftDate} · {fmtTime(s.startTime)} – {fmtTime(s.endTime)}</div>
-                        <div className="text-xs text-muted-foreground">{s.centreName} · {s.roleNeeded || "No role"}</div>
-                      </div>
-                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <StaffShiftsTab staffId={id} />
         </TabsContent>
       </Tabs>
     </div>
