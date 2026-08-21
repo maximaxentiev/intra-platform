@@ -316,3 +316,43 @@ pill values, wrapping responsively.
 - `prefers-reduced-motion: reduce` neutralises animations and transitions
   globally (`src/styles.css`); skeletons stop pulsing, spinners keep turning at a
   calm rate, and all non-motion feedback is preserved.
+
+---
+
+## 24. Adoption status
+
+The design system is adopted **page by page**, not by bulk refactor. A primitive
+becomes a platform standard only once a real workflow depends on it.
+
+### Adopted today
+
+| Primitive | Where it is live |
+| --- | --- |
+| `StatusPill` (via the `StatusBadge` facade) | Shifts list, Shift detail, Dashboard, Staff |
+| `MetricTile` | Dashboard tiles, Report metric cards |
+| `LoadingState` (`ListLoading`, `DetailLoadingState`) | Shifts list (mobile), detail screens |
+| `dataTable` conventions + `DataTableLoadingRows` / `DataTableEmptyRow` | Shifts list (desktop) |
+| `FilterPanel` + `FilterChipBar` | Shifts list |
+| `EmptyState` (compact) | Shifts list, Shift detail assignment |
+| `SectionCard` | Shift detail, Create shift, Shift internal comments |
+| `PropertyList` | Shift detail |
+| `ConfirmDestructiveDialog` | Shift deletion |
+| Reduced-motion handling | Global (`src/styles.css`) |
+
+### Planned — adopt during page migration
+
+These exist and are documented, but no shipped workflow depends on them yet.
+They are not platform standards until a real page adopts them.
+
+- `ObjectHeader` — Shifts intentionally kept `PageHeader`; revisit with Staff /
+  Centre detail.
+- `ActivityFeed` / `ActivityItem` beyond the Dashboard and Reports activity log.
+- `ComboboxField` outside its current single caller.
+- `EmptyState` `full` variant.
+
+### Reserved tokens
+
+- `--primary-action` / `bg-primary-action` — **RESERVED**. Shifts did not need
+  it; the `Button` component is deliberately *not* rewired to consume it. Use it
+  only for a specific small-text-on-indigo contrast problem.
+- `#FEE8F7`, `#FEDFD8` — reserved, awaiting a real semantic role.

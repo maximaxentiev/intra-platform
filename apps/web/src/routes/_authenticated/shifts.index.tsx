@@ -4,14 +4,33 @@ import { useState } from "react";
 import { centresApi, staffApi, shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, CalendarClock, X } from "lucide-react";
+import {
+  EmptyState,
+  FilterChipBar,
+  FilterPanel,
+  ListLoading,
+  dataTable,
+  DataTableEmptyRow,
+  DataTableLoadingRows,
+} from "@/components/ui-kit";
+import {
+  EMPTY_SHIFT_FILTERS,
+  buildShiftFilterChips,
+  clearShiftFilterChip,
+  hasActiveShiftFilters,
+  shiftAssigneeLabel,
+  shiftFiltersToSearch,
+  shiftResultCountLabel,
+  type ShiftFilterState,
+} from "@/lib/shifts-list-ui";
+import { AlertCircle, CalendarClock, ChevronRight, Info, Plus, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -28,19 +47,35 @@ export const Route = createFileRoute("/_authenticated/shifts/")({
   component: ShiftsIndex,
 });
 
+const STAFFPOINT_HELP =
+  "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
+
 function ShiftsIndex() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [from, setFrom] = useState(search.from ?? "");
-  const [to, setTo] = useState(search.to ?? "");
-  const [centreId, setCentreId] = useState(search.centre ?? "all");
-  const [status, setStatus] = useState<ShiftStatus | "all">((search.status ?? "all") as any);
-  const [staffId, setStaffId] = useState(search.staff ?? "all");
-  const [staffpoint, setStaffpoint] = useState<"all" | "yes" | "no">((search.staffpoint ?? "all") as any);
 
-  const hasFilters =
-    from !== "" || to !== "" || centreId !== "all" || status !== "all" ||
-    staffId !== "all" || staffpoint !== "all";
+  // Draft filter state — applied explicitly, never live-filtered.
+  const [draft, setDraft] = useState<ShiftFilterState>({
+    from: search.from ?? "",
+    to: search.to ?? "",
+    centreId: search.centre ?? "all",
+    status: (search.status ?? "all") as ShiftStatus | "all",
+    staffId: search.staff ?? "all",
+    staffpoint: (search.staffpoint ?? "all") as "all" | "yes" | "no",
+  });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const applied: ShiftFilterState = {
+    from: search.from ?? "",
+    to: search.to ?? "",
+    centreId: search.centre ?? "all",
+    status: (search.status ?? "all") as ShiftStatus | "all",
+    staffId: search.staff ?? "all",
+    staffpoint: (search.staffpoint ?? "all") as "all" | "yes" | "no",
+  };
+
+  const set = <K extends keyof ShiftFilterState>(key: K, value: ShiftFilterState[K]) =>
+    setDraft((prev) => ({ ...prev, [key]: value }));
 
   const centresQ = useQuery({
     queryKey: ["centres-all"],
@@ -51,40 +86,141 @@ function ShiftsIndex() {
     queryFn: () => staffApi.list(),
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["shifts-list", from, to, centreId, status, staffId, staffpoint],
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: [
+      "shifts-list",
+      applied.from,
+      applied.to,
+      applied.centreId,
+      applied.status,
+      applied.staffId,
+      applied.staffpoint,
+    ],
     queryFn: async () => {
       const rows = await shiftsApi.list({
-        from: from || undefined,
-        to: to || undefined,
-        centreId: centreId === "all" ? undefined : centreId,
-        status: status === "all" ? undefined : status,
-        staffId: staffId === "all" ? undefined : staffId,
+        from: applied.from || undefined,
+        to: applied.to || undefined,
+        centreId: applied.centreId === "all" ? undefined : applied.centreId,
+        status: applied.status === "all" ? undefined : applied.status,
+        staffId: applied.staffId === "all" ? undefined : applied.staffId,
       });
-      if (staffpoint === "yes") return rows.filter((r) => r.addedToStaffpoint);
-      if (staffpoint === "no") return rows.filter((r) => !r.addedToStaffpoint);
+      if (applied.staffpoint === "yes") return rows.filter((r) => r.addedToStaffpoint);
+      if (applied.staffpoint === "no") return rows.filter((r) => !r.addedToStaffpoint);
       return rows;
     },
   });
 
-  function applyFilters() {
-    navigate({
-      search: {
-        from: from || undefined,
-        to: to || undefined,
-        centre: centreId === "all" ? undefined : centreId,
-        status: status === "all" ? undefined : status,
-        staff: staffId === "all" ? undefined : staffId,
-        staffpoint: staffpoint === "all" ? undefined : staffpoint,
-      },
-    });
+  const rows = data ?? [];
+  const hasAppliedFilters = hasActiveShiftFilters(applied);
+  const hasDraftFilters = hasActiveShiftFilters(draft);
+
+  const chips = buildShiftFilterChips(applied, {
+    centreName: (id) => (centresQ.data ?? []).find((c) => c.id === id)?.name,
+    staffName: (id) => {
+      const found = (staffQ.data ?? []).find((s) => s.id === id);
+      return found ? displayStaff(found) : undefined;
+    },
+  }).map((chip) => ({
+    id: chip.id,
+    field: chip.field,
+    label: chip.label,
+    onRemove: () => {
+      const next = clearShiftFilterChip(applied, chip.id);
+      setDraft(next);
+      navigate({ search: shiftFiltersToSearch(next) });
+    },
+  }));
+
+  function applyFilters(state: ShiftFilterState = draft) {
+    navigate({ search: shiftFiltersToSearch(state) });
+    setMobileFiltersOpen(false);
   }
 
   function clearFilters() {
-    setFrom(""); setTo(""); setCentreId("all"); setStatus("all");
-    setStaffId("all"); setStaffpoint("all");
+    setDraft(EMPTY_SHIFT_FILTERS);
     navigate({ search: {} });
+    setMobileFiltersOpen(false);
   }
+
+  const resultContext = isLoading
+    ? "Loading…"
+    : isError
+      ? "Results unavailable"
+      : shiftResultCountLabel(rows.length);
+
+  const primaryFilters = (
+    <>
+      <div className="space-y-1.5">
+        <Label htmlFor="filter-from" className="text-xs font-medium text-muted-foreground">From</Label>
+        <Input
+          id="filter-from"
+          type="date"
+          value={draft.from}
+          onChange={(e) => set("from", e.target.value)}
+          className="h-9"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="filter-to" className="text-xs font-medium text-muted-foreground">To</Label>
+        <Input
+          id="filter-to"
+          type="date"
+          value={draft.to}
+          onChange={(e) => set("to", e.target.value)}
+          className="h-9"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
+        <Select value={draft.centreId} onValueChange={(v) => set("centreId", v)}>
+          <SelectTrigger className="h-9" aria-label="Filter by centre"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All centres</SelectItem>
+            {(centresQ.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+        <Select value={draft.status} onValueChange={(v) => set("status", v as ShiftStatus | "all")}>
+          <SelectTrigger className="h-9" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="filled">Filled</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  );
+
+  const secondaryFilters = (
+    <>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground">Assigned to</Label>
+        <Select value={draft.staffId} onValueChange={(v) => set("staffId", v)}>
+          <SelectTrigger className="h-9" aria-label="Filter by assigned staff"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Anyone</SelectItem>
+            {(staffQ.data ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{displayStaff(s)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground">Staffpoint</Label>
+        <Select value={draft.staffpoint} onValueChange={(v) => set("staffpoint", v as "all" | "yes" | "no")}>
+          <SelectTrigger className="h-9" aria-label="Filter by Staffpoint"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="yes">Yes</SelectItem>
+            <SelectItem value="no">No</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -98,197 +234,260 @@ function ShiftsIndex() {
         }
       />
 
-      <Card className="p-4 border-border/70 shadow-xs">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
-          </div>
-          <div className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
-            <Select value={centreId} onValueChange={setCentreId}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All centres</SelectItem>
-                {(centresQ.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="filled">Filled</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Assigned to</Label>
-            <Select value={staffId} onValueChange={setStaffId}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Anyone</SelectItem>
-                {(staffQ.data ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{displayStaff(s)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label className="text-xs font-medium text-muted-foreground">Staffpoint</Label>
-            <Select value={staffpoint} onValueChange={(v) => setStaffpoint(v as any)}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="yes">Yes</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/70">
-          <div className="text-xs text-muted-foreground">
-            {isLoading ? "Loading…" : `${(data ?? []).length} shift${(data ?? []).length === 1 ? "" : "s"}`}
-          </div>
-          <div className="flex gap-2">
-            {hasFilters && (
-              <Button variant="ghost" onClick={clearFilters} size="sm">
-                <X className="h-4 w-4 mr-1" /> Clear
-              </Button>
-            )}
-            <Button onClick={applyFilters} size="sm">Apply filters</Button>
-          </div>
-        </div>
-      </Card>
-
-
-      {/* Mobile: card list */}
-      <div className="md:hidden space-y-2">
-        {isLoading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
-        {!isLoading && (data ?? []).length === 0 && (
-          <Card className="p-8 text-center border-dashed">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary mb-3">
-              <CalendarClock className="h-6 w-6" />
-            </div>
-            <div className="text-sm font-medium">No shifts match your filters</div>
-            <div className="text-xs text-muted-foreground mt-1">Adjust filters, or create a new shift.</div>
-          </Card>
-        )}
-        {!isLoading && (data ?? []).map((s) => {
-          const isPastDue = new Date(`${s.shiftDate}T${s.endTime}`) < new Date();
-          const assigned = s.assignedStaffId && s.assignedLegalName
-            ? displayStaff({
-                legalName: s.assignedLegalName,
-                displayName: s.assignedDisplayName ?? "",
-                useDisplayName: s.assignedUseDisplayName ?? false,
-              })
-            : null;
-          return (
-            <Card
-              key={s.id}
-              className={`p-3 border-border/70 shadow-xs cursor-pointer active:bg-muted/40 ${isPastDue ? "opacity-70" : ""}`}
-              onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-sm truncate">{s.centreName}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                    {s.shiftDate} · {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                    {s.roleNeeded && <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{s.roleNeeded}</span>}
-                    <span className={assigned ? "text-foreground" : "text-muted-foreground italic"}>
-                      {assigned ?? "Unassigned"}
-                    </span>
-                    {s.addedToStaffpoint && <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">· Staffpoint</span>}
-                  </div>
-                </div>
-                <StatusBadge status={s.status}>{s.status}</StatusBadge>
-              </div>
-            </Card>
-          );
-        })}
+      {/* Desktop filters */}
+      <div className="hidden md:block">
+        <FilterPanel
+          advanced={secondaryFilters}
+          advancedLabel="More filters"
+          defaultAdvancedOpen={applied.staffId !== "all" || applied.staffpoint !== "all"}
+          onApply={() => applyFilters()}
+          applyLabel="Apply filters"
+          onClear={hasAppliedFilters || hasDraftFilters ? clearFilters : undefined}
+          clearLabel="Clear all"
+          resultContext={resultContext}
+          chips={chips.length > 0 ? <FilterChipBar chips={chips} /> : undefined}
+        >
+          {primaryFilters}
+        </FilterPanel>
       </div>
 
-      {/* Desktop: table */}
-      <Card className="hidden md:block border-border/70 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Date</TableHead>
-                <TableHead>Centre</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Assigned to</TableHead>
-                <TableHead className="text-center">Staffpoint</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))}
-              {!isLoading && (data ?? []).length === 0 && (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={7} className="text-center py-12">
-                    <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary mb-3">
-                      <CalendarClock className="h-6 w-6" />
-                    </div>
-                    <div className="text-sm font-medium">No shifts match your filters</div>
-                    <div className="text-xs text-muted-foreground mt-1">Adjust filters, or create a new shift.</div>
-                  </TableCell>
-                </TableRow>
-              )}
-              {!isLoading && (data ?? []).map((s) => {
-                const isPastDue = new Date(`${s.shiftDate}T${s.endTime}`) < new Date();
-                const assigned = s.assignedStaffId && s.assignedLegalName
-                  ? displayStaff({
-                      legalName: s.assignedLegalName,
-                      displayName: s.assignedDisplayName ?? "",
-                      useDisplayName: s.assignedUseDisplayName ?? false,
-                    })
-                  : null;
-                return (
-                  <TableRow
-                    key={s.id}
-                    className={`cursor-pointer transition-colors ${isPastDue ? "opacity-70" : ""}`}
-                    onClick={() => navigate({ to: "/shifts/$id", params: { id: s.id } } as any)}
-                  >
-                    <TableCell className="font-medium tabular-nums">{s.shiftDate}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{s.centreName}</TableCell>
-                    <TableCell className="tabular-nums text-muted-foreground">{fmtTime(s.startTime)} – {fmtTime(s.endTime)}</TableCell>
-                    <TableCell>{s.roleNeeded || <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell>
-                      {assigned
-                        ? assigned
-                        : <span className="text-muted-foreground italic">Unassigned</span>}
-                    </TableCell>
-                    <TableCell className="text-center text-muted-foreground text-xs">
-                      {s.addedToStaffpoint ? "Yes" : "No"}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={s.status}>{s.status}</StatusBadge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+      {/* Mobile filters */}
+      <div className="space-y-2 md:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[13px] text-muted-foreground" aria-live="polite">{resultContext}</p>
+          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                Filters
+                {chips.length > 0 && (
+                  <span className="ml-1 rounded-full bg-muted px-1.5 text-xs tabular-nums">{chips.length}</span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filter shifts</SheetTitle>
+                <SheetDescription>Filters apply when you tap Apply filters.</SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-3 py-4 sm:grid-cols-2">
+                {primaryFilters}
+                {secondaryFilters}
+              </div>
+              <SheetFooter className="flex-row gap-2 sm:justify-end">
+                <Button variant="outline" className="flex-1" onClick={clearFilters} disabled={!hasDraftFilters}>
+                  Clear all
+                </Button>
+                <Button className="flex-1" onClick={() => applyFilters()}>Apply filters</Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
         </div>
-      </Card>
+        {chips.length > 0 && <FilterChipBar chips={chips} onClearAll={clearFilters} />}
+      </div>
 
+      {isError ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-card px-4 py-3.5 shadow-xs"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Shifts could not be loaded</p>
+            <p className="text-[13px] text-muted-foreground">
+              This is a loading problem, not an empty result. Try again.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: structured shift cards */}
+          <div className="md:hidden">
+            {isLoading ? (
+              <ListLoading rows={4} label="Loading shifts" />
+            ) : rows.length === 0 ? (
+              <ShiftsEmpty filtered={hasAppliedFilters} onClear={clearFilters} />
+            ) : (
+              <ul className="space-y-2">
+                {rows.map((s) => {
+                  const assignedName = assignedNameOf(s);
+                  const assignee = shiftAssigneeLabel(assignedName, s.status as ShiftStatus);
+                  const quiet = s.status === "completed" || s.status === "cancelled";
+                  return (
+                    <li key={s.id}>
+                      <Link
+                        to="/shifts/$id"
+                        params={{ id: s.id }}
+                        aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}
+                        className={`flex items-start gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-3 shadow-xs transition-colors hover:bg-muted/50 active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${quiet ? "opacity-75" : ""}`}
+                      >
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium tabular-nums">{s.shiftDate}</span>
+                            <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                          </div>
+                          <div className="truncate text-sm text-foreground">{s.centreName}</div>
+                          <div className="text-[13px] tabular-nums text-muted-foreground">
+                            {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
+                            {s.roleNeeded ? ` · ${s.roleNeeded}` : ""}
+                            {s.addedToStaffpoint ? " · Staffpoint" : ""}
+                          </div>
+                          <div
+                            className={
+                              assignee.needsStaff
+                                ? "text-[13px] font-medium text-foreground"
+                                : "text-[13px] text-muted-foreground"
+                            }
+                          >
+                            {assignee.text}
+                          </div>
+                        </div>
+                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* Desktop: table */}
+          <div className={`hidden md:block ${dataTable.shell}`}>
+            <div className={dataTable.scroll}>
+              <Table>
+                <TableHeader className={dataTable.header}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={dataTable.headerCell}>Date</TableHead>
+                    <TableHead className={dataTable.headerCell}>Centre</TableHead>
+                    <TableHead className={dataTable.headerCell}>Time</TableHead>
+                    <TableHead className={dataTable.headerCell}>Role</TableHead>
+                    <TableHead className={dataTable.headerCell}>Assigned to</TableHead>
+                    <TableHead className={dataTable.headerCell}>
+                      <span className="inline-flex items-center gap-1">
+                        Staffpoint
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`About Staffpoint. ${STAFFPOINT_HELP}`}
+                              className="grid h-4 w-4 place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <Info className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-64">{STAFFPOINT_HELP}</TooltipContent>
+                        </Tooltip>
+                      </span>
+                    </TableHead>
+                    <TableHead className={dataTable.headerCell}>Status</TableHead>
+                    <TableHead className={dataTable.headerCell}><span className="sr-only">Open</span></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading && <DataTableLoadingRows rows={6} columns={8} />}
+                  {!isLoading && rows.length === 0 && (
+                    <DataTableEmptyRow columns={8}>
+                      <ShiftsEmpty filtered={hasAppliedFilters} onClear={clearFilters} />
+                    </DataTableEmptyRow>
+                  )}
+                  {!isLoading && rows.map((s) => {
+                    const assignedName = assignedNameOf(s);
+                    const assignee = shiftAssigneeLabel(assignedName, s.status as ShiftStatus);
+                    const quiet = s.status === "completed" || s.status === "cancelled";
+                    return (
+                      <TableRow
+                        key={s.id}
+                        className={`relative ${dataTable.row} ${dataTable.rowInteractive} ${quiet ? "opacity-75" : ""}`}
+                      >
+                        <TableCell className={`${dataTable.cell} font-medium tabular-nums`}>
+                          <Link
+                            to="/shifts/$id"
+                            params={{ id: s.id }}
+                            aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}
+                            className="after:absolute after:inset-0 focus-visible:outline-none"
+                          >
+                            {s.shiftDate}
+                          </Link>
+                        </TableCell>
+                        <TableCell className={`${dataTable.cell} max-w-[220px] truncate`}>{s.centreName}</TableCell>
+                        <TableCell className={`${dataTable.cell} ${dataTable.cellMuted} tabular-nums`}>
+                          {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
+                        </TableCell>
+                        <TableCell className={dataTable.cell}>
+                          {s.roleNeeded || <span className={dataTable.cellMuted}>—</span>}
+                        </TableCell>
+                        <TableCell className={dataTable.cell}>
+                          <span className={assignee.needsStaff ? "font-medium text-foreground" : assignedName ? "" : "text-muted-foreground"}>
+                            {assignee.text}
+                          </span>
+                        </TableCell>
+                        <TableCell className={`${dataTable.cell} ${dataTable.cellMuted}`}>
+                          {s.addedToStaffpoint ? "Yes" : "No"}
+                        </TableCell>
+                        <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
+                          <StatusBadge status={s.status}>{s.status}</StatusBadge>
+                        </TableCell>
+                        <TableCell className={`${dataTable.cell} ${dataTable.cellActions}`}>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+function assignedNameOf(s: {
+  assignedStaffId?: string | null;
+  assignedLegalName?: string | null;
+  assignedDisplayName?: string | null;
+  assignedUseDisplayName?: boolean | null;
+}) {
+  return s.assignedStaffId && s.assignedLegalName
+    ? displayStaff({
+        legalName: s.assignedLegalName,
+        displayName: s.assignedDisplayName ?? "",
+        useDisplayName: s.assignedUseDisplayName ?? false,
+      })
+    : null;
+}
+
+function ShiftsEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => void }) {
+  if (filtered) {
+    return (
+      <EmptyState
+        icon={CalendarClock}
+        title="No shifts match these filters"
+        description="Try a wider date range or a different centre."
+        action={
+          <Button variant="outline" size="sm" onClick={onClear}>
+            Clear filters
+          </Button>
+        }
+        className="text-left"
+      />
+    );
+  }
+  return (
+    <EmptyState
+      icon={CalendarClock}
+      title="No shifts yet"
+      description="Create the first shift to start staffing."
+      action={
+        <Button asChild size="sm">
+          <Link to="/shifts/new">Create shift</Link>
+        </Button>
+      }
+      className="text-left"
+    />
   );
 }
