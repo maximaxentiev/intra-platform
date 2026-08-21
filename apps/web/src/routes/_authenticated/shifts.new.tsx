@@ -6,14 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
+import { SectionCard } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_authenticated/shifts/new")({
   component: NewShift,
 });
+
+function FieldGroup({ legend, children }: { legend: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {legend}
+      </legend>
+      {children}
+    </fieldset>
+  );
+}
 
 function NewShift() {
   const navigate = useNavigate();
@@ -61,61 +72,73 @@ function NewShift() {
         backTo="/shifts"
         backLabel="Back to Shifts"
         title="Create shift"
-        subtitle="Save the shift now — you can find and assign staff on the next screen."
+        subtitle="Create the shift first, then find and assign staff on the next screen."
       />
-      <Card className="border-border/70 shadow-xs">
 
-        <CardContent className="pt-6">
-          <form onSubmit={submit} className="space-y-4">
+      <SectionCard id="create-shift">
+        <form onSubmit={submit} className="space-y-6">
+          <FieldGroup legend="Where">
             <div className="space-y-2">
               <Label>Centre *</Label>
-              <SearchableCentreSelect value={values.centreId} onChange={v => set("centreId", v)} />
+              <SearchableCentreSelect value={values.centreId} onChange={(v) => set("centreId", v)} />
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+          </FieldGroup>
+
+          <FieldGroup legend="When">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="d">Date *</Label>
-                <Input id="d" type="date" required value={values.shiftDate} onChange={e => set("shiftDate", e.target.value)} />
+                <Input id="d" type="date" required value={values.shiftDate} onChange={(e) => set("shiftDate", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="st">Start time *</Label>
-                <Input id="st" type="time" required value={values.startTime} onChange={e => set("startTime", e.target.value)} />
+                <Input id="st" type="time" required value={values.startTime} onChange={(e) => set("startTime", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="et">End time *</Label>
-                <Input id="et" type="time" required value={values.endTime} onChange={e => set("endTime", e.target.value)} />
+                <Input id="et" type="time" required value={values.endTime} onChange={(e) => set("endTime", e.target.value)} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Role needed *</Label>
-              <Select value={values.roleNeeded || undefined} onValueChange={v => set("roleNeeded", v)} required>
-                <SelectTrigger><SelectValue placeholder="Choose role..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ECA">ECA</SelectItem>
-                  <SelectItem value="ECE">ECE</SelectItem>
-                </SelectContent>
-              </Select>
+          </FieldGroup>
+
+          <FieldGroup legend="Requirements">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Role needed *</Label>
+                <Select value={values.roleNeeded || undefined} onValueChange={(v) => set("roleNeeded", v)} required>
+                  <SelectTrigger aria-label="Role needed"><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ECA">ECA</SelectItem>
+                    <SelectItem value="ECE">ECE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Added to Staffpoint</Label>
+                <Select
+                  value={values.addedToStaffpoint ? "yes" : "no"}
+                  onValueChange={(v) => set("addedToStaffpoint", v === "yes")}
+                >
+                  <SelectTrigger aria-label="Added to Staffpoint"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">No</SelectItem>
+                    <SelectItem value="yes">Yes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          </FieldGroup>
+
+          <FieldGroup legend="Internal">
             <div className="space-y-2">
-              <Label>Added to Staffpoint</Label>
-              <Select
-                value={values.addedToStaffpoint ? "yes" : "no"}
-                onValueChange={v => set("addedToStaffpoint", v === "yes")}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no">No</SelectItem>
-                  <SelectItem value="yes">Yes</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" rows={3} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (internal)</Label>
-              <Textarea id="notes" rows={3} value={values.notes} onChange={e => set("notes", e.target.value)} />
-            </div>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save shift"}</Button>
-          </form>
-        </CardContent>
-      </Card>
+          </FieldGroup>
+
+          <Button type="submit" disabled={saving}>{saving ? "Creating..." : "Create shift"}</Button>
+        </form>
+      </SectionCard>
     </div>
   );
 }
