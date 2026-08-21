@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { IsInt, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { DashboardOverviewService } from './dashboard-overview.service';
 import { DashboardService } from './dashboard.service';
 
 class SummaryQuery {
@@ -21,7 +22,15 @@ class SummaryQuery {
 @ApiTags('dashboard')
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboard: DashboardService) {}
+  constructor(
+    private readonly dashboard: DashboardService,
+    private readonly overview: DashboardOverviewService,
+  ) {}
+
+  @Get('overview')
+  getOverview() {
+    return this.overview.overview();
+  }
 
   @Get('summary')
   summary(@Query() q: SummaryQuery) {

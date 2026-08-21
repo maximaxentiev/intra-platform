@@ -155,6 +155,12 @@ export class ReportsDocumentsService {
     return { rows: filteredRows };
   }
 
+  /** Active-staff document compliance summary — same semantics as the Document Compliance report default. */
+  async getActiveStaffComplianceSummary(): Promise<DocumentComplianceSummary> {
+    const { filteredRows } = await this.resolveDocumentComplianceFilteredRows({});
+    return buildSummary(filteredRows);
+  }
+
   private async resolveDocumentComplianceFilteredRows(query: DocumentComplianceQueryDto) {
     const staffIds = resolveStaffUsageStaffIds(query);
 
