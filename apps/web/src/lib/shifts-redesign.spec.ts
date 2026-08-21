@@ -156,7 +156,7 @@ describe("create shift redesign", () => {
   });
 
   it("renames the submit action to Create shift", () => {
-    expect(create).toContain(">Create shift<");
+    expect(create).toContain('{saving ? "Creating..." : "Create shift"}');
     expect(create).not.toContain("Save shift");
   });
 
