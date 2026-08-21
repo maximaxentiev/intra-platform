@@ -38,6 +38,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
+import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -537,18 +538,6 @@ function ShiftDetail() {
                 </div>
               )}
 
-              {isHistorical && (
-                <div className="border-t border-border/70 pt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => changeStatus("pending")}
-                  >
-                    Reopen as pending
-                  </Button>
-                </div>
-              )}
             </div>
           </SectionCard>
         </div>
@@ -562,8 +551,23 @@ function ShiftDetail() {
 function CancelShiftButton({ onCancel }: { onCancel: (reason: string) => void }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const normalizedReason = normalizeCancellationReason(reason);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) setReason("");
+  }
+
+  function submitCancellation() {
+    const trimmed = normalizeCancellationReason(reason);
+    if (!trimmed) return;
+    onCancel(trimmed);
+    setReason("");
+    setOpen(false);
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">Cancel shift</Button>
       </AlertDialogTrigger>
@@ -572,20 +576,25 @@ function CancelShiftButton({ onCancel }: { onCancel: (reason: string) => void })
           <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
           <AlertDialogDescription>
             The shift stays on record as Cancelled and any assigned staff member is kept for history.
+            A reason is required for internal records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="cancel-reason">Reason (optional)</Label>
+          <Label htmlFor="cancel-reason">Cancellation reason *</Label>
           <Textarea
             id="cancel-reason"
-            placeholder="Reason (optional)"
+            required
+            placeholder="Why is this shift being cancelled?"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            aria-invalid={reason.length > 0 && !normalizedReason}
           />
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep shift</AlertDialogCancel>
-          <AlertDialogAction onClick={() => { onCancel(reason); setOpen(false); }}>Cancel shift</AlertDialogAction>
+          <AlertDialogAction disabled={!normalizedReason} onClick={submitCancellation}>
+            Cancel shift
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

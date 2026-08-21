@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { normalizeCancellationReason } from "./shifts-lifecycle-ui";
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel: string) => readFileSync(join(webRoot, rel), "utf8");
@@ -10,6 +11,18 @@ const list = read("routes/_authenticated/shifts.index.tsx");
 const detail = read("routes/_authenticated/shifts.$id.tsx");
 const create = read("routes/_authenticated/shifts.new.tsx");
 const comments = read("components/ShiftComments.tsx");
+
+describe("shift cancellation reason", () => {
+  it("accepts trimmed non-empty reasons", () => {
+    expect(normalizeCancellationReason("  Centre closed  ")).toBe("Centre closed");
+  });
+
+  it("rejects blank and whitespace-only reasons", () => {
+    expect(normalizeCancellationReason("")).toBeNull();
+    expect(normalizeCancellationReason("   ")).toBeNull();
+    expect(normalizeCancellationReason("\n\t")).toBeNull();
+  });
+});
 
 describe("shifts list redesign", () => {
   it("keeps the page header and dominant create action", () => {
@@ -122,10 +135,18 @@ describe("shift detail redesign", () => {
     expect(detail).toContain("Filled shifts are automatically marked Completed once their end time passes.");
   });
 
-  it("keeps cancellation accessible with an optional reason", () => {
-    expect(detail).toContain("Cancel shift");
+  it("requires a non-empty cancellation reason before submission", () => {
+    expect(detail).toContain("normalizeCancellationReason");
+    expect(detail).toContain("Cancellation reason *");
+    expect(detail).toContain('disabled={!normalizedReason}');
+    expect(detail).not.toContain("Reason (optional)");
     expect(detail).toContain('changeStatus("cancelled", reason)');
     expect(detail).toContain("cancel-reason");
+  });
+
+  it("does not expose reopen-as-pending lifecycle recovery", () => {
+    expect(detail).not.toContain("Reopen as pending");
+    expect(detail).not.toContain('changeStatus("pending")');
   });
 
   it("moves delete into an overflow menu with a destructive confirmation", () => {
