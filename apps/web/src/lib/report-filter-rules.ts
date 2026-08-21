@@ -384,8 +384,8 @@ export function staffUsageSearchFromRules(rules: ReportFilterRule[]): StaffUsage
     const metric = getMetricDef(STAFF_USAGE_METRICS, rule.field);
     if (!metric?.minKey || !metric.maxKey) continue;
     const { min, max } = numericRuleToMinMax(rule, metric.kind);
-    if (min !== undefined) next[metric.minKey as keyof StaffUsageMetricSearch] = min;
-    if (max !== undefined) next[metric.maxKey as keyof StaffUsageMetricSearch] = max;
+    if (min !== undefined) (next as Record<string, unknown>)[metric.minKey] = min;
+    if (max !== undefined) (next as Record<string, unknown>)[metric.maxKey] = max;
   }
 
   return next;

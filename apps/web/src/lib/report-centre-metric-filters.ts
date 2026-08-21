@@ -64,7 +64,7 @@ export function centreMetricFiltersToSearchParams(
 }
 
 export function parseCentreMetricFiltersFromSearch(
-  search: Record<string, string | undefined>,
+  search: Record<string, string | number | undefined>,
 ): CentreMetricFilterSearch {
   return {
     totalShiftsMin: search.totalShiftsMin,

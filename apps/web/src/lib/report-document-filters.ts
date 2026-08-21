@@ -139,7 +139,7 @@ function applyLegacyStatusToState(
 }
 
 export function parseDocumentComplianceFiltersFromSearch(
-  search: Record<string, string | undefined>,
+  search: Record<string, string | number | undefined>,
 ): DocumentComplianceFilterState {
   let state: DocumentComplianceFilterState = {
     ...EMPTY_DOCUMENT_COMPLIANCE_FILTERS,
