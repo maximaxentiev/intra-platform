@@ -270,11 +270,11 @@ function ShiftsIndex() {
                 <SheetTitle>Filter shifts</SheetTitle>
                 <SheetDescription>Filters apply when you tap Apply filters.</SheetDescription>
               </SheetHeader>
-              <div className="grid gap-3 px-4 pb-2 sm:grid-cols-2">
+              <div className="grid gap-3 py-4 sm:grid-cols-2">
                 {primaryFilters}
                 {secondaryFilters}
               </div>
-              <SheetFooter className="flex-row gap-2">
+              <SheetFooter className="flex-row gap-2 sm:justify-end">
                 <Button variant="outline" className="flex-1" onClick={clearFilters} disabled={!hasDraftFilters}>
                   Clear all
                 </Button>
@@ -400,7 +400,7 @@ function ShiftsIndex() {
                     return (
                       <TableRow
                         key={s.id}
-                        className={`${dataTable.row} ${dataTable.rowInteractive} ${quiet ? "opacity-75" : ""}`}
+                        className={`relative ${dataTable.row} ${dataTable.rowInteractive} ${quiet ? "opacity-75" : ""}`}
                       >
                         <TableCell className={`${dataTable.cell} font-medium tabular-nums`}>
                           <Link
