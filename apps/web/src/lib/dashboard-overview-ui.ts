@@ -159,7 +159,7 @@ export function formatUpcomingDateLabel(
 
 /** Toronto clock time for an activity/failure instant: "10:42 AM". */
 export function formatDashboardInstantTime(iso: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: DASHBOARD_TIMEZONE,
     hour: "numeric",
     minute: "2-digit",
