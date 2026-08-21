@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { MetricTile } from "@/components/ui-kit/MetricTile";
 
 /** Section wrapper giving every Dashboard block the same heading rhythm. */
 export function DashboardSection({
@@ -46,7 +47,7 @@ export function DashboardSection({
 export function DashboardMetric({
   label,
   value,
-  icon: Icon,
+  icon,
   to,
   search,
   tone = "neutral",
@@ -58,45 +59,19 @@ export function DashboardMetric({
   search?: Record<string, unknown>;
   tone?: "neutral" | "primary" | "warning" | "success";
 }) {
-  const tones = {
-    neutral: "bg-muted text-muted-foreground",
-    primary: "bg-primary-soft text-primary",
-    warning: "bg-warning-soft text-warning",
-    success: "bg-success-soft text-success",
-  } as const;
-
-  const inner = (
-    <div className="flex items-center justify-between gap-3 p-4">
-      <div className="min-w-0">
-        <div className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </div>
-        <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-          {value}
-        </div>
-      </div>
-      <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", tones[tone])}>
-        <Icon className="h-4 w-4" />
-      </span>
-    </div>
-  );
-
-  if (!to) {
-    return <Card className="border-border/70 py-0 shadow-xs">{inner}</Card>;
-  }
-
   return (
-    <Link
-      to={to as any}
-      search={search as any}
-      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      <Card className="border-border/70 py-0 shadow-xs transition-all group-hover:border-primary/40 group-hover:shadow-sm group-active:translate-y-px">
-        {inner}
-      </Card>
-    </Link>
+    <MetricTile
+      layout="tile"
+      label={label}
+      value={value}
+      icon={icon}
+      tone={tone}
+      to={to}
+      search={search}
+    />
   );
 }
+
 
 export function DashboardFooterLink({
   to,

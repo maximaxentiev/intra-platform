@@ -36,6 +36,10 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  /* Accessible action variant of the brand indigo (white text, small sizes). */
+  --color-primary-action: var(--primary-action);
+  --color-primary-action-foreground: var(--primary-action-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -99,9 +103,13 @@
   --popover-foreground: oklch(0.22 0.012 285);
 
   /* Brand indigo */
-  --primary: oklch(0.62 0.19 275);
+  --primary: oklch(0.62 0.19 275);         /* brand identity #6366F1 */
   --primary-foreground: oklch(0.99 0.003 285);
+  /* Slightly darker indigo for small white-text controls (WCAG AA body text). */
+  --primary-action: oklch(0.545 0.19 275);
+  --primary-action-foreground: oklch(0.99 0.003 285);
   --primary-soft: oklch(0.965 0.02 268);   /* #E8EEFE tone */
+
 
   --secondary: oklch(0.965 0.004 285);     /* #F4F4F5 */
   --secondary-foreground: oklch(0.28 0.014 285);
@@ -162,7 +170,11 @@
 
   --primary: oklch(0.70 0.17 275);
   --primary-foreground: oklch(0.16 0.01 285);
+  /* Dark mode already uses dark text on indigo, so action == primary. */
+  --primary-action: oklch(0.70 0.17 275);
+  --primary-action-foreground: oklch(0.16 0.01 285);
   --primary-soft: oklch(0.30 0.08 275);
+
 
   --secondary: oklch(0.26 0.014 285);
   --secondary-foreground: oklch(0.97 0.004 285);
@@ -232,7 +244,35 @@
     box-shadow: var(--shadow-ring);
     border-radius: var(--radius-md);
   }
+
+  /*
+   * Reduced motion: decorative movement is removed, but interaction feedback
+   * (colour changes, focus rings, opacity) is preserved.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Skeletons stay visible instead of pulsing. */
+    .animate-pulse {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    /* Busy spinners remain meaningful feedback — keep them turning, calmly. */
+    .animate-spin {
+      animation-duration: 1.5s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
 }
+
 
 @utility no-scrollbar {
   &::-webkit-scrollbar { display: none; }
