@@ -45,8 +45,8 @@ export function Next7DaysSection({
         </dl>
 
         {next7Days.pendingShifts.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-muted-foreground">
-            All upcoming shifts are currently covered.
+          <p className="px-4 py-3 text-sm text-muted-foreground">
+            {next7DaysCoverageMessage(next7Days) ?? "No pending shifts to assign."}
           </p>
         ) : (
           <ul className="divide-y divide-border">
