@@ -524,17 +524,21 @@ function ShiftDetail() {
               {!isHistorical && (
                 <div className="space-y-2 border-t border-border/70 pt-3">
                   <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => changeStatus("completed")}
-                  >
-                    Mark completed
-                  </Button>
-                  <p className="text-[13px] text-muted-foreground">
-                    Filled shifts are automatically marked Completed once their end time passes.
-                  </p>
+                  {status === "filled" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => changeStatus("completed")}
+                      >
+                        Mark completed
+                      </Button>
+                      <p className="text-[13px] text-muted-foreground">
+                        Filled shifts are automatically marked Completed once their end time passes.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 

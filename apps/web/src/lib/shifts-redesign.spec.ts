@@ -135,6 +135,11 @@ describe("shift detail redesign", () => {
     expect(detail).toContain("Filled shifts are automatically marked Completed once their end time passes.");
   });
 
+  it("shows manual completion only for filled shifts", () => {
+    expect(detail).toContain('{status === "filled" && (');
+    expect(detail).toContain("Mark completed");
+  });
+
   it("requires a non-empty cancellation reason before submission", () => {
     expect(detail).toContain("normalizeCancellationReason");
     expect(detail).toContain("Cancellation reason *");

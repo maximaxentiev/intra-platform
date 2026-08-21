@@ -29,6 +29,10 @@ import {
   cancellationReasonPreview,
   shiftAuditSnapshot,
 } from './shift-audit.util';
+import {
+  assertManualCompletionAllowed,
+  normalizeRequiredCancellationReason,
+} from './shifts-lifecycle.util';
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import {
@@ -434,6 +438,10 @@ export class ShiftsService {
       .where(eq(shifts.id, id));
     if (!existing[0]) throw new NotFoundException('Shift not found.');
 
+    if (dto.status === 'completed') {
+      assertManualCompletionAllowed(existing[0].status);
+    }
+
     return this.db.transaction(async (tx) => {
       const patch: Record<string, unknown> = { status: dto.status, updatedAt: new Date() };
       if (dto.status === 'pending') patch.assignedStaffId = null;
@@ -498,13 +506,13 @@ export class ShiftsService {
         return existing[0]!;
       }
 
+      const trimmedReason = normalizeRequiredCancellationReason(cancellationReason);
+
       const patch: Record<string, unknown> = {
         status: 'cancelled',
         updatedAt: new Date(),
+        cancellationReason: trimmedReason,
       };
-      if (cancellationReason !== undefined) {
-        patch.cancellationReason = cancellationReason;
-      }
 
       const updated = await tx
         .update(shifts)
@@ -525,7 +533,7 @@ export class ShiftsService {
           staffId: cancelled.assignedStaffId,
           entityId: id,
           metadata: {
-            cancellationReasonPreview: cancellationReasonPreview(cancellationReason),
+            cancellationReasonPreview: cancellationReasonPreview(trimmedReason),
           },
         },
         tx,
