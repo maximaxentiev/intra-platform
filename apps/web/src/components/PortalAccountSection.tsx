@@ -1,12 +1,11 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { staffApi, type PortalAccountInfo, type PortalInvitationResult } from "@/lib/db";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
+import { PropertyList, SectionCard, type PropertyItem } from "@/components/ui-kit";
 import { Loader2 } from "lucide-react";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,13 +18,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { type PortalAccountDisplayStatus } from "@/lib/portal-account-status";
+import { formatDateTime, onboardingSummary, portalMetaVisibility } from "@/lib/staff-detail-ui";
 
-function fmtDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
-    new Date(iso),
-  );
-}
+const STATE_COPY: Record<PortalAccountDisplayStatus, string> = {
+  no_account: "No carer portal account yet. Send an invitation so they can complete onboarding.",
+  invited: "Invitation sent — waiting for them to set a password.",
+  incomplete: "Signed in, but onboarding is not finished yet.",
+  disabled: "Portal access is currently disabled.",
+  active: "Portal account is active.",
+};
 
 export function PortalAccountSection({
   staffId,
@@ -71,62 +72,45 @@ export function PortalAccountSection({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const canInvite = status === "no_account" || status === "invited" || status === "incomplete" || status === "active";
+  // Unchanged API conditions.
+  const canInvite =
+    status === "no_account" || status === "invited" || status === "incomplete" || status === "active";
   const canResend = status !== "no_account" && status !== "disabled";
   const busy = inviteMut.isPending || disableMut.isPending || enableMut.isPending;
 
-  return (
-    <Card className="border-border/70 shadow-xs overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex flex-wrap items-center gap-2">
-          Portal account
-          <PortalStatusBadge status={status} />
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {status === "no_account"
-            ? "No carer portal account yet. Send an invitation so they can complete onboarding."
-            : status === "invited"
-              ? "Invitation sent — waiting for them to set a password."
-              : status === "incomplete"
-                ? "Signed in, but onboarding is not finished yet."
-                : status === "disabled"
-                  ? "Portal access is currently disabled."
-                  : "Portal account is active."}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        <dl className="grid gap-2 sm:grid-cols-2 min-w-0">
-          <div>
-            <dt className="text-muted-foreground">Email</dt>
-            <dd className="font-medium break-all">{portalAccount?.email ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Invitation sent</dt>
-            <dd>{fmtDate(portalAccount?.inviteSentAt ?? null)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Invitation expires</dt>
-            <dd>{fmtDate(portalAccount?.inviteExpiresAt ?? null)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Last login</dt>
-            <dd>{fmtDate(portalAccount?.lastLoginAt ?? null)}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Onboarding</dt>
-            <dd>
-              {portalAccount?.onboardingCompletedAt
-                ? `Completed ${fmtDate(portalAccount.onboardingCompletedAt)}`
-                : portalAccount
-                  ? portalAccount.profileCompletedAt
-                    ? `Personal info completed ${fmtDate(portalAccount.profileCompletedAt)} — step ${portalAccount.onboardingStep ?? 1} of 3`
-                    : `Step ${portalAccount.onboardingStep} of 3`
-                  : "Not started"}
-            </dd>
-          </div>
-        </dl>
+  const show = portalMetaVisibility(portalAccount);
+  const onboarding = onboardingSummary(portalAccount);
+  const items: PropertyItem[] = [];
+  if (show.email) items.push({ label: "Email", value: portalAccount?.email, className: "break-all" });
+  if (show.inviteSentAt)
+    items.push({ label: "Invitation sent", value: formatDateTime(portalAccount?.inviteSentAt) });
+  if (show.inviteExpiresAt)
+    items.push({ label: "Invitation expires", value: formatDateTime(portalAccount?.inviteExpiresAt) });
+  if (show.lastLoginAt)
+    items.push({ label: "Last login", value: formatDateTime(portalAccount?.lastLoginAt) });
+  if (show.onboarding)
+    items.push({
+      label: "Onboarding",
+      value: portalAccount?.onboardingCompletedAt
+        ? `Completed ${formatDateTime(portalAccount.onboardingCompletedAt)}`
+        : onboarding.label,
+    });
 
-        <div className="flex flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+  return (
+    <SectionCard
+      id="portal-account"
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          Portal account
+          <PortalStatusBadge status={status} size="xs" />
+        </span>
+      }
+      description={STATE_COPY[status]}
+    >
+      <div className="space-y-4">
+        {items.length > 0 && <PropertyList items={items} />}
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {canInvite && status === "no_account" ? (
             <ConfirmAction
               title="Send portal invitation?"
@@ -135,9 +119,11 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(false)}
               loading={inviteMut.isPending}
             >
-              <Button className="h-11 w-full sm:w-auto" disabled={busy}>
-                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
-                Send portal invitation
+              <Button size="sm" className="h-9 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Send invitation
               </Button>
             </ConfirmAction>
           ) : null}
@@ -150,8 +136,10 @@ export function PortalAccountSection({
               onConfirm={() => inviteMut.mutate(true)}
               loading={inviteMut.isPending}
             >
-              <Button variant="secondary" className="h-11 w-full sm:w-auto" disabled={busy}>
-                {inviteMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
+              <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto" disabled={busy}>
+                {inviteMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                )}
                 Resend invitation
               </Button>
             </ConfirmAction>
@@ -167,15 +155,17 @@ export function PortalAccountSection({
             >
               <Button
                 variant="ghost"
-                className="h-11 w-full text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto sm:w-auto"
+                size="sm"
+                className="h-9 w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:ml-auto sm:w-auto"
                 disabled={busy}
               >
-                {disableMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
-                Disable portal access
+                {disableMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Disable access
               </Button>
             </ConfirmAction>
           ) : null}
-
 
           {status === "disabled" ? (
             <ConfirmAction
@@ -185,15 +175,17 @@ export function PortalAccountSection({
               onConfirm={() => enableMut.mutate()}
               loading={enableMut.isPending}
             >
-              <Button className="h-11 w-full sm:w-auto" disabled={busy}>
-                {enableMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden />}
-                Re-enable portal access
+              <Button size="sm" className="h-9 w-full sm:w-auto" disabled={busy}>
+                {enableMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Re-enable access
               </Button>
             </ConfirmAction>
           ) : null}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -212,8 +204,9 @@ function ConfirmAction({
   loading?: boolean;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild disabled={loading}>
         {children}
       </AlertDialogTrigger>
