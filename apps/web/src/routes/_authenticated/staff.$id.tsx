@@ -78,7 +78,7 @@ function StaffDetail() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                variant="destructive"
+                className="text-destructive focus:text-destructive"
                 onSelect={(e) => {
                   e.preventDefault();
                   setDeleteOpen(true);
@@ -95,7 +95,8 @@ function StaffDetail() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete this staff member?"
-        description="Deletion is only available before a carer portal account or invitation history exists. If they have portal access, disable it and set employment to inactive instead. Otherwise this removes their profile, availability, and centre preferences. Assigned shifts remain but lose this assignment."
+        consequence="This permanently removes their profile, availability, and centre preferences. Assigned shifts remain but lose this assignment."
+        details="Deletion is only available before a carer portal account or invitation history exists. If they have portal access, disable it and set employment to inactive instead."
         confirmLabel="Delete staff"
         onConfirm={deleteStaff}
       />
