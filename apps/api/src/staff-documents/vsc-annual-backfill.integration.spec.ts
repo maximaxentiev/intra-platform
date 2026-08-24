@@ -503,7 +503,9 @@ describe.runIf(INTEGRATION_READY)('VSC annual expiry backfill + reminder reconci
     await runVscBackfill(pool);
     await documentReminders.reconcileEligibleDocuments();
 
-    const expectedOffsets = planFutureDocumentExpiryReminders(expectedExpiry).map((plan) => plan.offsetDays);
+    const expectedOffsets = planFutureDocumentExpiryReminders('vulnerable_sector_check', expectedExpiry)
+      .filter((plan) => plan.unit === 'days')
+      .map((plan) => plan.offsetDays);
     expect(expectedOffsets).toEqual([7, 3, 1]);
 
     const rows = await db

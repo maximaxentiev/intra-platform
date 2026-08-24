@@ -21,8 +21,11 @@ import {
 import { EmailService, RecordingEmailTransport } from '../email/email.service';
 import { DocumentExpiryReminderService } from './document-expiry-reminder.service';
 import { registerDocumentExpiryProcessors } from './document-expiry-reminder.processor';
-import { buildDocumentExpiryIdempotencyKey } from './document-expiry-reminder.types';
-import { torontoDocumentReminderInstant } from './document-expiry-toronto.util';
+import { buildDocumentExpiryIdempotencyKeyMonths } from './document-expiry-reminder.types';
+import {
+  torontoDocumentReminderInstant,
+  torontoDocumentReminderInstantMonths,
+} from './document-expiry-toronto.util';
 import { deriveVscExpiryDate, startOfUtcDay, addCalendarDays } from './staff-document-dates.util';
 
 const DATABASE_URL =
@@ -257,7 +260,7 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
     expect(rows.some((row) => row.status === 'scheduled')).toBe(true);
   }, 60_000);
 
-  it('schedules CPR 2026-09-04 as 14d/7d/3d/1d only when today is 2026-08-18', async () => {
+  it('schedules First Aid 2026-09-04 with no future monthly reminders when today is 2026-08-18', async () => {
     const cprExpiry = '2026-09-04';
     const cprNow = new Date('2026-08-18T13:00:00.000Z');
     const cprSetRows = await db
@@ -303,30 +306,104 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
       );
     });
 
-    expect(scheduledIds.length).toBe(4);
+    expect(scheduledIds.length).toBe(0);
 
     const rows = await db
       .select()
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, cprSubmissionId));
-    expect(rows.filter((row) => row.status === 'scheduled').map((row) => row.communicationType)).toEqual([
-      'document_expiry_14d',
-      'document_expiry_7d',
-      'document_expiry_3d',
-      'document_expiry_1d',
-    ]);
+    expect(rows.filter((row) => row.status === 'scheduled')).toEqual([]);
     expect(rows.some((row) => row.communicationType === 'document_expiry_30d')).toBe(false);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_14d')).toBe(false);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_7d')).toBe(false);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_3d')).toBe(false);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_1d')).toBe(false);
+    expect(rows.some((row) => row.communicationType === 'document_expiry_1mo')).toBe(false);
 
     await documentReminders.cancelPendingForSubmission(cprSubmissionId);
 
-    const result = await documentReminders.reconcileEligibleDocuments();
-    expect(result.ensured).toBeGreaterThan(0);
+    await documentReminders.reconcileEligibleDocuments();
 
     const reactivated = await db
       .select()
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, cprSubmissionId));
-    expect(reactivated.filter((row) => row.status === 'scheduled').length).toBe(4);
+    expect(reactivated.filter((row) => row.status === 'scheduled').length).toBe(0);
+  }, 20_000);
+
+  it('cancels legacy First Aid day reminders during reconciliation without touching VSC', async () => {
+    const transitionStaff = await insertActiveStaffWithAccount(
+      db,
+      `doc-fa-transition-${TEST_PREFIX}@example.test`,
+    );
+    const cprExpiry = '2027-06-15';
+    const cprSetRows = await db
+      .insert(staffDocumentSets)
+      .values({
+        staffId: transitionStaff.staffId,
+        documentType: 'first_aid_cpr',
+        remindersEnabled: true,
+      })
+      .returning({ id: staffDocumentSets.id });
+    const cprSetId = cprSetRows[0]!.id;
+
+    const cprSubmissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: cprSetId,
+        reviewStatus: 'approved',
+        expiryDate: cprExpiry,
+        submittedAt: new Date(),
+        submittedByActorType: 'carer',
+        submittedByStaffAccountId: transitionStaff.accountId,
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+    const cprSubmissionId = cprSubmissionRows[0]!.id;
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: cprSubmissionId })
+      .where(eq(staffDocumentSets.id, cprSetId));
+
+    await db.insert(scheduledCommunications).values([
+      {
+        idempotencyKey: `staff-document:${cprSubmissionId}:expiry:30d`,
+        communicationType: 'document_expiry_30d',
+        entityType: 'staff_document',
+        entityId: cprSubmissionId,
+        recipientType: 'staff',
+        recipientEntityId: transitionStaff.staffId,
+        scheduledFor: torontoDocumentReminderInstant(cprExpiry, 30),
+        status: 'scheduled',
+      },
+      {
+        idempotencyKey: `staff-document:${cprSubmissionId}:expiry:14d`,
+        communicationType: 'document_expiry_14d',
+        entityType: 'staff_document',
+        entityId: cprSubmissionId,
+        recipientType: 'staff',
+        recipientEntityId: transitionStaff.staffId,
+        scheduledFor: torontoDocumentReminderInstant(cprExpiry, 14),
+        status: 'scheduled',
+      },
+    ]);
+
+    await documentReminders.reconcileEligibleDocuments();
+
+    const rows = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, cprSubmissionId));
+
+    expect(rows.filter((row) => row.status === 'scheduled').map((row) => row.communicationType)).toEqual([
+      'document_expiry_3mo',
+      'document_expiry_2mo',
+      'document_expiry_1mo',
+    ]);
+    expect(rows.filter((row) => row.status === 'cancelled').map((row) => row.communicationType)).toEqual([
+      'document_expiry_30d',
+      'document_expiry_14d',
+    ]);
   }, 20_000);
 
   it('schedules VSC reminders from calculated one-year expiry (processed 2026-09-04)', async () => {
@@ -621,12 +698,12 @@ describe.runIf(POSTGRES_READY && REDIS_READY)('Document expiry worker integratio
       .set({ expiryDate })
       .where(eq(staffDocumentSubmissions.id, submissionId));
 
-    const scheduledFor = torontoDocumentReminderInstant(expiryDate, 30);
+    const scheduledFor = torontoDocumentReminderInstantMonths(expiryDate, 1);
     expect(scheduledFor.getTime()).toBeLessThanOrEqual(Date.now());
 
     const row = await scheduled.schedule({
-      idempotencyKey: buildDocumentExpiryIdempotencyKey({ submissionId, offsetDays: 30 }),
-      communicationType: 'document_expiry_30d',
+      idempotencyKey: buildDocumentExpiryIdempotencyKeyMonths({ submissionId, offsetMonths: 1 }),
+      communicationType: 'document_expiry_1mo',
       entityType: 'staff_document',
       entityId: submissionId,
       recipientType: 'staff',

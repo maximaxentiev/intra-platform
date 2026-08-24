@@ -47,7 +47,12 @@ export function platformActionCategory(action: string): ActivityLogCategory {
 
 export function communicationTypeLabel(type: string): string {
   if (type.startsWith('document_expiry_')) {
-    const days = type.replace('document_expiry_', '').replace('d', '');
+    const suffix = type.replace('document_expiry_', '');
+    if (suffix.endsWith('mo')) {
+      const months = suffix.replace('mo', '');
+      return `${months}-month document expiry reminder`;
+    }
+    const days = suffix.replace('d', '');
     return `${days}-day document expiry reminder`;
   }
   if (type === 'shift_reminder_3d') return '3-day shift reminder';

@@ -10,6 +10,9 @@ export type CommunicationType =
   | 'document_expiry_7d'
   | 'document_expiry_3d'
   | 'document_expiry_1d'
+  | 'document_expiry_3mo'
+  | 'document_expiry_2mo'
+  | 'document_expiry_1mo'
   | 'test_ping';
 
 export type ScheduledCommunicationStatus =
@@ -56,6 +59,9 @@ export const COMMUNICATION_TYPE_VALUES: readonly CommunicationType[] = [
   'document_expiry_7d',
   'document_expiry_3d',
   'document_expiry_1d',
+  'document_expiry_3mo',
+  'document_expiry_2mo',
+  'document_expiry_1mo',
   'test_ping',
 ] as const;
 

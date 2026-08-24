@@ -15,12 +15,20 @@ import {
 } from './staff-document.constants';
 import { deriveExpiryDisplay } from './staff-document-dates.util';
 import { isActiveReminderSubmission } from './staff-document-compliance.util';
-import { planFutureDocumentExpiryReminders } from './document-expiry-reminder-scheduling.util';
 import {
-  buildDocumentExpiryIdempotencyKey,
-  DOCUMENT_EXPIRY_COMMUNICATION_TYPE,
-  DOCUMENT_EXPIRY_COMMUNICATION_TYPES,
-  DOCUMENT_EXPIRY_REMINDER_OFFSETS,
+  planFutureDocumentExpiryReminders,
+  type FutureDocumentExpiryReminderPlan,
+} from './document-expiry-reminder-scheduling.util';
+import {
+  ALL_DOCUMENT_EXPIRY_COMMUNICATION_TYPES,
+  buildDocumentExpiryIdempotencyKeyDays,
+  buildDocumentExpiryIdempotencyKeyMonths,
+  buildLegacyFirstAidDayIdempotencyKeys,
+  DOCUMENT_EXPIRY_DAY_COMMUNICATION_TYPE,
+  DOCUMENT_EXPIRY_MONTH_COMMUNICATION_TYPE,
+  FIRST_AID_DOCUMENT_EXPIRY_REMINDER_OFFSETS_MONTHS,
+  parseDocumentExpiryIdempotencyKey,
+  VSC_DOCUMENT_EXPIRY_REMINDER_OFFSETS_DAYS,
 } from './document-expiry-reminder.types';
 
 type DbLike = Pick<DbExecutor, 'select' | 'insert' | 'update'>;
@@ -60,26 +68,70 @@ export class DocumentExpiryReminderService {
     return true;
   }
 
+  private async getSentReminderIdempotencyKeys(submissionId: string): Promise<Set<string>> {
+    const rows = await this.db
+      .select({ idempotencyKey: scheduledCommunications.idempotencyKey })
+      .from(scheduledCommunications)
+      .where(
+        and(
+          eq(scheduledCommunications.entityId, submissionId),
+          eq(scheduledCommunications.status, 'sent'),
+          inArray(scheduledCommunications.communicationType, [...ALL_DOCUMENT_EXPIRY_COMMUNICATION_TYPES]),
+        ),
+      );
+    return new Set(rows.map((row) => row.idempotencyKey));
+  }
+
+  private planIdempotencyKey(submissionId: string, plan: FutureDocumentExpiryReminderPlan): string {
+    if (plan.unit === 'days') {
+      return buildDocumentExpiryIdempotencyKeyDays({
+        submissionId,
+        offsetDays: plan.offsetDays,
+      });
+    }
+    return buildDocumentExpiryIdempotencyKeyMonths({
+      submissionId,
+      offsetMonths: plan.offsetMonths,
+    });
+  }
+
+  private communicationTypeFromPlan(plan: FutureDocumentExpiryReminderPlan) {
+    if (plan.unit === 'days') {
+      return DOCUMENT_EXPIRY_DAY_COMMUNICATION_TYPE[plan.offsetDays];
+    }
+    return DOCUMENT_EXPIRY_MONTH_COMMUNICATION_TYPE[plan.offsetMonths];
+  }
+
+  private legacyFirstAid30dSent(sentKeys: Set<string>, submissionId: string): boolean {
+    return sentKeys.has(
+      buildDocumentExpiryIdempotencyKeyDays({ submissionId, offsetDays: 30 }),
+    );
+  }
+
   async scheduleForApprovedSubmission(
     ctx: DocumentExpiryReminderContext,
     executor: DbLike,
     now: Date = new Date(),
+    sentKeys?: Set<string>,
   ): Promise<string[]> {
     if (!isStaffDocumentReminderType(ctx.documentType)) return [];
 
-    const plans = planFutureDocumentExpiryReminders(ctx.expiryDate, now);
+    const resolvedSentKeys =
+      sentKeys ?? (await this.getSentReminderIdempotencyKeys(ctx.submissionId));
+    const plans = planFutureDocumentExpiryReminders(ctx.documentType, ctx.expiryDate, now, {
+      legacyFirstAid30dSent:
+        ctx.documentType === 'first_aid_cpr' &&
+        this.legacyFirstAid30dSent(resolvedSentKeys, ctx.submissionId),
+    });
     const scheduledIds: string[] = [];
 
     for (const plan of plans) {
-      const idempotencyKey = buildDocumentExpiryIdempotencyKey({
-        submissionId: ctx.submissionId,
-        offsetDays: plan.offsetDays,
-      });
+      const idempotencyKey = this.planIdempotencyKey(ctx.submissionId, plan);
 
       const row = await this.automated.ensureScheduled(
         {
           idempotencyKey,
-          communicationType: DOCUMENT_EXPIRY_COMMUNICATION_TYPE[plan.offsetDays],
+          communicationType: this.communicationTypeFromPlan(plan),
           entityType: 'staff_document',
           entityId: ctx.submissionId,
           recipientType: 'staff',
@@ -107,7 +159,7 @@ export class DocumentExpiryReminderService {
         and(
           eq(scheduledCommunications.entityType, 'staff_document'),
           eq(scheduledCommunications.entityId, submissionId),
-          inArray(scheduledCommunications.communicationType, DOCUMENT_EXPIRY_COMMUNICATION_TYPES),
+          inArray(scheduledCommunications.communicationType, [...ALL_DOCUMENT_EXPIRY_COMMUNICATION_TYPES]),
           inArray(scheduledCommunications.status, ['scheduled', 'processing']),
         ),
       )
@@ -173,6 +225,52 @@ export class DocumentExpiryReminderService {
     }
   }
 
+  private async cancelObsoleteReminderKeys(
+    documentType: StaffDocumentType,
+    submissionId: string,
+    plans: FutureDocumentExpiryReminderPlan[],
+  ): Promise<number> {
+    let cancelled = 0;
+
+    if (documentType === 'first_aid_cpr') {
+      cancelled += await this.automated.cancelByIdempotencyKeys(
+        buildLegacyFirstAidDayIdempotencyKeys(submissionId),
+      );
+
+      const activeMonthOffsets = new Set(
+        plans.filter((plan) => plan.unit === 'months').map((plan) => plan.offsetMonths),
+      );
+      const obsoleteMonthKeys = FIRST_AID_DOCUMENT_EXPIRY_REMINDER_OFFSETS_MONTHS.filter(
+        (offsetMonths) => !activeMonthOffsets.has(offsetMonths),
+      ).map((offsetMonths) =>
+        buildDocumentExpiryIdempotencyKeyMonths({ submissionId, offsetMonths }),
+      );
+      if (obsoleteMonthKeys.length > 0) {
+        cancelled += await this.automated.cancelByIdempotencyKeys(obsoleteMonthKeys);
+      }
+      return cancelled;
+    }
+
+    if (documentType === 'vulnerable_sector_check') {
+      const activeDayOffsets = new Set(
+        plans.filter((plan) => plan.unit === 'days').map((plan) => plan.offsetDays),
+      );
+      const obsoleteDayKeys = VSC_DOCUMENT_EXPIRY_REMINDER_OFFSETS_DAYS.filter(
+        (offsetDays) => !activeDayOffsets.has(offsetDays),
+      ).map((offsetDays) => buildDocumentExpiryIdempotencyKeyDays({ submissionId, offsetDays }));
+      if (obsoleteDayKeys.length > 0) {
+        cancelled += await this.automated.cancelByIdempotencyKeys(obsoleteDayKeys);
+      }
+
+      const obsoleteMonthKeys = FIRST_AID_DOCUMENT_EXPIRY_REMINDER_OFFSETS_MONTHS.map(
+        (offsetMonths) => buildDocumentExpiryIdempotencyKeyMonths({ submissionId, offsetMonths }),
+      );
+      cancelled += await this.automated.cancelByIdempotencyKeys(obsoleteMonthKeys);
+    }
+
+    return cancelled;
+  }
+
   async reconcileEligibleDocuments(
     batchSize = 200,
   ): Promise<{ ensured: number; cancelled: number; enqueued: number }> {
@@ -226,29 +324,25 @@ export class DocumentExpiryReminderService {
         continue;
       }
 
-      const plans = planFutureDocumentExpiryReminders(row.expiryDate!, now);
-      const activeOffsets = new Set(plans.map((plan) => plan.offsetDays));
-      const obsoleteKeys = DOCUMENT_EXPIRY_REMINDER_OFFSETS.filter(
-        (offsetDays) => !activeOffsets.has(offsetDays),
-      ).map((offsetDays) =>
-        buildDocumentExpiryIdempotencyKey({
-          submissionId: row.submissionId,
-          offsetDays,
-        }),
+      const sentKeys = await this.getSentReminderIdempotencyKeys(row.submissionId);
+      const plans = planFutureDocumentExpiryReminders(row.documentType, row.expiryDate!, now, {
+        legacyFirstAid30dSent:
+          row.documentType === 'first_aid_cpr' &&
+          this.legacyFirstAid30dSent(sentKeys, row.submissionId),
+      });
+
+      cancelled += await this.cancelObsoleteReminderKeys(
+        row.documentType,
+        row.submissionId,
+        plans,
       );
-      if (obsoleteKeys.length > 0) {
-        cancelled += await this.automated.cancelByIdempotencyKeys(obsoleteKeys);
-      }
 
       for (const plan of plans) {
-        const idempotencyKey = buildDocumentExpiryIdempotencyKey({
-          submissionId: row.submissionId,
-          offsetDays: plan.offsetDays,
-        });
+        const idempotencyKey = this.planIdempotencyKey(row.submissionId, plan);
 
         const scheduled = await this.automated.ensureScheduled({
           idempotencyKey,
-          communicationType: DOCUMENT_EXPIRY_COMMUNICATION_TYPE[plan.offsetDays],
+          communicationType: this.communicationTypeFromPlan(plan),
           entityType: 'staff_document',
           entityId: row.submissionId,
           recipientType: 'staff',
@@ -287,7 +381,7 @@ export class DocumentExpiryReminderService {
       .where(
         and(
           eq(scheduledCommunications.entityType, 'staff_document'),
-          inArray(scheduledCommunications.communicationType, DOCUMENT_EXPIRY_COMMUNICATION_TYPES),
+          inArray(scheduledCommunications.communicationType, [...ALL_DOCUMENT_EXPIRY_COMMUNICATION_TYPES]),
           inArray(scheduledCommunications.status, ['scheduled', 'processing']),
         ),
       )
@@ -339,14 +433,45 @@ export class DocumentExpiryReminderService {
         continue;
       }
 
-      const offsetMatch = /^staff-document:[^:]+:expiry:(30|14|7|3|1)d$/.exec(row.idempotencyKey);
-      if (context.expiryDate && offsetMatch) {
-        const offsetDays = Number(offsetMatch[1]) as 30 | 14 | 7 | 3 | 1;
-        const plans = planFutureDocumentExpiryReminders(context.expiryDate, new Date());
-        if (!plans.some((plan) => plan.offsetDays === offsetDays)) {
-          await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
-          cancelled += 1;
-        }
+      const parsed = parseDocumentExpiryIdempotencyKey(row.idempotencyKey);
+      if (!context.expiryDate || !parsed) {
+        continue;
+      }
+
+      if (context.documentType === 'first_aid_cpr' && parsed.unit === 'days') {
+        await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
+        cancelled += 1;
+        continue;
+      }
+
+      if (context.documentType === 'vulnerable_sector_check' && parsed.unit === 'months') {
+        await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
+        cancelled += 1;
+        continue;
+      }
+
+      const sentKeys = await this.getSentReminderIdempotencyKeys(context.submissionId);
+      const plans = planFutureDocumentExpiryReminders(
+        context.documentType,
+        context.expiryDate,
+        new Date(),
+        {
+          legacyFirstAid30dSent:
+            context.documentType === 'first_aid_cpr' &&
+            this.legacyFirstAid30dSent(sentKeys, context.submissionId),
+        },
+      );
+
+      const stillActive =
+        parsed.unit === 'days'
+          ? plans.some((plan) => plan.unit === 'days' && plan.offsetDays === parsed.offsetDays)
+          : plans.some(
+              (plan) => plan.unit === 'months' && plan.offsetMonths === parsed.offsetMonths,
+            );
+
+      if (!stillActive) {
+        await this.automated.cancelByIdempotencyKeys([row.idempotencyKey]);
+        cancelled += 1;
       }
     }
 

@@ -5,12 +5,19 @@ import {
   wrapShiftAssignmentEmailHtml,
 } from '../shifts/shift-assignment-notification.util';
 import type { StaffDocumentType } from './staff-document.constants';
-import type { DocumentExpiryReminderOffsetDays } from './document-expiry-reminder.types';
+import type {
+  DocumentExpiryReminderOffsetDays,
+  DocumentExpiryReminderOffsetMonths,
+} from './document-expiry-reminder.types';
 
 const DOCUMENT_DISPLAY_NAMES: Record<'vulnerable_sector_check' | 'first_aid_cpr', string> = {
   vulnerable_sector_check: 'Vulnerable Sector Check',
   first_aid_cpr: 'First Aid & CPR certification',
 };
+
+export type DocumentExpiryReminderTiming =
+  | { unit: 'days'; offsetDays: DocumentExpiryReminderOffsetDays }
+  | { unit: 'months'; offsetMonths: DocumentExpiryReminderOffsetMonths };
 
 function formatExpiryDateLabel(expiryDate: string): string {
   const [y, m, d] = expiryDate.split('-').map(Number);
@@ -23,16 +30,27 @@ function formatExpiryDateLabel(expiryDate: string): string {
   });
 }
 
-function subjectForOffset(
+function subjectForTiming(
   documentType: 'vulnerable_sector_check' | 'first_aid_cpr',
-  offsetDays: DocumentExpiryReminderOffsetDays,
+  timing: DocumentExpiryReminderTiming,
 ): string {
   const name =
     documentType === 'vulnerable_sector_check'
       ? 'Vulnerable Sector Check'
       : 'First Aid & CPR certification';
 
-  switch (offsetDays) {
+  if (timing.unit === 'months') {
+    switch (timing.offsetMonths) {
+      case 3:
+        return `Your ${name} expires in 3 months`;
+      case 2:
+        return `Your ${name} expires in 2 months`;
+      case 1:
+        return `Your ${name} expires in 1 month`;
+    }
+  }
+
+  switch (timing.offsetDays) {
     case 30:
       return `Your ${name} expires in 30 days`;
     case 14:
@@ -50,8 +68,19 @@ function subjectForOffset(
   }
 }
 
-function timeRemainingLabel(offsetDays: DocumentExpiryReminderOffsetDays): string {
-  switch (offsetDays) {
+function timeRemainingLabel(timing: DocumentExpiryReminderTiming): string {
+  if (timing.unit === 'months') {
+    switch (timing.offsetMonths) {
+      case 3:
+        return '3 months';
+      case 2:
+        return '2 months';
+      case 1:
+        return '1 month';
+    }
+  }
+
+  switch (timing.offsetDays) {
     case 30:
       return '30 days';
     case 14:
@@ -69,13 +98,13 @@ export function buildDocumentExpiryCarerEmailContent(params: {
   carerName: string;
   documentType: 'vulnerable_sector_check' | 'first_aid_cpr';
   expiryDate: string;
-  offsetDays: DocumentExpiryReminderOffsetDays;
+  timing: DocumentExpiryReminderTiming;
   platformEnv: PlatformUrlEnv;
 }) {
   const documentName = DOCUMENT_DISPLAY_NAMES[params.documentType];
   const expiryLabel = formatExpiryDateLabel(params.expiryDate);
-  const subject = subjectForOffset(params.documentType, params.offsetDays);
-  const remaining = timeRemainingLabel(params.offsetDays);
+  const subject = subjectForTiming(params.documentType, params.timing);
+  const remaining = timeRemainingLabel(params.timing);
   const documentsUrl = buildCarerDocumentsLink(params.platformEnv);
 
   const text = [

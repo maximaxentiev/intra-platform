@@ -67,8 +67,14 @@ export const STAFF_DOCUMENT_REMINDER_TYPES = [
   'first_aid_cpr',
 ] as const satisfies readonly StaffDocumentType[];
 
-/** Future reminder offsets in days before expiry (Communications phase). */
-export const STAFF_DOCUMENT_REMINDER_OFFSETS_DAYS = [30, 14, 7, 3, 1] as const;
+/** Future reminder offsets in days before expiry — Vulnerable Sector Check only. */
+export const VSC_REMINDER_OFFSETS_DAYS = [30, 14, 7, 3, 1] as const;
+
+/** Future reminder offsets in calendar months before expiry — First Aid / CPR only. */
+export const FIRST_AID_REMINDER_OFFSETS_MONTHS = [3, 2, 1] as const;
+
+/** @deprecated Use VSC_REMINDER_OFFSETS_DAYS — retained for VSC day-based reminder code paths. */
+export const STAFF_DOCUMENT_REMINDER_OFFSETS_DAYS = VSC_REMINDER_OFFSETS_DAYS;
 
 /** Default public-share policy — all categories may appear when live eligibility passes. */
 export const STAFF_DOCUMENT_DEFAULT_PUBLIC_SHARE: Record<StaffDocumentType, boolean> = {

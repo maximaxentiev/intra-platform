@@ -20,26 +20,29 @@ import {
   normalizeNotificationEmail,
 } from '../shifts/shift-assignment-notification.util';
 import { normalizeStaffEmail } from '../staff-portal/portal-account-status.util';
-import { isStaffDocumentReminderType } from './staff-document.constants';
+import {
+  FIRST_AID_REMINDER_OFFSETS_MONTHS,
+  VSC_REMINDER_OFFSETS_DAYS,
+} from './staff-document.constants';
 import { deriveExpiryDisplay } from './staff-document-dates.util';
 import { isActiveReminderSubmission } from './staff-document-compliance.util';
 import { buildDocumentExpiryCarerEmailContent } from './document-expiry-carer-email.template';
-import { torontoDocumentReminderInstant } from './document-expiry-toronto.util';
 import {
-  DOCUMENT_EXPIRY_COMMUNICATION_TYPE,
+  torontoDocumentReminderInstant,
+  torontoDocumentReminderInstantMonths,
+} from './document-expiry-toronto.util';
+import {
+  DOCUMENT_EXPIRY_DAY_COMMUNICATION_TYPE,
+  DOCUMENT_EXPIRY_MONTH_COMMUNICATION_TYPE,
   parseDocumentExpiryIdempotencyKey,
   type DocumentExpiryReminderOffsetDays,
+  type DocumentExpiryReminderOffsetMonths,
 } from './document-expiry-reminder.types';
 
-export class DocumentExpiryCommunicationProcessor implements CommunicationProcessor {
-  readonly communicationType: CommunicationType;
+abstract class DocumentExpiryCommunicationProcessorBase implements CommunicationProcessor {
+  abstract readonly communicationType: CommunicationType;
 
-  constructor(
-    private readonly offsetDays: DocumentExpiryReminderOffsetDays,
-    private readonly config: ConfigService,
-  ) {
-    this.communicationType = DOCUMENT_EXPIRY_COMMUNICATION_TYPE[offsetDays];
-  }
+  constructor(protected readonly config: ConfigService) {}
 
   async evaluate(
     db: Database,
@@ -60,7 +63,7 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
     }
 
     const parsed = parseDocumentExpiryIdempotencyKey(idempotencyKey);
-    if (!parsed || parsed.offsetDays !== this.offsetDays) {
+    if (!parsed || !this.matchesParsedKey(parsed)) {
       return { kind: 'stale' };
     }
 
@@ -90,7 +93,7 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
       return { kind: 'stale' };
     }
 
-    if (!isStaffDocumentReminderType(row.documentType)) {
+    if (row.documentType !== this.expectedDocumentType()) {
       return { kind: 'stale' };
     }
 
@@ -129,7 +132,7 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
     }
 
     const now = new Date();
-    const expectedInstant = torontoDocumentReminderInstant(row.expiryDate, parsed.offsetDays);
+    const expectedInstant = this.expectedInstant(row.expiryDate, parsed);
     if (Math.abs(commRow.scheduledFor.getTime() - expectedInstant.getTime()) > 1000) {
       return { kind: 'stale' };
     }
@@ -162,9 +165,9 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
 
     const content = buildDocumentExpiryCarerEmailContent({
       carerName: row.staffLegalName,
-      documentType: row.documentType as 'vulnerable_sector_check' | 'first_aid_cpr',
+      documentType: this.expectedDocumentType(),
       expiryDate: row.expiryDate,
-      offsetDays: parsed.offsetDays,
+      timing: this.timingFromParsed(parsed),
       platformEnv: this.platformEnv(),
     });
 
@@ -177,6 +180,23 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
     };
   }
 
+  protected abstract matchesParsedKey(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): boolean;
+
+  protected abstract expectedDocumentType(): 'vulnerable_sector_check' | 'first_aid_cpr';
+
+  protected abstract expectedInstant(
+    expiryDate: string,
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): Date;
+
+  protected abstract timingFromParsed(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ):
+    | { unit: 'days'; offsetDays: DocumentExpiryReminderOffsetDays }
+    | { unit: 'months'; offsetMonths: DocumentExpiryReminderOffsetMonths };
+
   private platformEnv(): PlatformUrlEnv {
     return {
       APP_PUBLIC_URL: this.config.get<string>('APP_PUBLIC_URL'),
@@ -187,11 +207,101 @@ export class DocumentExpiryCommunicationProcessor implements CommunicationProces
   }
 }
 
+class DocumentExpiryDayCommunicationProcessor extends DocumentExpiryCommunicationProcessorBase {
+  readonly communicationType: CommunicationType;
+
+  constructor(
+    private readonly offsetDays: DocumentExpiryReminderOffsetDays,
+    config: ConfigService,
+  ) {
+    super(config);
+    this.communicationType = DOCUMENT_EXPIRY_DAY_COMMUNICATION_TYPE[offsetDays];
+  }
+
+  protected matchesParsedKey(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): boolean {
+    return parsed.unit === 'days' && parsed.offsetDays === this.offsetDays;
+  }
+
+  protected expectedDocumentType(): 'vulnerable_sector_check' {
+    return 'vulnerable_sector_check';
+  }
+
+  protected expectedInstant(
+    expiryDate: string,
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): Date {
+    if (parsed.unit !== 'days') {
+      throw new Error('Expected day-based reminder key.');
+    }
+    return torontoDocumentReminderInstant(expiryDate, parsed.offsetDays);
+  }
+
+  protected timingFromParsed(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ) {
+    if (parsed.unit !== 'days') {
+      throw new Error('Expected day-based reminder key.');
+    }
+    return { unit: 'days' as const, offsetDays: parsed.offsetDays };
+  }
+}
+
+class DocumentExpiryMonthCommunicationProcessor extends DocumentExpiryCommunicationProcessorBase {
+  readonly communicationType: CommunicationType;
+
+  constructor(
+    private readonly offsetMonths: DocumentExpiryReminderOffsetMonths,
+    config: ConfigService,
+  ) {
+    super(config);
+    this.communicationType = DOCUMENT_EXPIRY_MONTH_COMMUNICATION_TYPE[offsetMonths];
+  }
+
+  protected matchesParsedKey(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): boolean {
+    return parsed.unit === 'months' && parsed.offsetMonths === this.offsetMonths;
+  }
+
+  protected expectedDocumentType(): 'first_aid_cpr' {
+    return 'first_aid_cpr';
+  }
+
+  protected expectedInstant(
+    expiryDate: string,
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ): Date {
+    if (parsed.unit !== 'months') {
+      throw new Error('Expected month-based reminder key.');
+    }
+    return torontoDocumentReminderInstantMonths(expiryDate, parsed.offsetMonths);
+  }
+
+  protected timingFromParsed(
+    parsed: NonNullable<ReturnType<typeof parseDocumentExpiryIdempotencyKey>>,
+  ) {
+    if (parsed.unit !== 'months') {
+      throw new Error('Expected month-based reminder key.');
+    }
+    return { unit: 'months' as const, offsetMonths: parsed.offsetMonths };
+  }
+}
+
 export function registerDocumentExpiryProcessors(
   registry: { register(processor: CommunicationProcessor): void },
   config: ConfigService,
 ): void {
-  for (const offsetDays of [30, 14, 7, 3, 1] as const) {
-    registry.register(new DocumentExpiryCommunicationProcessor(offsetDays, config));
+  for (const offsetDays of VSC_REMINDER_OFFSETS_DAYS) {
+    registry.register(new DocumentExpiryDayCommunicationProcessor(offsetDays, config));
+  }
+  for (const offsetMonths of FIRST_AID_REMINDER_OFFSETS_MONTHS) {
+    registry.register(new DocumentExpiryMonthCommunicationProcessor(offsetMonths, config));
   }
 }
+
+export {
+  DocumentExpiryDayCommunicationProcessor,
+  DocumentExpiryMonthCommunicationProcessor,
+};

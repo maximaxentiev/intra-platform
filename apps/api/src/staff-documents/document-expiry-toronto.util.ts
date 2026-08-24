@@ -1,4 +1,5 @@
 import { TZDate } from '@date-fns/tz';
+import { subMonths } from 'date-fns';
 import { AVAILABILITY_TIMEZONE } from '../availability/availability-toronto.util';
 import { parseDateOnly } from './staff-document-dates.util';
 
@@ -19,6 +20,25 @@ function subtractCalendarDaysFromDateOnly(expiryDate: string, offsetDays: number
   };
 }
 
+/** Calendar-month subtraction using date-fns subMonths on UTC date components. */
+export function subtractCalendarMonthsFromDateOnly(
+  expiryDate: string,
+  offsetMonths: number,
+): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const parsed = parseDateOnly(expiryDate);
+  const anchor = new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+  const reminder = subMonths(anchor, offsetMonths);
+  return {
+    year: reminder.getFullYear(),
+    month: reminder.getMonth() + 1,
+    day: reminder.getDate(),
+  };
+}
+
 /**
  * Absolute UTC instant for a document expiry reminder at 09:00 America/Toronto
  * on (expiry calendar date − offsetDays).
@@ -35,3 +55,21 @@ export function torontoDocumentReminderInstant(
   const toronto = new TZDate(year, month - 1, day, hour, 0, 0, AVAILABILITY_TIMEZONE);
   return new Date(toronto.getTime());
 }
+
+/**
+ * Absolute UTC instant for a document expiry reminder at 09:00 America/Toronto
+ * on (expiry calendar date − offsetMonths calendar months).
+ */
+export function torontoDocumentReminderInstantMonths(
+  expiryDate: string,
+  offsetMonths: number,
+  hour = 9,
+): Date {
+  if (!DATE_ONLY_RE.test(expiryDate.trim())) {
+    throw new Error(`Invalid expiry date "${expiryDate}".`);
+  }
+  const { year, month, day } = subtractCalendarMonthsFromDateOnly(expiryDate, offsetMonths);
+  const toronto = new TZDate(year, month - 1, day, hour, 0, 0, AVAILABILITY_TIMEZONE);
+  return new Date(toronto.getTime());
+}
+
