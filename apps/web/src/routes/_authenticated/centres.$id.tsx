@@ -1,18 +1,26 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { centresApi, displayStaff, fmtTime, saveCentreSecondaryChannels } from "@/lib/db";
-import { CentreForm } from "@/components/CentreForm";
+import { centresApi, channelLabel, saveCentreSecondaryChannels } from "@/lib/db";
+import { centreLocationOrFallback } from "@/lib/centres-ui";
+import { CentreDetailsCard } from "@/components/centres/CentreDetailsCard";
 import { CentreContactsEditor } from "@/components/CentreContactsEditor";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CentreStaffPreferences } from "@/components/centres/CentreStaffPreferences";
+import { CentreShiftsTab } from "@/components/centres/CentreShiftsTab";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MultiStaffSelect } from "@/components/MultiStaffSelect";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ConfirmDestructiveDialog } from "@/components/ui-kit";
 import { toast } from "sonner";
-import { Star, Ban, Trash2, MapPin } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -30,6 +38,7 @@ function CentreDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const activeTab = tab ?? "details";
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const centreQ = useQuery({
     queryKey: ["centre", id],
@@ -47,16 +56,37 @@ function CentreDetail() {
     queryKey: ["centre-banned", id],
     queryFn: () => centresApi.bannedStaff(id),
   });
-  const shiftsQ = useQuery({
-    queryKey: ["centre-shifts", id],
-    queryFn: () => centresApi.shifts(id),
-  });
+
+  if (centreQ.isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader eyebrow="Centre" backTo="/centres" backLabel="Back to Centres" title="Centre unavailable" />
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">This centre could not be loaded</p>
+            <p className="text-[13px] text-muted-foreground">
+              It may have been deleted, or the request failed.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => void centreQ.refetch()}
+            disabled={centreQ.isFetching}
+          >
+            {centreQ.isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!centreQ.data) return <DetailLoading />;
   const centre = centreQ.data;
   const topIds = (topQ.data ?? []).map((r) => r.staffId);
   const bannedIds = (bannedQ.data ?? []).map((r) => r.staffId);
-  const now = new Date();
 
   async function deleteCentre() {
     try {
@@ -65,6 +95,8 @@ function CentreDetail() {
       navigate({ to: "/centres" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeleteOpen(false);
     }
   }
 
@@ -75,153 +107,126 @@ function CentreDetail() {
         backTo="/centres"
         backLabel="Back to Centres"
         title={centre.name}
-        subtitle={
-          centre.address ? (
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" /> {centre.address}
-            </span>
-          ) : "No address on file"
+        subtitle={centreLocationOrFallback(centre.address, centre.city)}
+        meta={
+          <Badge variant="secondary" className="font-normal">
+            {channelLabel(centre.primaryChannel)}
+          </Badge>
         }
         actions={
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this centre?</AlertDialogTitle>
-                <AlertDialogDescription>This removes the centre and its Top/Banned staff lists. Existing shifts referencing it will block deletion.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteCentre}>Delete centre</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label="More centre actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> Delete centre
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
+      />
+
+      <ConfirmDestructiveDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this centre?"
+        consequence="This permanently removes the centre, its contacts, and its Top/Banned staff lists."
+        details="Deletion is blocked while shifts still reference this centre."
+        confirmLabel="Delete centre"
+        onConfirm={() => void deleteCentre()}
       />
 
       <Tabs
         value={activeTab}
-        onValueChange={v => navigate({ to: "/centres/$id", params: { id }, search: { tab: v === "details" ? undefined : (v as "staff-lists" | "shifts") } })}
+        onValueChange={(v) =>
+          navigate({
+            to: "/centres/$id",
+            params: { id },
+            search: { tab: v === "details" ? undefined : (v as "staff-lists" | "shifts") },
+          })
+        }
       >
-        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar px-4 sm:px-0">
+        <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="staff-lists">Top &amp; Banned Staff</TabsTrigger>
+            <TabsTrigger value="staff-lists">Staff preferences</TabsTrigger>
             <TabsTrigger value="shifts">Shifts</TabsTrigger>
           </TabsList>
         </div>
 
-
-
-        <TabsContent value="details" className="pt-4 space-y-4">
-          <Card>
-            <CardHeader><CardTitle>Edit centre details</CardTitle></CardHeader>
-            <CardContent>
-              <CentreForm
-                initial={centre}
-                secondaryChannels={secondaryQ.data ?? []}
-                onSubmit={async (values, secondary) => {
-                  try {
-                    await centresApi.update(id, {
-                      ...values,
-                      hourlyRate: values.hourlyRate.trim() ? values.hourlyRate.trim() : null,
-                    });
-                    await saveCentreSecondaryChannels(id, secondary);
-                    toast.success("Centre saved");
-                    qc.invalidateQueries({ queryKey: ["centre", id] });
-                    qc.invalidateQueries({ queryKey: ["centre-secondary-channels", id] });
-                    qc.invalidateQueries({ queryKey: ["centres"] });
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Save failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <CentreContactsEditor centreId={id} />
-            </CardContent>
-          </Card>
+        <TabsContent value="details" className="space-y-4 pt-4">
+          <CentreDetailsCard
+            centre={centre}
+            secondaryChannels={secondaryQ.data ?? []}
+            onSave={async (values, secondary) => {
+              try {
+                await centresApi.update(id, {
+                  ...values,
+                  hourlyRate: values.hourlyRate.trim() ? values.hourlyRate.trim() : null,
+                });
+                await saveCentreSecondaryChannels(id, secondary);
+                toast.success("Centre saved");
+                qc.invalidateQueries({ queryKey: ["centre", id] });
+                qc.invalidateQueries({ queryKey: ["centre-secondary-channels", id] });
+                qc.invalidateQueries({ queryKey: ["centres"] });
+                return true;
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Save failed");
+                return false;
+              }
+            }}
+          />
+          <CentreContactsEditor centreId={id} />
         </TabsContent>
 
-        <TabsContent value="staff-lists" className="pt-4 space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-warning fill-warning" /> Top Staff</CardTitle></CardHeader>
-            <CardContent>
-              <MultiStaffSelect
-                selectedIds={topIds}
-                excludeIds={bannedIds}
-                onChange={async (newIds) => {
-                  try {
-                    await centresApi.setTopStaff(id, newIds);
-                    qc.invalidateQueries();
-                    toast.success("Top staff updated");
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Update failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Ban className="h-4 w-4 text-destructive" /> Banned Staff</CardTitle></CardHeader>
-            <CardContent>
-              <MultiStaffSelect
-                selectedIds={bannedIds}
-                excludeIds={topIds}
-                onChange={async (newIds) => {
-                  try {
-                    await centresApi.setBannedStaff(id, newIds);
-                    qc.invalidateQueries();
-                    toast.success("Banned staff updated");
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Update failed");
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="staff-lists" className="space-y-4 pt-4">
+          <CentreStaffPreferences
+            title="Top staff"
+            description="Preferred carers for this centre. Considered first when filling shifts."
+            emptyText="No preferred staff yet."
+            selectedIds={topIds}
+            excludeIds={bannedIds}
+            onChange={async (ids) => {
+              try {
+                await centresApi.setTopStaff(id, ids);
+                qc.invalidateQueries({ queryKey: ["centre-top", id] });
+                qc.invalidateQueries({ queryKey: ["centre-banned", id] });
+                toast.success("Top staff updated");
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Update failed");
+              }
+            }}
+          />
+          <CentreStaffPreferences
+            title="Banned staff"
+            description="Carers who must not be assigned to this centre."
+            emptyText="No banned staff."
+            selectedIds={bannedIds}
+            excludeIds={topIds}
+            onChange={async (ids) => {
+              try {
+                await centresApi.setBannedStaff(id, ids);
+                qc.invalidateQueries({ queryKey: ["centre-top", id] });
+                qc.invalidateQueries({ queryKey: ["centre-banned", id] });
+                toast.success("Banned staff updated");
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Update failed");
+              }
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="shifts" className="pt-4">
-          <Card>
-            <CardHeader><CardTitle>All shifts at this centre</CardTitle></CardHeader>
-            <CardContent>
-              {(shiftsQ.data ?? []).length === 0 ? (
-                <div className="text-sm text-muted-foreground">No shifts recorded for this centre.</div>
-              ) : (
-                <div className="divide-y">
-                  {(shiftsQ.data ?? []).map((s) => {
-                    const isPastDue = new Date(`${s.shiftDate}T${s.endTime}`) < now;
-                    const assigned = s.assignedStaffId && s.assignedLegalName
-                      ? displayStaff({
-                          legalName: s.assignedLegalName,
-                          displayName: s.assignedDisplayName ?? "",
-                          useDisplayName: s.assignedUseDisplayName ?? false,
-                        })
-                      : "Unassigned";
-                    return (
-                      <Link
-                        key={s.id}
-                        to="/shifts/$id"
-                        params={{ id: s.id }}
-                        className={`flex items-center justify-between py-2 hover:bg-muted/50 px-2 -mx-2 rounded ${isPastDue ? "opacity-75 text-muted-foreground" : ""}`}
-                      >
-                        <div>
-                          <div className="text-sm font-medium">{s.shiftDate} · {fmtTime(s.startTime)} – {fmtTime(s.endTime)}</div>
-                          <div className="text-xs text-muted-foreground">{s.roleNeeded || "No role"} · {assigned}</div>
-                        </div>
-                        <StatusBadge status={s.status}>{s.status}</StatusBadge>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CentreShiftsTab centreId={id} />
         </TabsContent>
       </Tabs>
     </div>
