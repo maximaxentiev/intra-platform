@@ -15,8 +15,8 @@ import { AvailabilityEditor } from "@/components/AvailabilityEditor";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
 import { ConfirmDestructiveDialog } from "@/components/ui-kit";
+import { AlertCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/staff/$id")({
@@ -46,7 +46,34 @@ function StaffDetail() {
     queryFn: () => opsStaffDocumentsApi.get(id),
   });
 
-  if (!staffQ.data) return <DetailLoading />;
+  if (staffQ.isLoading) return <DetailLoading />;
+
+  if (staffQ.isError || !staffQ.data) {
+    return (
+      <div className="space-y-4">
+        <PageHeader eyebrow="Staff" backTo="/staff" backLabel="Back to Staff" title="Staff profile" />
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Staff profile could not be loaded</p>
+            <p className="text-[13px] text-muted-foreground">
+              The request failed or this staff member was not found.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => void staffQ.refetch()}
+            disabled={staffQ.isFetching}
+          >
+            {staffQ.isFetching ? "Retrying…" : "Retry"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const staff = staffQ.data;
   const topIds = topQ.data ?? [];
   const bannedIds = bannedQ.data ?? [];
