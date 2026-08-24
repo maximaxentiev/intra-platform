@@ -21,10 +21,16 @@ export function CentreForm({
   initial,
   secondaryChannels = [],
   onSubmit,
+  submitLabel = "Save centre",
+  savingLabel = "Saving...",
+  onCancel,
 }: {
   initial: Partial<Omit<CentreFormValues, "hourlyRate"> & { hourlyRate?: string | null }>;
   secondaryChannels?: CentreChannel[];
   onSubmit: (values: CentreFormValues, secondary: CentreChannel[]) => Promise<void>;
+  submitLabel?: string;
+  savingLabel?: string;
+  onCancel?: () => void;
 }) {
   const [values, setValues] = useState<CentreFormValues>({
     name: initial.name ?? "",
