@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { staffApi, safeDocumentHref, type StaffDetail } from "@/lib/db";
+import { staffApi, type StaffDetail } from "@/lib/db";
 import { StaffForm } from "@/components/StaffForm";
 import { Button } from "@/components/ui/button";
 import { PropertyList, SectionCard } from "@/components/ui-kit";
@@ -14,7 +14,6 @@ import { Pencil } from "lucide-react";
 export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const docsHref = safeDocumentHref(staff.documentsUrl);
 
   if (editing) {
     return (
@@ -103,11 +102,6 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
                 ) : (
                   ""
                 ),
-              },
-              {
-                label: "Documents link",
-                value: docsHref ? "Open compliance documents" : "",
-                href: docsHref ?? undefined,
               },
             ]}
           />

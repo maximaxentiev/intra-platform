@@ -213,6 +213,9 @@ export class StaffService {
     if (dto.city !== undefined) {
       values.city = assertCityForUpdate(values.city, existing.city);
     }
+    if (dto.documentsUrl === undefined) {
+      values.documentsUrl = existing.documentsUrl;
+    }
 
     return this.db.transaction(async (tx) => {
       const rows = await tx

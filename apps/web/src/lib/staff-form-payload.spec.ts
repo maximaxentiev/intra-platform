@@ -24,7 +24,6 @@ describe("pickStaffFormEditableInitial", () => {
       role: "ECA",
       status: "active",
       notes: "Note",
-      documentsUrl: "https://example.com/docs",
       address: "1 Main St",
       city: "Toronto",
     });
@@ -47,7 +46,6 @@ describe("buildStaffUpdatePayload", () => {
     role: "ECA",
     status: "active",
     notes: "Note",
-    documentsUrl: "https://example.com/docs",
     address: "1 Main St",
     city: "Toronto",
   });
@@ -70,7 +68,6 @@ describe("buildStaffUpdatePayload", () => {
       role: "ECA",
       status: "active",
       notes: "Note",
-      documentsUrl: "https://example.com/docs",
       address: "1 Main St",
       city: "Toronto",
     });
@@ -102,5 +99,12 @@ describe("buildStaffUpdatePayload", () => {
     expect(payload?.city).toBe("Hamilton");
     expect(payload?.phone).toBe("999");
     expect(payload?.notes).toBe("Updated");
+  });
+
+  it("does not include documentsUrl in normal staff update payload", () => {
+    const payload = buildStaffUpdatePayload(base, "Toronto");
+    expect(payload).not.toBeNull();
+    expect(payload).not.toHaveProperty("documentsUrl");
+    expect(Object.keys(payload!).sort()).toEqual([...STAFF_UPDATE_FIELD_KEYS].sort());
   });
 });

@@ -22,7 +22,6 @@ export const STAFF_UPDATE_FIELD_KEYS = [
   "role",
   "status",
   "notes",
-  "documentsUrl",
   "address",
   "city",
 ] as const;
@@ -36,7 +35,6 @@ export type StaffUpdatePayload = {
   role: string;
   status: StaffStatus;
   notes: string;
-  documentsUrl: string;
   address: string;
   city: string;
 };
@@ -64,7 +62,6 @@ export function pickStaffFormEditableInitial(source: StaffFormInitialSource): St
     role: String(source.role ?? ""),
     status: (source.status as StaffStatus) ?? "active",
     notes: String(source.notes ?? ""),
-    documentsUrl: String(source.documentsUrl ?? ""),
     address: String(source.address ?? ""),
     city: String(source.city ?? ""),
   };
@@ -87,7 +84,6 @@ export function buildStaffUpdatePayload(
     role: values.role.trim(),
     status: values.status,
     notes: values.notes.trim(),
-    documentsUrl: values.documentsUrl.trim(),
     address: values.address.trim(),
     city,
   };

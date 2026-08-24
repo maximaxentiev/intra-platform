@@ -148,16 +148,6 @@ export function StaffForm({
         error={cityError}
       />
       <div className="space-y-2">
-        <Label htmlFor="docs">Documents link (optional)</Label>
-        <Input
-          id="docs"
-          type="url"
-          placeholder="https://…"
-          value={values.documentsUrl}
-          onChange={(e) => set("documentsUrl", e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <Textarea
           id="notes"

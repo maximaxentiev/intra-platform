@@ -9,6 +9,7 @@ const read = (rel: string) => readFileSync(join(webRoot, rel), "utf8");
 const list = read("routes/_authenticated/staff.index.tsx");
 const detail = read("routes/_authenticated/staff.$id.tsx");
 const profile = read("components/staff/StaffProfileCard.tsx");
+const staffForm = read("components/StaffForm.tsx");
 const portal = read("components/PortalAccountSection.tsx");
 const centres = read("components/staff/StaffCentrePreferences.tsx");
 const shifts = read("components/staff/StaffShiftsTab.tsx");
@@ -56,6 +57,18 @@ describe("staff detail redesign", () => {
     expect(profile).toContain('setEditing(false)');
     expect(profile).toContain("PropertyList");
     expect(profile).toContain("staffApi.update");
+  });
+
+  it("does not show legacy Documents link in read mode", () => {
+    expect(profile).not.toContain("Documents link");
+    expect(profile).not.toContain("safeDocumentHref");
+    expect(profile).not.toContain("Open compliance documents");
+  });
+
+  it("does not show legacy Documents link input in edit mode", () => {
+    expect(staffForm).not.toContain("Documents link");
+    expect(staffForm).not.toContain("documentsUrl");
+    expect(staffForm).not.toContain('id="docs"');
   });
 
   it("omits Display name in read mode when useDisplayName is false", () => {
