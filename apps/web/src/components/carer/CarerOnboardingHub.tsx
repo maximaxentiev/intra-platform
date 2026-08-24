@@ -31,13 +31,20 @@ export function CarerOnboardingHub({
     <div className="space-y-6">
       <section
         aria-labelledby="onboarding-incomplete-heading"
-        className="rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:p-5"
+        className={[
+          "rounded-xl border p-4 shadow-xs sm:p-5",
+          canFinish
+            ? "border-primary/30 bg-primary/5"
+            : "border-border/70 bg-card",
+        ].join(" ")}
       >
         <h2 id="onboarding-incomplete-heading" className="text-base font-semibold text-foreground">
-          Onboarding not complete
+          {canFinish ? "You're ready to finish setup" : "Onboarding not complete"}
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Finish these three steps to set up your account and start receiving shift opportunities.
+          {canFinish
+            ? "All three steps are complete. Finish onboarding to activate your account and start receiving shift opportunities."
+            : "Finish these three steps to set up your account and start receiving shift opportunities."}
         </p>
 
         <div className="mt-4 space-y-2" aria-label="Onboarding progress">

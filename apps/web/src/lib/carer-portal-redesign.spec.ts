@@ -80,3 +80,39 @@ describe("carer portal home", () => {
     );
   });
 });
+
+describe("carer onboarding hub presentation", () => {
+  it("shows ready-to-finish copy when all steps are complete but onboarding is not submitted", () => {
+    const hub = readSrc("components/carer/CarerOnboardingHub.tsx");
+    expect(hub).toContain("You're ready to finish setup");
+    expect(hub).toContain("canFinish");
+    expect(hub).toContain("Complete onboarding");
+  });
+
+  it("does not show the ready heading unconditionally", () => {
+    const hub = readSrc("components/carer/CarerOnboardingHub.tsx");
+    expect(hub).toContain("Onboarding not complete");
+    expect(hub).toMatch(/canFinish \? "You're ready to finish setup"/);
+  });
+});
+
+describe("carer document status presentation", () => {
+  it("keeps separate review and expiry pills for replacement semantics", () => {
+    const form = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(form).toContain("ReviewStatusPill");
+    expect(form).toContain("ExpiryStatusPill");
+    expect(form).toContain("category.reviewStatus");
+    expect(form).toContain("category.expiryDisplay");
+  });
+});
+
+describe("carer password reset copy", () => {
+  it("preserves 60-minute reset lifetime messaging", () => {
+    const forgot = readSrc("routes/carer/forgot-password.tsx");
+    const reset = readSrc("routes/carer/reset-password.$token.tsx");
+    expect(forgot).toContain("60 minutes");
+    expect(reset).toContain("60 minutes");
+    expect(forgot).not.toMatch(/24 hours|7 days/i);
+    expect(reset).not.toMatch(/24 hours|7 days/i);
+  });
+});
