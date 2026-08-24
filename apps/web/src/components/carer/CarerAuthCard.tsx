@@ -12,29 +12,33 @@ export function CarerAuthCard({
 }: {
   title: string;
   description?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-surface-muted px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-sm">
             IN
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Carer Portal</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Intra — Independent Carers</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Manage your shifts, availability and documents.
+          </p>
         </div>
 
         <Card className="border-border/70 shadow-sm">
-          <CardHeader className="space-y-1 pb-4">
+          <CardHeader className="space-y-1.5 pb-4">
             <CardTitle className="text-lg">{title}</CardTitle>
-            {description ? <CardDescription>{description}</CardDescription> : null}
+            {description ? (
+              <CardDescription className="leading-relaxed">{description}</CardDescription>
+            ) : null}
           </CardHeader>
-          <CardContent>{children}</CardContent>
+          {children ? <CardContent>{children}</CardContent> : null}
         </Card>
 
-        <div className="mt-6 flex flex-col items-center gap-3 text-sm">
+        <div className="mt-6 flex flex-col items-center gap-2 text-sm">
           {footer}
           <Link
             to="/"

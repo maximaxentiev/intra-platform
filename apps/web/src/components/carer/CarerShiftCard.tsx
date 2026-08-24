@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ChevronRight, MapPin } from "lucide-react";
 import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
 import {
   formatAvailabilityWindowDisplay,
@@ -13,38 +14,44 @@ type CarerShiftCardProps = {
 
 export function CarerShiftCard({ shift }: CarerShiftCardProps) {
   const { centre } = shift;
+  const location = [centre.address, centre.city].filter(Boolean).join(", ");
 
   return (
-    <article className="rounded-md border bg-background p-4">
+    <article className="rounded-xl border border-border/70 bg-card p-4 shadow-xs transition-colors hover:border-primary/40">
       <div className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <p className="text-sm font-semibold">
-            {formatDashboardAvailabilityDateLabel(shift.shiftDate)}
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {formatDashboardAvailabilityDateLabel(shift.shiftDate)}
+            </p>
+            <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-foreground">
+              {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
+            </p>
+          </div>
           <CarerShiftStatusBadge status={shift.status} size="sm" />
         </div>
 
-        <p className="text-sm font-medium">
-          {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
-        </p>
-
-        <div className="space-y-0.5 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">{centre.name}</p>
-          {centre.address ? <p className="break-words">{centre.address}</p> : null}
-          {centre.city ? <p>{centre.city}</p> : null}
+        <div className="space-y-1 border-t border-border/60 pt-3">
+          <p className="text-sm font-medium text-foreground">{centre.name}</p>
+          {location ? (
+            <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+              <MapPin aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="break-words">{location}</span>
+            </p>
+          ) : null}
+          {shift.roleNeeded ? (
+            <p className="text-sm text-muted-foreground">{shift.roleNeeded}</p>
+          ) : null}
         </div>
-
-        {shift.roleNeeded ? (
-          <p className="text-sm font-medium text-foreground">{shift.roleNeeded}</p>
-        ) : null}
 
         <Link
           to="/carer/shifts/$id"
           params={{ id: shift.id }}
-          className="inline-block text-sm font-medium text-primary hover:underline"
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
           aria-label={carerShiftDetailLinkLabel(shift)}
         >
           View details
+          <ChevronRight aria-hidden="true" className="h-4 w-4" />
         </Link>
       </div>
     </article>
