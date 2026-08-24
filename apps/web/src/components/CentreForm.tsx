@@ -103,7 +103,7 @@ export function CentreForm({
         <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
           Commercial terms
         </legend>
-        <Label htmlFor="hourlyRate">Hourly rate</Label>
+        <Label htmlFor="hourlyRate">Hourly Rate</Label>
         <p className="text-[13px] text-muted-foreground">
           Stores the agreed hourly charge for this Centre for future invoicing and reporting.
         </p>
@@ -153,7 +153,7 @@ export function CentreForm({
         <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
           Rules & notes
         </legend>
-        <Label htmlFor="notes">Rules, policies, and other notes</Label>
+        <Label htmlFor="notes">Rules, Policies, and Other Notes</Label>
         <p className="text-[13px] text-muted-foreground">
           These instructions are shared with carers when they are assigned to shifts at this centre.
         </p>
