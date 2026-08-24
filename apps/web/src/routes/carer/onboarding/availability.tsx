@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerShell } from "@/components/carer/CarerShell";
+import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
 import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
 import {
@@ -52,7 +52,7 @@ function CarerOnboardingAvailabilityPage() {
   }
 
   return (
-    <CarerShell
+    <CarerOnboardingHubShell
       session={carer}
       title="Availability"
       subtitle="Add the days and times you're available to work."
@@ -85,6 +85,6 @@ function CarerOnboardingAvailabilityPage() {
           />
         )}
       </CarerOnboardingShell>
-    </CarerShell>
+    </CarerOnboardingHubShell>
   );
 }

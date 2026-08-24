@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerShell } from "@/components/carer/CarerShell";
+import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
 import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
 import { CarerPersonalInformationForm } from "@/components/carer/CarerPersonalInformationForm";
@@ -41,16 +41,16 @@ function CarerOnboardingProfilePage() {
 
   if (profile.isLoading && !profile.data) {
     return (
-      <CarerShell session={carer} title="Personal information">
+      <CarerOnboardingHubShell session={carer} title="Personal information">
         <Skeleton className="h-40 w-full" />
-      </CarerShell>
+      </CarerOnboardingHubShell>
     );
   }
 
   const initial = personalProfileFromSession(profile.data);
 
   return (
-    <CarerShell
+    <CarerOnboardingHubShell
       session={carer}
       title="Personal information"
       subtitle="Confirm your contact details so we can reach you about shifts."
@@ -63,6 +63,6 @@ function CarerOnboardingProfilePage() {
           onStepComplete={() => void handleStepComplete()}
         />
       </CarerOnboardingShell>
-    </CarerShell>
+    </CarerOnboardingHubShell>
   );
 }
