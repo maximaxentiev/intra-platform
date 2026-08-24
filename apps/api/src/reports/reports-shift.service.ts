@@ -4,7 +4,9 @@ import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staff } from '../db/schema';
 import type { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
 import type { CentreUsageShiftsQueryDto } from './dto/centre-usage-shifts-query.dto';
+import type { SupportedCity } from '@intra/shared';
 import { resolveCentreUsageCentreIds } from './dto/report-centre-ids.util';
+import { resolveReportCitiesFilter } from './dto/report-cities.util';
 import type { ShiftReportQueryDto } from './dto/shift-report-query.dto';
 import {
   buildCentreUsageSummaryFromRows,
@@ -125,6 +127,7 @@ export class ReportsShiftService {
     const [countRow] = await this.db
       .select({ total: sql<number>`count(*)::int` })
       .from(shifts)
+      .innerJoin(centres, eq(centres.id, shifts.centreId))
       .where(resolved.whereClause);
 
     const rawRows = await this.db
@@ -245,6 +248,7 @@ export class ReportsShiftService {
 
     await this.reports.assertCentresExist(centreIds);
 
+    const cities = resolveReportCitiesFilter(query.cities);
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const status = resolveCentreUsageShiftDetailStatus(query.status);
     const staffIds = query.staffIds?.length ? [...new Set(query.staffIds)] : null;
@@ -255,6 +259,10 @@ export class ReportsShiftService {
       gte(shifts.shiftDate, dateFrom),
       lte(shifts.shiftDate, dateTo),
     ];
+
+    if (cities?.length) {
+      conditions.push(inArray(centres.city, cities));
+    }
 
     if (status !== 'all') {
       conditions.push(eq(shifts.status, status));
@@ -273,6 +281,7 @@ export class ReportsShiftService {
         uniqueStaff: sql<number>`count(distinct ${shifts.assignedStaffId}) filter (where ${shifts.assignedStaffId} is not null)::int`,
       })
       .from(shifts)
+      .innerJoin(centres, eq(centres.id, shifts.centreId))
       .where(whereClause);
 
     return {
@@ -296,21 +305,23 @@ export class ReportsShiftService {
   private async resolveShiftFulfillmentFilteredRows(query: ShiftReportQueryDto) {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const centreIds = resolveCentreUsageCentreIds(query);
+    const cities = resolveReportCitiesFilter(query.cities);
     const metricFilters = resolveCentreShiftMetricFilters(query);
 
     if (centreIds?.length) {
       await this.reports.assertCentresExist(centreIds);
     }
 
-    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds, cities);
     const filteredRows = allRows.filter((row) => centreRowMatchesShiftMetricFilters(row, metricFilters));
 
-    return { dateFrom, dateTo, centreIds, filteredRows, metricFilters };
+    return { dateFrom, dateTo, centreIds, cities, filteredRows, metricFilters };
   }
 
   private async resolveCentreUsageFilteredRows(query: CentreUsageQueryDto) {
     const { dateFrom, dateTo } = resolveReportDateRange(query.dateFrom, query.dateTo);
     const centreIds = resolveCentreUsageCentreIds(query);
+    const cities = resolveReportCitiesFilter(query.cities);
     const metricFilters = resolveCentreShiftMetricFilters(query);
     const hoursFilters = resolveCentreScheduledHoursFilters(query);
 
@@ -318,20 +329,35 @@ export class ReportsShiftService {
       await this.reports.assertCentresExist(centreIds);
     }
 
-    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds);
+    const allRows = await this.fetchCentreMetricsRows(dateFrom, dateTo, centreIds, cities);
     const filteredRows = allRows.filter(
       (row) =>
         centreRowMatchesShiftMetricFilters(row, metricFilters) &&
         centreRowMatchesScheduledHoursFilters(row, hoursFilters),
     );
 
-    return { dateFrom, dateTo, centreIds, filteredRows };
+    return { dateFrom, dateTo, centreIds, cities, filteredRows };
+  }
+
+  private buildCentreScopeConditions(
+    centreIds: string[] | null,
+    cities: SupportedCity[] | null,
+  ) {
+    const parts = [];
+    if (centreIds?.length) {
+      parts.push(inArray(centres.id, centreIds));
+    }
+    if (cities?.length) {
+      parts.push(inArray(centres.city, cities));
+    }
+    return parts.length ? and(...parts) : undefined;
   }
 
   private async fetchCentreMetricsRows(
     dateFrom: string,
     dateTo: string,
     centreIds: string[] | null,
+    cities: SupportedCity[] | null = null,
   ): Promise<CentreMetricsFullRow[]> {
     const durationMinutes = scheduledShiftDurationMinutesSql(shifts.startTime, shifts.endTime);
     const shiftJoin = and(
@@ -340,7 +366,7 @@ export class ReportsShiftService {
       lte(shifts.shiftDate, dateTo),
     );
 
-    const centreConditions = centreIds?.length ? inArray(centres.id, centreIds) : undefined;
+    const centreConditions = this.buildCentreScopeConditions(centreIds, cities);
 
     const rawRows = await this.db
       .select({

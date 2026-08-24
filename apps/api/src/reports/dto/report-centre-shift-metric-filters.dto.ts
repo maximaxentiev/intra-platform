@@ -1,9 +1,9 @@
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { ReportPaginationQueryDto } from './report-pagination.dto';
+import { ReportCitiesFilterQueryDto } from './report-cities-filter.dto';
 
 /** Shared shift-count metric filters for centre comparison reports. */
-export class ReportCentreShiftMetricFiltersDto extends ReportPaginationQueryDto {
+export class ReportCentreShiftMetricFiltersDto extends ReportCitiesFilterQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()

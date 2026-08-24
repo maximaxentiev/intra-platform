@@ -45,6 +45,7 @@ type CentreUsageShiftDetailProps = {
   dateFrom: string;
   dateTo: string;
   centreIds: string[];
+  cities?: string[];
   singleCentreSelected: boolean;
   detail: CentreUsageShiftDetailSearch;
   staffMembers: Staff[];
@@ -158,6 +159,7 @@ export function CentreUsageShiftDetail({
   dateFrom,
   dateTo,
   centreIds,
+  cities,
   singleCentreSelected,
   detail,
   staffMembers,
@@ -172,6 +174,7 @@ export function CentreUsageShiftDetail({
       dateFrom,
       dateTo,
       centreIds.join(","),
+      (cities ?? []).join(","),
       detail.shiftStatus,
       detail.shiftStaffIds.join(","),
       detail.shiftPage,
@@ -182,6 +185,7 @@ export function CentreUsageShiftDetail({
         dateFrom,
         dateTo,
         centreIds,
+        cities,
         status: detail.shiftStatus === "completed" ? undefined : detail.shiftStatus,
         staffIds: detail.shiftStaffIds.length ? detail.shiftStaffIds : undefined,
         page: detail.shiftPage,
@@ -234,6 +238,7 @@ export function CentreUsageShiftDetail({
             dateFrom,
             dateTo,
             centreIds,
+            cities,
             status: detail.shiftStatus === "completed" ? undefined : detail.shiftStatus,
             staffIds: detail.shiftStaffIds.length ? detail.shiftStaffIds : undefined,
           }}

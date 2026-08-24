@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, Res } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ActivityLogQueryDto } from './dto/activity-log-query.dto';
 import { CentreUsageQueryDto } from './dto/centre-usage-query.dto';
@@ -38,11 +38,21 @@ export class ReportsController {
     private readonly reportsExport: ReportsExportService,
   ) {}
 
+  /** @deprecated Use GET /reports/centre-usage — Centre & Shift Performance is the canonical report. */
+  @ApiOperation({
+    deprecated: true,
+    summary: 'Shift fulfillment (deprecated — use GET /reports/centre-usage)',
+  })
   @Get('shift-fulfillment')
   shiftFulfillment(@Query() query: ShiftReportQueryDto) {
     return this.reportsShift.getShiftFulfillment(query);
   }
 
+  /** @deprecated Use GET /reports/centre-usage/export — Centre & Shift Performance is the canonical report. */
+  @ApiOperation({
+    deprecated: true,
+    summary: 'Shift fulfillment export (deprecated — use GET /reports/centre-usage/export)',
+  })
   @Get('shift-fulfillment/export')
   async exportShiftFulfillment(@Query() query: ShiftReportQueryDto, @Res() res: Response) {
     sendCsvExport(res, await this.reportsExport.exportShiftFulfillment(query));

@@ -73,8 +73,10 @@ export function shiftDetailStaffIdsFromSelection(selection: StaffSelectionState)
 export function shiftDetailToApiQuery(
   detail: CentreUsageShiftDetailSearch,
   centreIds: string[],
+  cities?: string[],
 ): {
   centreIds: string[];
+  cities?: string[];
   status?: CentreUsageShiftDetailStatus;
   staffIds?: string[];
   page: number;
@@ -82,6 +84,7 @@ export function shiftDetailToApiQuery(
 } {
   return {
     centreIds,
+    cities: cities?.length ? cities : undefined,
     status: detail.shiftStatus === "completed" ? undefined : detail.shiftStatus,
     staffIds: detail.shiftStaffIds.length ? detail.shiftStaffIds : undefined,
     page: detail.shiftPage,

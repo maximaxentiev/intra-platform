@@ -74,7 +74,6 @@ describe("report-export", () => {
 
 describe("report export UI wiring", () => {
   const reportPages = [
-    "routes/_authenticated/reports.shift-fulfillment.tsx",
     "routes/_authenticated/reports.centre-usage.tsx",
     "routes/_authenticated/reports.staff-usage.tsx",
     "routes/_authenticated/reports.documents.tsx",
@@ -85,6 +84,12 @@ describe("report export UI wiring", () => {
     const source = readSrc(pagePath);
     expect(source).toContain("ReportExportButton");
     expect(source).toContain("reportExportPaths");
+  });
+
+  it("redirects legacy shift fulfillment route instead of rendering export UI", () => {
+    const source = readSrc("routes/_authenticated/reports.shift-fulfillment.tsx");
+    expect(source).toContain('to: "/reports/centre-usage"');
+    expect(source).not.toContain("ReportExportButton");
   });
 
   it("disables export when totalCount is zero", () => {

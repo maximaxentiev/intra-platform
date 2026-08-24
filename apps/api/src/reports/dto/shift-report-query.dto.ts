@@ -1,7 +1,6 @@
 import { ArrayMaxSize, IsOptional, IsUUID, Matches, Validate } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ReportDateRangeConstraint } from './report-date-range.dto';
-import { ReportCentreFilterQueryDto } from './report-centre-filter.dto';
 import { MAX_REPORT_CENTRE_IDS, parseReportCentreIds } from './report-centre-ids.util';
 import { ReportCentreShiftMetricFiltersDto } from './report-centre-shift-metric-filters.dto';
 

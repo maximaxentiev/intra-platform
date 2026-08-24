@@ -20,10 +20,11 @@ describe("ops reports UI source", () => {
     expect(reportsIdx).toBeGreaterThan(dashboardIdx);
   });
 
-  it("landing page shows five cards with five enabled reports", () => {
+  it("landing page shows four enabled reports including Centre & Shift Performance", () => {
     const landing = readSrc("routes/_authenticated/reports.index.tsx");
-    expect(landing).toContain("Shift Fulfillment");
-    expect(landing).toContain("Centre Usage");
+    expect(landing).toContain("Centre & Shift Performance");
+    expect(landing).not.toContain("Shift Fulfillment");
+    expect(landing).not.toContain('title: "Centre Usage"');
     expect(landing).toContain("Staff Usage");
     expect(landing).toContain("Document Compliance");
     expect(landing).toContain("Activity Log");
@@ -88,20 +89,25 @@ describe("ops reports UI source", () => {
     expect(summaryCards).toContain("Cancelled");
   });
 
-  it("shift fulfillment page uses centre multi-select, rule builder, and pagination", () => {
+  it("shift fulfillment route redirects to centre usage with compatible search mapping", () => {
     const page = readSrc("routes/_authenticated/reports.shift-fulfillment.tsx");
-    const filters = readSrc("components/reports/ShiftFulfillmentFilters.tsx");
-    const ruleBuilder = readSrc("components/reports/ReportFilterRuleBuilder.tsx");
-    expect(page).toContain("validateSearch");
-    expect(page).toContain("centreIds");
-    expect(page).toContain("ReportPagination");
-    expect(page).toContain("isSingleCentreSelection");
-    expect(page).toContain("rulesFromCentreMetricSearch");
-    expect(page).toContain("validateReportFilterRules");
-    expect(filters).toContain("ReportFilterRuleBuilder");
-    expect(ruleBuilder).toContain("Add filter");
-    expect(filters).not.toContain("ReportMetricRangeFields");
-    expect(filters).not.toContain("ReportMoreFiltersSection");
+    const redirectLib = readSrc("lib/reports-shift-fulfillment-redirect.ts");
+    expect(page).toContain("beforeLoad");
+    expect(page).toContain('to: "/reports/centre-usage"');
+    expect(page).toContain("replace: true");
+    expect(page).toContain("mapShiftFulfillmentSearchToCentreUsage");
+    expect(redirectLib).toContain("dateFrom");
+    expect(redirectLib).toContain("centreIds");
+    expect(redirectLib).toContain("fillRateMin");
+  });
+
+  it("centre usage page includes city multi-select filter", () => {
+    const page = readSrc("routes/_authenticated/reports.centre-usage.tsx");
+    const filters = readSrc("components/reports/CentreUsageFilters.tsx");
+    expect(page).toContain("resolveAppliedCitySelection");
+    expect(page).toContain("citySelectionToApiQuery");
+    expect(filters).toContain("ReportCityMultiSelect");
+    expect(filters).toContain("SUPPORTED_CITIES");
   });
 
   it("centre usage page uses rule builder instead of metric min/max grid", () => {
@@ -237,9 +243,8 @@ describe("ops reports UI source", () => {
     expect(filters).toContain("All actors");
   });
 
-  it("all five report pages expose Export CSV near the page header", () => {
+  it("all four active report pages expose Export CSV near the page header", () => {
     const pages = [
-      "routes/_authenticated/reports.shift-fulfillment.tsx",
       "routes/_authenticated/reports.centre-usage.tsx",
       "routes/_authenticated/reports.staff-usage.tsx",
       "routes/_authenticated/reports.documents.tsx",

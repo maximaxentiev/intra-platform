@@ -560,6 +560,253 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     });
   });
 
+  describe('city filtering', () => {
+    const cityToronto = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7';
+    const cityOttawa = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa8';
+    const cityLegacy = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa9';
+    const cityMississauga = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa10';
+    const cityShiftIds: string[] = [];
+
+    beforeAll(async () => {
+      await db.insert(centres).values([
+        { id: cityToronto, name: 'City Toronto Centre', city: 'Toronto' },
+        { id: cityOttawa, name: 'City Ottawa Centre', city: 'Ottawa' },
+        { id: cityLegacy, name: 'City Legacy Centre', city: 'Old Town' },
+        { id: cityMississauga, name: 'City Mississauga Centre', city: 'Mississauga' },
+      ]);
+
+      const rows = await db
+        .insert(shifts)
+        .values([
+          ...Array.from({ length: 5 }, () => ({
+            centreId: cityToronto,
+            shiftDate: '2026-08-14',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'completed' as const,
+          })),
+          ...Array.from({ length: 3 }, () => ({
+            centreId: cityOttawa,
+            shiftDate: '2026-08-14',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'filled' as const,
+          })),
+          ...Array.from({ length: 2 }, () => ({
+            centreId: cityLegacy,
+            shiftDate: '2026-08-14',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'pending' as const,
+          })),
+          {
+            centreId: cityMississauga,
+            shiftDate: '2026-08-14',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            status: 'completed',
+          },
+        ])
+        .returning({ id: shifts.id });
+
+      cityShiftIds.push(...rows.map((row) => row.id));
+    });
+
+    afterAll(async () => {
+      if (cityShiftIds.length > 0) {
+        await db.delete(shifts).where(inArray(shifts.id, cityShiftIds));
+      }
+      await db
+        .delete(centres)
+        .where(
+          inArray(centres.id, [cityToronto, cityOttawa, cityLegacy, cityMississauga]),
+        );
+    });
+
+    const cityFixtureIds = [
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa8',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa9',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa10',
+    ] as const;
+
+    it('returns unchanged results when no cities are selected', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(4);
+      expect(result.summary.totalShifts).toBe(11);
+      expect(result.rows).toHaveLength(4);
+    });
+
+    it('filters summary and comparison rows to one city', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto'],
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(1);
+      expect(result.summary.totalShifts).toBe(5);
+      expect(result.summary.completed).toBe(5);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]!.centreId).toBe(cityToronto);
+    });
+
+    it('filters to the union of multiple cities', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto', 'Ottawa'],
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(2);
+      expect(result.summary.totalShifts).toBe(8);
+      expect(result.rows.map((row) => row.centreId).sort()).toEqual(
+        [cityToronto, cityOttawa].sort(),
+      );
+    });
+
+    it('intersects city and centre ID filters', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [cityToronto, cityOttawa],
+        cities: ['Ottawa'],
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(1);
+      expect(result.summary.totalShifts).toBe(3);
+      expect(result.rows[0]!.centreId).toBe(cityOttawa);
+    });
+
+    it('excludes centres outside selected city when centre IDs span cities', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [cityToronto, cityOttawa],
+        cities: ['Toronto'],
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(1);
+      expect(result.rows[0]!.centreId).toBe(cityToronto);
+    });
+
+    it('combines city filter with shift metric rules', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto', 'Ottawa', 'Mississauga'],
+        completedMin: 1,
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(2);
+      expect(result.rows.every((row) => row.completed >= 1)).toBe(true);
+      expect(result.rows.map((row) => row.centreId).sort()).toEqual(
+        [cityToronto, cityMississauga].sort(),
+      );
+    });
+
+    it('combines city filter with scheduled hour filters', async () => {
+      const result = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Ottawa'],
+        scheduledHoursMin: 20,
+        pageSize: 100,
+      });
+
+      expect(result.summary.totalCentres).toBe(1);
+      expect(result.rows[0]!.centreId).toBe(cityOttawa);
+      expect(result.rows[0]!.totalScheduledMinutes).toBe(3 * 480);
+    });
+
+    it('paginates the city-filtered centre set', async () => {
+      const page1 = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto', 'Ottawa', 'Mississauga'],
+        page: 1,
+        pageSize: 2,
+      });
+
+      expect(page1.totalCount).toBe(3);
+      expect(page1.rows).toHaveLength(2);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.summary.totalCentres).toBe(3);
+
+      const page2 = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto', 'Ottawa', 'Mississauga'],
+        page: 2,
+        pageSize: 2,
+      });
+
+      expect(page2.rows).toHaveLength(1);
+      expect(page2.totalCount).toBe(3);
+    });
+
+    it('includes legacy non-canonical centre cities under all cities only', async () => {
+      const allCities = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        pageSize: 100,
+      });
+      expect(allCities.rows.some((row) => row.centreId === cityLegacy)).toBe(true);
+
+      const torontoOnly = await service.getCentreUsage({
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto'],
+        pageSize: 100,
+      });
+      expect(torontoOnly.rows.some((row) => row.centreId === cityLegacy)).toBe(false);
+    });
+
+    it('rejects invalid city values in centre usage DTO', () => {
+      const dto = plainToInstance(CentreUsageQueryDto, { cities: 'Tornto' });
+      const errors = validateSync(dto);
+      expect(errors.some((error) => error.property === 'cities')).toBe(true);
+    });
+
+    it('exports the full city-filtered dataset', async () => {
+      const query = {
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        centreIds: [...cityFixtureIds],
+        cities: ['Toronto', 'Ottawa'] as const,
+        page: 1,
+        pageSize: 1,
+      };
+      const json = await service.getCentreUsage(query);
+      const csv = await exportService.exportCentreUsage(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(2);
+      expect(csv.content).toContain('City Toronto Centre');
+      expect(csv.content).toContain('City Ottawa Centre');
+      expect(csv.content).not.toContain('City Legacy Centre');
+    });
+  });
+
   describe('CSV export', () => {
     it('shift fulfillment export matches filtered totalCount and ignores pagination', async () => {
       const query = {

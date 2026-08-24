@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3, Building2, ClipboardList, FileText, Users } from "lucide-react";
+import { Building2, ClipboardList, FileText, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -9,15 +9,8 @@ export const Route = createFileRoute("/_authenticated/reports/")({
 
 const REPORT_CARDS = [
   {
-    title: "Shift Fulfillment",
-    description: "Track how many shifts were filled, completed, pending, or cancelled.",
-    to: "/reports/shift-fulfillment",
-    icon: BarChart3,
-    available: true,
-  },
-  {
-    title: "Centre Usage",
-    description: "Review shift volume and scheduled staffing hours by Centre.",
+    title: "Centre & Shift Performance",
+    description: "Review fill performance, shift volume, and scheduled staffing hours by centre.",
     to: "/reports/centre-usage",
     icon: Building2,
     available: true,

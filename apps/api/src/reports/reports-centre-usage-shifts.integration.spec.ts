@@ -67,7 +67,7 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
 
     await db.insert(centres).values([
       { id: FIXTURE.centreA, name: 'Alpha Centre', city: 'Toronto' },
-      { id: FIXTURE.centreB, name: 'Beta Centre', city: 'Toronto' },
+      { id: FIXTURE.centreB, name: 'Beta Centre', city: 'Ottawa' },
     ]);
 
     await db.insert(staff).values([
@@ -309,6 +309,82 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
     expect(result.summary.totalShifts).toBe(0);
     expect(result.summary.totalScheduledMinutes).toBe(0);
     expect(result.summary.uniqueStaff).toBe(0);
+  });
+
+  describe('city filtering', () => {
+    it('filters shift detail rows and summary by city', async () => {
+      const torontoOnly = await service.getCentreUsageShifts({
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        cities: ['Toronto'],
+      });
+
+      expect(torontoOnly.totalCount).toBe(3);
+      expect(torontoOnly.summary.totalShifts).toBe(3);
+      expect(torontoOnly.rows.every((row) => row.centreName === 'Alpha Centre')).toBe(true);
+
+      const ottawaOnly = await service.getCentreUsageShifts({
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        cities: ['Ottawa'],
+      });
+
+      expect(ottawaOnly.totalCount).toBe(1);
+      expect(ottawaOnly.rows[0]!.centreName).toBe('Beta Centre');
+    });
+
+    it('intersects city with centre IDs and staff filter', async () => {
+      const filtered = await service.getCentreUsageShifts({
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        cities: ['Toronto'],
+        status: 'completed',
+        staffIds: [FIXTURE.staffA],
+      });
+
+      expect(filtered.totalCount).toBe(2);
+      expect(filtered.summary.uniqueStaff).toBe(1);
+      expect(filtered.rows.every((row) => row.centreName === 'Alpha Centre')).toBe(true);
+    });
+
+    it('paginates city-filtered shift detail independently from summary', async () => {
+      const page1 = await service.getCentreUsageShifts({
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        cities: ['Toronto', 'Ottawa'],
+        status: 'all',
+        page: 1,
+        pageSize: 3,
+      });
+
+      expect(page1.totalCount).toBe(7);
+      expect(page1.summary.totalShifts).toBe(7);
+      expect(page1.rows).toHaveLength(3);
+      expect(page1.hasMore).toBe(true);
+    });
+
+    it('exports the full city-filtered shift detail dataset', async () => {
+      const query = {
+        centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        cities: ['Ottawa'] as const,
+        status: 'completed' as const,
+        page: 2,
+        pageSize: 1,
+      };
+      const json = await service.getCentreUsageShifts(query);
+      const csv = await exportService.exportCentreUsageShifts(query);
+
+      expect(csv.rowCount).toBe(json.totalCount);
+      expect(csvDataRowCount(csv.content)).toBe(1);
+      expect(csv.content).toContain('Beta Centre');
+      expect(csv.content).not.toContain('Alpha Centre');
+    });
   });
 
   describe('CSV export', () => {

@@ -15,6 +15,11 @@ import {
   centreSelectionLabel,
   type CentreSelectionState,
 } from "@/lib/reports-centre-selection";
+import {
+  citySelectionLabel,
+  SUPPORTED_CITIES,
+  type CitySelectionState,
+} from "@/lib/reports-city-selection";
 import { cn } from "@/lib/utils";
 
 type ReportCentreMultiSelectProps = {
@@ -159,16 +164,153 @@ export function ReportCentreMultiSelect({
   );
 }
 
+type ReportCityMultiSelectProps = {
+  selection: CitySelectionState;
+  onSelectionChange: (selection: CitySelectionState) => void;
+};
+
+export function ReportCityMultiSelect({
+  selection,
+  onSelectionChange,
+}: ReportCityMultiSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredCities = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return [...SUPPORTED_CITIES];
+    return SUPPORTED_CITIES.filter((city) => city.toLowerCase().includes(query));
+  }, [search]);
+
+  const selectedSet = useMemo(
+    () => new Set(selection.mode === "subset" ? selection.cities : []),
+    [selection],
+  );
+
+  function selectAllCities() {
+    onSelectionChange({ mode: "all", cities: [] });
+  }
+
+  function clearSelection() {
+    onSelectionChange({ mode: "all", cities: [] });
+  }
+
+  function toggleCity(city: (typeof SUPPORTED_CITIES)[number], checked: boolean) {
+    if (checked) {
+      const nextCities =
+        selection.mode === "all"
+          ? [city]
+          : [...new Set([...selection.cities, city])];
+      onSelectionChange({ mode: "subset", cities: nextCities });
+      return;
+    }
+
+    const nextCities = selection.cities.filter((entry) => entry !== city);
+    if (nextCities.length === 0) {
+      onSelectionChange({ mode: "all", cities: [] });
+      return;
+    }
+    onSelectionChange({ mode: "subset", cities: nextCities });
+  }
+
+  const triggerLabel = citySelectionLabel(selection);
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setSearch("");
+        }
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label="Select cities"
+          className="h-10 w-full justify-between font-normal"
+        >
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] p-0"
+        align="start"
+      >
+        <div className="space-y-2 p-3">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search cities..."
+              aria-label="Search cities"
+              className="h-9 pl-8"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={selectAllCities}>
+              Select all
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={clearSelection}>
+              Clear selection
+            </Button>
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto border-t border-border/70 p-2">
+          {filteredCities.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-muted-foreground">No cities found.</p>
+          ) : (
+            <ul className="space-y-1">
+              {filteredCities.map((city) => {
+                const checked = selection.mode === "all" ? false : selectedSet.has(city);
+                const checkboxId = `report-city-${city.replace(/\s+/g, "-").toLowerCase()}`;
+                return (
+                  <li key={city}>
+                    <label
+                      htmlFor={checkboxId}
+                      className={cn(
+                        "flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted/60",
+                      )}
+                    >
+                      <Checkbox
+                        id={checkboxId}
+                        checked={checked}
+                        onCheckedChange={(value) => toggleCity(city, value === true)}
+                      />
+                      <span className="leading-snug">{city}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 type CentreUsageFiltersProps = {
   dateFrom: string;
   dateTo: string;
   centres: Centre[];
   selection: CentreSelectionState;
+  citySelection: CitySelectionState;
   rules: ReportFilterRule[];
   validationError: string | null;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onSelectionChange: (selection: CentreSelectionState) => void;
+  onCitySelectionChange: (selection: CitySelectionState) => void;
   onRulesChange: (rules: ReportFilterRule[]) => void;
   onClearRules: () => void;
   onApply: () => void;
@@ -180,11 +322,13 @@ export function CentreUsageFilters({
   dateTo,
   centres,
   selection,
+  citySelection,
   rules,
   validationError,
   onDateFromChange,
   onDateToChange,
   onSelectionChange,
+  onCitySelectionChange,
   onRulesChange,
   onClearRules,
   onApply,
@@ -192,7 +336,7 @@ export function CentreUsageFilters({
 }: CentreUsageFiltersProps) {
   return (
     <div className="rounded-lg border border-border/70 bg-card p-4 shadow-xs space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="centre-usage-date-from" className="text-xs font-medium text-muted-foreground">
             From
@@ -225,6 +369,15 @@ export function CentreUsageFilters({
             centres={centres}
             selection={selection}
             onSelectionChange={onSelectionChange}
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+          <Label htmlFor="centre-usage-cities" className="text-xs font-medium text-muted-foreground">
+            Cities
+          </Label>
+          <ReportCityMultiSelect
+            selection={citySelection}
+            onSelectionChange={onCitySelectionChange}
           />
         </div>
       </div>

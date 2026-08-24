@@ -50,6 +50,7 @@ export const reportsApi = {
       dateTo?: string;
       centreIds?: string[];
       centreId?: string;
+      cities?: string[];
     } & CentreMetricQuery &
       PaginationQuery,
   ) => api.get<CentreUsageResponse>("/reports/centre-usage", query),
@@ -59,6 +60,7 @@ export const reportsApi = {
       dateFrom?: string;
       dateTo?: string;
       centreIds: string[];
+      cities?: string[];
       status?: string;
       staffIds?: string[];
       page?: number;

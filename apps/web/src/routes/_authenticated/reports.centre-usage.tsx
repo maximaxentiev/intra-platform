@@ -56,6 +56,12 @@ import {
   type CentreSelectionState,
 } from "@/lib/reports-centre-selection";
 import {
+  citySelectionToApiQuery,
+  citySelectionToSearchParams,
+  resolveAppliedCitySelection,
+  type CitySelectionState,
+} from "@/lib/reports-city-selection";
+import {
   resolveAppliedShiftDetailSearch,
   shiftDetailToSearchParams,
   type CentreUsageShiftDetailSearch,
@@ -90,6 +96,7 @@ const searchSchema = z.object({
   dateTo: z.string().optional(),
   centreIds: z.string().optional(),
   centreId: z.string().optional(),
+  cities: z.string().optional(),
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
   ...metricFilterSchema,
@@ -106,6 +113,7 @@ function CentreUsageReport() {
   const defaults = defaultReportSearch();
 
   const appliedSelection = useMemo(() => resolveAppliedCentreSelection(search), [search]);
+  const appliedCitySelection = useMemo(() => resolveAppliedCitySelection(search), [search]);
   const appliedMetricFilters = useMemo(() => parseCentreMetricFiltersFromSearch(search), [search]);
 
   const appliedShiftDetail = useMemo(() => resolveAppliedShiftDetailSearch(search), [search]);
@@ -115,16 +123,25 @@ function CentreUsageReport() {
       dateFrom: search.dateFrom ?? defaults.dateFrom,
       dateTo: search.dateTo ?? defaults.dateTo,
       selection: appliedSelection,
+      citySelection: appliedCitySelection,
       metricFilters: appliedMetricFilters,
       page: search.page && search.page > 0 ? search.page : 1,
       pageSize: resolveReportComparisonPageSize(search.pageSize),
     }),
-    [search, defaults.dateFrom, defaults.dateTo, appliedSelection, appliedMetricFilters],
+    [
+      search,
+      defaults.dateFrom,
+      defaults.dateTo,
+      appliedSelection,
+      appliedCitySelection,
+      appliedMetricFilters,
+    ],
   );
 
   const [dateFrom, setDateFrom] = useState(applied.dateFrom);
   const [dateTo, setDateTo] = useState(applied.dateTo);
   const [selection, setSelection] = useState<CentreSelectionState>(applied.selection);
+  const [citySelection, setCitySelection] = useState<CitySelectionState>(applied.citySelection);
   const [rules, setRules] = useState<ReportFilterRule[]>(() =>
     rulesFromCentreMetricSearch(applied.metricFilters, CENTRE_USAGE_METRICS),
   );
@@ -147,6 +164,7 @@ function CentreUsageReport() {
       applied.dateTo,
       applied.selection.mode,
       applied.selection.centreIds.join(","),
+      applied.citySelection.cities.join(","),
       JSON.stringify(applied.metricFilters),
       applied.page,
       applied.pageSize,
@@ -156,6 +174,7 @@ function CentreUsageReport() {
         dateFrom: applied.dateFrom,
         dateTo: applied.dateTo,
         ...centreSelectionToApiQuery(applied.selection),
+        ...citySelectionToApiQuery(applied.citySelection),
         ...centreMetricFiltersToApiQuery(applied.metricFilters),
         page: applied.page,
         pageSize: applied.pageSize,
@@ -173,6 +192,7 @@ function CentreUsageReport() {
       dateFrom: dateFrom === defaults.dateFrom ? undefined : dateFrom,
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       ...centreSelectionToSearchParams(selection),
+      ...citySelectionToSearchParams(citySelection),
       ...centreMetricFiltersToSearchParams(metricFilters),
       page: page === 1 ? undefined : page,
       pageSize: pageSize === REPORT_COMPARISON_DEFAULT_PAGE_SIZE ? undefined : pageSize,
@@ -209,6 +229,7 @@ function CentreUsageReport() {
     setDateFrom(next.dateFrom);
     setDateTo(next.dateTo);
     setSelection({ mode: "all", centreIds: [] });
+    setCitySelection({ mode: "all", cities: [] });
     setRules([]);
     setValidationError(null);
     navigate({ search: {} });
@@ -233,8 +254,8 @@ function CentreUsageReport() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Centre Usage"
-        subtitle="Shift volume and scheduled hours by Centre."
+        title="Centre & Shift Performance"
+        subtitle="Review fill performance, shift volume, and scheduled staffing hours by centre."
         actions={
           <>
             <ReportExportButton
@@ -243,6 +264,7 @@ function CentreUsageReport() {
                 dateFrom: applied.dateFrom,
                 dateTo: applied.dateTo,
                 ...centreSelectionToApiQuery(applied.selection),
+                ...citySelectionToApiQuery(applied.citySelection),
                 ...centreMetricFiltersToApiQuery(applied.metricFilters),
               }}
               ready={reportReady}
@@ -270,11 +292,13 @@ function CentreUsageReport() {
         dateTo={dateTo}
         centres={centresQ.data ?? []}
         selection={selection}
+        citySelection={citySelection}
         rules={rules}
         validationError={validationError}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onSelectionChange={setSelection}
+        onCitySelectionChange={setCitySelection}
         onRulesChange={(nextRules) => {
           setRules(nextRules);
           setValidationError(validateReportFilterRules(nextRules, CENTRE_USAGE_METRICS));
@@ -436,6 +460,9 @@ function CentreUsageReport() {
               dateFrom={applied.dateFrom}
               dateTo={applied.dateTo}
               centreIds={applied.selection.centreIds}
+              cities={
+                applied.citySelection.cities.length > 0 ? applied.citySelection.cities : undefined
+              }
               singleCentreSelected={singleCentreSelected}
               detail={appliedShiftDetail}
               staffMembers={staffQ.data ?? []}
