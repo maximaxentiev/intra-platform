@@ -1,8 +1,6 @@
-import type { SearchSchemaInput } from "@tanstack/react-router";
-
 /** Map legacy Shift Fulfillment search params onto Centre Usage. */
 export function mapShiftFulfillmentSearchToCentreUsage(
-  search: SearchSchemaInput,
+  search: Record<string, unknown>,
 ): Record<string, unknown> {
   const next: Record<string, unknown> = {};
 

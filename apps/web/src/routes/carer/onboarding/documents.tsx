@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerShell } from "@/components/carer/CarerShell";
+import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
 import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
 import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
 import { CarerDocumentsForm } from "@/components/carer/CarerDocumentsForm";
@@ -33,7 +33,7 @@ function CarerOnboardingDocumentsPage() {
   }
 
   return (
-    <CarerShell
+    <CarerOnboardingHubShell
       session={carer}
       title="Documents"
       subtitle="Upload the documents Intra needs to review before you can be considered fully compliant for shifts."
@@ -49,6 +49,6 @@ function CarerOnboardingDocumentsPage() {
           onStepComplete={() => void handleStepComplete()}
         />
       </CarerOnboardingShell>
-    </CarerShell>
+    </CarerOnboardingHubShell>
   );
 }
