@@ -5,7 +5,9 @@ import {
   type CentreChannel,
   type CentreContact,
   type CentreListItem,
+  type ShiftStatus,
 } from "@/lib/db";
+import { shiftAssigneeLabel } from "@/lib/shifts-list-ui";
 
 /**
  * Presentation helpers for the Ops Centres experience.
@@ -113,11 +115,15 @@ export function centreShiftAssignedLabel(shift: {
   assignedLegalName: string | null;
   assignedDisplayName: string | null;
   assignedUseDisplayName: boolean | null;
+  status: ShiftStatus;
 }): string {
-  if (!shift.assignedStaffId || !shift.assignedLegalName) return "Needs staff";
-  return displayStaff({
-    legalName: shift.assignedLegalName,
-    displayName: shift.assignedDisplayName ?? "",
-    useDisplayName: shift.assignedUseDisplayName ?? false,
-  });
+  const assignedName =
+    shift.assignedStaffId && shift.assignedLegalName
+      ? displayStaff({
+          legalName: shift.assignedLegalName,
+          displayName: shift.assignedDisplayName ?? "",
+          useDisplayName: shift.assignedUseDisplayName ?? false,
+        })
+      : null;
+  return shiftAssigneeLabel(assignedName, shift.status).text;
 }

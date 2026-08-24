@@ -86,15 +86,25 @@ describe("channels", () => {
 });
 
 describe("centreShiftAssignedLabel", () => {
-  it("says Needs staff when unassigned", () => {
+  it("says Needs staff only for pending unassigned shifts", () => {
     expect(
       centreShiftAssignedLabel({
         assignedStaffId: null,
         assignedLegalName: null,
         assignedDisplayName: null,
         assignedUseDisplayName: null,
+        status: "pending",
       }),
     ).toBe("Needs staff");
+    expect(
+      centreShiftAssignedLabel({
+        assignedStaffId: null,
+        assignedLegalName: null,
+        assignedDisplayName: null,
+        assignedUseDisplayName: null,
+        status: "cancelled",
+      }),
+    ).toBe("Unassigned");
   });
 
   it("respects the display-name preference", () => {
@@ -104,6 +114,7 @@ describe("centreShiftAssignedLabel", () => {
         assignedLegalName: "Jane Doe",
         assignedDisplayName: "Janey",
         assignedUseDisplayName: true,
+        status: "filled",
       }),
     ).toBe("Janey");
   });
