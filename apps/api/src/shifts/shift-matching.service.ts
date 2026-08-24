@@ -1,7 +1,9 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { compareStaffMatchingSort } from '@intra/shared';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
+  centres,
   shiftContacted,
   shifts,
   staff,
@@ -36,7 +38,7 @@ export class ShiftMatchingService {
     const shift = await this.loadShift(shiftId);
     const context = await this.loadEvaluationContext(shift, this.db);
 
-    const eligible: EligibleAvailableStaffRow[] = [];
+    const eligible: Array<EligibleAvailableStaffRow & { city: string | null }> = [];
     for (const candidate of context.candidates) {
       const result = this.evaluateCandidate(candidate, shift, context);
       if (!result.eligible) continue;
@@ -48,15 +50,13 @@ export class ShiftMatchingService {
         role: candidate.role,
         isTop: context.topStaffIds.has(candidate.id),
         contacted: context.contactedStaffIds.has(candidate.id),
+        city: candidate.city,
       });
     }
 
-    eligible.sort((a, b) => {
-      if (a.isTop !== b.isTop) return a.isTop ? -1 : 1;
-      return a.legalName.localeCompare(b.legalName);
-    });
+    eligible.sort((a, b) => compareStaffMatchingSort(a, b, shift.centreCity));
 
-    return eligible;
+    return eligible.map(({ city: _city, ...row }) => row);
   }
 
   async evaluateStaffForShift(
@@ -96,12 +96,14 @@ export class ShiftMatchingService {
       .select({
         id: shifts.id,
         centreId: shifts.centreId,
+        centreCity: centres.city,
         shiftDate: shifts.shiftDate,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
         roleNeeded: shifts.roleNeeded,
       })
       .from(shifts)
+      .innerJoin(centres, eq(centres.id, shifts.centreId))
       .where(eq(shifts.id, shiftId));
     if (!rows[0]) throw new NotFoundException('Shift not found.');
     return rows[0];
@@ -119,6 +121,7 @@ export class ShiftMatchingService {
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         role: staff.role,
+        city: staff.city,
         status: staff.status,
         accountStatus: staffAccounts.status,
         onboardingCompletedAt: staffAccounts.onboardingCompletedAt,
@@ -136,6 +139,7 @@ export class ShiftMatchingService {
       displayName: row.displayName,
       useDisplayName: row.useDisplayName,
       role: row.role,
+      city: row.city,
       status: row.status,
       account: row.accountStatus
         ? {

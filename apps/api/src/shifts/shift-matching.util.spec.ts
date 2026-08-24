@@ -17,6 +17,7 @@ import {
 const SHIFT: ShiftMatchingTarget = {
   id: 'target-shift',
   centreId: 'centre-1',
+  centreCity: 'Toronto',
   shiftDate: '2026-09-15',
   startTime: '08:30:00',
   endTime: '16:30:00',

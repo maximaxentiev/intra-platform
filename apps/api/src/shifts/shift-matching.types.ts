@@ -5,6 +5,7 @@ export type { ShiftEligibilityReason };
 export type ShiftMatchingTarget = {
   id: string;
   centreId: string;
+  centreCity: string | null;
   shiftDate: string;
   startTime: string;
   endTime: string;
@@ -25,6 +26,7 @@ export type StaffMatchingCandidate = {
   displayName: string;
   useDisplayName: boolean;
   role: string;
+  city: string | null;
   status: 'active' | 'inactive';
   account: {
     status: 'invited' | 'incomplete' | 'active' | 'disabled';
