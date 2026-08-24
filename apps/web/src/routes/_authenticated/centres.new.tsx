@@ -24,6 +24,8 @@ function NewCentre() {
         <CardContent className="pt-6">
           <CentreForm
             initial={{}}
+            submitLabel="Create centre"
+            savingLabel="Creating..."
             onSubmit={async (values, secondary) => {
               try {
                 const created = await centresApi.create({
