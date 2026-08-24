@@ -6,6 +6,7 @@ import {
   resolveAppliedCitySelection,
   serializeCitiesParam,
 } from "./reports-city-selection";
+import type { CitySelectionState } from "./reports-city-selection";
 
 describe("reports-city-selection", () => {
   it("parses canonical cities case-insensitively and ignores unknown values", () => {
@@ -22,7 +23,7 @@ describe("reports-city-selection", () => {
   });
 
   it("serializes selected cities for URL and API query", () => {
-    const selection = { mode: "subset" as const, cities: ["Toronto", "Ottawa"] };
+    const selection = { mode: "subset" as const, cities: ["Toronto", "Ottawa"] as CitySelectionState["cities"] };
     expect(citySelectionToSearchParams(selection)).toEqual({ cities: "Toronto,Ottawa" });
     expect(citySelectionToApiQuery(selection)).toEqual({ cities: ["Toronto", "Ottawa"] });
     expect(serializeCitiesParam(["Toronto", "Ottawa"])).toBe("Toronto,Ottawa");
