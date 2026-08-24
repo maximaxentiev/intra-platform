@@ -54,12 +54,33 @@ describe("centre detail redesign", () => {
 });
 
 describe("centre contacts redesign", () => {
-  it("derives primary from ordering and keeps blur-save", () => {
+  it("derives primary from ordering and keeps blur-save for existing contacts", () => {
     expect(contacts).toContain("isPrimaryContact(index)");
     expect(contacts).not.toMatch(/isPrimary\s*[:=]/);
     expect(contacts).toContain("onBlur={(e) => updateContact");
     expect(contacts).toContain("reorderContacts");
     expect(contacts).toContain("Done");
+  });
+
+  it("uses a local draft for new contacts with explicit Save and Discard", () => {
+    expect(contacts).toContain("openDraft");
+    expect(contacts).toContain("saveDraft");
+    expect(contacts).toContain("discardDraft");
+    expect(contacts).toContain("Save contact");
+    expect(contacts).toContain("Discard");
+    expect(contacts).toContain("contactDraftHasContent");
+    expect(contacts).toMatch(/toast\.success\("Contact added"\)/);
+    expect(contacts).not.toMatch(/addContact\(centreId,\s*EMPTY\)/);
+    expect(contacts).not.toMatch(/onClick=\{addContact\}/);
+  });
+});
+
+describe("centre staff preferences copy", () => {
+  it("uses staff terminology in preference descriptions", () => {
+    expect(detail).toContain("Preferred staff. Prioritised when matching shifts at this centre.");
+    expect(detail).toContain("These staff members will not be eligible for shifts at this centre.");
+    expect(detail).not.toContain("Preferred carers");
+    expect(detail).not.toContain("Carers who must not be assigned");
   });
 });
 

@@ -7,6 +7,7 @@ import {
   centreShiftAssignedLabel,
   contactDetailLines,
   contactDisplayName,
+  contactDraftHasContent,
   filterCentresByName,
   isPrimaryContact,
   reorderedContactIds,
@@ -62,6 +63,15 @@ describe("contact presentation", () => {
 
   it("lists only non-empty detail lines", () => {
     expect(contactDetailLines({ email: "a@b.co", phone: "" })).toEqual(["a@b.co"]);
+  });
+
+  it("requires at least one field before a new contact can be saved", () => {
+    expect(
+      contactDraftHasContent({ name: "", title: "", email: "", phone: "" }),
+    ).toBe(false);
+    expect(
+      contactDraftHasContent({ name: "Alex", title: "", email: "", phone: "" }),
+    ).toBe(true);
   });
 
   it("returns the full ordered id array when reordering", () => {

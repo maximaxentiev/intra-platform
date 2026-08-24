@@ -105,7 +105,7 @@ export function CentreForm({
         </legend>
         <Label htmlFor="hourlyRate">Hourly Rate</Label>
         <p className="text-[13px] text-muted-foreground">
-          Stores the agreed hourly charge for this Centre for future invoicing and reporting.
+          Stores the agreed hourly rate for this centre.
         </p>
         <Input
           id="hourlyRate"

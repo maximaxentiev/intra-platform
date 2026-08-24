@@ -47,10 +47,11 @@ describe('ops shift smart matching UI', () => {
 });
 
 describe('centre hourly rate UI', () => {
-  it('includes Hourly Rate field with helper copy', () => {
+  it('includes Hourly Rate field with neutral helper copy', () => {
     const form = readFileSync(join(webRoot, 'components/CentreForm.tsx'), 'utf8');
     expect(form).toContain('Hourly Rate');
-    expect(form).toContain('future invoicing and reporting');
+    expect(form).toContain('Stores the agreed hourly rate for this centre.');
+    expect(form).not.toContain('future invoicing and reporting');
     expect(form).toContain('hourlyRate');
   });
 });

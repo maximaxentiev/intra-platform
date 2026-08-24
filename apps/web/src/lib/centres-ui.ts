@@ -96,6 +96,13 @@ export function contactDetailLines(
   return [contact.email, contact.phone].map((v) => (v ?? "").trim()).filter(Boolean);
 }
 
+export type ContactDraftFields = Pick<CentreContact, "name" | "title" | "email" | "phone">;
+
+/** New contacts require at least one meaningful field before POST. */
+export function contactDraftHasContent(draft: ContactDraftFields): boolean {
+  return [draft.name, draft.title, draft.email, draft.phone].some((v) => (v ?? "").trim() !== "");
+}
+
 /** Reorder produces the FULL ordered id array expected by the API. */
 export function reorderedContactIds(
   contacts: Array<Pick<CentreContact, "id">>,
