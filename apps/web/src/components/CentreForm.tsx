@@ -70,65 +70,91 @@ export function CentreForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Centre name *</Label>
-        <Input id="name" required value={values.name} onChange={(e) => set("name", e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
-        <Input id="address" value={values.address} onChange={(e) => set("address", e.target.value)} />
-      </div>
-      <CityCombobox
-        id="centre-city"
-        label="City"
-        value={values.city}
-        onChange={(city) => {
-          set("city", city);
-          setCityError(undefined);
-        }}
-        error={cityError}
-      />
-      <div className="space-y-2">
-        <Label htmlFor="hourlyRate">Hourly Rate</Label>
-        <p className="text-sm text-muted-foreground">
+    <form onSubmit={submit} className="space-y-6">
+      {/* Group 1 — identity & location */}
+      <fieldset className="space-y-4">
+        <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Centre identity
+        </legend>
+        <div className="space-y-2">
+          <Label htmlFor="name">Centre name *</Label>
+          <Input id="name" required value={values.name} onChange={(e) => set("name", e.target.value)} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input id="address" value={values.address} onChange={(e) => set("address", e.target.value)} />
+          </div>
+          <CityCombobox
+            id="centre-city"
+            label="City"
+            value={values.city}
+            onChange={(city) => {
+              set("city", city);
+              setCityError(undefined);
+            }}
+            error={cityError}
+          />
+        </div>
+      </fieldset>
+
+      {/* Group 2 — commercial terms */}
+      <fieldset className="space-y-2">
+        <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Commercial terms
+        </legend>
+        <Label htmlFor="hourlyRate">Hourly rate</Label>
+        <p className="text-[13px] text-muted-foreground">
           Stores the agreed hourly charge for this Centre for future invoicing and reporting.
         </p>
         <Input
           id="hourlyRate"
           inputMode="decimal"
           placeholder="28.50"
+          className="sm:max-w-[200px]"
           value={values.hourlyRate}
           onChange={(e) => set("hourlyRate", e.target.value)}
         />
-      </div>
-      <div className="space-y-2">
-        <Label>Primary communication channel</Label>
-        <Select value={values.primaryChannel} onValueChange={(v) => onPrimaryChange(v as CentreChannel)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CENTRE_CHANNEL_OPTIONS.map(({ value, label }) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Secondary communication channels</Label>
-        <ChannelMultiSelect
-          selected={secondary}
-          exclude={[values.primaryChannel]}
-          onChange={setSecondary}
-          label="Add secondary channels"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="notes">Rules, Policies, and Other Notes</Label>
-        <p className="text-sm text-muted-foreground">
+      </fieldset>
+
+      {/* Group 3 — how ops contacts this centre */}
+      <fieldset className="space-y-4">
+        <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Communication
+        </legend>
+        <div className="space-y-2">
+          <Label>Primary communication channel</Label>
+          <Select value={values.primaryChannel} onValueChange={(v) => onPrimaryChange(v as CentreChannel)}>
+            <SelectTrigger className="sm:max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CENTRE_CHANNEL_OPTIONS.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Secondary communication channels</Label>
+          <ChannelMultiSelect
+            selected={secondary}
+            exclude={[values.primaryChannel]}
+            onChange={setSecondary}
+            label="Add secondary channels"
+          />
+        </div>
+      </fieldset>
+
+      {/* Group 4 — operational instructions */}
+      <fieldset className="space-y-2">
+        <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Rules & notes
+        </legend>
+        <Label htmlFor="notes">Rules, policies, and other notes</Label>
+        <p className="text-[13px] text-muted-foreground">
           These instructions are shared with carers when they are assigned to shifts at this centre.
         </p>
         <Textarea
@@ -138,10 +164,18 @@ export function CentreForm({
           onChange={(e) => set("notes", e.target.value)}
           placeholder="Parking, entry, age groups, expectations..."
         />
+      </fieldset>
+
+      <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center">
+        <Button type="submit" disabled={saving}>
+          {saving ? savingLabel : submitLabel}
+        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
+            Cancel
+          </Button>
+        )}
       </div>
-      <Button type="submit" disabled={saving}>
-        {saving ? "Saving..." : "Save centre"}
-      </Button>
     </form>
   );
 }
