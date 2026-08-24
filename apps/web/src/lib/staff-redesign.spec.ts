@@ -13,6 +13,7 @@ const portal = read("components/PortalAccountSection.tsx");
 const centres = read("components/staff/StaffCentrePreferences.tsx");
 const shifts = read("components/staff/StaffShiftsTab.tsx");
 const summary = read("components/staff/StaffOperationalSummary.tsx");
+const availability = read("components/AvailabilityEditor.tsx");
 
 describe("staff list redesign", () => {
   it("keeps live client-side filtering without Apply or URL search", () => {
@@ -57,6 +58,13 @@ describe("staff detail redesign", () => {
     expect(profile).toContain("staffApi.update");
   });
 
+  it("omits Display name in read mode when useDisplayName is false", () => {
+    expect(profile).toContain("staff.useDisplayName");
+    expect(profile).toContain('label: "Display name", value: staff.displayName');
+    expect(profile).toContain(": []),");
+    expect(profile).not.toMatch(/useDisplayName \? staff\.displayName : ""/);
+  });
+
   it("moves delete into overflow with ConfirmDestructiveDialog", () => {
     expect(detail).toContain('aria-label="More staff actions"');
     expect(detail).toContain("ConfirmDestructiveDialog");
@@ -83,6 +91,23 @@ describe("centre preferences contract", () => {
     expect(centres).toContain("excludeIds");
     expect(detail).toContain("setTopCentres");
     expect(detail).toContain("setBannedCentres");
+  });
+
+  it("uses staff member terminology in preference copy", () => {
+    expect(detail).toContain("matching this staff member to shifts");
+    expect(detail).toContain("This staff member will not be matched to shifts at these centres.");
+    expect(detail).not.toContain("matching this carer to shifts");
+    expect(detail).not.toContain("This carer will not be matched");
+  });
+});
+
+describe("availability desktop layout", () => {
+  it("fits seven day columns at wide desktop while keeping horizontal scroll on smaller widths", () => {
+    expect(availability).toContain("overflow-x-auto");
+    expect(availability).toContain("xl:overflow-x-visible");
+    expect(availability).toContain("xl:grid-cols-7");
+    expect(availability).toContain("min-w-max");
+    expect(availability).toContain("xl:min-w-0");
   });
 });
 

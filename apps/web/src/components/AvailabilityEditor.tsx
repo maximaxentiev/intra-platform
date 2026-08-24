@@ -295,8 +295,8 @@ export function AvailabilityEditor({ staffId }: { staffId: string }) {
         )}
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto pb-1">
-          <div className="flex min-w-max gap-3">
+        <div className="overflow-x-auto pb-1 xl:overflow-x-visible">
+          <div className="flex min-w-max gap-3 xl:grid xl:min-w-0 xl:w-full xl:grid-cols-7 xl:gap-2">
             {DAY_FULL.map((dayName, dow) => {
               const dayDate = addDays(weekStart, dow);
               const ranges = ((data ?? []) as AvailabilityRange[]).filter(r => r.dayOfWeek === dow);
@@ -306,7 +306,7 @@ export function AvailabilityEditor({ staffId }: { staffId: string }) {
               return (
                 <div
                   key={dow}
-                  className={`flex w-[168px] shrink-0 flex-col rounded-lg border p-3 ${
+                  className={`flex w-[168px] shrink-0 flex-col rounded-lg border p-3 xl:min-w-0 xl:w-auto ${
                     !inRange
                       ? "border-dashed border-border/40 bg-muted/10 opacity-40"
                       : pastDay

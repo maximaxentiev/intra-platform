@@ -170,7 +170,7 @@ function StaffDetail() {
         <TabsContent value="centres" className="space-y-4 pt-4">
           <StaffCentrePreferences
             title="Top centres"
-            description="Preferred placements. Prioritised when matching this carer to shifts."
+            description="Preferred placements. Prioritised when matching this staff member to shifts."
             emptyText="No preferred centres yet."
             selectedIds={topIds}
             excludeIds={bannedIds}
@@ -186,7 +186,7 @@ function StaffDetail() {
           />
           <StaffCentrePreferences
             title="Banned centres"
-            description="This carer will not be matched to shifts at these centres."
+            description="This staff member will not be matched to shifts at these centres."
             emptyText="No banned centres."
             selectedIds={bannedIds}
             excludeIds={topIds}

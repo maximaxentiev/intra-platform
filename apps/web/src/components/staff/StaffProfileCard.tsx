@@ -64,7 +64,9 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
         <ProfileGroup label="Identity">
           <PropertyList
             items={[
-              { label: "Display name", value: staff.useDisplayName ? staff.displayName : "" },
+              ...(staff.useDisplayName
+                ? [{ label: "Display name", value: staff.displayName }]
+                : []),
               { label: "Legal name", value: staff.legalName },
               { label: "Role", value: staff.role },
               { label: "Employment", value: staff.status === "active" ? "Active" : "Inactive" },
