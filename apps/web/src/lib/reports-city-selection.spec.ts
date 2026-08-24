@@ -22,7 +22,7 @@ describe("reports-city-selection", () => {
   });
 
   it("serializes selected cities for URL and API query", () => {
-    const selection = { mode: "subset" as const, cities: ["Toronto", "Ottawa"] as const };
+    const selection = { mode: "subset" as const, cities: ["Toronto", "Ottawa"] };
     expect(citySelectionToSearchParams(selection)).toEqual({ cities: "Toronto,Ottawa" });
     expect(citySelectionToApiQuery(selection)).toEqual({ cities: ["Toronto", "Ottawa"] });
     expect(serializeCitiesParam(["Toronto", "Ottawa"])).toBe("Toronto,Ottawa");
