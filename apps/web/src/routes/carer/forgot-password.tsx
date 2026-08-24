@@ -34,10 +34,10 @@ function CarerForgotPasswordPage() {
     return (
       <CarerAuthCard
         title="Check your email"
-        description="If an account exists for that address, we've sent a link to set a new password. The link expires in 24 hours."
+        description="If an account exists for that email, we've sent password reset instructions."
       >
         <p className="text-sm text-muted-foreground">
-          Didn't get it? Check your spam folder, or contact your Intra coordinator.
+          Reset links expire in 60 minutes. If you did not receive an email, check your spam folder or contact your Intra coordinator.
         </p>
       </CarerAuthCard>
     );

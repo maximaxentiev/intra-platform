@@ -29,6 +29,14 @@ export function buildStaffInviteEmailLink(inviteToken: string, env: PlatformUrlE
   return url;
 }
 
+export function buildStaffPasswordResetEmailLink(resetToken: string, env: PlatformUrlEnv): string {
+  const base = resolvePublicPlatformUrl(env);
+  const path = `/carer/reset-password/${encodeURIComponent(resetToken)}`;
+  const url = buildPlatformLink(base, path);
+  assertProductionOutboundUrl(url, env);
+  return url;
+}
+
 export function buildGenericPlatformEmailLink(path: string, env: PlatformUrlEnv): string {
   const base = resolvePublicPlatformUrl(env);
   const url = buildPlatformLink(base, path);

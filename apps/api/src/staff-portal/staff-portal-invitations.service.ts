@@ -170,6 +170,67 @@ export class StaffPortalInvitationsService {
     }
   }
 
+  /**
+   * Re-sends the invitation email for accounts that have not yet set a password.
+   * Used by forgot-password when the invitation workflow remains authoritative.
+   */
+  async sendInvitationEmailForForgotPassword(staffId: string, accountId: string): Promise<void> {
+    const person = await this.requireStaff(staffId);
+    const account = (
+      await this.db.select().from(staffAccounts).where(eq(staffAccounts.id, accountId))
+    )[0];
+    if (!account || account.passwordHash || account.status === 'disabled') {
+      return;
+    }
+
+    const rawToken = await this.auth.issueInviteToken(account.id);
+    const refreshed = await this.db
+      .select()
+      .from(staffAccounts)
+      .where(eq(staffAccounts.id, account.id));
+    const updatedAccount = refreshed[0]!;
+
+    const platformEnv = {
+      APP_PUBLIC_URL: this.config.get<string>('APP_PUBLIC_URL'),
+      APP_HOST: this.config.get<string>('APP_HOST'),
+      LEGACY_APP_HOST: this.config.get<string>('LEGACY_APP_HOST'),
+      NODE_ENV: this.config.get<string>('NODE_ENV'),
+    };
+
+    const content = buildStaffInviteEmailContent({
+      legalFirstName: person.legalFirstName,
+      inviteToken: rawToken,
+      expiresAt: updatedAccount.inviteTokenExpiresAt ?? new Date(Date.now() + INVITE_TTL_MS),
+      platformEnv,
+    });
+
+    try {
+      await this.email.send({
+        to: updatedAccount.email,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
+      });
+      await this.audit.record({
+        staffId,
+        staffAccountId: account.id,
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.invitationEmailSent,
+        detail: { source: 'forgot_password' },
+      });
+    } catch (err) {
+      await this.audit.record({
+        staffId,
+        staffAccountId: account.id,
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.invitationEmailFailed,
+        detail: {
+          source: 'forgot_password',
+          reason:
+            err instanceof EmailDeliveryError ? err.message.slice(0, 200) : 'send_failed',
+        },
+      });
+    }
+  }
+
   async disablePortalAccess(staffId: string, actorUserId: string) {
     const account = await this.requireAccount(staffId);
     await this.db

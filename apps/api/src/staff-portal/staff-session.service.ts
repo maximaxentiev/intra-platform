@@ -64,4 +64,38 @@ export class StaffSessionService {
   async destroy(sid: string): Promise<void> {
     if (sid) await this.redis.del(PREFIX + sid);
   }
+
+  /** Invalidates every Carer session for the given portal account. */
+  async destroyAllForAccount(accountId: string): Promise<number> {
+    let cursor = '0';
+    let deleted = 0;
+
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        `${PREFIX}*`,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+
+      for (const key of keys) {
+        const raw = await this.redis.get(key);
+        if (!raw) continue;
+
+        try {
+          const payload = JSON.parse(raw) as StaffSessionPayload;
+          if (payload.accountId === accountId) {
+            await this.redis.del(key);
+            deleted += 1;
+          }
+        } catch {
+          // Ignore malformed session payloads.
+        }
+      }
+    } while (cursor !== '0');
+
+    return deleted;
+  }
 }

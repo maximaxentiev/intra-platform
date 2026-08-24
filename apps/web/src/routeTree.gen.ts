@@ -38,6 +38,7 @@ import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
 import { Route as CarerShiftsIdRouteImport } from './routes/carer/shifts.$id'
+import { Route as CarerResetPasswordTokenRouteImport } from './routes/carer/reset-password.$token'
 import { Route as CarerOnboardingProfileRouteImport } from './routes/carer/onboarding/profile'
 import { Route as CarerOnboardingDocumentsRouteImport } from './routes/carer/onboarding/documents'
 import { Route as CarerOnboardingAvailabilityRouteImport } from './routes/carer/onboarding/availability'
@@ -204,6 +205,11 @@ const CarerShiftsIdRoute = CarerShiftsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CarerShiftsRoute,
 } as any)
+const CarerResetPasswordTokenRoute = CarerResetPasswordTokenRouteImport.update({
+  id: '/reset-password/$token',
+  path: '/reset-password/$token',
+  getParentRoute: () => CarerRouteRoute,
+} as any)
 const CarerOnboardingProfileRoute = CarerOnboardingProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
+  '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
+  '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
@@ -418,6 +426,7 @@ export interface FileRoutesById {
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
+  '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
     | '/carer/onboarding/profile'
+    | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/centres/'
     | '/reports/'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
     | '/carer/onboarding/profile'
+    | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/centres'
     | '/reports'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
     | '/carer/onboarding/profile'
+    | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/_authenticated/centres/'
     | '/_authenticated/reports/'
@@ -773,6 +785,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/carer/shifts/$id'
       preLoaderRoute: typeof CarerShiftsIdRouteImport
       parentRoute: typeof CarerShiftsRoute
+    }
+    '/carer/reset-password/$token': {
+      id: '/carer/reset-password/$token'
+      path: '/reset-password/$token'
+      fullPath: '/carer/reset-password/$token'
+      preLoaderRoute: typeof CarerResetPasswordTokenRouteImport
+      parentRoute: typeof CarerRouteRoute
     }
     '/carer/onboarding/profile': {
       id: '/carer/onboarding/profile'
@@ -1026,6 +1045,7 @@ interface CarerRouteRouteChildren {
   CarerShiftsRoute: typeof CarerShiftsRouteWithChildren
   CarerIndexRoute: typeof CarerIndexRoute
   CarerInviteTokenRoute: typeof CarerInviteTokenRoute
+  CarerResetPasswordTokenRoute: typeof CarerResetPasswordTokenRoute
 }
 
 const CarerRouteRouteChildren: CarerRouteRouteChildren = {
@@ -1038,6 +1058,7 @@ const CarerRouteRouteChildren: CarerRouteRouteChildren = {
   CarerShiftsRoute: CarerShiftsRouteWithChildren,
   CarerIndexRoute: CarerIndexRoute,
   CarerInviteTokenRoute: CarerInviteTokenRoute,
+  CarerResetPasswordTokenRoute: CarerResetPasswordTokenRoute,
 }
 
 const CarerRouteRouteWithChildren = CarerRouteRoute._addFileChildren(

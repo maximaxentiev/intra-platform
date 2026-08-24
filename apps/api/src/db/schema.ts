@@ -178,10 +178,16 @@ export const staffAccounts = pgTable(
     email: text('email').notNull().unique(),
     passwordHash: text('password_hash'),
     status: staffAccountStatus('status').notNull().default('invited'),
-    // Invite / password-reset token (stored hashed).
+    // Invitation token (stored hashed).
     inviteTokenHash: text('invite_token_hash'),
     inviteTokenExpiresAt: timestamp('invite_token_expires_at', { withTimezone: true }),
     inviteSentAt: timestamp('invite_sent_at', { withTimezone: true }),
+    // Password reset token (stored hashed; independent from invitation).
+    passwordResetTokenHash: text('password_reset_token_hash'),
+    passwordResetTokenExpiresAt: timestamp('password_reset_token_expires_at', {
+      withTimezone: true,
+    }),
+    passwordResetRequestedAt: timestamp('password_reset_requested_at', { withTimezone: true }),
     // Mandatory onboarding: 1 = personal info, 2 = documents, 3 = availability.
     onboardingStep: smallint('onboarding_step').notNull().default(1),
     profileCompletedAt: timestamp('profile_completed_at', { withTimezone: true }),

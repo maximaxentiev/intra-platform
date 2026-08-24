@@ -3,8 +3,15 @@ import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { Public } from '../auth/session.guard';
-import { AcceptInviteDto, ForgotPasswordDto, StaffLoginDto } from './dto/staff-auth.dto';
+import { resolveClientIp } from '../common/client-ip.util';
+import {
+  AcceptInviteDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  StaffLoginDto,
+} from './dto/staff-auth.dto';
 import { StaffAuthService } from './staff-auth.service';
+import { StaffPasswordResetService } from './staff-password-reset.service';
 import { CurrentStaff, StaffSessionGuard } from './staff-session.guard';
 import { StaffSessionService, type StaffSessionPayload } from './staff-session.service';
 
@@ -19,6 +26,7 @@ import { StaffSessionService, type StaffSessionPayload } from './staff-session.s
 export class StaffAuthController {
   constructor(
     private readonly auth: StaffAuthService,
+    private readonly passwordReset: StaffPasswordResetService,
     private readonly sessions: StaffSessionService,
   ) {}
 
@@ -50,9 +58,22 @@ export class StaffAuthController {
   }
 
   @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    await this.auth.requestPasswordReset(dto.email);
-    // Same response whether or not the account exists.
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() req: Request,
+  ) {
+    await this.passwordReset.requestPasswordReset(dto.email, resolveClientIp(req));
+    return { ok: true };
+  }
+
+  @Get('reset-password/:token')
+  validateResetPassword(@Param('token') token: string, @Req() req: Request) {
+    return this.passwordReset.validateResetToken(token, resolveClientIp(req));
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+    await this.passwordReset.resetPassword(dto.token, dto.password, resolveClientIp(req));
     return { ok: true };
   }
 

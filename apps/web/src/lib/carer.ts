@@ -43,6 +43,10 @@ export const carerAuthApi = {
     api.post<CarerSession>("/staff-auth/accept-invite", { token, password }),
   forgotPassword: (email: string) =>
     api.post<{ ok: true }>("/staff-auth/forgot-password", { email }),
+  validateResetPassword: (token: string) =>
+    api.get<{ valid: true }>(`/staff-auth/reset-password/${encodeURIComponent(token)}`),
+  resetPassword: (token: string, password: string) =>
+    api.post<{ ok: true }>("/staff-auth/reset-password", { token, password }),
   logout: () => api.post<{ ok: true }>("/staff-auth/logout"),
 };
 

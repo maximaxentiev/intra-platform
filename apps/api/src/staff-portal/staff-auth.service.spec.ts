@@ -446,20 +446,6 @@ describe('StaffAuthService', () => {
     });
   });
 
-  describe('requestPasswordReset', () => {
-    it('does not throw when account missing', async () => {
-      dbMock.setSelectRows([]);
-      await expect(service.requestPasswordReset('missing@example.test')).resolves.toBeUndefined();
-    });
-
-    it('issues token without returning it to caller', async () => {
-      dbMock.setSelectRows([{ id: 'acc-1', staffId: 'staff-1', email: 'a@example.test' }]);
-      const result = await service.requestPasswordReset('a@example.test');
-      expect(result).toBeUndefined();
-      expect(dbMock.updateSets.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('logout', () => {
     it('destroys session', async () => {
       await service.logout('sid-123');

@@ -4,6 +4,8 @@ import { ShiftCommunicationsModule } from '../shifts/shift-communications.module
 import { StaffAuthController } from './staff-auth.controller';
 import { StaffAuthService } from './staff-auth.service';
 import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
+import { StaffPasswordResetRateLimitService } from './staff-password-reset-rate-limit.service';
+import { StaffPasswordResetService } from './staff-password-reset.service';
 import { StaffSessionGuard } from './staff-session.guard';
 import { StaffSessionService } from './staff-session.service';
 import { StaffPortalAuditService } from './staff-portal-audit.service';
@@ -28,6 +30,8 @@ import { StaffPortalShiftsService } from './staff-portal-shifts.service';
   ],
   providers: [
     StaffAuthService,
+    StaffPasswordResetService,
+    StaffPasswordResetRateLimitService,
     StaffSessionService,
     StaffSessionGuard,
     CarerPortalEnabledGuard,

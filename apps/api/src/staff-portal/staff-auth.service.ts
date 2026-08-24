@@ -216,18 +216,4 @@ export class StaffAuthService {
       city: person?.city ?? '',
     };
   }
-
-  /**
-   * Always resolves so the endpoint cannot be used to enumerate accounts.
-   * Raw tokens are never logged; email delivery is Phase 7.
-   */
-  async requestPasswordReset(email: string): Promise<void> {
-    const rows = await this.db
-      .select()
-      .from(staffAccounts)
-      .where(eq(staffAccounts.email, email.trim().toLowerCase()));
-    const account = rows[0];
-    if (!account) return;
-    await this.issueInviteToken(account.id);
-  }
 }
