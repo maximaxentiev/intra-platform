@@ -100,6 +100,9 @@ describe('report-document-status.util', () => {
       categoryInput('first_aid_cpr'),
       categoryInput('immunizations'),
       categoryInput('covid19_vaccination'),
+      categoryInput('eca_diploma'),
+      categoryInput('ece_diploma'),
+      categoryInput('rece_proof'),
     ]);
 
     expect(deriveOverallComplianceStatus(categories)).toBe('needs_attention');
@@ -112,6 +115,9 @@ describe('report-document-status.util', () => {
       first_aid_cpr: 'expired' as const,
       immunizations: 'approved' as const,
       covid19_vaccination: 'not_submitted' as const,
+      eca_diploma: 'not_submitted' as const,
+      ece_diploma: 'not_submitted' as const,
+      rece_proof: 'not_submitted' as const,
     };
 
     expect(
@@ -135,6 +141,9 @@ describe('report-document-status.util', () => {
       first_aid_cpr: 'approved' as const,
       immunizations: 'approved' as const,
       covid19_vaccination: 'not_submitted' as const,
+      eca_diploma: 'not_submitted' as const,
+      ece_diploma: 'not_submitted' as const,
+      rece_proof: 'not_submitted' as const,
     };
 
     expect(

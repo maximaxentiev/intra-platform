@@ -7,6 +7,9 @@ export const STAFF_DOCUMENT_PUBLIC_SHARE_LABELS = {
   first_aid_cpr: 'First Aid & CPR Certification',
   immunizations: 'Immunizations',
   covid19_vaccination: 'COVID-19 Vaccination',
+  eca_diploma: 'ECA Diploma',
+  ece_diploma: 'ECE Diploma',
+  rece_proof: 'RECE Proof',
 } as const;
 
 export const STAFF_SHARE_RATE_LIMIT_EXCHANGE_MINUTE_MAX = 10;

@@ -144,8 +144,8 @@ describe("stale submission handling", () => {
 });
 
 describe("ops upload and replace", () => {
-  it("covers four document categories", () => {
-    expect(STAFF_DOCUMENT_TYPES).toHaveLength(4);
+  it("covers compliance and qualification document categories", () => {
+    expect(STAFF_DOCUMENT_TYPES).toHaveLength(7);
   });
 
   it("retains existing files in save payload by default", () => {

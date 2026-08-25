@@ -5,9 +5,28 @@ export const STAFF_DOCUMENT_TYPES = [
   "first_aid_cpr",
   "immunizations",
   "covid19_vaccination",
+  "eca_diploma",
+  "ece_diploma",
+  "rece_proof",
 ] as const;
 
 export type StaffDocumentType = (typeof STAFF_DOCUMENT_TYPES)[number];
+
+/** Primary compliance documents (required + COVID). */
+export const STAFF_COMPLIANCE_DOCUMENT_TYPES = [
+  "vulnerable_sector_check",
+  "first_aid_cpr",
+  "immunizations",
+  "covid19_vaccination",
+] as const satisfies readonly StaffDocumentType[];
+
+export const QUALIFICATION_STAFF_DOCUMENT_TYPES = [
+  "eca_diploma",
+  "ece_diploma",
+  "rece_proof",
+] as const satisfies readonly StaffDocumentType[];
+
+export type QualificationStaffDocumentType = (typeof QUALIFICATION_STAFF_DOCUMENT_TYPES)[number];
 
 export type CarerDocumentFile = {
   id: string;
@@ -34,6 +53,7 @@ export type CarerDocumentCategory = {
 };
 
 export type CarerDocumentsList = {
+  staffRole: string;
   categories: CarerDocumentCategory[];
   documentsCompletedAt: string | null;
   onboardingStep: number;
@@ -45,7 +65,12 @@ export type CarerDocumentsList = {
 
 export const CARER_DOCUMENT_CATEGORY_META: Record<
   StaffDocumentType,
-  { title: string; required: boolean; dateField: "processed" | "expiry" | "both" | null }
+  {
+    title: string;
+    required: boolean;
+    dateField: "processed" | "expiry" | "both" | null;
+    helperText?: string;
+  }
 > = {
   vulnerable_sector_check: {
     title: "Vulnerable Sector Check",
@@ -67,7 +92,37 @@ export const CARER_DOCUMENT_CATEGORY_META: Record<
     required: false,
     dateField: null,
   },
+  eca_diploma: {
+    title: "ECA Diploma",
+    required: false,
+    dateField: null,
+  },
+  ece_diploma: {
+    title: "ECE Diploma",
+    required: false,
+    dateField: null,
+  },
+  rece_proof: {
+    title: "RECE Proof",
+    required: false,
+    dateField: null,
+    helperText:
+      "Upload your Certificate of Registration, Membership Card, or other proof of RECE registration.",
+  },
 };
+
+export const QUALIFICATIONS_SECTION_COPY =
+  "Qualifications are optional, but strongly recommended. Some childcare centres require verified qualifications before Staff can be matched to their shifts. If you have an ECA/ECE diploma or proof of RECE registration, upload it here to make sure you're eligible for those opportunities.";
+
+/** Role-based qualification visibility for the Carer portal. */
+export function qualificationTypesForStaffRole(
+  role: string | null | undefined,
+): QualificationStaffDocumentType[] {
+  const normalized = (role ?? "").trim();
+  if (normalized === "ECA") return ["eca_diploma"];
+  if (normalized === "ECE") return ["ece_diploma", "rece_proof"];
+  return [];
+}
 
 export const STAFF_DOCUMENT_MAX_FILES = 10;
 export const STAFF_DOCUMENT_MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -81,6 +136,18 @@ export type CategoryDraft = {
   processedDate: string;
   expiryDate: string;
 };
+
+export function emptyCategoryDrafts(): Record<StaffDocumentType, CategoryDraft> {
+  return {
+    vulnerable_sector_check: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    first_aid_cpr: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    immunizations: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    covid19_vaccination: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    eca_diploma: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    ece_diploma: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+    rece_proof: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
+  };
+}
 
 export function categoryDraftFromCategory(category: CarerDocumentCategory): CategoryDraft {
   return {

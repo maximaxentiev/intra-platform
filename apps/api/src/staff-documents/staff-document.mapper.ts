@@ -33,6 +33,7 @@ export type StaffDocumentCategoryDto = {
 };
 
 export type StaffDocumentsListDto = {
+  staffRole: string;
   categories: StaffDocumentCategoryDto[];
   documentsCompletedAt: string | null;
   onboardingStep: number;
@@ -83,6 +84,7 @@ export function mapStaffDocumentCategory(
 }
 
 export function buildDocumentsListDto(input: {
+  staffRole: string;
   categories: StaffDocumentCategoryCompliance[];
   filesByType: Map<StaffDocumentType, StaffDocumentFileDto[]>;
   issueNotesByType: Map<StaffDocumentType, string>;
@@ -109,6 +111,7 @@ export function buildDocumentsListDto(input: {
   });
 
   return {
+    staffRole: input.staffRole,
     categories,
     documentsCompletedAt: input.documentsCompletedAt?.toISOString() ?? null,
     onboardingStep: input.onboardingStep,

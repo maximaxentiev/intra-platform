@@ -18,12 +18,38 @@ const SHIFT: ShiftMatchingTarget = {
   id: 'target-shift',
   centreId: 'centre-1',
   centreCity: 'Toronto',
+  centreRequiresQualification: false,
+  centreEceQualificationRequirement: 'ece_or_rece',
   shiftDate: '2026-09-15',
   startTime: '08:30:00',
   endTime: '16:30:00',
   roleNeeded: 'ECA',
 };
 
+function defaultQualificationInputs(): StaffDocumentCategoryComplianceInput[] {
+  return [];
+}
+
+function eligibleBase(overrides: Partial<Parameters<typeof evaluateStaffShiftEligibility>[0]> = {}) {
+  return evaluateStaffShiftEligibility({
+    staffId: 'staff-1',
+    staffRole: 'ECA',
+    account: { status: 'incomplete', onboardingCompletedAt: new Date('2026-01-01') },
+    isCentreBanned: false,
+    hasAvailabilityCoverage: true,
+    sameDayShifts: [],
+    documentGate: deriveStaffShiftDocumentGate([
+      approved('vulnerable_sector_check'),
+      approved('first_aid_cpr'),
+      approved('immunizations'),
+    ]),
+    qualificationCategoryInputs: defaultQualificationInputs(),
+    centreRequiresQualification: false,
+    centreEceQualificationRequirement: 'ece_or_rece',
+    shift: SHIFT,
+    ...overrides,
+  });
+}
 function cat(
   documentType: StaffDocumentCategoryComplianceInput['documentType'],
   overrides: Partial<StaffDocumentCategoryComplianceInput> = {},
@@ -52,24 +78,6 @@ function approved(documentType: StaffDocumentCategoryComplianceInput['documentTy
     currentSubmissionId: 'sub-1',
     submittedAt: '2026-01-01T00:00:00Z',
     reviewedAt: '2026-01-02T00:00:00Z',
-  });
-}
-
-function eligibleBase(overrides: Partial<Parameters<typeof evaluateStaffShiftEligibility>[0]> = {}) {
-  return evaluateStaffShiftEligibility({
-    staffId: 'staff-1',
-    staffRole: 'ECA',
-    account: { status: 'incomplete', onboardingCompletedAt: new Date('2026-01-01') },
-    isCentreBanned: false,
-    hasAvailabilityCoverage: true,
-    sameDayShifts: [],
-    documentGate: deriveStaffShiftDocumentGate([
-      approved('vulnerable_sector_check'),
-      approved('first_aid_cpr'),
-      approved('immunizations'),
-    ]),
-    shift: SHIFT,
-    ...overrides,
   });
 }
 
@@ -330,5 +338,58 @@ describe('evaluateStaffShiftEligibility — combinations', () => {
     expect(result.reasons).toEqual(
       expect.arrayContaining(['not_available', 'centre_banned', 'documents_ineligible']),
     );
+  });
+});
+
+describe('evaluateStaffShiftEligibility — qualifications', () => {
+  it('ignores qualifications when centre requirement is disabled', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECA',
+        centreRequiresQualification: false,
+        qualificationCategoryInputs: [],
+      }).eligible,
+    ).toBe(true);
+  });
+
+  it('blocks ECA staff without approved diploma when required', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECA',
+        centreRequiresQualification: true,
+        qualificationCategoryInputs: [],
+      }).reasons,
+    ).toContain('qualification_required');
+  });
+
+  it('allows ECA staff with approved diploma when required', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECA',
+        centreRequiresQualification: true,
+        qualificationCategoryInputs: [approved('eca_diploma')],
+      }).eligible,
+    ).toBe(true);
+  });
+
+  it('requires RECE proof for ECE when centre setting is rece_required', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECE',
+        centreRequiresQualification: true,
+        centreEceQualificationRequirement: 'rece_required',
+        qualificationCategoryInputs: [approved('ece_diploma')],
+      }).reasons,
+    ).toContain('rece_required');
+  });
+
+  it('does not exempt qualification requirements for otherwise eligible staff', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECA',
+        centreRequiresQualification: true,
+        qualificationCategoryInputs: [],
+      }).eligible,
+    ).toBe(false);
   });
 });

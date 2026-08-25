@@ -113,6 +113,9 @@ const DOCUMENT_TYPE_TO_KEY = {
   first_aid_cpr: 'firstAidCpr',
   immunizations: 'immunizations',
   covid19_vaccination: 'covid19Vaccination',
+  eca_diploma: 'ecaDiploma',
+  ece_diploma: 'eceDiploma',
+  rece_proof: 'receProof',
 } as const satisfies Record<StaffDocumentType, keyof DocumentReportDocuments>;
 
 function documentKeyForType(type: StaffDocumentType): keyof DocumentReportDocuments {
@@ -238,6 +241,9 @@ export class ReportsDocumentsService {
     const firstAid = categories.get('first_aid_cpr')!;
     const immunizations = categories.get('immunizations')!;
     const covid = categories.get('covid19_vaccination')!;
+    const ecaDiploma = categories.get('eca_diploma')!;
+    const eceDiploma = categories.get('ece_diploma')!;
+    const receProof = categories.get('rece_proof')!;
 
     const vscReminder = vsc.currentSubmissionId
       ? (reminderBySubmission.get(vsc.currentSubmissionId) ?? emptyReminderSummary())
@@ -272,6 +278,24 @@ export class ReportsDocumentsService {
           optional: true,
           submittedAt: covid.submittedAt,
           reviewedAt: covid.reviewedAt,
+        },
+        ecaDiploma: {
+          status: deriveDocumentReportStatus(ecaDiploma),
+          optional: true,
+          submittedAt: ecaDiploma.submittedAt,
+          reviewedAt: ecaDiploma.reviewedAt,
+        },
+        eceDiploma: {
+          status: deriveDocumentReportStatus(eceDiploma),
+          optional: true,
+          submittedAt: eceDiploma.submittedAt,
+          reviewedAt: eceDiploma.reviewedAt,
+        },
+        receProof: {
+          status: deriveDocumentReportStatus(receProof),
+          optional: true,
+          submittedAt: receProof.submittedAt,
+          reviewedAt: receProof.reviewedAt,
         },
       },
     };

@@ -207,11 +207,18 @@ export interface DocumentReportCovidCategory extends DocumentReportCategoryBase 
   optional: true;
 }
 
+export interface DocumentReportQualificationCategory extends DocumentReportCategoryBase {
+  optional: true;
+}
+
 export interface DocumentReportDocuments {
   vulnerableSectorCheck: DocumentReportVscCategory;
   firstAidCpr: DocumentReportFirstAidCategory;
   immunizations: DocumentReportImmunizationsCategory;
   covid19Vaccination: DocumentReportCovidCategory;
+  ecaDiploma: DocumentReportQualificationCategory;
+  eceDiploma: DocumentReportQualificationCategory;
+  receProof: DocumentReportQualificationCategory;
 }
 
 export interface DocumentComplianceRow {

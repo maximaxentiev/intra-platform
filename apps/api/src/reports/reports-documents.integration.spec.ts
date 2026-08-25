@@ -515,6 +515,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
 
   it('filters by document status with optional documentType scoping', async () => {
     const expired = await service.getDocumentCompliance({
+      staffIds: FIXTURE_ACTIVE_STAFF_IDS,
       status: 'expired',
       pageSize: 100,
     });
@@ -522,6 +523,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
     expect(expired.items.some((row) => row.staffId === FIXTURE.staffA)).toBe(false);
 
     const covidMissing = await service.getDocumentCompliance({
+      staffIds: FIXTURE_ACTIVE_STAFF_IDS,
       status: 'not_submitted',
       documentType: 'covid19_vaccination',
       pageSize: 100,
@@ -580,6 +582,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
       expect(csv.filename).toMatch(/^document-compliance-\d{4}-\d{2}-\d{2}\.csv$/);
       expect(csv.content).toContain('Staff Name,Role,Overall Compliance');
       expect(csv.content).toContain('VSC Status');
+      expect(csv.content).toContain('ECA Diploma Status');
       expect(csv.content).not.toMatch(/storage_key|share_url|token|s3/i);
     });
   });

@@ -9,12 +9,17 @@ import {
   categoryDraftDirty,
   categoryDraftFromCategory,
   deriveVscRenewalDueDate,
+  emptyCategoryDrafts,
   documentsDraftDirty,
   formatVscRenewalDueLabel,
   mapDocumentsApiError,
   reviewStatusLabel,
   STAFF_DOCUMENT_MAX_FILE_BYTES,
   STAFF_DOCUMENT_MAX_FILES,
+  STAFF_COMPLIANCE_DOCUMENT_TYPES,
+  QUALIFICATION_STAFF_DOCUMENT_TYPES,
+  qualificationTypesForStaffRole,
+  QUALIFICATIONS_SECTION_COPY,
   STAFF_DOCUMENT_TYPES,
   validateCategoryDraft,
   type CarerDocumentCategory,
@@ -62,6 +67,7 @@ function sampleCategory(
 
 function sampleDocuments(categories: CarerDocumentCategory[]): CarerDocumentsList {
   return {
+    staffRole: "ECA",
     categories,
     documentsCompletedAt: null,
     onboardingStep: 2,
@@ -73,11 +79,25 @@ function sampleDocuments(categories: CarerDocumentCategory[]): CarerDocumentsLis
 }
 
 describe("carer document category metadata", () => {
-  it("defines four required/optional categories", () => {
-    expect(STAFF_DOCUMENT_TYPES).toHaveLength(4);
+  it("defines compliance and qualification categories", () => {
+    expect(STAFF_DOCUMENT_TYPES).toHaveLength(7);
+    expect(STAFF_COMPLIANCE_DOCUMENT_TYPES).toHaveLength(4);
+    expect(QUALIFICATION_STAFF_DOCUMENT_TYPES).toEqual([
+      "eca_diploma",
+      "ece_diploma",
+      "rece_proof",
+    ]);
     expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.required).toBe(true);
     expect(CARER_DOCUMENT_CATEGORY_META.vulnerable_sector_check.dateField).toBe("processed");
     expect(CARER_DOCUMENT_CATEGORY_META.covid19_vaccination.required).toBe(false);
+    expect(CARER_DOCUMENT_CATEGORY_META.eca_diploma.required).toBe(false);
+    expect(CARER_DOCUMENT_CATEGORY_META.rece_proof.helperText).toMatch(/RECE registration/i);
+  });
+
+  it("shows role-based qualification types", () => {
+    expect(qualificationTypesForStaffRole("ECA")).toEqual(["eca_diploma"]);
+    expect(qualificationTypesForStaffRole("ECE")).toEqual(["ece_diploma", "rece_proof"]);
+    expect(qualificationTypesForStaffRole("Nanny")).toEqual([]);
   });
 });
 
@@ -96,18 +116,8 @@ describe("category draft state", () => {
     };
     expect(categoryDraftDirty(dirty, saved, "immunizations")).toBe(true);
     expect(documentsDraftDirty(
-      {
-        vulnerable_sector_check: saved,
-        first_aid_cpr: saved,
-        immunizations: dirty,
-        covid19_vaccination: saved,
-      },
-      {
-        vulnerable_sector_check: saved,
-        first_aid_cpr: saved,
-        immunizations: saved,
-        covid19_vaccination: saved,
-      },
+      { ...emptyCategoryDrafts(), immunizations: dirty },
+      { ...emptyCategoryDrafts(), immunizations: saved },
     )).toBe(true);
   });
 
@@ -297,5 +307,13 @@ describe("carer documents UI", () => {
     expect(src).toContain("formatVscRenewalDueLabel");
     expect(src).not.toContain('dateField === "both"');
     expect(src).not.toMatch(/ops-expiry-vsc|expiry-\$\{category\.documentType\}.*Vulnerable/);
+  });
+
+  it("renders optional qualifications section with role-based visibility", () => {
+    const src = readSrc("components/carer/CarerDocumentsForm.tsx");
+    expect(src).toContain("Qualifications (Optional)");
+    expect(src).toContain("QUALIFICATIONS_SECTION_COPY");
+    expect(src).toContain("qualificationTypesForStaffRole");
+    expect(src).toContain("STAFF_COMPLIANCE_DOCUMENT_TYPES");
   });
 });

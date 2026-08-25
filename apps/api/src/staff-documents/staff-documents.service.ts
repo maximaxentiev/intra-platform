@@ -663,11 +663,15 @@ export class StaffDocumentsService {
     staffId: string,
     account: StaffAccount | null,
   ): Promise<StaffDocumentsListDto> {
-    const gate = await this.loadComplianceGate(staffId);
-    const filesByType = await this.loadCurrentFilesByType(staffId);
-    const issueNotes = await this.loadIssueNotesByType(staffId);
+    const [gate, filesByType, issueNotes, staffRow] = await Promise.all([
+      this.loadComplianceGate(staffId),
+      this.loadCurrentFilesByType(staffId),
+      this.loadIssueNotesByType(staffId),
+      this.db.select({ role: staff.role }).from(staff).where(eq(staff.id, staffId)).limit(1),
+    ]);
 
     return buildDocumentsListDto({
+      staffRole: staffRow[0]?.role ?? '',
       categories: gate.allCategories,
       filesByType,
       issueNotesByType: issueNotes,

@@ -1,6 +1,7 @@
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsIn,
   IsNumberString,
   IsOptional,
@@ -11,6 +12,9 @@ import {
 
 const CHANNELS = ['whatsapp', 'goto', 'email'] as const;
 type Channel = (typeof CHANNELS)[number];
+
+const ECE_QUALIFICATION_REQUIREMENTS = ['ece_or_rece', 'rece_required'] as const;
+export type CentreEceQualificationRequirementDto = (typeof ECE_QUALIFICATION_REQUIREMENTS)[number];
 
 export class UpsertCentreDto {
   @IsString()
@@ -39,6 +43,14 @@ export class UpsertCentreDto {
   @IsString()
   @MaxLength(5000)
   notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  requiresQualificationForMatching?: boolean;
+
+  @IsOptional()
+  @IsIn(ECE_QUALIFICATION_REQUIREMENTS)
+  eceQualificationRequirement?: CentreEceQualificationRequirementDto;
 }
 
 export class SetSecondaryChannelsDto {

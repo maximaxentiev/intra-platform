@@ -35,6 +35,9 @@ export const DOCUMENT_TYPE_FILTER_OPTIONS = [
   { value: "first_aid_cpr", label: "First Aid & CPR" },
   { value: "immunizations", label: "Immunizations" },
   { value: "covid19_vaccination", label: "COVID-19 Vaccination" },
+  { value: "eca_diploma", label: "ECA Diploma" },
+  { value: "ece_diploma", label: "ECE Diploma" },
+  { value: "rece_proof", label: "RECE Proof" },
 ] as const;
 
 export const DOCUMENT_STATUS_FILTER_OPTIONS = [
@@ -76,6 +79,12 @@ export function documentCategoryShortLabel(key: DocumentReportDocumentsKeys): st
       return "Immunizations";
     case "covid19Vaccination":
       return "COVID";
+    case "ecaDiploma":
+      return "ECA Diploma";
+    case "eceDiploma":
+      return "ECE Diploma";
+    case "receProof":
+      return "RECE Proof";
     default:
       return key;
   }
@@ -85,7 +94,10 @@ export type DocumentReportDocumentsKeys =
   | "vulnerableSectorCheck"
   | "firstAidCpr"
   | "immunizations"
-  | "covid19Vaccination";
+  | "covid19Vaccination"
+  | "ecaDiploma"
+  | "eceDiploma"
+  | "receProof";
 
 export const DOCUMENT_MATRIX_COLUMNS: {
   key: DocumentReportDocumentsKeys;
@@ -95,4 +107,7 @@ export const DOCUMENT_MATRIX_COLUMNS: {
   { key: "firstAidCpr", label: "First Aid & CPR" },
   { key: "immunizations", label: "Immunizations" },
   { key: "covid19Vaccination", label: "COVID" },
+  { key: "ecaDiploma", label: "ECA Diploma" },
+  { key: "eceDiploma", label: "ECE Diploma" },
+  { key: "receProof", label: "RECE Proof" },
 ];

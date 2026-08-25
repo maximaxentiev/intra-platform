@@ -11,6 +11,8 @@ import {
   formatVscRenewalDueLabel,
   mapDocumentsApiError,
   reviewStatusLabel,
+  STAFF_COMPLIANCE_DOCUMENT_TYPES,
+  QUALIFICATION_STAFF_DOCUMENT_TYPES,
   STAFF_DOCUMENT_TYPES,
   validateCategoryDraft,
   type CarerDocumentCategory,
@@ -30,7 +32,9 @@ export type ShiftEligibilityReason =
   | "missing_required_submission"
   | "pending_review"
   | "issue_flagged"
-  | "expired";
+  | "expired"
+  | "qualification_required"
+  | "rece_required";
 
 export type OpsStaffDocumentsList = CarerDocumentsList & {
   staffId: string;
@@ -48,6 +52,8 @@ export const SHIFT_ELIGIBILITY_REASON_LABELS: Record<ShiftEligibilityReason, str
   pending_review: "Document pending review",
   issue_flagged: "Document issue flagged",
   expired: "Required document expired",
+  qualification_required: "Centre qualification requirement not met",
+  rece_required: "RECE proof required for this centre",
 };
 
 export function staffDocumentListStatusLabel(status: string): string {
@@ -127,6 +133,8 @@ export {
   formatDocumentDate,
   formatVscRenewalDueLabel,
   reviewStatusLabel,
+  STAFF_COMPLIANCE_DOCUMENT_TYPES,
+  QUALIFICATION_STAFF_DOCUMENT_TYPES,
   STAFF_DOCUMENT_TYPES,
   validateCategoryDraft,
   type CarerDocumentCategory,

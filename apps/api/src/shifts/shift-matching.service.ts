@@ -17,6 +17,7 @@ import {
 import {
   buildComplianceInputsForStaff,
   deriveStaffShiftDocumentGate,
+  type StaffDocumentCategoryComplianceInput,
   type StaffShiftDocumentGate,
 } from '../staff-documents/staff-document-compliance.util';
 import type {
@@ -86,6 +87,9 @@ export class ShiftMatchingService {
       hasAvailabilityCoverage: context.availableStaffIds.has(candidate.id),
       sameDayShifts: context.sameDayShifts,
       documentGate: context.documentGates.get(candidate.id) ?? emptyDocumentGate(),
+      qualificationCategoryInputs: context.qualificationInputsByStaff.get(candidate.id) ?? [],
+      centreRequiresQualification: shift.centreRequiresQualification,
+      centreEceQualificationRequirement: shift.centreEceQualificationRequirement,
       shift,
     });
   }
@@ -96,6 +100,8 @@ export class ShiftMatchingService {
         id: shifts.id,
         centreId: shifts.centreId,
         centreCity: centres.city,
+        centreRequiresQualification: centres.requiresQualificationForMatching,
+        centreEceQualificationRequirement: centres.eceQualificationRequirement,
         shiftDate: shifts.shiftDate,
         startTime: shifts.startTime,
         endTime: shifts.endTime,
@@ -148,7 +154,7 @@ export class ShiftMatchingService {
 
     const staffIds = candidates.map((row) => row.id);
 
-    const [banned, top, contacted, availableStaffIds, sameDayShifts, documentGates] =
+    const [banned, top, contacted, availableStaffIds, sameDayShifts, documentCompliance] =
       await Promise.all([
         db
           .select({ staffId: staffCentreBanned.staffId })
@@ -164,7 +170,7 @@ export class ShiftMatchingService {
           .where(eq(shiftContacted.shiftId, shift.id)),
         this.loadStaffIdsWithAvailabilityCoverage(db, shift),
         this.loadSameDayShifts(db, shift),
-        this.loadDocumentGates(db, staffIds),
+        this.loadDocumentCompliance(db, staffIds),
       ]);
 
     return {
@@ -174,7 +180,8 @@ export class ShiftMatchingService {
       contactedStaffIds: new Set(contacted.map((row) => row.staffId)),
       availableStaffIds,
       sameDayShifts,
-      documentGates,
+      documentGates: documentCompliance.gates,
+      qualificationInputsByStaff: documentCompliance.inputsByStaff,
     };
   }
 
@@ -219,12 +226,16 @@ export class ShiftMatchingService {
       }));
   }
 
-  private async loadDocumentGates(
+  private async loadDocumentCompliance(
     db: DbLike,
     staffIds: string[],
-  ): Promise<Map<string, StaffShiftDocumentGate>> {
+  ): Promise<{
+    gates: Map<string, StaffShiftDocumentGate>;
+    inputsByStaff: Map<string, StaffDocumentCategoryComplianceInput[]>;
+  }> {
     const gates = new Map<string, StaffShiftDocumentGate>();
-    if (staffIds.length === 0) return gates;
+    const inputsByStaff = new Map<string, StaffDocumentCategoryComplianceInput[]>();
+    if (staffIds.length === 0) return { gates, inputsByStaff };
 
     const sets = await db
       .select()
@@ -271,10 +282,11 @@ export class ShiftMatchingService {
     for (const staffId of staffIds) {
       const staffSets = setsByStaff.get(staffId) ?? [];
       const inputs = buildComplianceInputsForStaff(staffSets, submissionById, fileCountBySubmission);
+      inputsByStaff.set(staffId, inputs);
       gates.set(staffId, deriveStaffShiftDocumentGate(inputs));
     }
 
-    return gates;
+    return { gates, inputsByStaff };
   }
 }
 
@@ -286,6 +298,7 @@ type EvaluationContext = {
   availableStaffIds: Set<string>;
   sameDayShifts: SameDayStaffShift[];
   documentGates: Map<string, StaffShiftDocumentGate>;
+  qualificationInputsByStaff: Map<string, StaffDocumentCategoryComplianceInput[]>;
 };
 
 function emptyDocumentGate(): StaffShiftDocumentGate {

@@ -179,12 +179,18 @@ export class ReportsExportService {
       'Immunizations Submitted At',
       'COVID Status',
       'COVID Submitted At',
+      'ECA Diploma Status',
+      'ECE Diploma Status',
+      'RECE Proof Status',
     ];
     const body = rows.map((row) => {
       const vsc = row.documents.vulnerableSectorCheck;
       const firstAid = row.documents.firstAidCpr;
       const immunizations = row.documents.immunizations;
       const covid = row.documents.covid19Vaccination;
+      const ecaDiploma = row.documents.ecaDiploma;
+      const eceDiploma = row.documents.eceDiploma;
+      const receProof = row.documents.receProof;
       return [
         csvTextCell(row.staffName),
         csvTextCell(row.role),
@@ -222,6 +228,9 @@ export class ReportsExportService {
         csvTextCell(
           covid.submittedAt ? formatTorontoTimestampForCsv(covid.submittedAt) : '',
         ),
+        csvTextCell(documentStatusCsvLabel(ecaDiploma.status, true)),
+        csvTextCell(documentStatusCsvLabel(eceDiploma.status, true)),
+        csvTextCell(documentStatusCsvLabel(receProof.status, true)),
       ];
     });
     return {

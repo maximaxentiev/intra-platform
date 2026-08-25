@@ -31,6 +31,10 @@ export const staffAccountStatus = pgEnum('staff_account_status', [
   'disabled',
 ]);
 export const centreChannel = pgEnum('centre_channel', ['whatsapp', 'goto', 'email']);
+export const centreEceQualificationRequirement = pgEnum('centre_ece_qualification_requirement', [
+  'ece_or_rece',
+  'rece_required',
+]);
 export const shiftStatus = pgEnum('shift_status', ['pending', 'filled', 'cancelled', 'completed']);
 export const userRole = pgEnum('user_role', ['admin', 'ops']);
 export const applicationRole = pgEnum('application_role', ['eca', 'ece_rece', 'nanny']);
@@ -54,6 +58,9 @@ export const staffDocumentType = pgEnum('staff_document_type', [
   'first_aid_cpr',
   'immunizations',
   'covid19_vaccination',
+  'eca_diploma',
+  'ece_diploma',
+  'rece_proof',
 ]);
 
 export const staffDocumentReviewStatus = pgEnum('staff_document_review_status', [
@@ -93,6 +100,12 @@ export const centres = pgTable('centres', {
   // Labelled "Rules, Policies, and Other Notes" in the UI; included verbatim
   // in shift assignment + reminder emails to staff.
   notes: text('notes').notNull().default(''),
+  requiresQualificationForMatching: boolean('requires_qualification_for_matching')
+    .notNull()
+    .default(false),
+  eceQualificationRequirement: centreEceQualificationRequirement('ece_qualification_requirement')
+    .notNull()
+    .default('ece_or_rece'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

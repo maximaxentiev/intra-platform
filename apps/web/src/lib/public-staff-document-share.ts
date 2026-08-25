@@ -23,7 +23,10 @@ export type PublicStaffDocumentShareDocumentType =
   | "vulnerable_sector_check"
   | "first_aid_cpr"
   | "immunizations"
-  | "covid19_vaccination";
+  | "covid19_vaccination"
+  | "eca_diploma"
+  | "ece_diploma"
+  | "rece_proof";
 
 export type PublicStaffDocumentShareDocument = {
   documentType: PublicStaffDocumentShareDocumentType;

@@ -1,6 +1,12 @@
 import { normalizeShiftRoleNeeded } from './shift-assignment-display.util';
 import type { SameDayStaffShift, ShiftEligibilityResult, ShiftMatchingTarget } from './shift-matching.types';
 import type { StaffShiftDocumentGate } from '../staff-documents/staff-document-compliance.util';
+import type { StaffDocumentCategoryComplianceInput } from '../staff-documents/staff-document-compliance.util';
+import {
+  evaluateCentreQualificationEligibility,
+  type CentreEceQualificationRequirement,
+  type ShiftQualificationEligibilityReason,
+} from './staff-qualification-compliance.util';
 
 export type ShiftEligibilityReason =
   | 'not_available'
@@ -11,6 +17,8 @@ export type ShiftEligibilityReason =
   | 'account_disabled'
   | 'onboarding_incomplete'
   | 'documents_ineligible'
+  | 'qualification_required'
+  | 'rece_required'
   | 'role_mismatch';
 
 export type StaffEligibilityInput = {
@@ -24,8 +32,13 @@ export type StaffEligibilityInput = {
   hasAvailabilityCoverage: boolean;
   sameDayShifts: SameDayStaffShift[];
   documentGate: StaffShiftDocumentGate;
+  qualificationCategoryInputs: StaffDocumentCategoryComplianceInput[];
+  centreRequiresQualification: boolean;
+  centreEceQualificationRequirement: CentreEceQualificationRequirement;
   shift: ShiftMatchingTarget;
 };
+
+export type { ShiftQualificationEligibilityReason };
 
 /** Trim staff role for comparison with shift.roleNeeded. */
 export function normalizeStaffRoleForMatching(role: string | null | undefined): string | null {
@@ -157,6 +170,16 @@ export function evaluateStaffShiftEligibility(input: StaffEligibilityInput): Shi
 
   if (!input.documentGate.eligible) {
     reasons.push('documents_ineligible');
+  }
+
+  const qualificationResult = evaluateCentreQualificationEligibility({
+    staffRole: input.staffRole,
+    centreRequiresQualification: input.centreRequiresQualification,
+    eceQualificationRequirement: input.centreEceQualificationRequirement,
+    categoryInputs: input.qualificationCategoryInputs,
+  });
+  if (!qualificationResult.eligible && qualificationResult.reason) {
+    reasons.push(qualificationResult.reason);
   }
 
   return {

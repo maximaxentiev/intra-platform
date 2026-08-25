@@ -119,5 +119,8 @@ export function buildDocumentStatusMap(
     covid19_vaccination: deriveDocumentReportStatus(
       categories.get('covid19_vaccination')!,
     ),
+    eca_diploma: deriveDocumentReportStatus(categories.get('eca_diploma')!),
+    ece_diploma: deriveDocumentReportStatus(categories.get('ece_diploma')!),
+    rece_proof: deriveDocumentReportStatus(categories.get('rece_proof')!),
   };
 }

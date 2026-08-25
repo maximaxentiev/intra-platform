@@ -68,6 +68,14 @@ export function CentreDetailsCard({
             label: "Secondary channels",
             value: secondaryChannelsLabel(secondaryChannels),
           },
+          {
+            label: "Qualification requirement",
+            value: centre.requiresQualificationForMatching
+              ? centre.eceQualificationRequirement === "rece_required"
+                ? "Enabled — RECE required for ECE staff"
+                : "Enabled — ECE qualification accepted"
+              : "Disabled",
+          },
         ]}
       />
       <div className="mt-4 border-t border-border/70 pt-3.5">

@@ -218,6 +218,21 @@ function SingleStaffDocumentCards({ row }: { row: DocumentComplianceRow }) {
           doc={row.documents.covid19Vaccination}
           optional
         />
+        <DocumentDetailCard
+          title={CARER_DOCUMENT_CATEGORY_META.eca_diploma.title}
+          doc={row.documents.ecaDiploma}
+          optional
+        />
+        <DocumentDetailCard
+          title={CARER_DOCUMENT_CATEGORY_META.ece_diploma.title}
+          doc={row.documents.eceDiploma}
+          optional
+        />
+        <DocumentDetailCard
+          title={CARER_DOCUMENT_CATEGORY_META.rece_proof.title}
+          doc={row.documents.receProof}
+          optional
+        />
       </div>
 
       <div>

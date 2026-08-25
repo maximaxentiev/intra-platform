@@ -34,6 +34,9 @@ const DOCUMENT_TYPE_TO_KEY = {
   first_aid_cpr: 'firstAidCpr',
   immunizations: 'immunizations',
   covid19_vaccination: 'covid19Vaccination',
+  eca_diploma: 'ecaDiploma',
+  ece_diploma: 'eceDiploma',
+  rece_proof: 'receProof',
 } as const satisfies Record<StaffDocumentType, keyof DocumentReportDocuments>;
 
 function documentKeyForType(type: StaffDocumentType): keyof DocumentReportDocuments {
@@ -48,6 +51,9 @@ export function statusRecordFromRow(
     first_aid_cpr: row.documents.firstAidCpr.status,
     immunizations: row.documents.immunizations.status,
     covid19_vaccination: row.documents.covid19Vaccination.status,
+    eca_diploma: row.documents.ecaDiploma.status,
+    ece_diploma: row.documents.eceDiploma.status,
+    rece_proof: row.documents.receProof.status,
   };
 }
 

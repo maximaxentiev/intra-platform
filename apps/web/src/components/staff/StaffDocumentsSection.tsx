@@ -50,7 +50,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  STAFF_DOCUMENT_TYPES,
+  STAFF_COMPLIANCE_DOCUMENT_TYPES,
+  QUALIFICATION_STAFF_DOCUMENT_TYPES,
   buildOpsCategorySaveFormData,
   CARER_DOCUMENT_CATEGORY_META,
   categoryDraftFromCategory,
@@ -459,8 +460,16 @@ export function StaffDocumentsSection({
 
       <StaffDocumentShareControls staffId={staffId} />
 
-      <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        {STAFF_DOCUMENT_TYPES.map((type) => {
+      {[
+        { types: STAFF_COMPLIANCE_DOCUMENT_TYPES },
+        { heading: "Qualifications", types: QUALIFICATION_STAFF_DOCUMENT_TYPES },
+      ].map((section) => (
+        <div key={section.heading ?? "compliance"} className="space-y-2">
+          {section.heading ? (
+            <h3 className="text-sm font-semibold text-foreground">{section.heading}</h3>
+          ) : null}
+          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            {section.types.map((type) => {
           const category = categoriesByType.get(type)!;
           const meta = CARER_DOCUMENT_CATEGORY_META[type];
           const isOpen = openType === type;
@@ -852,7 +861,9 @@ export function StaffDocumentsSection({
             </li>
           );
         })}
-      </ul>
+          </ul>
+        </div>
+      ))}
 
       <AlertDialog open={approveTarget !== null} onOpenChange={(open) => !open && setApproveTarget(null)}>
         <AlertDialogContent>

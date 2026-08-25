@@ -33,11 +33,14 @@ import {
   categoryDraftFromCategory,
   deriveVscRenewalDueDate,
   documentsDraftDirty,
+  emptyCategoryDrafts,
   formatDocumentByteSize,
   formatDocumentDate,
   formatVscRenewalDueLabel,
   mapDocumentsApiError,
-  STAFF_DOCUMENT_TYPES,
+  qualificationTypesForStaffRole,
+  QUALIFICATIONS_SECTION_COPY,
+  STAFF_COMPLIANCE_DOCUMENT_TYPES,
   validateCategoryDraft,
   carerDocumentsApi,
   type CarerDocumentCategory,
@@ -55,12 +58,7 @@ import {
 } from "@/components/documents/DocumentStatusPills";
 
 function emptyDrafts(): Record<StaffDocumentType, CategoryDraft> {
-  return {
-    vulnerable_sector_check: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
-    first_aid_cpr: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
-    immunizations: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
-    covid19_vaccination: { retainFileIds: [], newFiles: [], processedDate: "", expiryDate: "" },
-  };
+  return emptyCategoryDrafts();
 }
 
 function draftsFromDocuments(documents: CarerDocumentsList): Record<StaffDocumentType, CategoryDraft> {
@@ -159,8 +157,8 @@ export function CarerDocumentsForm({
 
   async function saveDirtyCategories(): Promise<boolean> {
     if (!documents) return false;
-    const dirtyTypes = STAFF_DOCUMENT_TYPES.filter((type) =>
-      categoryDraftDirty(drafts[type], savedDrafts[type], type),
+    const dirtyTypes = [...STAFF_COMPLIANCE_DOCUMENT_TYPES, ...qualificationTypesForStaffRole(documents.staffRole)].filter(
+      (type) => categoryDraftDirty(drafts[type], savedDrafts[type], type),
     );
     if (!dirtyTypes.length) return true;
 
@@ -281,6 +279,8 @@ export function CarerDocumentsForm({
     );
   }
 
+  const qualificationTypes = qualificationTypesForStaffRole(documents.staffRole);
+
   return (
     <>
       <form onSubmit={(e) => void handleSave(e)} className="space-y-4 min-w-0 overflow-x-hidden">
@@ -313,7 +313,7 @@ export function CarerDocumentsForm({
 
 
         <div className="space-y-4">
-          {STAFF_DOCUMENT_TYPES.map((type) => {
+          {STAFF_COMPLIANCE_DOCUMENT_TYPES.map((type) => {
             const category = categoriesByType.get(type)!;
             const meta = CARER_DOCUMENT_CATEGORY_META[type];
             const draft = drafts[type];
@@ -341,6 +341,44 @@ export function CarerDocumentsForm({
             );
           })}
         </div>
+
+        {qualificationTypes.length > 0 ? (
+          <div className="space-y-3 border-t border-border/70 pt-4">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Qualifications (Optional)</h2>
+              <p className="text-sm text-muted-foreground">{QUALIFICATIONS_SECTION_COPY}</p>
+            </div>
+            <div className="space-y-4">
+              {qualificationTypes.map((type) => {
+                const category = categoriesByType.get(type)!;
+                const meta = CARER_DOCUMENT_CATEGORY_META[type];
+                const draft = drafts[type];
+                const dirty = categoryDraftDirty(draft, savedDrafts[type], type);
+                return (
+                  <CarerDocumentCategoryCard
+                    key={type}
+                    category={category}
+                    draft={draft}
+                    dirty={dirty}
+                    error={categoryErrors[type]}
+                    meta={meta}
+                    viewingFileId={viewingFileId}
+                    disabled={busy}
+                    fileInputRef={(el) => {
+                      fileInputs.current[type] = el;
+                    }}
+                    onProcessedDateChange={(value) => updateDraft(type, { processedDate: value })}
+                    onExpiryDateChange={(value) => updateDraft(type, { expiryDate: value })}
+                    onFilesSelected={(files) => handleFilesSelected(type, files)}
+                    onRemoveNewFile={(index) => removeNewFile(type, index)}
+                    onRemoveRetainedFile={(fileId) => removeRetainedFile(type, fileId)}
+                    onViewFile={(fileId) => void handleViewFile(type, fileId)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div aria-live="polite" className="space-y-2">
           {formError ? (
@@ -551,6 +589,9 @@ function CarerDocumentCategoryCard({
                 <RequirementPill required={meta.required} />
               </div>
               <p className="text-xs text-muted-foreground">{nextAction}</p>
+              {meta.helperText ? (
+                <p className="text-xs text-muted-foreground">{meta.helperText}</p>
+              ) : null}
             </div>
           </div>
 
