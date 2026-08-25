@@ -13,7 +13,6 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/PageHeader";
-import { StatusBadge } from "@/components/StatusBadge";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
 import {
@@ -128,7 +127,7 @@ function StaffIndex() {
 
       {/* Live filters — results update as you type / select. */}
       <Card className="gap-0 border-border/70 px-3.5 py-3 shadow-xs sm:px-4">
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_10rem_10rem_12rem]">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_10rem_12rem]">
           <div className="space-y-1.5">
             <Label htmlFor="staff-search" className="text-xs font-medium text-muted-foreground">
               Search
@@ -146,22 +145,6 @@ function StaffIndex() {
                 className="h-9 pl-9"
               />
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Employment</Label>
-            <Select
-              value={filters.status}
-              onValueChange={(v) => set("status", v as StaffFilterState["status"])}
-            >
-              <SelectTrigger className="h-9" aria-label="Filter by employment status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Role</Label>
@@ -250,12 +233,6 @@ function StaffIndex() {
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="truncate text-[15px] font-semibold">{displayStaff(s)}</span>
-                            <StatusBadge
-                              status={s.status === "active" ? "active" : "inactive"}
-                              size="xs"
-                            >
-                              {s.status}
-                            </StatusBadge>
                           </div>
                           <div className="text-[13px] text-muted-foreground">
                             {s.role || "No role assigned"}
@@ -296,7 +273,6 @@ function StaffIndex() {
                     <TableHead className={dataTable.headerCell}>Name</TableHead>
                     <TableHead className={dataTable.headerCell}>Role</TableHead>
                     <TableHead className={dataTable.headerCell}>Contact</TableHead>
-                    <TableHead className={dataTable.headerCell}>Employment</TableHead>
                     <TableHead className={dataTable.headerCell}>Portal</TableHead>
                     <TableHead className={dataTable.headerCell}>Documents</TableHead>
                     <TableHead className={dataTable.headerCell}>
@@ -305,9 +281,9 @@ function StaffIndex() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && <DataTableLoadingRows rows={6} columns={7} />}
+                  {isLoading && <DataTableLoadingRows rows={6} columns={6} />}
                   {!isLoading && filtered.length === 0 && (
-                    <DataTableEmptyRow columns={7}>{emptyState}</DataTableEmptyRow>
+                    <DataTableEmptyRow columns={6}>{emptyState}</DataTableEmptyRow>
                   )}
                   {!isLoading &&
                     filtered.map((s) => {
@@ -344,14 +320,6 @@ function StaffIndex() {
                             ) : (
                               <span className={dataTable.cellMuted}>—</span>
                             )}
-                          </TableCell>
-                          <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
-                            <StatusBadge
-                              status={s.status === "active" ? "active" : "inactive"}
-                              size="xs"
-                            >
-                              {s.status}
-                            </StatusBadge>
                           </TableCell>
                           <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
                             <PortalStatusBadge status={portal} size="xs" />

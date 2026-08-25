@@ -58,7 +58,6 @@ function approved(documentType: StaffDocumentCategoryComplianceInput['documentTy
 function eligibleBase(overrides: Partial<Parameters<typeof evaluateStaffShiftEligibility>[0]> = {}) {
   return evaluateStaffShiftEligibility({
     staffId: 'staff-1',
-    staffStatus: 'active',
     staffRole: 'ECA',
     account: { status: 'incomplete', onboardingCompletedAt: new Date('2026-01-01') },
     isCentreBanned: false,
@@ -206,9 +205,9 @@ describe('evaluateStaffShiftEligibility — buffer', () => {
 });
 
 describe('evaluateStaffShiftEligibility — account', () => {
-  it('requires active staff with onboarded portal account', () => {
+  it('requires an onboarded portal account and never uses inactive_staff', () => {
     expect(eligibleBase().eligible).toBe(true);
-    expect(eligibleBase({ staffStatus: 'inactive' }).reasons).toContain('inactive_staff');
+    expect(eligibleBase().reasons).not.toContain('inactive_staff');
     expect(eligibleBase({ account: null }).reasons).toContain('no_portal_account');
     expect(
       eligibleBase({ account: { status: 'disabled', onboardingCompletedAt: new Date() } }).reasons,

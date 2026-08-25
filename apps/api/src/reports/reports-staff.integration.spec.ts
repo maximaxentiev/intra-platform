@@ -364,7 +364,7 @@ describe.skipIf(!POSTGRES_READY)('Reports staff PostgreSQL integration', () => {
       expect(csv.rowCount).toBe(json.totalCount);
       expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
       expect(csv.filename).toBe('staff-usage-2026-08-01-to-2026-08-31.csv');
-      expect(csv.content).toContain('Staff,Role,Status');
+      expect(csv.content).toContain('Staff,Role,Completed Shifts');
       expect(csv.content).toContain('Alice Active');
       expect(csv.content).not.toMatch(/Actual Hours|Payroll Hours|Verified Hours/i);
     });

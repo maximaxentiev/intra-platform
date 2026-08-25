@@ -54,7 +54,6 @@ type StaffRosterRow = {
   displayName: string;
   useDisplayName: boolean;
   role: string | null;
-  status: string;
 };
 
 function emptyReminderSummary(): DocumentReminderSummary {
@@ -155,7 +154,7 @@ export class ReportsDocumentsService {
     return { rows: filteredRows };
   }
 
-  /** Active-staff document compliance summary — same semantics as the Document Compliance report default. */
+  /** Staff document compliance summary — same semantics as the Document Compliance report default. */
   async getActiveStaffComplianceSummary(): Promise<DocumentComplianceSummary> {
     const { filteredRows } = await this.resolveDocumentComplianceFilteredRows({});
     return buildSummary(filteredRows);
@@ -168,7 +167,7 @@ export class ReportsDocumentsService {
       await this.reports.assertStaffMembersExist(staffIds);
     }
 
-    const staffConditions = this.buildStaffConditions(staffIds, query.roles, query.staffStatuses);
+    const staffConditions = this.buildStaffConditions(staffIds, query.roles);
 
     const rosterRows = await this.db
       .select({
@@ -177,7 +176,6 @@ export class ReportsDocumentsService {
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         role: staff.role,
-        status: staff.status,
       })
       .from(staff)
       .where(staffConditions)
@@ -188,7 +186,7 @@ export class ReportsDocumentsService {
     const reminderBySubmission = await this.loadReminderSummaries(complianceByStaff);
 
     const allRows = rosterRows.map((row) =>
-      this.buildRow(row, complianceByStaff.get(row.staffId)!, reminderBySubmission, row.status),
+      this.buildRow(row, complianceByStaff.get(row.staffId)!, reminderBySubmission),
     );
 
     const perDocumentStatuses = buildDocumentPerTypeStatusFilters({
@@ -217,33 +215,24 @@ export class ReportsDocumentsService {
     return { staffIds, filteredRows };
   }
 
-  private buildStaffConditions(
-    staffIds: string[] | null,
-    roles?: string[],
-    staffStatuses?: string[],
-  ) {
+  private buildStaffConditions(staffIds: string[] | null, roles?: string[]) {
     const conditions = [];
 
     if (staffIds?.length) {
       conditions.push(inArray(staff.id, staffIds));
-    } else if (staffStatuses?.length) {
-      conditions.push(inArray(staff.status, staffStatuses as ('active' | 'inactive')[]));
-    } else {
-      conditions.push(eq(staff.status, 'active'));
     }
 
     if (roles?.length) {
       conditions.push(inArray(staff.role, roles));
     }
 
-    return conditions.length === 1 ? conditions[0] : and(...conditions);
+    return conditions.length ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined;
   }
 
   private buildRow(
     row: StaffRosterRow,
     categories: Map<StaffDocumentType, StaffDocumentCategoryCompliance>,
     reminderBySubmission: Map<string, DocumentReminderSummary>,
-    staffStatus: string,
   ): DocumentComplianceRow {
     const vsc = categories.get('vulnerable_sector_check')!;
     const firstAid = categories.get('first_aid_cpr')!;
@@ -261,7 +250,6 @@ export class ReportsDocumentsService {
       staffId: row.staffId,
       staffName: formatStaffReportName(row),
       role: formatStaffReportRole(row.role),
-      staffStatus,
       overallComplianceStatus: deriveOverallComplianceStatus(categories),
       documents: {
         vulnerableSectorCheck: buildDocumentCategoryFields(vsc, vscReminder),

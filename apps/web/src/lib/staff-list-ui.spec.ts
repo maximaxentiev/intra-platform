@@ -22,7 +22,6 @@ const sample: Staff = {
   address: "1 Main St",
   city: "Toronto",
   role: "ECE",
-  status: "active",
   notes: "",
   documentsUrl: "",
   createdAt: "",
@@ -47,13 +46,12 @@ describe("staff list filters", () => {
     const state = {
       ...EMPTY_STAFF_FILTERS,
       q: "Alex",
-      status: "active" as const,
       role: "ECE",
       portal: "invited" as const,
     };
     expect(hasActiveStaffFilters(state)).toBe(true);
     const chips = buildStaffFilterChips(state);
-    expect(chips.map((c) => c.id)).toEqual(["search", "status", "role", "portal"]);
+    expect(chips.map((c) => c.id)).toEqual(["search", "role", "portal"]);
     expect(clearStaffFilterChip(state, "role")).toMatchObject({ role: "all", q: "Alex" });
     expect(buildStaffFilterChips(EMPTY_STAFF_FILTERS)).toEqual([]);
   });

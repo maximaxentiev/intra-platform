@@ -15,7 +15,6 @@ const base = {
   phone: '555',
   email: 'alex@example.test',
   role: 'ECA',
-  status: 'active',
   notes: '',
   documentsUrl: '',
   address: '1 Main St',
@@ -25,6 +24,11 @@ const base = {
 describe('UpsertStaffDto', () => {
   it('accepts editable staff fields', () => {
     expect(validate(base)).toHaveLength(0);
+  });
+
+  it('rejects legacy employment status field', () => {
+    const errors = validate({ ...base, status: 'inactive' });
+    expect(errors.some((e) => e.property === 'status')).toBe(true);
   });
 
   it('rejects read-only response fields', () => {

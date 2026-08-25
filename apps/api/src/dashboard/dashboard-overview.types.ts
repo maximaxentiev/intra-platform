@@ -116,7 +116,7 @@ export interface DashboardNext7DaysSection {
 }
 
 export interface DashboardStaffReadiness {
-  activeStaff: number;
+  staffCount: number;
   portalActive: number;
   noAccount: number;
   invited: number;

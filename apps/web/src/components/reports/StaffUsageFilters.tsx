@@ -34,7 +34,6 @@ export function ReportStaffMultiSelect({
         .map((member) => ({
           id: member.id,
           name: displayStaff(member),
-          status: member.status,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [staffMembers],
@@ -150,12 +149,7 @@ export function ReportStaffMultiSelect({
                         checked={checked}
                         onCheckedChange={(value) => toggleStaff(option.id, value === true)}
                       />
-                      <span className="leading-snug">
-                        {option.name}
-                        {option.status === "inactive" ? (
-                          <span className="ml-2 text-xs text-muted-foreground">Inactive</span>
-                        ) : null}
-                      </span>
+                      <span className="leading-snug">{option.name}</span>
                     </label>
                   </li>
                 );

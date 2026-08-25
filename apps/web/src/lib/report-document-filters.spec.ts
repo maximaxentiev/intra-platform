@@ -65,7 +65,6 @@ describe("report-document-filters", () => {
       overallCompliance: ["compliant", "expiring_soon"],
       documentType: "first_aid_cpr",
       roles: ["ECA", "Nanny"],
-      staffStatuses: ["active"],
       vscStatuses: ["expired", "expiring_soon"],
       firstAidStatuses: ["approved"],
       immunizationsStatuses: ["issue_flagged"],
@@ -81,7 +80,6 @@ describe("report-document-filters", () => {
     expect(api.overallCompliance).toEqual(["compliant", "expiring_soon"]);
     expect(api.documentType).toBe("first_aid_cpr");
     expect(api.roles).toEqual(["ECA", "Nanny"]);
-    expect(api.staffStatuses).toEqual(["active"]);
     expect(api.vscStatuses).toEqual(["expired", "expiring_soon"]);
     expect(api.firstAidStatuses).toEqual(["approved"]);
     expect(api.immunizationsStatuses).toEqual(["issue_flagged"]);
@@ -183,7 +181,6 @@ describe("report-document-filters", () => {
       overallCompliance: "needs_attention,expiring_soon",
       vscStatuses: "expired,expiring_soon",
       roles: "ECE,Nanny",
-      staffStatuses: "active",
       immunizationsStatuses: "approved,issue_flagged",
       covidStatuses: "not_submitted",
       vscRenewalDueFrom: "2026-08-01",
@@ -195,7 +192,6 @@ describe("report-document-filters", () => {
     expect(encoded.overallCompliance).toBe("needs_attention,expiring_soon");
     expect(encoded.vscStatuses).toBe("expired,expiring_soon");
     expect(encoded.roles).toBe("ECE,Nanny");
-    expect(encoded.staffStatuses).toBe("active");
     expect(encoded.immunizationsStatuses).toBe("approved,issue_flagged");
     expect(encoded.covidStatuses).toBe("not_submitted");
     expect(encoded.vscRenewalDueFrom).toBe("2026-08-01");

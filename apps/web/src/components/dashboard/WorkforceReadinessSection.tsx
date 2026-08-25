@@ -108,7 +108,7 @@ export function WorkforceReadinessSection({
             Staff readiness
           </h3>
           <p className="mt-1.5 text-xl font-semibold tracking-tight tabular-nums text-foreground">
-            {staffReadinessHeadline(staffReadiness.activeStaff)}
+            {staffReadinessHeadline(staffReadiness.staffCount)}
           </p>
           <p className="text-sm text-muted-foreground">
             Availability and documents still determine who can be assigned.

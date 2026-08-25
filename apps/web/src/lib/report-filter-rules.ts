@@ -88,11 +88,6 @@ const STAFF_ROLE_OPTIONS = [
   { value: "Nanny", label: "Nanny" },
 ] as const;
 
-const STAFF_STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-] as const;
-
 export const STAFF_USAGE_METRICS: MetricFieldDef[] = [
   {
     field: "role",
@@ -101,14 +96,6 @@ export const STAFF_USAGE_METRICS: MetricFieldDef[] = [
     kind: "enum",
     enumKey: "roles",
     enumOptions: STAFF_ROLE_OPTIONS,
-  },
-  {
-    field: "staffStatus",
-    label: "Staff Status",
-    group: "Staff",
-    kind: "enum",
-    enumKey: "staffStatuses",
-    enumOptions: STAFF_STATUS_OPTIONS,
   },
   {
     field: "completedShifts",
@@ -239,7 +226,6 @@ export function rulesFromCentreMetricSearch(
 
 export type StaffUsageMetricSearch = {
   roles: string[];
-  staffStatuses: string[];
   completedShiftsMin: string;
   completedShiftsMax: string;
   completedScheduledHoursMin: string;
@@ -257,22 +243,6 @@ export function rulesFromStaffUsageSearch(search: StaffUsageMetricSearch): Repor
     rules.push({ kind: "enum", field: "role", operator: "is", values: [search.roles[0]] });
   } else if (search.roles.length > 1) {
     rules.push({ kind: "enum", field: "role", operator: "in", values: [...search.roles] });
-  }
-
-  if (search.staffStatuses.length === 1) {
-    rules.push({
-      kind: "enum",
-      field: "staffStatus",
-      operator: "is",
-      values: [search.staffStatuses[0]],
-    });
-  } else if (search.staffStatuses.length > 1) {
-    rules.push({
-      kind: "enum",
-      field: "staffStatus",
-      operator: "in",
-      values: [...search.staffStatuses],
-    });
   }
 
   for (const metric of STAFF_USAGE_METRICS) {
@@ -359,7 +329,6 @@ export function centreMetricSearchFromRules(
 export function staffUsageSearchFromRules(rules: ReportFilterRule[]): StaffUsageMetricSearch {
   const next: StaffUsageMetricSearch = {
     roles: [],
-    staffStatuses: [],
     completedShiftsMin: "",
     completedShiftsMax: "",
     completedScheduledHoursMin: "",
@@ -374,9 +343,6 @@ export function staffUsageSearchFromRules(rules: ReportFilterRule[]): StaffUsage
     if (rule.kind === "enum") {
       if (rule.field === "role" && rule.values.length) {
         next.roles = [...rule.values];
-      }
-      if (rule.field === "staffStatus" && rule.values.length) {
-        next.staffStatuses = [...rule.values];
       }
       continue;
     }
@@ -494,7 +460,6 @@ export function staffUsageSearchToSearchParams(
 ): Record<string, string | undefined> {
   return {
     roles: search.roles.length ? search.roles.join(",") : undefined,
-    staffStatuses: search.staffStatuses.length ? search.staffStatuses.join(",") : undefined,
     completedShiftsMin: search.completedShiftsMin.trim() || undefined,
     completedShiftsMax: search.completedShiftsMax.trim() || undefined,
     completedScheduledHoursMin: search.completedScheduledHoursMin.trim() || undefined,
@@ -508,7 +473,6 @@ export function staffUsageSearchToSearchParams(
 
 export const EMPTY_STAFF_USAGE_METRIC_SEARCH: StaffUsageMetricSearch = {
   roles: [],
-  staffStatuses: [],
   completedShiftsMin: "",
   completedShiftsMax: "",
   completedScheduledHoursMin: "",
@@ -521,7 +485,6 @@ export const EMPTY_STAFF_USAGE_METRIC_SEARCH: StaffUsageMetricSearch = {
 
 export function staffUsageMetricSearchFromApplied(search: {
   roles?: string;
-  staffStatuses?: string;
   completedShiftsMin?: string;
   completedShiftsMax?: string;
   completedScheduledHoursMin?: string;
@@ -533,7 +496,6 @@ export function staffUsageMetricSearchFromApplied(search: {
 }): StaffUsageMetricSearch {
   return {
     roles: search.roles ? search.roles.split(",").filter(Boolean) : [],
-    staffStatuses: search.staffStatuses ? search.staffStatuses.split(",").filter(Boolean) : [],
     completedShiftsMin: search.completedShiftsMin ?? "",
     completedShiftsMax: search.completedShiftsMax ?? "",
     completedScheduledHoursMin: search.completedScheduledHoursMin ?? "",

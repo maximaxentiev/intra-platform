@@ -58,10 +58,6 @@ export class UpsertStaffDto {
   role?: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: 'active' | 'inactive';
-
-  @IsOptional()
   @IsString()
   @MaxLength(5000)
   notes?: string;

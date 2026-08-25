@@ -18,7 +18,7 @@ export function parseReportStaffIds(value: unknown): string[] | undefined {
   return normalized;
 }
 
-/** Resolve Staff Usage staff filter: null = all active staff. */
+/** Resolve Staff Usage staff filter: null = all staff. */
 export function resolveStaffUsageStaffIds(input: {
   staffIds?: string[];
   staffId?: string;

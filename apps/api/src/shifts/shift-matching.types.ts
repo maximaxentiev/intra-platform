@@ -27,7 +27,6 @@ export type StaffMatchingCandidate = {
   useDisplayName: boolean;
   role: string;
   city: string | null;
-  status: 'active' | 'inactive';
   account: {
     status: 'invited' | 'incomplete' | 'active' | 'disabled';
     onboardingCompletedAt: Date | null;

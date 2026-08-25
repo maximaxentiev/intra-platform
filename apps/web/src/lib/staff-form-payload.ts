@@ -1,5 +1,4 @@
 import { cityValueForSubmit } from "@/components/CityCombobox";
-import type { StaffStatus } from "@/lib/db";
 
 /** Staff GET response fields passed into the edit form (includes read-only props). */
 export type StaffFormInitialSource = Partial<StaffFormEditableValues> & {
@@ -20,7 +19,6 @@ export const STAFF_UPDATE_FIELD_KEYS = [
   "phone",
   "email",
   "role",
-  "status",
   "notes",
   "address",
   "city",
@@ -33,7 +31,6 @@ export type StaffUpdatePayload = {
   phone: string;
   email: string;
   role: string;
-  status: StaffStatus;
   notes: string;
   address: string;
   city: string;
@@ -60,7 +57,6 @@ export function pickStaffFormEditableInitial(source: StaffFormInitialSource): St
     phone: String(source.phone ?? ""),
     email: String(source.email ?? ""),
     role: String(source.role ?? ""),
-    status: (source.status as StaffStatus) ?? "active",
     notes: String(source.notes ?? ""),
     address: String(source.address ?? ""),
     city: String(source.city ?? ""),
@@ -82,7 +78,6 @@ export function buildStaffUpdatePayload(
     phone: values.phone.trim(),
     email: values.email.trim(),
     role: values.role.trim(),
-    status: values.status,
     notes: values.notes.trim(),
     address: values.address.trim(),
     city,

@@ -191,7 +191,7 @@ describe("workforce readiness", () => {
   it("builds the compliance headline", () => {
     expect(complianceHeadline({ compliant: 247, staffShown: 263 })).toEqual({
       value: "247 compliant",
-      context: "of 263 active staff",
+      context: "of 263 staff members",
     });
   });
 });
@@ -235,8 +235,8 @@ describe("next 7 days coverage semantics", () => {
 
 describe("workforce readiness copy", () => {
   it("renders an unambiguous staff readiness headline", () => {
-    expect(staffReadinessHeadline(1)).toBe("1 active staff member");
-    expect(staffReadinessHeadline(12)).toBe("12 active staff members");
+    expect(staffReadinessHeadline(1)).toBe("1 staff member");
+    expect(staffReadinessHeadline(12)).toBe("12 staff members");
   });
 
   it("explains an unexplained compliance gap", () => {

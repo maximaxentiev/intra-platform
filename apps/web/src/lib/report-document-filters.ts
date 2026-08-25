@@ -10,11 +10,6 @@ import {
 
 export const STAFF_ROLE_FILTER_OPTIONS = ["ECA", "ECE", "Nanny"] as const;
 
-export const STAFF_STATUS_FILTER_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-] as const;
-
 export const OVERALL_COMPLIANCE_FILTER_OPTIONS = [
   { value: "compliant", label: DOCUMENT_OVERALL_STATUS_LABELS.compliant },
   { value: "expiring_soon", label: DOCUMENT_OVERALL_STATUS_LABELS.expiring_soon },
@@ -65,7 +60,6 @@ export type DocumentComplianceFilterState = {
   overallCompliance: DocumentOverallComplianceStatus[];
   documentType: string;
   roles: string[];
-  staffStatuses: string[];
   vscStatuses: DocumentReportStatus[];
   firstAidStatuses: DocumentReportStatus[];
   immunizationsStatuses: DocumentReportStatus[];
@@ -85,7 +79,6 @@ export const EMPTY_DOCUMENT_COMPLIANCE_FILTERS: DocumentComplianceFilterState = 
   overallCompliance: [],
   documentType: "",
   roles: [],
-  staffStatuses: [],
   vscStatuses: [],
   firstAidStatuses: [],
   immunizationsStatuses: [],
@@ -149,7 +142,6 @@ export function parseDocumentComplianceFiltersFromSearch(
     overallCompliance: parseCommaList(search.overallCompliance) as DocumentOverallComplianceStatus[],
     documentType: search.documentType?.trim() || "",
     roles: parseCommaList(search.roles),
-    staffStatuses: parseCommaList(search.staffStatuses),
     vscStatuses: parseCommaList(search.vscStatuses) as DocumentReportStatus[],
     firstAidStatuses: parseCommaList(search.firstAidStatuses) as DocumentReportStatus[],
     immunizationsStatuses: parseCommaList(search.immunizationsStatuses) as DocumentReportStatus[],
@@ -182,7 +174,6 @@ export function documentComplianceFiltersToSearchParams(
   }
   if (filters.documentType) params.documentType = filters.documentType;
   if (filters.roles.length) params.roles = filters.roles.join(",");
-  if (filters.staffStatuses.length) params.staffStatuses = filters.staffStatuses.join(",");
   if (filters.vscStatuses.length) params.vscStatuses = filters.vscStatuses.join(",");
   if (filters.firstAidStatuses.length) params.firstAidStatuses = filters.firstAidStatuses.join(",");
   if (filters.immunizationsStatuses.length) {
@@ -213,7 +204,6 @@ export function documentComplianceFiltersToApiQuery(filters: DocumentComplianceF
     overallCompliance: filters.overallCompliance.length ? filters.overallCompliance : undefined,
     documentType: filters.documentType || undefined,
     roles: filters.roles.length ? filters.roles : undefined,
-    staffStatuses: filters.staffStatuses.length ? filters.staffStatuses : undefined,
     vscStatuses: filters.vscStatuses.length ? filters.vscStatuses : undefined,
     firstAidStatuses: filters.firstAidStatuses.length ? filters.firstAidStatuses : undefined,
     immunizationsStatuses: filters.immunizationsStatuses.length
@@ -261,7 +251,6 @@ export function isAdvancedDocumentComplianceFilterActive(
 ): boolean {
   return (
     filters.roles.length > 0 ||
-    filters.staffStatuses.length > 0 ||
     filters.vscStatuses.length > 0 ||
     filters.firstAidStatuses.length > 0 ||
     filters.immunizationsStatuses.length > 0 ||
@@ -327,19 +316,6 @@ export function buildDocumentComplianceFilterChips(
       id: `role-${role}`,
       label: `Role: ${role}`,
       clear: (current) => ({ ...current, roles: current.roles.filter((item) => item !== role) }),
-    });
-  }
-
-  for (const status of filters.staffStatuses) {
-    const label =
-      STAFF_STATUS_FILTER_OPTIONS.find((option) => option.value === status)?.label ?? status;
-    chips.push({
-      id: `staff-status-${status}`,
-      label: `Staff Status: ${label}`,
-      clear: (current) => ({
-        ...current,
-        staffStatuses: current.staffStatuses.filter((item) => item !== status),
-      }),
     });
   }
 
@@ -457,7 +433,6 @@ export function clearAdvancedDocumentComplianceFilters(
   return {
     ...filters,
     roles: [],
-    staffStatuses: [],
     vscStatuses: [],
     firstAidStatuses: [],
     immunizationsStatuses: [],

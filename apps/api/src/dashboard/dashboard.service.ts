@@ -8,7 +8,7 @@ export class DashboardService {
   constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
   async summary(weekStart: string, weekEnd: string, dayOfWeek: number) {
-    const [weekShifts, pending, filled, availToday, activeStaff] = await Promise.all([
+    const [weekShifts, pending, filled, availToday, rosterStaff] = await Promise.all([
       this.db
         .select({ id: shifts.id })
         .from(shifts)
@@ -26,12 +26,11 @@ export class DashboardService {
           displayName: staff.displayName,
           useDisplayName: staff.useDisplayName,
         })
-        .from(staff)
-        .where(eq(staff.status, 'active')),
+        .from(staff),
     ]);
 
     const availIds = new Set(availToday.map((a) => a.staffId));
-    const availableToday = activeStaff.filter((s) => availIds.has(s.id));
+    const availableToday = rosterStaff.filter((s) => availIds.has(s.id));
 
     return {
       week: weekShifts.length,

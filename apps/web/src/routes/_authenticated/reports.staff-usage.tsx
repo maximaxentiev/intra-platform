@@ -67,7 +67,6 @@ const searchSchema = z.object({
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
   roles: z.string().optional(),
-  staffStatuses: z.string().optional(),
   completedShiftsMin: z.string().optional(),
   completedShiftsMax: z.string().optional(),
   completedScheduledHoursMin: z.string().optional(),
@@ -142,9 +141,6 @@ function StaffUsageReport() {
         dateTo: applied.dateTo,
         ...staffSelectionToApiQuery(applied.selection),
         roles: applied.metricSearch.roles.length ? applied.metricSearch.roles : undefined,
-        staffStatuses: applied.metricSearch.staffStatuses.length
-          ? applied.metricSearch.staffStatuses
-          : undefined,
         completedShiftsMin: parseOptionalCountInput(applied.metricSearch.completedShiftsMin),
         completedShiftsMax: parseOptionalCountInput(applied.metricSearch.completedShiftsMax),
         completedScheduledHoursMin: applied.metricSearch.completedScheduledHoursMin

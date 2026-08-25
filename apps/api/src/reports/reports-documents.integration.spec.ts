@@ -440,11 +440,11 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
     await pool.end();
   });
 
-  it('defaults to all active staff when staffIds omitted', async () => {
+  it('defaults to all staff when staffIds omitted', async () => {
     const result = await service.getDocumentCompliance({ pageSize: 100 });
     expect(result.staffIds).toBeNull();
     expect(result.totalCount).toBeGreaterThanOrEqual(FIXTURE_ACTIVE_STAFF_IDS.length);
-    expect(result.items.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(false);
+    expect(result.items.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(true);
 
     const fixtureSlice = await service.getDocumentCompliance({
       staffIds: [FIXTURE.staffF],
@@ -578,7 +578,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
       expect(csv.rowCount).toBe(json.totalCount);
       expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
       expect(csv.filename).toMatch(/^document-compliance-\d{4}-\d{2}-\d{2}\.csv$/);
-      expect(csv.content).toContain('Staff Name,Role,Staff Status,Overall Compliance');
+      expect(csv.content).toContain('Staff Name,Role,Overall Compliance');
       expect(csv.content).toContain('VSC Status');
       expect(csv.content).not.toMatch(/storage_key|share_url|token|s3/i);
     });

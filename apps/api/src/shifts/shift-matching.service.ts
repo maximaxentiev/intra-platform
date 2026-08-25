@@ -68,7 +68,7 @@ export class ShiftMatchingService {
     const context = await this.loadEvaluationContext(shift, tx, staffId);
     const candidate = context.candidates.find((row) => row.id === staffId);
     if (!candidate) {
-      return { eligible: false, reasons: ['inactive_staff'] };
+      return { eligible: false, reasons: [] };
     }
     return this.evaluateCandidate(candidate, shift, context);
   }
@@ -80,7 +80,6 @@ export class ShiftMatchingService {
   ): ShiftEligibilityResult {
     return evaluateStaffShiftEligibility({
       staffId: candidate.id,
-      staffStatus: candidate.status,
       staffRole: candidate.role,
       account: candidate.account,
       isCentreBanned: context.bannedStaffIds.has(candidate.id),
@@ -122,7 +121,6 @@ export class ShiftMatchingService {
         useDisplayName: staff.useDisplayName,
         role: staff.role,
         city: staff.city,
-        status: staff.status,
         accountStatus: staffAccounts.status,
         onboardingCompletedAt: staffAccounts.onboardingCompletedAt,
       })
@@ -140,7 +138,6 @@ export class ShiftMatchingService {
       useDisplayName: row.useDisplayName,
       role: row.role,
       city: row.city,
-      status: row.status,
       account: row.accountStatus
         ? {
             status: row.accountStatus,

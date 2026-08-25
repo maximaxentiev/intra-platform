@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { Staff, StaffDetail } from "@/lib/db";
+import type { StaffDetail } from "@/lib/db";
 import { CityCombobox, validateCityField } from "@/components/CityCombobox";
 import {
   buildStaffUpdatePayload,
@@ -110,21 +110,6 @@ export function StaffForm({
               <SelectItem value="ECA">ECA</SelectItem>
               <SelectItem value="ECE">ECE</SelectItem>
               <SelectItem value="Nanny">Nanny</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select
-            value={values.status}
-            onValueChange={(v) => set("status", v as Staff["status"])}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
         </div>

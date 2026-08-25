@@ -74,7 +74,6 @@ const filterSearchFields = {
   documentType: z.string().optional(),
   overallCompliance: z.string().optional(),
   roles: z.string().optional(),
-  staffStatuses: z.string().optional(),
   vscStatuses: z.string().optional(),
   firstAidStatuses: z.string().optional(),
   immunizationsStatuses: z.string().optional(),

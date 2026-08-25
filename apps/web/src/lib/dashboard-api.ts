@@ -106,7 +106,7 @@ export interface DashboardOverviewResponse {
   };
   documents: DocumentComplianceSummary;
   staffReadiness: {
-    activeStaff: number;
+    staffCount: number;
     portalActive: number;
     noAccount: number;
     invited: number;

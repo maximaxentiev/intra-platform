@@ -138,7 +138,6 @@ export class ReportsExportService {
     const headers = [
       'Staff',
       'Role',
-      'Status',
       'Completed Shifts',
       'Scheduled Hours on Completed Shifts',
       'Filled Shifts',
@@ -147,7 +146,6 @@ export class ReportsExportService {
     const body = rows.map((row) => [
       csvTextCell(row.staffName),
       csvTextCell(row.role),
-      csvTextCell(row.status === 'active' ? 'Active' : 'Inactive'),
       csvNumberCell(row.completedShifts),
       csvNumberCell(minutesToCsvHours(row.completedScheduledMinutes)),
       csvNumberCell(row.filledShifts),
@@ -165,7 +163,6 @@ export class ReportsExportService {
     const headers = [
       'Staff Name',
       'Role',
-      'Staff Status',
       'Overall Compliance',
       'VSC Status',
       'VSC Processed Date',
@@ -191,7 +188,6 @@ export class ReportsExportService {
       return [
         csvTextCell(row.staffName),
         csvTextCell(row.role),
-        csvTextCell(row.staffStatus === 'active' ? 'Active' : 'Inactive'),
         csvTextCell(DOCUMENT_OVERALL_CSV_LABELS[row.overallComplianceStatus]),
         csvTextCell(documentStatusCsvLabel(vsc.status)),
         csvTextCell(formatCsvDateOnly(vsc.processedDate)),

@@ -23,7 +23,6 @@ import { MAX_REPORT_STAFF_IDS, parseReportStaffIds } from './report-staff-ids.ut
 import type { DocumentReminderFilterStatus } from '../report-document-filter.util';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const STAFF_STATUS_VALUES = ['active', 'inactive'] as const;
 const REMINDER_FILTER_VALUES = ['sent', 'failed', 'scheduled', 'none'] as const;
 const UPCOMING_REMINDER_VALUES = ['has', 'none'] as const;
 
@@ -62,11 +61,6 @@ export class DocumentComplianceQueryDto extends ReportStaffFilterQueryDto {
   @Transform(({ value }) => parseCommaSeparatedEnum<string>(value))
   @IsIn([...STAFF_CANONICAL_ROLES], { each: true })
   roles?: string[];
-
-  @IsOptional()
-  @Transform(({ value }) => parseCommaSeparatedEnum<string>(value))
-  @IsIn([...STAFF_STATUS_VALUES], { each: true })
-  staffStatuses?: string[];
 
   @IsOptional()
   @Transform(({ value }) => parseCommaSeparatedEnum<DocumentReportStatus>(value))

@@ -144,7 +144,6 @@ export class StaffService {
       address: row.address,
       city: row.city,
       role: row.role,
-      status: row.status,
       notes: row.notes,
       documentsUrl: row.documentsUrl,
       createdAt: row.createdAt.toISOString(),
@@ -192,7 +191,6 @@ export class StaffService {
       phone: dto.phone?.trim() ?? '',
       email: dto.email ? normalizeStaffEmail(dto.email) : '',
       role: dto.role ?? '',
-      status: dto.status ?? 'active',
       notes: dto.notes ?? '',
       documentsUrl: sanitizeOptionalHttpUrl(dto.documentsUrl),
     };
@@ -229,16 +227,14 @@ export class StaffService {
         {
           legalName: existing.legalName,
           role: existing.role,
-          status: existing.status,
           email: existing.email,
         },
         {
           legalName: rows[0].legalName,
           role: rows[0].role,
-          status: rows[0].status,
           email: rows[0].email,
         },
-        ['legalName', 'role', 'status', 'email'],
+        ['legalName', 'role', 'email'],
       );
       if (changes) {
         await this.platformAudit.record(
@@ -264,7 +260,7 @@ export class StaffService {
     )[0];
     if (account) {
       throw new ConflictException(
-        'This staff member has a carer portal account. Set employment to inactive and disable portal access instead of deleting.',
+        'This staff member has a carer portal account. Disable portal access instead of deleting.',
       );
     }
 
@@ -277,7 +273,7 @@ export class StaffService {
     );
     if (hasPortalLifecycleAudit) {
       throw new ConflictException(
-        'This staff member has portal invitation or access history. Deactivate them instead of deleting.',
+        'This staff member has portal invitation or access history. Disable portal access instead of deleting.',
       );
     }
 

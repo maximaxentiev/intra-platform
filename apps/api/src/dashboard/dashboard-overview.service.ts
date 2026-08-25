@@ -311,11 +311,10 @@ export class DashboardOverviewService {
         account: staffAccounts,
       })
       .from(staff)
-      .leftJoin(staffAccounts, eq(staffAccounts.staffId, staff.id))
-      .where(eq(staff.status, 'active'));
+      .leftJoin(staffAccounts, eq(staffAccounts.staffId, staff.id));
 
     const readiness: DashboardStaffReadiness = {
-      activeStaff: rows.length,
+      staffCount: rows.length,
       portalActive: 0,
       noAccount: 0,
       invited: 0,

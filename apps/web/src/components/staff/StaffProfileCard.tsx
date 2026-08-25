@@ -68,7 +68,6 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
                 : []),
               { label: "Legal name", value: staff.legalName },
               { label: "Role", value: staff.role },
-              { label: "Employment", value: staff.status === "active" ? "Active" : "Inactive" },
             ]}
           />
         </ProfileGroup>

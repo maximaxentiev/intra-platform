@@ -73,7 +73,7 @@ export class ReportsStaffService {
       lte(shifts.shiftDate, dateTo),
     );
 
-    const staffConditions = this.buildStaffConditions(staffIds, query.roles, query.staffStatuses);
+    const staffConditions = this.buildStaffConditions(staffIds, query.roles);
 
     const rawRows = await this.db
       .select({
@@ -82,7 +82,6 @@ export class ReportsStaffService {
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         role: staff.role,
-        status: staff.status,
         completedShifts: sql<number>`count(${shifts.id}) filter (where ${shifts.status} = 'completed')::int`,
         filledShifts: sql<number>`count(${shifts.id}) filter (where ${shifts.status} = 'filled')::int`,
         completedScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}) filter (where ${shifts.status} = 'completed'), 0)::int`,
@@ -97,7 +96,6 @@ export class ReportsStaffService {
         staff.displayName,
         staff.useDisplayName,
         staff.role,
-        staff.status,
       )
       .orderBy(
         desc(sql`count(${shifts.id}) filter (where ${shifts.status} = 'completed')`),
@@ -111,7 +109,6 @@ export class ReportsStaffService {
       staffId: row.staffId,
       staffName: formatStaffReportName(row),
       role: formatStaffReportRole(row.role),
-      status: row.status,
       completedShifts: normalizeReportCount(row.completedShifts),
       filledShifts: normalizeReportCount(row.filledShifts),
       completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
@@ -122,26 +119,18 @@ export class ReportsStaffService {
     return { dateFrom, dateTo, staffIds, filteredRows };
   }
 
-  private buildStaffConditions(
-    staffIds: string[] | null,
-    roles?: string[],
-    staffStatuses?: string[],
-  ) {
+  private buildStaffConditions(staffIds: string[] | null, roles?: string[]) {
     const conditions = [];
 
     if (staffIds?.length) {
       conditions.push(inArray(staff.id, staffIds));
-    } else if (staffStatuses?.length) {
-      conditions.push(inArray(staff.status, staffStatuses as ('active' | 'inactive')[]));
-    } else {
-      conditions.push(eq(staff.status, 'active'));
     }
 
     if (roles?.length) {
       conditions.push(inArray(staff.role, roles));
     }
 
-    return conditions.length === 1 ? conditions[0] : and(...conditions);
+    return conditions.length ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined;
   }
 
   async getStaffUsageShifts(

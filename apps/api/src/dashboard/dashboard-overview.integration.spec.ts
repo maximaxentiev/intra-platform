@@ -639,7 +639,7 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
     expect(result.next7Days.hasMorePendingShifts).toBe(false);
   });
 
-  it('matches document compliance report semantics for active staff', async () => {
+  it('matches document compliance report semantics for all staff', async () => {
     const reportSummary = (await documentsReport.getActiveStaffComplianceSummary());
     const result = await service.overview(FIXTURE.fixedNow);
     expect(result.documents).toEqual(reportSummary);
@@ -647,9 +647,9 @@ describe.skipIf(!POSTGRES_READY)('Dashboard overview PostgreSQL integration', ()
     expect(result.attention.documents.pendingReview).toBe(result.documents.pendingReview);
   });
 
-  it('returns staff readiness counts for active staff only', async () => {
+  it('returns staff readiness counts for all staff', async () => {
     const result = await service.overview(FIXTURE.fixedNow);
-    expect(result.staffReadiness.activeStaff).toBeGreaterThanOrEqual(7);
+    expect(result.staffReadiness.staffCount).toBeGreaterThanOrEqual(7);
     expect(result.staffReadiness.portalActive).toBeGreaterThanOrEqual(1);
     expect(result.staffReadiness.noAccount).toBeGreaterThanOrEqual(1);
     expect(result.staffReadiness.invited).toBeGreaterThanOrEqual(1);

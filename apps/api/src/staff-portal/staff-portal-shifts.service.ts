@@ -433,7 +433,7 @@ export class StaffPortalShiftsService {
   /**
    * Portal account gate for regular shift data.
    * Uses staff_accounts lifecycle (disabled + onboardingCompletedAt).
-   * Does not interpret staff.status (active/inactive) — that remains Ops-side.
+   * Ops-side staff records are included regardless of legacy employment status in the database.
    */
   private async loadOnboardedAccount(session: StaffSessionPayload) {
     const account = (

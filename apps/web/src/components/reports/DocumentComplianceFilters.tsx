@@ -26,7 +26,6 @@ import {
   OVERALL_COMPLIANCE_FILTER_OPTIONS,
   REMINDER_STATUS_FILTER_OPTIONS,
   STAFF_ROLE_FILTER_OPTIONS,
-  STAFF_STATUS_FILTER_OPTIONS,
   UPCOMING_REMINDER_FILTER_OPTIONS,
   VSC_STATUS_FILTER_OPTIONS,
   type DocumentComplianceFilterState,
@@ -98,10 +97,6 @@ export function DocumentComplianceFilters({
 
   function toggleRole(value: string, checked: boolean) {
     updateFilters({ roles: toggleListValue(filters.roles, value, checked) });
-  }
-
-  function toggleStaffStatus(value: string, checked: boolean) {
-    updateFilters({ staffStatuses: toggleListValue(filters.staffStatuses, value, checked) });
   }
 
   function toggleStatusField(
@@ -191,13 +186,6 @@ export function DocumentComplianceFilters({
           options={STAFF_ROLE_FILTER_OPTIONS.map((role) => ({ value: role, label: role }))}
           values={filters.roles}
           onToggle={toggleRole}
-        />
-
-        <ReportCheckboxFilterGroup
-          legend="Staff Status"
-          options={[...STAFF_STATUS_FILTER_OPTIONS]}
-          values={filters.staffStatuses}
-          onToggle={toggleStaffStatus}
         />
 
         <ReportFilterSectionHeading>Compliance Status</ReportFilterSectionHeading>

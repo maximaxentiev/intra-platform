@@ -54,7 +54,7 @@ function AvailabilityPage() {
 
   const staffQ = useQuery({
     queryKey: ["staff-active"],
-    queryFn: async () => (await staffApi.list()).filter((s) => s.status === "active"),
+    queryFn: () => staffApi.list(),
   });
   const availQ = useQuery({
     queryKey: ["availability-week", weekKey],

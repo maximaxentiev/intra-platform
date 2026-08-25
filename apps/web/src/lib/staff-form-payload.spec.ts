@@ -22,7 +22,6 @@ describe("pickStaffFormEditableInitial", () => {
       phone: "555",
       email: "alex@example.test",
       role: "ECA",
-      status: "active",
       notes: "Note",
       address: "1 Main St",
       city: "Toronto",
@@ -32,6 +31,7 @@ describe("pickStaffFormEditableInitial", () => {
     expect(editable).not.toHaveProperty("createdAt");
     expect(editable).not.toHaveProperty("updatedAt");
     expect(editable).not.toHaveProperty("portalAccount");
+    expect(editable).not.toHaveProperty("status");
     expect(editable.city).toBe("Toronto");
   });
 });
@@ -44,7 +44,6 @@ describe("buildStaffUpdatePayload", () => {
     phone: "555",
     email: "alex@example.test",
     role: "ECA",
-    status: "active",
     notes: "Note",
     address: "1 Main St",
     city: "Toronto",
@@ -57,7 +56,7 @@ describe("buildStaffUpdatePayload", () => {
     expect(staffUpdatePayloadExcludesReadOnlyFields(payload!)).toBe(true);
   });
 
-  it("excludes id, timestamps, and portalAccount", () => {
+  it("excludes id, timestamps, portalAccount, and legacy employment status", () => {
     const payload = buildStaffUpdatePayload(base, "Toronto");
     expect(payload).toEqual({
       legalName: "Alex Carer",
@@ -66,7 +65,6 @@ describe("buildStaffUpdatePayload", () => {
       phone: "555",
       email: "alex@example.test",
       role: "ECA",
-      status: "active",
       notes: "Note",
       address: "1 Main St",
       city: "Toronto",
@@ -75,6 +73,7 @@ describe("buildStaffUpdatePayload", () => {
     expect(payload).not.toHaveProperty("createdAt");
     expect(payload).not.toHaveProperty("updatedAt");
     expect(payload).not.toHaveProperty("portalAccount");
+    expect(payload).not.toHaveProperty("status");
   });
 
   it("normalizes changed city to canonical spelling", () => {

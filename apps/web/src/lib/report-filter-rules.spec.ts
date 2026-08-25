@@ -119,7 +119,6 @@ describe("report-filter-rules", () => {
   it("reconstructs staff usage rules from URL state", () => {
     const rules = rulesFromStaffUsageSearch({
       roles: ["ECE"],
-      staffStatuses: [],
       completedShiftsMin: "2",
       completedShiftsMax: "2",
       completedScheduledHoursMin: "",

@@ -75,7 +75,6 @@ export const reportsApi = {
       staffIds?: string[];
       staffId?: string;
       roles?: string[];
-      staffStatuses?: string[];
       completedShiftsMin?: number;
       completedShiftsMax?: number;
       completedScheduledHoursMin?: number;
@@ -105,7 +104,6 @@ export const reportsApi = {
       documentType?: string;
       overallCompliance?: string[];
       roles?: string[];
-      staffStatuses?: string[];
       vscStatuses?: string[];
       firstAidStatuses?: string[];
       immunizationsStatuses?: string[];

@@ -1,24 +1,21 @@
 import type { PortalAccountInfo } from "@/lib/db";
 import { PortalStatusBadge } from "@/components/PortalStatusBadge";
 import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
-import { StatusBadge } from "@/components/StatusBadge";
 import { onboardingSummary } from "@/lib/staff-detail-ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 
 /**
  * Compact operational overview. Server-authoritative values only:
- * employment status, portal-account state, portal onboarding fields and the
- * documents API's own `documentStatus`.
+ * portal-account state, portal onboarding fields and the documents API's own
+ * `documentStatus`.
  */
 export function StaffOperationalSummary({
-  employmentStatus,
   portalAccount,
   documentStatus,
   documentsLoading,
   documentsUnavailable,
 }: {
-  employmentStatus: string;
   portalAccount: PortalAccountInfo | null;
   documentStatus?: string;
   documentsLoading?: boolean;
@@ -29,15 +26,7 @@ export function StaffOperationalSummary({
 
   return (
     <Card className="gap-0 border-border/70 px-4 py-3 shadow-xs">
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Row label="Employment">
-          <StatusBadge
-            status={employmentStatus === "active" ? "active" : "inactive"}
-            size="xs"
-          >
-            {employmentStatus}
-          </StatusBadge>
-        </Row>
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
         <Row label="Portal">
           <PortalStatusBadge status={portalStatus} size="xs" />
         </Row>

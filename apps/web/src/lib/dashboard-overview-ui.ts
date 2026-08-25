@@ -200,14 +200,14 @@ export function next7DaysShiftsSearch(
     : { from: next7.dateFrom, to: next7.dateTo };
 }
 
-/** Compliance headline: "247 compliant of 263 active staff". */
+/** Compliance headline: "247 compliant of 263 staff members". */
 export function complianceHeadline(documents: {
   compliant: number;
   staffShown: number;
 }): { value: string; context: string } {
   return {
     value: `${documents.compliant} compliant`,
-    context: `of ${documents.staffShown} active staff`,
+    context: `of ${documents.staffShown} staff members`,
   };
 }
 
@@ -225,13 +225,13 @@ export function next7DaysCoverageMessage(next7Days: {
   return null;
 }
 
-/** Unambiguous staff readiness headline: "1 active staff member". */
-export function staffReadinessHeadline(activeStaff: number): string {
-  return activeStaff === 1 ? "1 active staff member" : `${activeStaff} active staff members`;
+/** Unambiguous staff readiness headline: "1 staff member". */
+export function staffReadinessHeadline(staffCount: number): string {
+  return staffCount === 1 ? "1 staff member" : `${staffCount} staff members`;
 }
 
 /**
- * Neutral explanation when active staff exceeds compliant staff but no issue
+ * Neutral explanation when staff exceeds compliant staff but no issue
  * counters explain the gap. Purely derived from values already returned.
  */
 export function unexplainedComplianceNote(documents: {

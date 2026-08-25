@@ -3,7 +3,6 @@
 import { api } from "@/lib/api";
 import type { StaffUpdatePayload } from "@/lib/staff-form-payload";
 
-export type StaffStatus = "active" | "inactive";
 export type PortalAccountDisplayStatus =
   | "no_account"
   | "invited"
@@ -49,7 +48,6 @@ export interface Staff {
   address: string;
   city: string;
   role: string;
-  status: StaffStatus;
   notes: string;
   documentsUrl: string;
   createdAt: string;

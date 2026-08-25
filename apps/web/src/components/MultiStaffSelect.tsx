@@ -62,7 +62,7 @@ export function MultiStaffSelect({
                   return (
                     <CommandItem key={s.id} onSelect={() => toggle(s.id)}>
                       <Check className={`h-4 w-4 mr-2 ${on ? "opacity-100" : "opacity-0"}`} />
-                      {displayStaff(s)} {s.status === "inactive" && <span className="ml-auto text-xs text-muted-foreground">Inactive</span>}
+                      {displayStaff(s)}
                     </CommandItem>
                   );
                 })}

@@ -2,12 +2,10 @@ import { ArrayMaxSize, IsIn, IsOptional, IsUUID, Matches, Validate } from 'class
 import { Transform, Type } from 'class-transformer';
 import { STAFF_CANONICAL_ROLES } from '../../staff/staff-role.util';
 import { ReportDateRangeConstraint } from './report-date-range.dto';
-import { ReportStaffFilterQueryDto } from './report-staff-filter.dto';
-import { MAX_REPORT_STAFF_IDS, parseReportStaffIds } from './report-staff-ids.util';
 import { ReportPaginationQueryDto } from './report-pagination.dto';
+import { MAX_REPORT_STAFF_IDS, parseReportStaffIds } from './report-staff-ids.util';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const STAFF_STATUS_VALUES = ['active', 'inactive'] as const;
 
 export class StaffUsageQueryDto extends ReportPaginationQueryDto {
   @IsOptional()
@@ -31,11 +29,6 @@ export class StaffUsageQueryDto extends ReportPaginationQueryDto {
   @Transform(({ value }) => parseReportStaffIds(value))
   @IsIn([...STAFF_CANONICAL_ROLES], { each: true })
   roles?: string[];
-
-  @IsOptional()
-  @Transform(({ value }) => parseReportStaffIds(value))
-  @IsIn([...STAFF_STATUS_VALUES], { each: true })
-  staffStatuses?: string[];
 
   @IsOptional()
   @Type(() => Number)
@@ -73,5 +66,3 @@ export class StaffUsageQueryDto extends ReportPaginationQueryDto {
   @IsUUID('4')
   staffId?: string;
 }
-
-export { STAFF_STATUS_VALUES };

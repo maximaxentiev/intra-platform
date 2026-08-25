@@ -7,7 +7,6 @@ export type ShiftEligibilityReason =
   | 'shift_overlap'
   | 'prior_shift_buffer'
   | 'centre_banned'
-  | 'inactive_staff'
   | 'no_portal_account'
   | 'account_disabled'
   | 'onboarding_incomplete'
@@ -16,7 +15,6 @@ export type ShiftEligibilityReason =
 
 export type StaffEligibilityInput = {
   staffId: string;
-  staffStatus: 'active' | 'inactive';
   staffRole: string;
   account: {
     status: 'invited' | 'incomplete' | 'active' | 'disabled';
@@ -99,10 +97,6 @@ function isOperationalBufferPriorShift(shift: SameDayStaffShift): boolean {
 
 export function evaluateStaffShiftEligibility(input: StaffEligibilityInput): ShiftEligibilityResult {
   const reasons: ShiftEligibilityReason[] = [];
-
-  if (input.staffStatus !== 'active') {
-    reasons.push('inactive_staff');
-  }
 
   if (!input.account) {
     reasons.push('no_portal_account');
