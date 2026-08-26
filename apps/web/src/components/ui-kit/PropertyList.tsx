@@ -69,7 +69,8 @@ export function PropertyList({
 
         return (
           <div key={item.label} className={cn("min-w-0", item.className)}>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <dt className="text-[13px] font-semibold text-muted-foreground">
+
               {item.label}
             </dt>
             <dd className="mt-1 flex min-w-0 flex-wrap items-center gap-2 break-words text-sm text-foreground">
