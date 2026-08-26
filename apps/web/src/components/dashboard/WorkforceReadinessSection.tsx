@@ -44,14 +44,6 @@ function StatRow({
   );
 }
 
-function GroupLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mt-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-      {children}
-    </p>
-  );
-}
-
 export function WorkforceReadinessSection({
   documents,
   staffReadiness,
@@ -63,16 +55,10 @@ export function WorkforceReadinessSection({
   const gapNote = unexplainedComplianceNote(documents);
 
   return (
-    <DashboardSection
-      id="workforce-readiness"
-      title="Workforce readiness"
-      description="Document compliance and portal account health."
-    >
+    <DashboardSection id="workforce-readiness" title="Workforce readiness">
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/70 p-4 shadow-xs">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Document compliance
-          </h3>
+          <h3 className="text-base font-semibold text-foreground">Document compliance</h3>
           <p className="mt-1.5 text-xl font-semibold tracking-tight text-foreground">
             <span className="tabular-nums">{headline.value}</span>{" "}
             <span className="text-sm font-normal text-muted-foreground">{headline.context}</span>
@@ -80,21 +66,12 @@ export function WorkforceReadinessSection({
 
           {gapNote && <p className="mt-1.5 text-sm text-muted-foreground">{gapNote}</p>}
 
-          <GroupLabel>Needs action</GroupLabel>
-          <dl className="mt-0.5 divide-y divide-border/60">
+          <dl className="mt-3 divide-y divide-border/60">
             <StatRow label="Pending review" value={documents.pendingReview} emphasis="warning" />
             <StatRow label="Issue flagged" value={documents.issueFlagged} emphasis="warning" />
             <StatRow label="Expired" value={documents.expired} emphasis="warning" />
-          </dl>
-
-          <GroupLabel>Upcoming</GroupLabel>
-          <dl className="mt-0.5">
             <StatRow label="Expiring soon" value={documents.expiringSoon} emphasis="muted" />
           </dl>
-
-          <p className="mt-2.5 text-xs text-muted-foreground/80">
-            COVID-19 vaccination is optional and does not affect compliance.
-          </p>
 
           <div className="mt-3">
             <DashboardFooterLink to="/reports/documents">
@@ -104,9 +81,7 @@ export function WorkforceReadinessSection({
         </Card>
 
         <Card className="border-border/70 p-4 shadow-xs">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Staff readiness
-          </h3>
+          <h3 className="text-base font-semibold text-foreground">Staff readiness</h3>
           <p className="mt-1.5 text-xl font-semibold tracking-tight tabular-nums text-foreground">
             {staffReadinessHeadline(staffReadiness.staffCount)}
           </p>
@@ -114,8 +89,7 @@ export function WorkforceReadinessSection({
             Availability and documents still determine who can be assigned.
           </p>
 
-          <GroupLabel>Portal accounts</GroupLabel>
-          <dl className="mt-0.5 divide-y divide-border/60">
+          <dl className="mt-3 divide-y divide-border/60">
             <StatRow label="Portal active" value={staffReadiness.portalActive} emphasis="muted" />
             <StatRow label="No account" value={staffReadiness.noAccount} emphasis="muted" />
             <StatRow label="Invited" value={staffReadiness.invited} emphasis="warning" />
