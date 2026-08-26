@@ -57,7 +57,7 @@ Brand palette: Primary `#6366F1`; accents `#18181B`, `#FFFFFF`, `#585691`,
 | Primary action | `--primary-action` / `bg-primary-action` | Small white-text controls needing AA body contrast |
 | Primary soft | `--primary-soft` (`#E8EEFE` tone) | Tinted backgrounds behind primary icons/metrics |
 | Ink / foreground | `--foreground` (`#18181B` family) | All body and heading text |
-| Surfaces | `--background`, `--surface`, `--surface-muted`, `--card` | Page, raised, and recessed surfaces |
+| Surfaces | `--background`, `--surface`, `--surface-muted`, `--card` | Page background is warm brand **beige**; content surfaces (cards, tables, panels) are white/near-white so information visibly sits *on* the page |
 | Muted | `--muted`, `--muted-foreground` | Neutral chips, secondary text, healthy/zero states |
 | Success (sage) | `--success`, `--success-soft` (`#F1F7E6`) | Completed, compliant, active |
 | Warning (amber/cream) | `--warning`, `--warning-soft` (`#FFF4DB`) | Pending, expiring, needs attention |
@@ -357,3 +357,28 @@ They are not platform standards until a real page adopts them.
   it; the `Button` component is deliberately *not* rewired to consume it. Use it
   only for a specific small-text-on-indigo contrast problem.
 - `#FEE8F7`, `#FEDFD8` — reserved, awaiting a real semantic role.
+
+
+---
+
+## Surface, button, tab and navigation contract (redesign)
+
+- **Page background** is warm brand beige (`--background`). **Content surfaces** are
+  white (`--card` / `--surface`). Never place white-on-white; every information
+  block belongs in a `SectionCard` or equivalent bordered white surface.
+- **Primary actions** (Add, Create, Save, Edit, Apply, Export, Add contact,
+  document/shift actions) use the default `Button` variant — Intra purple. Never
+  leave a real action as a plain white rectangle.
+- **Secondary / cancel** actions use `outline` (bordered white) or `ghost`;
+  destructive uses `destructive`.
+- **Back navigation** uses `BackLink` from `ui-kit`, always placed *above* the
+  page title, never inline with page actions.
+- **Tabs** use the shared `Tabs` primitive: bordered pill bar, solid purple
+  active state, hover affordance on inactive tabs.
+- **Field labels** are semibold 13px muted; **values** are 15px foreground.
+  Uppercase eyebrow labels above an object title are not used.
+- **Copy**: remove descriptions the UI already communicates. Exception: Reports
+  keeps the explanatory copy under each report title.
+- **Branding**: the Ops product name is "Intra Platform". The mark in
+  `AppShell.tsx` is a placeholder slot — swap in the official Intra logo asset
+  when supplied; do not redraw it.
