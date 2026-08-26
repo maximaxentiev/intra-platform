@@ -71,7 +71,7 @@ export const EMPTY_FILTERS: ApplicationFilters = {
 const FILTER_LABELS: Record<keyof ApplicationFilters, string> = {
   status: "Status",
   statusInCanada: "Status in Canada",
-  experience: "Childcare Experience",
+  experience: "Experience Duration",
   qualification: "Qualification",
   trainingCompleted: "Training Completed",
   experienceTypes: "Experience Types",
@@ -302,7 +302,7 @@ export function ApplicationsFilterPanel({
               options={opts.statusInCanada}
             />
             <OptionSelect
-              label="Childcare Experience"
+              label="Experience Duration"
               value={filters.experience}
               onChange={(v) => set("experience", v)}
               options={opts.experience}

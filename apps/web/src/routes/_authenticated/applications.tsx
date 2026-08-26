@@ -440,7 +440,7 @@ function ApplicationsPage() {
                         className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted"
                         style={{ maxWidth: Math.max(c.minWidth, 240) }}
                       >
-                        {c.cell(r, { openDoc: docs.open })}
+                        {c.cell(r, { openDoc: docs.open, openRow: setOpenId })}
                       </td>
                     ))}
                     <td className="sticky right-0 z-30 isolate border-b border-l border-border bg-card px-3 py-2 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)] group-hover:bg-muted">

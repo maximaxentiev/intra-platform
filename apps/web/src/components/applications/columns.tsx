@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Chips, Dash, Trunc, YesNo } from "@/components/applications/primitives";
+import { ChildcareExperiencePreview } from "@/components/applications/ChildcareExperiencePreview";
 import { DocumentChips } from "@/components/applications/documents";
 import {
   asYesNo,
@@ -17,7 +18,7 @@ export interface AppColumn {
   header: string;
   minWidth: number;
   sortValue?: (r: ApplicationRow) => string | number;
-  cell: (r: ApplicationRow, ctx: { openDoc: (d: ApplicationDocument) => void }) => ReactNode;
+  cell: (r: ApplicationRow, ctx: { openDoc: (d: ApplicationDocument) => void; openRow: (id: string) => void }) => ReactNode;
 }
 
 const langList = (r: ApplicationRow) =>
@@ -55,11 +56,22 @@ const SHARED_BEFORE: AppColumn[] = [
     cell: (r) => <Trunc value={toLabel(r.eligibility.statusInCanada)} className="text-sm" />,
   },
   {
-    key: "experience",
-    header: "Childcare Experience",
+    key: "experienceDuration",
+    header: "Experience Duration",
     minWidth: 175,
     sortValue: (r) => toLabel(r.experience.duration),
     cell: (r) => <Trunc value={toLabel(r.experience.duration)} className="text-sm" />,
+  },
+  {
+    key: "childcareExperience",
+    header: "Childcare Experience",
+    minWidth: 220,
+    cell: (r, ctx) => (
+      <ChildcareExperiencePreview
+        description={r.experience.description}
+        onOpen={() => ctx.openRow(r.id)}
+      />
+    ),
   },
 ];
 
