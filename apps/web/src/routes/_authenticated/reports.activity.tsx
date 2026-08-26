@@ -153,9 +153,9 @@ function ActivityLogReport() {
     });
   }
 
-  const rangeLabel = reportQ.data
-    ? `${formatOpsDateToronto(reportQ.data.dateFrom)} – ${formatOpsDateToronto(reportQ.data.dateTo)}`
-    : null;
+  // Reflect the currently selected Start/End filters directly, rather than the
+  // server-echoed range, so this can never disagree with the applied filters.
+  const rangeLabel = `${formatOpsDateToronto(applied.dateFrom)} – ${formatOpsDateToronto(applied.dateTo)}`;
 
   const paginationProps = reportQ.data
     ? {
