@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AvailabilityEditor } from "@/components/AvailabilityEditor";
 import { PageHeader } from "@/components/PageHeader";
+import { BackLink } from "@/components/ui-kit";
 import { DetailLoading } from "@/components/DetailLoading";
 import { ConfirmDestructiveDialog } from "@/components/ui-kit";
 import { AlertCircle, MoreHorizontal, Trash2 } from "lucide-react";
@@ -51,7 +52,8 @@ function StaffDetail() {
   if (staffQ.isError || !staffQ.data) {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Staff" backTo="/staff" backLabel="Back to Staff" title="Staff profile" />
+        <BackLink to="/staff" label="Back to Staff" />
+        <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-foreground">Staff profile</h1>
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3">
           <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
           <div className="min-w-0">
@@ -90,13 +92,13 @@ function StaffDetail() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        eyebrow="Staff"
-        backTo="/staff"
-        backLabel="Back to Staff"
-        title={displayStaff(staff)}
-        subtitle={[staff.role || "No role set", staff.city].filter(Boolean).join(" · ")}
-        actions={
+      <BackLink to="/staff" label="Back to Staff" />
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <h1 className="min-w-0 truncate text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-foreground">
+            {displayStaff(staff)}
+          </h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" aria-label="More staff actions">
@@ -115,8 +117,15 @@ function StaffDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        }
-      />
+        </div>
+
+        <StaffOperationalSummary
+          portalAccount={staff.portalAccount ?? null}
+          documentStatus={documentsQ.data?.documentStatus}
+          documentsLoading={documentsQ.isLoading}
+          documentsUnavailable={documentsQ.isError}
+        />
+      </div>
 
       <ConfirmDestructiveDialog
         open={deleteOpen}
@@ -126,13 +135,6 @@ function StaffDetail() {
         details="Deletion is only available before a carer portal account or invitation history exists. If they have portal access, disable it first."
         confirmLabel="Delete staff"
         onConfirm={deleteStaff}
-      />
-
-      <StaffOperationalSummary
-        portalAccount={staff.portalAccount ?? null}
-        documentStatus={documentsQ.data?.documentStatus}
-        documentsLoading={documentsQ.isLoading}
-        documentsUnavailable={documentsQ.isError}
       />
 
       <Tabs defaultValue="profile">

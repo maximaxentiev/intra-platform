@@ -26,11 +26,7 @@ export function Next7DaysSection({
   ];
 
   return (
-    <DashboardSection
-      id="next-7-days"
-      title="Next 7 days"
-      description="Tomorrow through seven calendar days ahead."
-    >
+    <DashboardSection id="next-7-days" title="Next 7 days">
       <Card className="border-border/70 py-0 shadow-xs">
         <dl className="grid grid-cols-3 divide-x divide-border border-b border-border">
           {summary.map((item) => (

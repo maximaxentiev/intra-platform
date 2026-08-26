@@ -1,14 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { centresApi, channelLabel, saveCentreSecondaryChannels } from "@/lib/db";
-import { centreLocationOrFallback } from "@/lib/centres-ui";
+import { centresApi, saveCentreSecondaryChannels } from "@/lib/db";
 import { CentreDetailsCard } from "@/components/centres/CentreDetailsCard";
 import { CentreContactsEditor } from "@/components/CentreContactsEditor";
 import { CentreStaffPreferences } from "@/components/centres/CentreStaffPreferences";
 import { CentreShiftsTab } from "@/components/centres/CentreShiftsTab";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -18,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
-import { ConfirmDestructiveDialog } from "@/components/ui-kit";
+import { BackLink, ConfirmDestructiveDialog } from "@/components/ui-kit";
 import { toast } from "sonner";
 import { AlertCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { z } from "zod";
@@ -60,7 +58,8 @@ function CentreDetail() {
   if (centreQ.isError) {
     return (
       <div className="space-y-6">
-        <PageHeader eyebrow="Centre" backTo="/centres" backLabel="Back to Centres" title="Centre unavailable" />
+        <BackLink to="/centres" label="Back to Centres" />
+        <PageHeader title="Centre unavailable" />
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3">
           <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
           <div className="min-w-0">
@@ -102,17 +101,9 @@ function CentreDetail() {
 
   return (
     <div className="space-y-6">
+      <BackLink to="/centres" label="Back to Centres" />
       <PageHeader
-        eyebrow="Centre"
-        backTo="/centres"
-        backLabel="Back to Centres"
         title={centre.name}
-        subtitle={centreLocationOrFallback(centre.address, centre.city)}
-        meta={
-          <Badge variant="secondary" className="font-normal">
-            {channelLabel(centre.primaryChannel)}
-          </Badge>
-        }
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

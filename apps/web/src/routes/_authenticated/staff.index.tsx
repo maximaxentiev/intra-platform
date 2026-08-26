@@ -110,7 +110,6 @@ function StaffIndex() {
     <div className="space-y-6">
       <PageHeader
         title="Staff"
-        subtitle="Childcare staff directory."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild variant="outline">

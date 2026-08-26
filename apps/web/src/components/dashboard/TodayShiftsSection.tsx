@@ -46,7 +46,6 @@ export function TodayShiftsSection({
     <DashboardSection
       id="today-shifts"
       title="Today's shifts"
-      description="Schedule for today in Toronto."
       action={
         <DashboardFooterLink to="/shifts" search={todayShiftsSearch(today.date)}>
           View shifts

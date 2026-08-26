@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 
 function isDayPast(dayDate: Date): boolean {
@@ -42,6 +50,8 @@ function AvailabilityPage() {
   const [timeStartFilter, setTimeStartFilter] = useState<string>("");
   const [timeEndFilter, setTimeEndFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const weekKey = toDateStr(weekStart);
   const thisWeekKey = toDateStr(mondayOf(new Date()));
@@ -78,16 +88,22 @@ function AvailabilityPage() {
     return { staff: s, entries };
   }).filter((r) => (active !== "all" || filterStart) ? r.entries.length > 0 : true);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   function clearFilters() {
     setDayFilter("all");
     setTimeStartFilter("");
     setTimeEndFilter("");
     setDateFilter("");
     setWeekStart(mondayOf(new Date()));
+    setPage(1);
   }
 
   function handleDateFilterChange(value: string) {
     setDateFilter(value);
+    setPage(1);
     if (!value) return;
     const picked = fromDateStr(value);
     setWeekStart(mondayOf(picked));
@@ -97,18 +113,21 @@ function AvailabilityPage() {
   function handleDayFilterChange(value: string) {
     setDayFilter(value);
     setDateFilter("");
+    setPage(1);
   }
 
   function shiftWeek(delta: number) {
     setWeekStart(prev => addDays(prev, delta));
     setDateFilter("");
     if (dayFilter !== "all") setDayFilter("all");
+    setPage(1);
   }
 
   function goToThisWeek() {
     setWeekStart(mondayOf(new Date()));
     setDateFilter("");
     setDayFilter("all");
+    setPage(1);
   }
 
   return (
@@ -196,7 +215,7 @@ function AvailabilityPage() {
                           className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border tabular-nums ${
                             past
                               ? "bg-muted text-muted-foreground border-border"
-                              : "bg-warning-soft text-warning-foreground border-warning/25"
+                              : "bg-info-soft text-foreground border-info/25"
                           }`}
                         >
                           <span className="font-semibold uppercase tracking-wide">{DAY_FULL[a.dayOfWeek].slice(0, 3)}</span>

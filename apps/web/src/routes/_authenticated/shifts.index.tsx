@@ -226,7 +226,6 @@ function ShiftsIndex() {
     <div className="space-y-6">
       <PageHeader
         title="Shifts"
-        subtitle="All shifts across every centre."
         actions={
           <Button asChild>
             <Link to="/shifts/new"><Plus className="h-4 w-4 mr-1.5" /> Create shift</Link>
