@@ -31,6 +31,9 @@ export const ALLOWED_SUBMIT_EXTENSIONS = new Set([
 export const DOCUMENT_CATEGORY_VALUES = [
   'training_proof',
   'qualification_certificate',
+  'eca_diploma',
+  'ece_diploma',
+  'rece_proof',
   'vulnerable_sector_check',
   'first_aid_cpr',
   'immunization_records',
@@ -38,6 +41,17 @@ export const DOCUMENT_CATEGORY_VALUES = [
 ] as const;
 
 export type DocumentCategoryValue = (typeof DOCUMENT_CATEGORY_VALUES)[number];
+
+/** Structured qualification uploads aligned with staff document types (optional at intake). */
+export const STRUCTURED_QUALIFICATION_CATEGORIES = [
+  'eca_diploma',
+  'ece_diploma',
+  'rece_proof',
+] as const satisfies readonly DocumentCategoryValue[];
+
+export type StructuredQualificationCategory = (typeof STRUCTURED_QUALIFICATION_CATEGORIES)[number];
+
+export const CHILDCARE_EXPERIENCE_MAX_LENGTH = 2000;
 
 export const PUBLIC_ROLE_VALUES = ['ECA', 'ECE/RECE', 'Nanny'] as const;
 export type PublicRoleValue = (typeof PUBLIC_ROLE_VALUES)[number];
@@ -60,4 +74,24 @@ export const QUALIFICATION_STATUS_CANADIAN_CERTIFICATE = ['eca_canada', 'ece_can
 
 export function qualificationStatusRequiresCertificate(status: string): boolean {
   return (QUALIFICATION_STATUS_CANADIAN_CERTIFICATE as readonly string[]).includes(status);
+}
+
+/** Whether a document category is allowed for the given public application role. */
+export function isDocumentCategoryAllowedForRole(
+  role: PublicRoleValue,
+  category: DocumentCategoryValue,
+): boolean {
+  switch (category) {
+    case 'eca_diploma':
+      return role === 'ECA';
+    case 'ece_diploma':
+    case 'rece_proof':
+      return role === 'ECE/RECE';
+    case 'qualification_certificate':
+      return role === 'ECA' || role === 'ECE/RECE';
+    case 'training_proof':
+      return role === 'Nanny';
+    default:
+      return true;
+  }
 }

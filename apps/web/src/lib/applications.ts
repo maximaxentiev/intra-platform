@@ -10,6 +10,9 @@ export type ApplicationStatus = "new" | "contacted" | "hired" | "rejected";
 export type DocumentCategory =
   | "training_proof"
   | "qualification_certificate"
+  | "eca_diploma"
+  | "ece_diploma"
+  | "rece_proof"
   | "vulnerable_sector_check"
   | "first_aid_cpr"
   | "immunization_records"
@@ -65,7 +68,7 @@ export interface ApplicationDetail {
     gender: string;
   };
   eligibility: { gtaEligible: boolean | null; statusInCanada: string };
-  experience: { duration: string; nannyExperienceTypes: string[] };
+  experience: { duration: string; description?: string; nannyExperienceTypes: string[] };
   roleSpecific: {
     qualificationStatus: string;
     nannyTrainingCompleted: boolean | null;
@@ -170,6 +173,9 @@ export const DOCUMENT_LABELS: Record<DocumentCategory, string> = {
   first_aid_cpr: "First Aid & CPR",
   immunization_records: "Immunization Records",
   qualification_certificate: "Qualification Certificate",
+  eca_diploma: "ECA Diploma",
+  ece_diploma: "ECE Diploma",
+  rece_proof: "RECE Proof",
   training_proof: "Nanny Training Proof",
   covid19_vaccination: "COVID-19 Vaccination Proof",
 };
@@ -179,6 +185,9 @@ export const DOCUMENT_SHORT_LABELS: Record<DocumentCategory, string> = {
   first_aid_cpr: "First Aid",
   immunization_records: "Immunizations",
   qualification_certificate: "Qualification",
+  eca_diploma: "ECA Diploma",
+  ece_diploma: "ECE Diploma",
+  rece_proof: "RECE Proof",
   training_proof: "Training",
   covid19_vaccination: "COVID-19",
 };

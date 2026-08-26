@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import {
+  CHILDCARE_EXPERIENCE_MAX_LENGTH,
   NETWORK_SUBMIT_MAX_FILES,
   NETWORK_SUBMIT_MAX_FILE_BYTES,
 } from './network-submit.constants';
@@ -13,7 +14,15 @@ import {
   matchSubmitFiles,
   parseNetworkApplicationJson,
 } from './network-submit.validation';
-import { buildEcaApplicationJson, fakePdfBuffer, matchedFilesFromPayload } from './network-submit.test-fixtures';
+import {
+  buildEcaApplicationJson,
+  buildLegacyLiveWebsiteEcaPayload,
+  buildLegacyLiveWebsiteEcePayload,
+  buildNewShapeComplianceDocuments,
+  documentMeta,
+  fakePdfBuffer,
+  matchedFilesFromPayload,
+} from './network-submit.test-fixtures';
 
 describe('network submit validation', () => {
   it('parses a valid ECA payload', () => {
@@ -37,6 +46,20 @@ describe('network submit validation', () => {
     expect(parsed.role).toBe('Nanny');
     expect(parsed.roleSpecific.training?.completed).toBe(true);
     expect(parsed.documents.some((d) => d.category === 'training_proof')).toBe(true);
+  });
+
+  it('accepts the current live website ECA legacy payload', () => {
+    const payload = buildLegacyLiveWebsiteEcaPayload();
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.roleSpecific.qualification?.status).toBe('eca_canada');
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+  });
+
+  it('accepts the current live website ECE/RECE legacy payload', () => {
+    const payload = buildLegacyLiveWebsiteEcePayload();
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.roleSpecific.qualification?.status).toBe('ece_canada');
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
   });
 
   it('rejects invalid role', () => {
@@ -87,7 +110,7 @@ describe('network submit validation', () => {
     expect(matched).toHaveLength(payload.documents.length);
   });
 
-  it('requires role-specific documents', () => {
+  it('requires role-specific documents for legacy ECA certificate statuses', () => {
     const payload = buildEcaApplicationJson({ role: 'ECA' });
     payload.documents = payload.documents.filter((d) => d.category !== 'qualification_certificate');
     expect(() => assertRequiredDocumentsPresent(payload)).toThrow(BadRequestException);
@@ -149,6 +172,145 @@ describe('network submit validation', () => {
   it('rejects COVID proof when vaccination is unanswered', () => {
     const payload = buildEcaApplicationJson();
     payload.compliance.covid19 = { vaccinated: null, proofProvided: true };
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+});
+
+describe('network submit new qualification documents', () => {
+  it('accepts ECA with no qualification uploads', () => {
+    const payload = buildEcaApplicationJson({
+      role: 'ECA',
+      qualificationStatus: null,
+      documents: buildNewShapeComplianceDocuments(),
+    });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.roleSpecific.qualification).toBeUndefined();
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+  });
+
+  it('accepts ECA with eca_diploma', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('eca_diploma', 'eca.pdf')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECA',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.some((d) => d.category === 'eca_diploma')).toBe(true);
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+  });
+
+  it('rejects ECA with ece_diploma', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('ece_diploma')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECA',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('rejects ECA with rece_proof', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('rece_proof')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECA',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('accepts ECE/RECE with no qualification uploads', () => {
+    const payload = buildEcaApplicationJson({
+      role: 'ECE/RECE',
+      qualificationStatus: null,
+      documents: buildNewShapeComplianceDocuments(),
+    });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+  });
+
+  it('accepts ECE/RECE with ece_diploma', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('ece_diploma')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECE/RECE',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).not.toThrow();
+  });
+
+  it('accepts ECE/RECE with rece_proof', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('rece_proof')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECE/RECE',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).not.toThrow();
+  });
+
+  it('accepts ECE/RECE with both ece_diploma and rece_proof', () => {
+    const docs = [
+      ...buildNewShapeComplianceDocuments(),
+      documentMeta('ece_diploma'),
+      documentMeta('rece_proof', 'rece.pdf'),
+    ];
+    const payload = buildEcaApplicationJson({
+      role: 'ECE/RECE',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.filter((d) => d.category === 'ece_diploma' || d.category === 'rece_proof')).toHaveLength(2);
+  });
+
+  it('rejects ECE/RECE with eca_diploma', () => {
+    const docs = [...buildNewShapeComplianceDocuments(), documentMeta('eca_diploma')];
+    const payload = buildEcaApplicationJson({
+      role: 'ECE/RECE',
+      qualificationStatus: null,
+      documents: docs,
+    });
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('rejects Nanny with structured qualification categories', () => {
+    for (const category of ['eca_diploma', 'ece_diploma', 'rece_proof'] as const) {
+      const docs = [...buildEcaApplicationJson({ role: 'Nanny' }).documents, documentMeta(category)];
+      const payload = buildEcaApplicationJson({ role: 'Nanny', documents: docs });
+      expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+    }
+  });
+});
+
+describe('network submit childcare experience', () => {
+  it('accepts legacy payloads without experience.description', () => {
+    const payload = buildLegacyLiveWebsiteEcaPayload();
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.experience.description).toBeUndefined();
+  });
+
+  it('accepts empty experience.description during transition', () => {
+    const payload = buildEcaApplicationJson({ experienceDescription: '' });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.experience.description).toBeUndefined();
+  });
+
+  it('stores populated experience.description', () => {
+    const payload = buildEcaApplicationJson({ experienceDescription: 'Five years in licensed daycare.' });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.experience.description).toBe('Five years in licensed daycare.');
+  });
+
+  it('accepts exactly 2000 characters', () => {
+    const payload = buildEcaApplicationJson({ experienceDescription: 'a'.repeat(2000) });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.experience.description).toHaveLength(CHILDCARE_EXPERIENCE_MAX_LENGTH);
+  });
+
+  it('rejects descriptions over 2000 characters', () => {
+    const payload = buildEcaApplicationJson({ experienceDescription: 'a'.repeat(2001) });
     expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
   });
 });

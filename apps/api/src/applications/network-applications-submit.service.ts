@@ -104,6 +104,7 @@ export class NetworkApplicationsSubmitService {
             gtaEligible: payload.eligibility.gtaEligible,
             statusInCanada: payload.eligibility.statusInCanada,
             experienceDuration: payload.experience.duration,
+            childcareExperience: payload.experience.description ?? '',
             nannyExperienceTypes: payload.experience.types ?? [],
             qualificationStatus: payload.roleSpecific.qualification?.status ?? '',
             nannyTrainingCompleted: payload.roleSpecific.training?.completed ?? null,

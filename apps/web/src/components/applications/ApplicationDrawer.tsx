@@ -204,7 +204,14 @@ export function ApplicationDrawer({
             </Section>
 
             <Section title="Experience">
-              <FieldRow label="Childcare experience">{toLabel(row.experience.duration)}</FieldRow>
+              <FieldRow label="Experience duration">{toLabel(row.experience.duration)}</FieldRow>
+              <FieldRow label="Childcare experience">
+                {row.experience.description?.trim() ? (
+                  <span className="whitespace-pre-wrap break-words">{row.experience.description}</span>
+                ) : (
+                  <span className="text-muted-foreground">Not provided</span>
+                )}
+              </FieldRow>
               {isNanny && (
                 <FieldRow label="Experience types">
                   <Chips values={row.experience.nannyExperienceTypes.map(toLabel)} max={6} />
@@ -212,22 +219,24 @@ export function ApplicationDrawer({
               )}
             </Section>
 
-            <Section title={isNanny ? "Training" : "Qualifications"}>
-              {isNanny ? (
-                <>
-                  <FieldRow label="Training completed">
-                    <YesNo value={row.roleSpecific.nannyTrainingCompleted} />
+            {(isNanny || row.roleSpecific.qualificationStatus?.trim()) ? (
+              <Section title={isNanny ? "Training" : "Qualifications"}>
+                {isNanny ? (
+                  <>
+                    <FieldRow label="Training completed">
+                      <YesNo value={row.roleSpecific.nannyTrainingCompleted} />
+                    </FieldRow>
+                    <FieldRow label="Training description">
+                      {row.roleSpecific.nannyTrainingDescription || <Dash />}
+                    </FieldRow>
+                  </>
+                ) : (
+                  <FieldRow label="Qualification status">
+                    {toLabel(row.roleSpecific.qualificationStatus)}
                   </FieldRow>
-                  <FieldRow label="Training description">
-                    {row.roleSpecific.nannyTrainingDescription || <Dash />}
-                  </FieldRow>
-                </>
-              ) : (
-                <FieldRow label="Qualification status">
-                  {toLabel(row.roleSpecific.qualificationStatus)}
-                </FieldRow>
-              )}
-            </Section>
+                )}
+              </Section>
+            ) : null}
 
             <Section title="Compliance">
               <FieldRow label="Vulnerable sector check">

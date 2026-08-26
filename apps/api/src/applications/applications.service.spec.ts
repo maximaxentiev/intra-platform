@@ -15,6 +15,7 @@ const sampleApplication = {
   gtaEligible: true,
   statusInCanada: 'citizen',
   experienceDuration: '2 years',
+  childcareExperience: 'Worked with toddlers for three years.',
   nannyExperienceTypes: [],
   qualificationStatus: 'registered',
   nannyTrainingCompleted: null,
@@ -125,6 +126,7 @@ describe('ApplicationsService', () => {
 
     const result = await service.get(sampleApplication.id);
     expect(result.applicant.firstName).toBe('Jane');
+    expect(result.experience.description).toBe('Worked with toddlers for three years.');
     expect(result.compliance.vscStatus).toBe('clear');
     expect(result.metadata.formId).toBe('network');
     expect(result.documents).toEqual([]);

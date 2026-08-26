@@ -47,6 +47,9 @@ export const applicationStatus = pgEnum('application_status', [
 export const applicationDocumentCategory = pgEnum('application_document_category', [
   'training_proof',
   'qualification_certificate',
+  'eca_diploma',
+  'ece_diploma',
+  'rece_proof',
   'vulnerable_sector_check',
   'first_aid_cpr',
   'immunization_records',
@@ -493,6 +496,7 @@ export const applications = pgTable(
     gtaEligible: boolean('gta_eligible'),
     statusInCanada: text('status_in_canada').notNull().default(''),
     experienceDuration: text('experience_duration').notNull().default(''),
+    childcareExperience: text('childcare_experience').notNull().default(''),
     nannyExperienceTypes: jsonb('nanny_experience_types').$type<string[]>().notNull().default([]),
     qualificationStatus: text('qualification_status').notNull().default(''),
     nannyTrainingCompleted: boolean('nanny_training_completed'),

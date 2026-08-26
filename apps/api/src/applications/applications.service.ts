@@ -75,6 +75,7 @@ function buildDetail(row: typeof applications.$inferSelect, docs: typeof applica
     },
     experience: {
       duration: row.experienceDuration,
+      description: row.childcareExperience,
       nannyExperienceTypes: row.nannyExperienceTypes,
     },
     roleSpecific: {

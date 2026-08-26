@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   ALLOWED_SUBMIT_EXTENSIONS,
   ALLOWED_SUBMIT_MIME_TYPES,
+  CHILDCARE_EXPERIENCE_MAX_LENGTH,
   DOCUMENT_CATEGORY_VALUES,
   DOC_FIELD_PREFIX,
   NETWORK_SUBMIT_MAX_FILES,
@@ -10,6 +11,7 @@ import {
   PUBLIC_ROLE_VALUES,
   type DocumentCategoryValue,
   type PublicRoleValue,
+  isDocumentCategoryAllowedForRole,
   qualificationStatusRequiresCertificate,
 } from './network-submit.constants';
 
@@ -51,6 +53,7 @@ export interface NormalizedNetworkApplication {
   };
   experience: {
     duration: string;
+    description?: string;
     types?: string[];
   };
   roleSpecific: {
@@ -130,6 +133,55 @@ function assertPhone(phone: string): void {
 function extensionOf(filename: string): string {
   const idx = filename.lastIndexOf('.');
   return idx >= 0 ? filename.slice(idx).toLowerCase() : '';
+}
+
+/**
+ * Legacy website sends roleSpecific.qualification.status explicitly.
+ * New website may omit qualification entirely (null / absent / empty status).
+ */
+function parseQualification(
+  roleSpecific: Record<string, unknown>,
+  role: PublicRoleValue,
+): { status: string } | undefined {
+  if (role !== 'ECA' && role !== 'ECE/RECE') return undefined;
+  if (!('qualification' in roleSpecific)) return undefined;
+
+  const raw = roleSpecific.qualification;
+  if (raw === null || raw === undefined) return undefined;
+
+  const qualification = assertObject(raw, 'roleSpecific.qualification');
+  const statusRaw = qualification.status;
+  if (statusRaw === null || statusRaw === undefined) return undefined;
+  if (typeof statusRaw !== 'string') {
+    throw new BadRequestException('roleSpecific.qualification.status must be a string when provided.');
+  }
+  const status = statusRaw.trim();
+  if (!status) return undefined;
+
+  return { status };
+}
+
+function parseChildcareExperienceDescription(experience: Record<string, unknown>): string {
+  const description = optString(experience, 'description');
+  if (description.length > CHILDCARE_EXPERIENCE_MAX_LENGTH) {
+    throw new BadRequestException(
+      `experience.description must be at most ${CHILDCARE_EXPERIENCE_MAX_LENGTH} characters.`,
+    );
+  }
+  return description;
+}
+
+function assertDocumentCategoriesAllowedForRole(
+  role: PublicRoleValue,
+  documents: NetworkDocumentMeta[],
+): void {
+  for (const doc of documents) {
+    if (!isDocumentCategoryAllowedForRole(role, doc.category)) {
+      throw new BadRequestException(
+        `Document category "${doc.category}" is not allowed for role ${role}.`,
+      );
+    }
+  }
 }
 
 export function parseNetworkApplicationJson(raw: string): NormalizedNetworkApplication {
@@ -217,15 +269,13 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
     );
   }
 
-  if (role === 'ECA' || role === 'ECE/RECE') {
-    const qualification = assertObject(roleSpecific.qualification ?? {}, 'roleSpecific.qualification');
-    reqString(qualification, 'status', 'roleSpecific.qualification.status');
-  }
-
   if (role === 'Nanny') {
     const training = assertObject(roleSpecific.training ?? {}, 'roleSpecific.training');
     reqBool(training, 'completed', 'roleSpecific.training.completed');
   }
+
+  const qualification = parseQualification(roleSpecific, role);
+  const childcareExperienceDescription = parseChildcareExperienceDescription(experience);
 
   const speaksAdditional = reqBool(
     languages,
@@ -295,6 +345,8 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
     throw new BadRequestException('Total upload size exceeds the allowed limit.');
   }
 
+  assertDocumentCategoriesAllowedForRole(role, documents);
+
   return {
     metadata: {
       formId: reqString(metadata, 'formId', 'metadata.formId'),
@@ -320,15 +372,13 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
     },
     experience: {
       duration: optString(experience, 'duration'),
+      description: childcareExperienceDescription || undefined,
       types: Array.isArray(experience.types)
         ? experience.types.filter((t): t is string => typeof t === 'string')
         : undefined,
     },
     roleSpecific: {
-      qualification:
-        role === 'ECA' || role === 'ECE/RECE'
-          ? { status: reqString(assertObject(roleSpecific.qualification ?? {}, 'roleSpecific.qualification'), 'status', 'roleSpecific.qualification.status') }
-          : undefined,
+      qualification,
       training:
         role === 'Nanny'
           ? {
