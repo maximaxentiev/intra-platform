@@ -60,7 +60,7 @@ export function CarerShiftsDashboardSummary() {
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex min-w-0 items-center gap-2">
                     <p className="truncate font-semibold text-foreground">{shift.centre.name}</p>
-                    <CarerShiftStatusBadge shift={shift} />
+                    <CarerShiftStatusBadge status={shift.status} size="xs" />
                   </div>
                   <p className="truncate text-muted-foreground">
                     {formatDashboardAvailabilityDateLabel(shift.shiftDate)} ·{" "}

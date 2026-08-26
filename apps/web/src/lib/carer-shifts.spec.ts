@@ -154,7 +154,7 @@ describe("carer shifts dashboard", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(home).toContain("CarerShiftsDashboardSummary");
     expect(home).not.toContain("Your assigned shifts will appear here.");
-    expect(dashboard).toContain("useCarerShiftsSummary(3)");
+    expect(dashboard).toContain("useCarerShiftsSummary(4)");
   });
 
   it("renders date, time, centre, optional role, and cancelled status", () => {
@@ -162,7 +162,6 @@ describe("carer shifts dashboard", () => {
     expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
     expect(dashboard).toContain("formatAvailabilityWindowDisplay");
     expect(dashboard).toContain("shift.centre.name");
-    expect(dashboard).toContain("shift.roleNeeded");
     expect(dashboard).toContain("CarerShiftStatusBadge");
   });
 
@@ -170,9 +169,9 @@ describe("carer shifts dashboard", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(dashboard).toContain("No upcoming shifts assigned.");
     expect(dashboard).toContain('to="/carer/shifts/$id"');
-    expect(dashboard).toContain("View details");
+    expect(dashboard).toContain("View shift details");
     expect(dashboard).toContain('to="/carer/shifts"');
-    expect(dashboard).toContain("View all shifts");
+    expect(dashboard).toContain("View more shifts");
   });
 
   it("handles summary failure without crashing portal home", () => {

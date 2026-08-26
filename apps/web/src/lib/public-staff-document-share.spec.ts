@@ -178,9 +178,9 @@ describe("public share page source hygiene", () => {
     expect(libSrc).toContain("covid19_vaccination");
     expect(libSrc).toContain("no_expiry");
     expect(pageSrc).toContain("metadata.documents.map");
-    expect(pageSrc).toContain("publicStatusBadge");
-    expect(pageSrc).toContain('"Optional"');
-    expect(pageSrc).toContain("showExpiryDate");
+    // Centre-facing view intentionally shows only title + file + View document.
+    expect(pageSrc).not.toContain("showExpiryDate");
+    expect(pageSrc).toContain("View document");
     expect(pageSrc).not.toMatch(/Missing COVID|COVID required|COVID incomplete/i);
   });
 
