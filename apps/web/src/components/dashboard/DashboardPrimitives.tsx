@@ -54,7 +54,9 @@ export function DashboardMetric({
 }: {
   label: string;
   value: number | string;
-  icon: ComponentType<{ className?: string }>;
+  /** Optional — Today cards intentionally render without decorative icons. */
+  icon?: ComponentType<{ className?: string }>;
+
   to?: string;
   search?: Record<string, unknown>;
   tone?: "neutral" | "primary" | "warning" | "success";

@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { BackLink } from "@/components/ui-kit";
 import { CentreUsageFilters } from "@/components/reports/CentreUsageFilters";
 import { CentreUsageShiftDetail } from "@/components/reports/CentreUsageShiftDetail";
 import {
@@ -253,6 +253,8 @@ function CentreUsageReport() {
 
   return (
     <div className="space-y-6">
+      <BackLink to="/reports" label="All reports" />
+
       <PageHeader
         title="Centre & Shift Performance"
         subtitle="Review fill performance, shift volume, and scheduled staffing hours by centre."
@@ -270,13 +272,6 @@ function CentreUsageReport() {
               ready={reportReady}
               totalCount={reportQ.data?.totalCount}
             />
-            <Link
-              to="/reports"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              All reports
-            </Link>
           </>
         }
       />
