@@ -112,7 +112,36 @@ export const CARER_DOCUMENT_CATEGORY_META: Record<
 };
 
 export const QUALIFICATIONS_SECTION_COPY =
-  "Qualifications are optional, but strongly recommended. Some childcare centres require verified qualifications before Staff can be matched to their shifts. If you have an ECA/ECE diploma or proof of RECE registration, upload it here to make sure you're eligible for those opportunities.";
+  "Optional but useful — some centres require verified qualifications before matching you to shifts.";
+
+export type CarerDocumentCarerStatusTone = "info" | "warning" | "destructive";
+
+export type CarerDocumentCarerStatus = {
+  label: string;
+  tone: CarerDocumentCarerStatusTone;
+};
+
+/** Single carer-facing status line; omitted when no action or emphasis is needed. */
+export function carerDocumentCarerFacingStatus(
+  category: CarerDocumentCategory,
+): CarerDocumentCarerStatus | null {
+  if (!category.isSubmitted) {
+    return { label: "Not uploaded", tone: "warning" };
+  }
+  if (category.expiryDisplay === "expired") {
+    return { label: "Expired — update required", tone: "destructive" };
+  }
+  if (category.reviewStatus === "issue_flagged") {
+    return { label: "Action required", tone: "destructive" };
+  }
+  if (category.expiryDisplay === "expiring_soon") {
+    return { label: "Expiring soon", tone: "warning" };
+  }
+  if (category.reviewStatus === "pending_review") {
+    return { label: "Under review", tone: "info" };
+  }
+  return null;
+}
 
 /** Role-based qualification visibility for the Carer portal. */
 export function qualificationTypesForStaffRole(

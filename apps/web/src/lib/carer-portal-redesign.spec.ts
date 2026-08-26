@@ -55,6 +55,13 @@ describe("carer portal shell", () => {
     expect(nav).toContain("safe-area-inset-bottom");
   });
 
+  it("uses legal full name in the shell header, not staff displayName", () => {
+    const shell = readSrc("components/carer/CarerShell.tsx");
+    expect(shell).toContain("carerFullName(session)");
+    expect(shell).not.toContain("displayName");
+    expect(shell).not.toContain("session.displayName");
+  });
+
   it("keeps onboarding steps on onboarding chrome so portal nav cannot bounce off guards", () => {
     for (const rel of [
       "routes/carer/onboarding/profile.tsx",
@@ -70,14 +77,26 @@ describe("carer portal shell", () => {
 });
 
 describe("carer portal home", () => {
-  it("leads with shifts, then availability, then account shortcuts", () => {
+  it("leads with needs action, shifts, then availability", () => {
     const home = readSrc("routes/carer/index.tsx");
+    expect(home).toContain("CarerNeedsActionSummary");
     expect(home).toContain("CarerShiftsDashboardSummary");
     expect(home).toContain("CarerAvailabilityDashboardSummary");
     expect(home).toContain("carerGreeting");
-    expect(home.indexOf("CarerShiftsDashboardSummary />")).toBeLessThan(
-      home.indexOf("CarerAvailabilityDashboardSummary />"),
+    expect(home.indexOf("<CarerNeedsActionSummary")).toBeLessThan(
+      home.indexOf("<CarerShiftsDashboardSummary"),
     );
+    expect(home.indexOf("<CarerShiftsDashboardSummary")).toBeLessThan(
+      home.indexOf("<CarerAvailabilityDashboardSummary"),
+    );
+    expect(home).not.toContain("QuickLinkCard");
+    expect(home).not.toContain("compliance documents");
+  });
+
+  it("greets carers by legal first name", () => {
+    const home = readSrc("routes/carer/index.tsx");
+    expect(home).toContain("carer.legalFirstName");
+    expect(home).not.toContain("displayName");
   });
 });
 
@@ -97,12 +116,12 @@ describe("carer onboarding hub presentation", () => {
 });
 
 describe("carer document status presentation", () => {
-  it("keeps separate review and expiry pills for replacement semantics", () => {
+  it("uses a single carer-facing status line instead of separate review/expiry pills", () => {
     const form = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(form).toContain("ReviewStatusPill");
-    expect(form).toContain("ExpiryStatusPill");
-    expect(form).toContain("category.reviewStatus");
-    expect(form).toContain("category.expiryDisplay");
+    expect(form).toContain("CarerDocumentStatusLine");
+    expect(form).toContain("carerDocumentCarerFacingStatus");
+    expect(form).not.toContain("ReviewStatusPill");
+    expect(form).not.toContain("ExpiryStatusPill");
   });
 });
 

@@ -26,12 +26,13 @@ describe("carer availability UI contracts", () => {
     expect(wizard).not.toContain("Not available");
   });
 
-  it("regular availability route uses post-onboarding manager with week default", () => {
+  it("regular availability route uses a simplified week-only manager", () => {
     const route = readSrc("routes/carer/availability.tsx");
     const manager = readSrc("components/carer/CarerAvailabilityManager.tsx");
     expect(route).toContain("requireCarerSessionForPortal");
     expect(route).toContain("CarerAvailabilityManager");
-    expect(manager).toContain('useState<AvailabilityViewMode>("week")');
-    expect(manager).toContain("CarerAvailabilityMonthView");
+    expect(manager).toContain("CarerAvailabilityWeekView");
+    expect(manager).not.toContain("CarerAvailabilityMonthView");
+    expect(route).toContain("Tell Intra when you can work.");
   });
 });

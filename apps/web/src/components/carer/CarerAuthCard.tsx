@@ -23,9 +23,7 @@ export function CarerAuthCard({
             IN
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Carer Portal</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Manage your shifts, availability and documents.
-          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Your shifts, availability, and documents.</p>
         </div>
 
         <Card className="border-border/70 shadow-sm">

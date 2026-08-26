@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import {
   buildCategorySaveFormData,
   CARER_DOCUMENT_CATEGORY_META,
+  carerDocumentCarerFacingStatus,
   categoryDraftDirty,
   categoryDraftFromCategory,
   deriveVscRenewalDueDate,
@@ -315,5 +316,25 @@ describe("carer documents UI", () => {
     expect(src).toContain("QUALIFICATIONS_SECTION_COPY");
     expect(src).toContain("qualificationTypesForStaffRole");
     expect(src).toContain("STAFF_COMPLIANCE_DOCUMENT_TYPES");
+  });
+});
+
+describe("carerDocumentCarerFacingStatus", () => {
+  it("emphasises only carer-actionable document states", () => {
+    expect(
+      carerDocumentCarerFacingStatus(sampleCategory({ isSubmitted: false, reviewStatus: "not_submitted" })),
+    ).toEqual({ label: "Not uploaded", tone: "warning" });
+    expect(
+      carerDocumentCarerFacingStatus(sampleCategory({ reviewStatus: "issue_flagged" })),
+    ).toEqual({ label: "Action required", tone: "destructive" });
+    expect(
+      carerDocumentCarerFacingStatus(sampleCategory({ expiryDisplay: "expired" })),
+    ).toEqual({ label: "Expired — update required", tone: "destructive" });
+    expect(
+      carerDocumentCarerFacingStatus(sampleCategory({ reviewStatus: "pending_review" })),
+    ).toEqual({ label: "Under review", tone: "info" });
+    expect(
+      carerDocumentCarerFacingStatus(sampleCategory({ reviewStatus: "approved", expiryDisplay: "current" })),
+    ).toBeNull();
   });
 });

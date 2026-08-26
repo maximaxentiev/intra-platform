@@ -50,12 +50,12 @@ import {
 } from "@/lib/carer-documents";
 import { openStaffDocumentFile } from "@/lib/staff-document-content";
 import {
-  ExpiryStatusPill,
   IssueNoteCallout,
   RequirementPill,
-  ReviewStatusPill,
   UnsavedPill,
 } from "@/components/documents/DocumentStatusPills";
+import { cn } from "@/lib/utils";
+import { carerDocumentCarerFacingStatus } from "@/lib/carer-documents";
 
 function emptyDrafts(): Record<StaffDocumentType, CategoryDraft> {
   return emptyCategoryDrafts();
@@ -284,31 +284,25 @@ export function CarerDocumentsForm({
   return (
     <>
       <form onSubmit={(e) => void handleSave(e)} className="space-y-4 min-w-0 overflow-x-hidden">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           {mode === "onboarding" ? (
             <Button
               type="button"
               variant="ghost"
-              className="h-10 justify-self-start px-0 text-muted-foreground hover:text-foreground"
+              className="mr-auto h-10 justify-self-start px-0 text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={handleBackRequest}
             >
               <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
               Personal Information
             </Button>
-          ) : (
-            <p className="min-w-0 text-sm text-muted-foreground">
-              Keep these documents current — Intra reviews every new submission.
-            </p>
-          )}
+          ) : null}
           {isDirty ? (
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warning" />
               Unsaved changes
             </span>
-          ) : (
-            <span />
-          )}
+          ) : null}
         </div>
 
 
@@ -560,28 +554,19 @@ function CarerDocumentCategoryCard({
       role="group"
       aria-labelledby={`doc-title-${category.documentType}`}
     >
-      <CardHeader className="gap-3 pb-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          <div className="flex min-w-0 items-start gap-2.5">
-            <span
-              aria-hidden="true"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
-            >
-              <FileText className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 space-y-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <CardTitle id={`doc-title-${category.documentType}`} className="text-base leading-snug">
-                  {meta.title}
-                </CardTitle>
-                <RequirementPill required={meta.required} />
-              </div>
+      <CardHeader className="gap-2 pb-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <CardTitle id={`doc-title-${category.documentType}`} className="text-base leading-snug">
+                {meta.title}
+              </CardTitle>
+              <RequirementPill required={meta.required} />
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-end gap-1.5">
-            <ReviewStatusPill status={category.reviewStatus} />
-            <ExpiryStatusPill display={category.expiryDisplay} />
+          <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+            <CarerDocumentStatusLine category={category} />
             {dirty ? <UnsavedPill /> : null}
           </div>
         </div>
@@ -770,6 +755,30 @@ function CarerDocumentCategoryCard({
 
       </CardContent>
     </Card>
+  );
+}
+
+
+function CarerDocumentStatusLine({ category }: { category: CarerDocumentCategory }) {
+  const status = carerDocumentCarerFacingStatus(category);
+  if (!status) return null;
+
+  const toneClass =
+    status.tone === "destructive"
+      ? "border-destructive/30 bg-destructive/5 text-destructive"
+      : status.tone === "warning"
+        ? "border-warning/30 bg-warning-soft text-warning"
+        : "border-info/25 bg-info-soft text-info";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+        toneClass,
+      )}
+    >
+      {status.label}
+    </span>
   );
 }
 

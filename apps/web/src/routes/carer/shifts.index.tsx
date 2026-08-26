@@ -15,7 +15,7 @@ function CarerShiftsPage() {
     <CarerShell
       session={carer}
       title="Shifts"
-      subtitle="View your upcoming and previous assigned shifts."
+      subtitle="Your assigned shifts."
     >
       <div className="mb-4">
         <Button asChild variant="ghost" className="h-11 min-h-11 px-0 text-muted-foreground hover:text-foreground">

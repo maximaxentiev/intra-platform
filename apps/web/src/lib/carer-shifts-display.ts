@@ -23,6 +23,11 @@ export function carerShiftStatusLabel(status: CarerShiftStatus): string {
   return CARER_SHIFT_STATUS_LABEL[status];
 }
 
+/** Status badges are only meaningful when a shift is no longer a normal upcoming assignment. */
+export function carerShiftShowsStatusBadge(status: CarerShiftStatus): boolean {
+  return status === "cancelled" || status === "completed";
+}
+
 export function carerShiftDetailLinkLabel(shift: Pick<CarerShift, "shiftDate">): string {
   return `View details for ${formatFullCalendarDateWithYearLabel(shift.shiftDate)} shift`;
 }

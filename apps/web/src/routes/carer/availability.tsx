@@ -21,7 +21,7 @@ function CarerAccountAvailabilityPage() {
     <CarerShell
       session={carer}
       title="Availability"
-      subtitle="Keep your availability up to date so our team knows when you're available to work."
+      subtitle="Tell Intra when you can work."
     >
       <div className="mb-4">
         <Button asChild variant="ghost" className="h-11 min-h-11 px-0 text-muted-foreground hover:text-foreground">

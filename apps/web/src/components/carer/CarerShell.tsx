@@ -22,7 +22,7 @@ export function CarerShell({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
-  const displayName = carerFullName(session) || session.email;
+  const carerName = carerFullName(session) || session.email;
 
   async function signOut() {
     try {
@@ -43,18 +43,13 @@ export function CarerShell({
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
                 IN
               </div>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold leading-tight">Intra</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  Carer Portal
-                </span>
-              </span>
+              <span className="truncate text-sm font-semibold leading-tight">Intra</span>
             </Link>
             <CarerTopNav />
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="hidden max-w-[14rem] truncate text-sm text-muted-foreground lg:inline">
-              {displayName}
+              {carerName}
             </span>
             <Button
               variant="ghost"

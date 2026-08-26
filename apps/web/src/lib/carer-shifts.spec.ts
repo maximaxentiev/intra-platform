@@ -153,19 +153,19 @@ describe("carer shifts dashboard", () => {
     expect(dashboard).toContain("useCarerShiftsSummary(4)");
   });
 
-  it("renders date, time, centre, optional role, and cancelled status", () => {
+  it("renders centre, date, and time without redundant upcoming status badges", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
     expect(dashboard).toContain("formatAvailabilityWindowDisplay");
     expect(dashboard).toContain("shift.centre.name");
-    expect(dashboard).toContain("CarerShiftStatusBadge");
+    expect(dashboard).not.toContain("CarerShiftStatusBadge");
   });
 
-  it("shows empty state, View details links, and View all shifts link", () => {
+  it("shows empty state, clickable cards, and View more shifts link", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(dashboard).toContain("No upcoming shifts assigned.");
     expect(dashboard).toContain('to="/carer/shifts/$id"');
-    expect(dashboard).toContain("View shift details");
+    expect(dashboard).not.toContain("View shift details");
     expect(dashboard).toContain('to="/carer/shifts"');
     expect(dashboard).toContain("View more shifts");
   });
@@ -211,15 +211,16 @@ describe("carer shifts page", () => {
     expect(manager).toContain("setHistoryPage(1)");
   });
 
-  it("renders shift cards with View details links and no list cancel actions", () => {
+  it("renders compact clickable shift cards without list cancel actions", () => {
     const card = readSrc("components/carer/CarerShiftCard.tsx");
     const manager = readSrc("components/carer/CarerShiftsManager.tsx");
     expect(card).toContain("formatDashboardAvailabilityDateLabel");
     expect(card).toContain("formatAvailabilityWindowDisplay");
-    expect(card).toContain("CarerShiftStatusBadge");
-    expect(card).toContain("shift.roleNeeded");
+    expect(card).toContain("carerShiftShowsStatusBadge");
+    expect(card).toContain("shift.centre.name");
     expect(card).toContain('to="/carer/shifts/$id"');
-    expect(card).toContain("View details");
+    expect(card).not.toContain("View details");
+    expect(card).not.toContain("shift.roleNeeded");
     expect(card).not.toContain("assignedStaffId");
     expect(card).not.toContain("cancellationReason");
     expect(manager).not.toMatch(/\bAccept\b/);
@@ -267,28 +268,23 @@ describe("carer shift detail route", () => {
 describe("carer shift detail presentation", () => {
   const detail = () => readSrc("components/carer/CarerShiftDetail.tsx");
 
-  it("renders upcoming, today, completed, and cancelled statuses from API", () => {
+  it("shows status badges only for cancelled and completed shifts", () => {
     const src = detail();
+    expect(src).toContain("carerShiftShowsStatusBadge");
     expect(src).toContain("CarerShiftStatusBadge");
     expect(src).toContain("shift.status");
-    expect(src).not.toContain('status === "upcoming"');
     expect(src).not.toContain("torontoToday");
   });
 
-  it("shows full date, time, centre, address, city, and optional role", () => {
+  it("prioritises centre name, date, time, and location for carers", () => {
     const src = detail();
     expect(src).toContain("formatFullCalendarDateWithYearLabel");
     expect(src).toContain("formatAvailabilityWindowDisplay");
     expect(src).toContain("centre.name");
     expect(src).toContain("centre.address");
     expect(src).toContain("centre.city");
-    expect(src).toContain("shift.roleNeeded");
-    expect(src).toContain("Role");
-  });
-
-  it("omits role section when roleNeeded is null", () => {
-    const src = detail();
-    expect(src).toContain("shift.roleNeeded ?");
+    expect(src).not.toContain("shift.roleNeeded");
+    expect(src).not.toContain("Role");
   });
 
   it("shows cancelled supporting copy and optional own cancellation reason", () => {
@@ -384,10 +380,12 @@ describe("carer shifts read-only security", () => {
     }
   });
 
-  it("does not recalculate shift status in the web layer", () => {
+  it("uses full-card links and limits status badges to cancelled/completed", () => {
     const card = readSrc("components/carer/CarerShiftCard.tsx");
     const display = readSrc("lib/carer-shifts-display.ts");
-    expect(card).toContain("shift.status");
+    expect(card).toContain("carerShiftShowsStatusBadge");
+    expect(card).not.toContain("View details");
+    expect(display).toContain("carerShiftShowsStatusBadge");
     expect(display).not.toContain("torontoToday");
     expect(display).not.toContain("new Date(");
   });

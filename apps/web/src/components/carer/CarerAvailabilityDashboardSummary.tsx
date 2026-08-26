@@ -6,9 +6,11 @@ import {
 } from "@/lib/carer-availability-dates";
 import { useCarerUpcomingAvailability } from "@/lib/carer-availability-upcoming";
 
+const PREVIEW_LIMIT = 3;
+
 export function CarerAvailabilityDashboardSummary() {
   const { data, isLoading, isError } = useCarerUpcomingAvailability(1, 10);
-  const previewItems = data?.items.slice(0, 4) ?? [];
+  const previewItems = data?.items.slice(0, PREVIEW_LIMIT) ?? [];
   const hasUpcoming = previewItems.length > 0;
 
   if (isLoading) {
@@ -24,7 +26,7 @@ export function CarerAvailabilityDashboardSummary() {
     return (
       <div className="space-y-2 text-sm">
         <Link to="/carer/availability" className="font-medium text-primary hover:underline">
-          Add availability
+          Edit availability
         </Link>
         <p className="text-muted-foreground">Could not load upcoming availability.</p>
       </div>
@@ -32,22 +34,23 @@ export function CarerAvailabilityDashboardSummary() {
   }
 
   return (
-    <div className="space-y-3 text-sm">
-      <Link to="/carer/availability" className="font-medium text-primary hover:underline">
-        {hasUpcoming ? "Edit availability" : "Add availability"}
-      </Link>
-
+    <div className="space-y-2 text-sm">
       {!hasUpcoming ? (
-        <p className="text-muted-foreground">No upcoming availability added.</p>
+        <>
+          <p className="text-muted-foreground">No upcoming availability added.</p>
+          <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+            Edit availability
+          </Link>
+        </>
       ) : (
         <>
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {previewItems.map((item) => (
               <li
                 key={item.calendarDate}
-                className="rounded-lg border border-border/70 bg-card px-3 py-2.5"
+                className="rounded-lg border border-border/70 bg-card px-3 py-2"
               >
-                <p className="font-semibold text-foreground">
+                <p className="font-medium text-foreground">
                   {formatDashboardAvailabilityDateLabel(item.calendarDate)}
                 </p>
                 <p className="text-muted-foreground">
@@ -58,12 +61,8 @@ export function CarerAvailabilityDashboardSummary() {
               </li>
             ))}
           </ul>
-          <Link
-            to="/carer/availability"
-            hash="upcoming-availability"
-            className="font-medium text-primary hover:underline"
-          >
-            View more
+          <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+            Edit availability
           </Link>
         </>
       )}

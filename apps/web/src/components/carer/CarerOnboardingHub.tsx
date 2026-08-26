@@ -43,8 +43,8 @@ export function CarerOnboardingHub({
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           {canFinish
-            ? "All three steps are complete. Finish onboarding to activate your account and start receiving shift opportunities."
-            : "Finish these three steps to set up your account and start receiving shift opportunities."}
+            ? "All three steps are complete. Finish onboarding to activate your account."
+            : "Complete these steps to set up your account."}
         </p>
 
         <div className="mt-4 space-y-2" aria-label="Onboarding progress">

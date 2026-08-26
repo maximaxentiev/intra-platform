@@ -46,7 +46,7 @@ function CarerProfilePage() {
     <CarerShell
       session={carer}
       title="Personal information"
-      subtitle="Keep your contact and personal information up to date."
+      subtitle="Update your contact details."
     >
       <div className="mb-4">
         <Button asChild variant="ghost" className="h-10 px-0 text-muted-foreground hover:text-foreground">

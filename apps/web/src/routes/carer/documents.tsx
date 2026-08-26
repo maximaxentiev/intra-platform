@@ -28,7 +28,7 @@ function CarerAccountDocumentsPage() {
     <CarerShell
       session={carer}
       title="Documents"
-      subtitle="Upload and manage the documents Intra needs for compliance review."
+      subtitle="Upload the documents Intra needs for your account."
     >
       <div className="mb-4">
         <Button asChild variant="ghost" className="h-10 px-0 text-muted-foreground hover:text-foreground">

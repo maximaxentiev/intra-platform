@@ -202,9 +202,9 @@ export function CarerAvailabilityWindowList({
       {slots.map((slot) => (
         <li
           key={slot.id}
-          className="flex flex-col gap-2 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-2 rounded-lg border border-primary/25 bg-primary-soft px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span className="text-sm font-medium">
+          <span className="text-sm font-semibold text-foreground">
             {formatAvailabilityWindowDisplay(slot.startTime, slot.endTime)}
           </span>
           <div className="flex flex-wrap gap-2">

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,19 +9,17 @@ import {
   formatFullCalendarDateWithYearLabel,
 } from "@/lib/carer-availability-dates";
 import type { CarerShift } from "@/lib/carer-shifts";
+import { carerShiftShowsStatusBadge } from "@/lib/carer-shifts-display";
 import { useCarerShift } from "@/lib/carer-shifts-queries";
 
 function CarerShiftDetailSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite" aria-label="Loading shift details">
       <Skeleton className="h-6 w-28" />
-      <div className="space-y-4 rounded-md border bg-background p-4 sm:p-6">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-6 w-24" />
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
         <Skeleton className="h-5 w-full max-w-xs" />
         <Skeleton className="h-5 w-full max-w-sm" />
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-5 w-48" />
       </div>
     </div>
   );
@@ -29,7 +27,7 @@ function CarerShiftDetailSkeleton() {
 
 function CarerShiftNotFound() {
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4 rounded-md border bg-background p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-lg space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">Shift not found</h1>
       <p className="text-sm text-muted-foreground">
         This shift is no longer available or is not assigned to your account.
@@ -43,7 +41,7 @@ function CarerShiftNotFound() {
 
 function CarerShiftLoadError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4 rounded-md border border-destructive/30 bg-destructive/5 p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-lg space-y-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
       <p className="text-sm text-foreground">Unable to load shift details.</p>
       <Button type="button" variant="outline" className="h-11" onClick={onRetry}>
         Try again
@@ -58,56 +56,45 @@ type CarerShiftDetailContentProps = {
 
 export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps) {
   const { centre } = shift;
+  const showStatus = carerShiftShowsStatusBadge(shift.status);
+  const location = [centre.address, centre.city].filter(Boolean).join(", ");
 
   return (
-    <article className="mx-auto w-full max-w-lg space-y-6 rounded-md border bg-background p-4 sm:p-6">
-      <div className="space-y-3">
-        <CarerShiftStatusBadge status={shift.status} />
-        {shift.status === "cancelled" ? (
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">Shift cancelled</p>
-            <p className="text-sm text-muted-foreground">This shift has been cancelled.</p>
-            {shift.cancellationReason ? (
-              <p className="break-words text-sm text-foreground">
-                <span className="text-muted-foreground">Reason: </span>
-                {shift.cancellationReason}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+    <article className="mx-auto w-full max-w-lg space-y-5">
+      {showStatus ? (
+        <div className="space-y-2">
+          <CarerShiftStatusBadge status={shift.status} />
+          {shift.status === "cancelled" ? (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Shift cancelled</p>
+              <p className="text-sm text-muted-foreground">This shift has been cancelled.</p>
+              {shift.cancellationReason ? (
+                <p className="break-words text-sm text-foreground">
+                  <span className="text-muted-foreground">Reason: </span>
+                  {shift.cancellationReason}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-foreground">{centre.name}</h2>
+        <p className="text-base font-medium text-foreground">
+          {formatFullCalendarDateWithYearLabel(shift.shiftDate)}
+        </p>
+        <p className="text-base tabular-nums text-foreground">
+          {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
+        </p>
       </div>
 
-      <dl className="space-y-5 text-sm">
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Date</dt>
-          <dd className="text-lg font-semibold text-foreground">
-            {formatFullCalendarDateWithYearLabel(shift.shiftDate)}
-          </dd>
+      {location ? (
+        <div className="flex items-start gap-2 text-sm text-foreground">
+          <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 break-words">{location}</p>
         </div>
-
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Time</dt>
-          <dd className="text-lg font-semibold text-foreground">
-            {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
-          </dd>
-        </div>
-
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Centre</dt>
-          <dd className="space-y-0.5">
-            <p className="font-medium text-foreground">{centre.name}</p>
-            {centre.address ? <p className="break-words text-foreground">{centre.address}</p> : null}
-            {centre.city ? <p className="text-foreground">{centre.city}</p> : null}
-          </dd>
-        </div>
-
-        {shift.roleNeeded ? (
-          <div className="space-y-1">
-            <dt className="text-muted-foreground">Role</dt>
-            <dd className="font-medium text-foreground">{shift.roleNeeded}</dd>
-          </div>
-        ) : null}
-      </dl>
+      ) : null}
     </article>
   );
 }

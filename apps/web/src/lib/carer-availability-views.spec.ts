@@ -19,20 +19,19 @@ function readSrc(rel: string) {
 }
 
 describe("carer availability week view", () => {
-  it("defaults regular route to week-first manager", () => {
+  it("defaults regular route to a week-only manager", () => {
     const route = readSrc("routes/carer/availability.tsx");
     const manager = readSrc("components/carer/CarerAvailabilityManager.tsx");
     expect(route).toContain("CarerAvailabilityManager");
-    expect(manager).toContain('useState<AvailabilityViewMode>("week")');
     expect(manager).toContain("CarerAvailabilityWeekView");
-    expect(manager).toContain("CarerAvailabilityMonthView");
+    expect(manager).not.toContain("CarerAvailabilityMonthView");
+    expect(manager).not.toContain("CarerAvailabilityUpcomingList");
   });
 
-  it("provides week and month toggle without persisting preference", () => {
+  it("does not expose a week/month toggle on the carer availability page", () => {
     const manager = readSrc("components/carer/CarerAvailabilityManager.tsx");
-    expect(manager).toContain('role="tablist"');
-    expect(manager).toContain('"week"');
-    expect(manager).toContain('"month"');
+    expect(manager).not.toContain('role="tablist"');
+    expect(manager).not.toContain("AvailabilityViewToggle");
     expect(manager).not.toContain("localStorage");
   });
 
@@ -64,10 +63,10 @@ describe("carer availability week view", () => {
     expect(weekDayDates(currentMondayWeekStart("2026-08-13"))).toHaveLength(7);
   });
 
-  it("retains selected date when switching views", () => {
+  it("keeps selected date aligned with the visible week", () => {
     const manager = readSrc("components/carer/CarerAvailabilityManager.tsx");
-    expect(manager).toContain("mondayOfDateString(selectedDate)");
-    expect(manager).toContain("setDisplayMonth");
+    expect(manager).toContain("mondayOfDateString(date)");
+    expect(manager).not.toContain("setDisplayMonth");
   });
 });
 
@@ -131,34 +130,13 @@ describe("carer availability dashboard summary", () => {
     expect(home).toContain("Availability");
   });
 
-  it("shows Add availability below title when there is no upcoming availability", () => {
+  it("shows a concise preview capped at three dates with Edit availability action", () => {
     const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
-    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
+    expect(dashboard).toContain("PREVIEW_LIMIT = 3");
     expect(dashboard).toContain('to="/carer/availability"');
-    expect(dashboard).toContain("Add availability");
-    expect(dashboard).toContain("No upcoming availability added.");
-    expect(dashboard).toContain("hasUpcoming");
-    expect(body.indexOf("Add availability")).toBeLessThan(body.indexOf("No upcoming availability added."));
-    expect(body).not.toMatch(/No upcoming availability added\.[\s\S]*Add availability/);
-  });
-
-  it("shows Edit availability below title when upcoming dates exist", () => {
-    const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
-    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
     expect(dashboard).toContain("Edit availability");
-    expect(dashboard).toContain('hasUpcoming ? "Edit availability" : "Add availability"');
-    expect(body.indexOf("Edit availability")).toBeLessThan(
-      body.indexOf("formatDashboardAvailabilityDateLabel"),
-    );
-  });
-
-  it("renders upcoming dates below the action and View more below the dates", () => {
-    const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
-    const body = dashboard.slice(dashboard.indexOf('<div className="space-y-3 text-sm">'));
     expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
-    expect(dashboard).toContain("View more");
-    expect(dashboard).toContain('hash="upcoming-availability"');
-    expect(body.indexOf("formatDashboardAvailabilityDateLabel")).toBeLessThan(body.indexOf("View more"));
+    expect(dashboard).not.toContain("View more");
     expect(dashboard).not.toContain("Remove");
     expect(dashboard).not.toContain("Trash2");
   });
