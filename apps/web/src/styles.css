@@ -91,11 +91,12 @@
 :root {
   --radius: 0.625rem;
 
-  /* Base neutrals — warm zinc */
-  --background: oklch(0.985 0.003 285);
+  /* Base neutrals — warm beige page, white content surfaces */
+  --background: oklch(0.962 0.016 84);     /* Intra warm beige page background */
   --surface: oklch(1 0 0);
-  --surface-muted: oklch(0.975 0.004 285);
+  --surface-muted: oklch(0.975 0.010 84);
   --foreground: oklch(0.22 0.012 285);
+
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.012 285);
