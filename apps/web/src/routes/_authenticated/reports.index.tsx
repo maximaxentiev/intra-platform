@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Building2, ClipboardList, FileText, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -12,28 +11,24 @@ const REPORT_CARDS = [
     title: "Centre & Shift Performance",
     description: "Review fill performance, shift volume, and scheduled staffing hours by centre.",
     to: "/reports/centre-usage",
-    icon: Building2,
     available: true,
   },
   {
     title: "Staff Usage",
     description: "Review completed and upcoming shift usage by Staff member.",
     to: "/reports/staff-usage",
-    icon: Users,
     available: true,
   },
   {
     title: "Document Compliance",
     description: "Review current Staff document status, expiry, and reminder delivery.",
     to: "/reports/documents",
-    icon: FileText,
     available: true,
   },
   {
     title: "Activity Log",
     description: "Review recorded Staff, Shift, document, communication, and administrative activity.",
     to: "/reports/activity",
-    icon: ClipboardList,
     available: true,
   },
 ] as const;
@@ -48,7 +43,6 @@ function ReportsLanding() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {REPORT_CARDS.map((card) => {
-          const Icon = card.icon;
           const body = (
             <Card
               className={`h-full border-border/70 shadow-xs ${
@@ -58,10 +52,7 @@ function ReportsLanding() {
               }`}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {card.title}
-                </CardTitle>
+                <CardTitle className="text-lg font-semibold">{card.title}</CardTitle>
                 <CardDescription>{card.description}</CardDescription>
               </CardHeader>
               <CardContent>
