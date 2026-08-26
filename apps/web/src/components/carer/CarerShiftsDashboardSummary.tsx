@@ -7,6 +7,7 @@ import {
 } from "@/lib/carer-availability-dates";
 import { useCarerShiftsSummary } from "@/lib/carer-shifts-queries";
 import { carerShiftDetailLinkLabel } from "@/lib/carer-shifts-display";
+import { CarerShiftStatusBadge } from "./CarerShiftStatusBadge";
 
 export function CarerShiftsDashboardSummary() {
   const { data, isLoading, isError, refetch } = useCarerShiftsSummary(4);
@@ -57,7 +58,10 @@ export function CarerShiftsDashboardSummary() {
                 className="group flex min-h-14 items-center gap-3 rounded-lg border border-border/70 bg-card px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="truncate font-semibold text-foreground">{shift.centre.name}</p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate font-semibold text-foreground">{shift.centre.name}</p>
+                    <CarerShiftStatusBadge shift={shift} />
+                  </div>
                   <p className="truncate text-muted-foreground">
                     {formatDashboardAvailabilityDateLabel(shift.shiftDate)} ·{" "}
                     {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
