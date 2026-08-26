@@ -60,6 +60,7 @@ export class ReportsActivityService {
       staffId: query.staffId ?? null,
       centreId: query.centreId ?? null,
       shiftId: query.shiftId ?? null,
+      opsUserId: query.opsUserId ?? null,
       ...buildPaginatedReportResponse(items, page, pageSize, totalCount),
     };
   }
@@ -128,6 +129,9 @@ export class ReportsActivityService {
     }
     if (query.shiftId) {
       filterClauses.push(sql`shift_id = ${query.shiftId}`);
+    }
+    if (query.opsUserId) {
+      filterClauses.push(sql`actor_user_id = ${query.opsUserId}`);
     }
 
     const activityUnion = this.buildActivityUnionSql(fromInstant, toExclusive);

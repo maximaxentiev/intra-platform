@@ -126,6 +126,7 @@ export const reportsApi = {
     staffId?: string;
     centreId?: string;
     shiftId?: string;
+    opsUserId?: string;
     page?: number;
     pageSize?: number;
   }) => api.get<ActivityLogResponse>("/reports/activity", query),

@@ -35,6 +35,7 @@ type ActivityLogFiltersProps = {
   dateTo: string;
   category: string;
   actorType: string;
+  opsUserId: string;
   staffId: string;
   centreId: string;
   staff: Staff[];
@@ -44,6 +45,7 @@ type ActivityLogFiltersProps = {
   onDateToChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onActorTypeChange: (value: string) => void;
+  onOpsUserChange: (value: string) => void;
   onStaffChange: (value: string) => void;
   onCentreChange: (value: string) => void;
   onApply: () => void;
@@ -55,6 +57,7 @@ export function ActivityLogFilters({
   dateTo,
   category,
   actorType,
+  opsUserId,
   staffId,
   centreId,
   staff,
@@ -64,6 +67,7 @@ export function ActivityLogFilters({
   onDateToChange,
   onCategoryChange,
   onActorTypeChange,
+  onOpsUserChange,
   onStaffChange,
   onCentreChange,
   onApply,
@@ -138,16 +142,7 @@ export function ActivityLogFilters({
             >
               Ops user
             </Label>
-            {/*
-              BACKEND GAP: The reports API (`reportsApi.activityLog` / GET /reports/activity)
-              has no parameter to filter results by a specific ops user id — only `staffId`,
-              which filters Staff actors, not Ops users. Wiring this selector would require
-              the backend to accept something like `actorId` (or `opsUserId`) on
-              GET /reports/activity and filter activity rows where actor.type === "ops_user"
-              && actor.id === actorId. Until that exists, this selector stays disabled so it
-              never silently fails to filter.
-            */}
-            <Select value="all" disabled>
+            <Select value={opsUserId} onValueChange={onOpsUserChange}>
               <SelectTrigger id="activity-ops-user" className="h-10">
                 <SelectValue placeholder="All ops users" />
               </SelectTrigger>
@@ -160,9 +155,6 @@ export function ActivityLogFilters({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Filtering by a specific ops user isn't supported by the reports API yet.
-            </p>
           </div>
         ) : null}
         <div className="space-y-1.5">

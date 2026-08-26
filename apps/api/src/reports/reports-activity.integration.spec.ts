@@ -287,6 +287,33 @@ describe.skipIf(!POSTGRES_READY)('Reports activity PostgreSQL integration', () =
     expect(centreScoped.items.every((item) => item.centre?.id === FIXTURE.centre)).toBe(true);
   });
 
+  it('filters by specific ops user via actor_user_id', async () => {
+    const allOps = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      actorType: 'ops_user',
+      pageSize: 100,
+    });
+    expect(allOps.totalCount).toBeGreaterThan(0);
+
+    const scoped = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      actorType: 'ops_user',
+      opsUserId: FIXTURE.opsUser,
+      pageSize: 100,
+    });
+    expect(scoped.totalCount).toBeGreaterThan(0);
+    expect(scoped.opsUserId).toBe(FIXTURE.opsUser);
+    expect(scoped.items.every((item) => item.actor.id === FIXTURE.opsUser)).toBe(true);
+    expect(scoped.totalCount).toBeLessThanOrEqual(allOps.totalCount);
+
+    const noMatch = await service.getActivityLog({
+      ...ACTIVITY_FIXTURE_RANGE,
+      opsUserId: 'ffffffff-ffff-4fff-8fff-ffffffffff99',
+      pageSize: 100,
+    });
+    expect(noMatch.totalCount).toBe(0);
+  });
+
   it('shows unknown actor for legacy shift record creation', async () => {
     const result = await service.getActivityLog({
       ...ACTIVITY_FIXTURE_RANGE,

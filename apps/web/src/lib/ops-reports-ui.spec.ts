@@ -241,6 +241,9 @@ describe("ops reports UI source", () => {
 
     expect(filters).toContain("All categories");
     expect(filters).toContain("All actors");
+    expect(filters).toContain("Ops user");
+    expect(filters).toContain("onOpsUserChange");
+    expect(filters).not.toContain("isn't supported by the reports API yet");
   });
 
   it("all four active report pages expose Export CSV near the page header", () => {

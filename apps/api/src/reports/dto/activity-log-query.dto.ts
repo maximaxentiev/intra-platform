@@ -30,6 +30,11 @@ export class ActivityLogQueryDto extends ReportDateRangeQueryDto {
   @IsUUID('4')
   shiftId?: string;
 
+  /** Filter to activity performed by a specific Ops user (matches `actor_user_id`). */
+  @IsOptional()
+  @IsUUID('4')
+  opsUserId?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

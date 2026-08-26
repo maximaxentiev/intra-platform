@@ -290,6 +290,7 @@ export interface ActivityLogResponse {
   staffId: string | null;
   centreId: string | null;
   shiftId: string | null;
+  opsUserId: string | null;
   items: ActivityLogItem[];
   page: number;
   pageSize: number;

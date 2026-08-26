@@ -33,6 +33,7 @@ const searchSchema = z.object({
   staffId: z.string().optional(),
   centreId: z.string().optional(),
   shiftId: z.string().optional(),
+  opsUserId: z.string().optional(),
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
 });
@@ -53,6 +54,7 @@ function ActivityLogReport() {
       dateTo: search.dateTo ?? defaults.dateTo,
       category: search.category ?? "all",
       actorType: search.actorType ?? "all",
+      opsUserId: search.opsUserId ?? "all",
       staffId: search.staffId ?? "all",
       centreId: search.centreId ?? "all",
       shiftId: search.shiftId ?? undefined,
@@ -66,6 +68,7 @@ function ActivityLogReport() {
   const [dateTo, setDateTo] = useState(applied.dateTo);
   const [category, setCategory] = useState(applied.category);
   const [actorType, setActorType] = useState(applied.actorType);
+  const [opsUserId, setOpsUserId] = useState(applied.opsUserId);
   const [staffId, setStaffId] = useState(applied.staffId);
   const [centreId, setCentreId] = useState(applied.centreId);
 
@@ -89,6 +92,7 @@ function ActivityLogReport() {
       applied.dateTo,
       applied.category,
       applied.actorType,
+      applied.opsUserId,
       applied.staffId,
       applied.centreId,
       applied.page,
@@ -100,6 +104,10 @@ function ActivityLogReport() {
         dateTo: applied.dateTo,
         category: applied.category === "all" ? undefined : applied.category,
         actorType: applied.actorType === "all" ? undefined : applied.actorType,
+        opsUserId:
+          applied.actorType === "ops_user" && applied.opsUserId !== "all"
+            ? applied.opsUserId
+            : undefined,
         staffId: applied.staffId === "all" ? undefined : applied.staffId,
         centreId: applied.centreId === "all" ? undefined : applied.centreId,
         page: applied.page,
@@ -113,6 +121,8 @@ function ActivityLogReport() {
       dateTo: dateTo === defaults.dateTo ? undefined : dateTo,
       category: category === "all" ? undefined : category,
       actorType: actorType === "all" ? undefined : actorType,
+      opsUserId:
+        actorType === "ops_user" && opsUserId !== "all" ? opsUserId : undefined,
       staffId: staffId === "all" ? undefined : staffId,
       centreId: centreId === "all" ? undefined : centreId,
       page: page === 1 ? undefined : page,
@@ -132,6 +142,7 @@ function ActivityLogReport() {
     setDateTo(next.dateTo);
     setCategory("all");
     setActorType("all");
+    setOpsUserId("all");
     setStaffId("all");
     setCentreId("all");
     navigate({ search: {} });
@@ -190,6 +201,10 @@ function ActivityLogReport() {
                 dateTo: applied.dateTo,
                 category: applied.category === "all" ? undefined : applied.category,
                 actorType: applied.actorType === "all" ? undefined : applied.actorType,
+                opsUserId:
+                  applied.actorType === "ops_user" && applied.opsUserId !== "all"
+                    ? applied.opsUserId
+                    : undefined,
                 staffId: applied.staffId === "all" ? undefined : applied.staffId,
                 centreId: applied.centreId === "all" ? undefined : applied.centreId,
                 shiftId: applied.shiftId,
@@ -213,6 +228,7 @@ function ActivityLogReport() {
         dateTo={dateTo}
         category={category}
         actorType={actorType}
+        opsUserId={opsUserId}
         staffId={staffId}
         centreId={centreId}
         staff={staffQ.data ?? []}
@@ -221,7 +237,11 @@ function ActivityLogReport() {
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onCategoryChange={setCategory}
-        onActorTypeChange={setActorType}
+        onActorTypeChange={(value) => {
+          setActorType(value);
+          if (value !== "ops_user") setOpsUserId("all");
+        }}
+        onOpsUserChange={setOpsUserId}
         onStaffChange={setStaffId}
         onCentreChange={setCentreId}
         onApply={applyFilters}
