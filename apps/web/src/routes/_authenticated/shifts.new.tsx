@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
-import { SectionCard } from "@/components/ui-kit";
+import { BackLink, SectionCard } from "@/components/ui-kit";
 import { Info } from "lucide-react";
 
 const STAFFPOINT_HELP =
@@ -72,10 +72,8 @@ function NewShift() {
 
   return (
     <div className="max-w-[740px] space-y-6">
+      <BackLink to="/shifts" label="Back to Shifts" />
       <PageHeader
-        eyebrow="New"
-        backTo="/shifts"
-        backLabel="Back to Shifts"
         title="Create shift"
         subtitle="Create the shift first, then find and assign staff on the next screen."
       />

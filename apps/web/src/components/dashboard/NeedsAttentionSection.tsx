@@ -25,11 +25,7 @@ export function NeedsAttentionSection({
   const anything = hasAttentionItems(attention);
 
   return (
-    <DashboardSection
-      id="needs-attention"
-      title="Needs attention"
-      description="Items that may require action from Ops."
-    >
+    <DashboardSection id="needs-attention" title="Needs attention">
       {!anything ? (
         <div className="flex min-h-[44px] flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-success/20 bg-success-soft/30 px-3 py-2.5">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />

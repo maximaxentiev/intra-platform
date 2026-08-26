@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 
 function isDayPast(dayDate: Date): boolean {
@@ -42,6 +50,8 @@ function AvailabilityPage() {
   const [timeStartFilter, setTimeStartFilter] = useState<string>("");
   const [timeEndFilter, setTimeEndFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const weekKey = toDateStr(weekStart);
   const thisWeekKey = toDateStr(mondayOf(new Date()));
@@ -78,16 +88,22 @@ function AvailabilityPage() {
     return { staff: s, entries };
   }).filter((r) => (active !== "all" || filterStart) ? r.entries.length > 0 : true);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   function clearFilters() {
     setDayFilter("all");
     setTimeStartFilter("");
     setTimeEndFilter("");
     setDateFilter("");
     setWeekStart(mondayOf(new Date()));
+    setPage(1);
   }
 
   function handleDateFilterChange(value: string) {
     setDateFilter(value);
+    setPage(1);
     if (!value) return;
     const picked = fromDateStr(value);
     setWeekStart(mondayOf(picked));
@@ -97,18 +113,21 @@ function AvailabilityPage() {
   function handleDayFilterChange(value: string) {
     setDayFilter(value);
     setDateFilter("");
+    setPage(1);
   }
 
   function shiftWeek(delta: number) {
     setWeekStart(prev => addDays(prev, delta));
     setDateFilter("");
     if (dayFilter !== "all") setDayFilter("all");
+    setPage(1);
   }
 
   function goToThisWeek() {
     setWeekStart(mondayOf(new Date()));
     setDateFilter("");
     setDayFilter("all");
+    setPage(1);
   }
 
   return (
@@ -154,8 +173,8 @@ function AvailabilityPage() {
             <div className="space-y-1.5 md:col-span-2">
               <Label className="text-xs font-medium text-muted-foreground">Available during time</Label>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="time" value={timeStartFilter} onChange={e => setTimeStartFilter(e.target.value)} className="h-10" aria-label="From time" placeholder="From" />
-                <Input type="time" value={timeEndFilter} onChange={e => setTimeEndFilter(e.target.value)} className="h-10" aria-label="To time" placeholder="To" />
+                <Input type="time" value={timeStartFilter} onChange={e => { setTimeStartFilter(e.target.value); setPage(1); }} className="h-10" aria-label="From time" placeholder="From" />
+                <Input type="time" value={timeEndFilter} onChange={e => { setTimeEndFilter(e.target.value); setPage(1); }} className="h-10" aria-label="To time" placeholder="To" />
               </div>
             </div>
             <Button variant="outline" onClick={clearFilters} disabled={!hasFilters} className="h-10">
@@ -174,7 +193,7 @@ function AvailabilityPage() {
               </div>
             )}
             <ul className="divide-y divide-border">
-              {rows.map(({ staff, entries }) => (
+              {pagedRows.map(({ staff, entries }) => (
                 <li key={staff.id} className="p-3 sm:p-4 flex items-start gap-4 transition-colors hover:bg-muted/30">
                   <Link
                     to="/staff/$id"
@@ -196,7 +215,7 @@ function AvailabilityPage() {
                           className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border tabular-nums ${
                             past
                               ? "bg-muted text-muted-foreground border-border"
-                              : "bg-warning-soft text-warning-foreground border-warning/25"
+                              : "bg-info-soft text-foreground border-info/25"
                           }`}
                         >
                           <span className="font-semibold uppercase tracking-wide">{DAY_FULL[a.dayOfWeek].slice(0, 3)}</span>
@@ -210,6 +229,53 @@ function AvailabilityPage() {
               ))}
             </ul>
           </div>
+
+          {rows.length > 0 && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Rows per page</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+                >
+                  <SelectTrigger className="h-8 w-[4.5rem]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>
+                  Showing {(currentPage - 1) * pageSize + 1}
+                  –{Math.min(currentPage * pageSize, rows.length)} of {rows.length}
+                </span>
+              </div>
+
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); if (currentPage > 1) setPage(currentPage - 1); }}
+                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#" isActive className="pointer-events-none">
+                      {currentPage} / {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setPage(currentPage + 1); }}
+                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

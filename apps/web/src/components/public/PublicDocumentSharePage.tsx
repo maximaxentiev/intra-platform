@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDocumentDate, expiryDisplayLabel } from "@/lib/carer-documents";
 import { openPublicStaffDocumentFile } from "@/lib/public-staff-document-content";
 import {
   PUBLIC_SHARE_EMPTY_MESSAGE,
@@ -15,27 +14,8 @@ import {
   type PublicStaffDocumentShareDocument,
   type PublicStaffDocumentShareMetadata,
 } from "@/lib/public-staff-document-share";
-import { cn } from "@/lib/utils";
 
 type PageState = "initializing" | "available" | "empty" | "unavailable" | "error";
-
-function publicStatusBadge(document: PublicStaffDocumentShareDocument): string {
-  if (document.documentType === "covid19_vaccination") {
-    return "Optional";
-  }
-  if (document.expiryDisplay === "no_expiry") {
-    return "Current";
-  }
-  return expiryDisplayLabel(document.expiryDisplay) ?? "Current";
-}
-
-function showProcessedDate(document: PublicStaffDocumentShareDocument): boolean {
-  return document.processedDate !== null;
-}
-
-function showExpiryDate(document: PublicStaffDocumentShareDocument): boolean {
-  return document.expiryDate !== null;
-}
 
 export function PublicDocumentSharePage({ slug }: { slug: string }) {
   const [pageState, setPageState] = useState<PageState>("initializing");
@@ -107,15 +87,18 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
     <div className="min-h-dvh bg-muted/30">
       <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-10 sm:px-6 sm:py-14">
         <header className="mb-8 flex flex-col items-center text-center">
+          {/*
+            Branding slot. Replace the placeholder mark below with the official Intra
+            logo asset (import from `@/assets/intra-logo.svg`) once supplied — the
+            surrounding layout does not need to change.
+          */}
           <div
             aria-hidden="true"
             className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-sm font-bold tracking-wide text-primary-foreground shadow-sm"
           >
             IN
           </div>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Intra
-          </p>
+          <p className="mt-3 text-sm font-semibold text-foreground">Intra</p>
         </header>
 
         <main aria-live="polite" aria-busy={pageState === "initializing"} className="min-w-0 flex-1">
@@ -163,46 +146,12 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
                     className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <article aria-labelledby={`doc-${document.documentType}-title`} className="p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-                        <h3
-                          id={`doc-${document.documentType}-title`}
-                          className="min-w-0 text-base font-semibold leading-tight text-foreground"
-                        >
-                          {document.label}
-                        </h3>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                            document.expiryDisplay === "expiring_soon" &&
-                              document.documentType !== "covid19_vaccination"
-                              ? "border-warning/30 bg-warning/10 text-warning"
-                              : "border-border bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {publicStatusBadge(document)}
-                        </span>
-                      </div>
-
-                      {showProcessedDate(document) || showExpiryDate(document) ? (
-                        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          {showProcessedDate(document) ? (
-                            <div className="flex gap-1.5">
-                              <dt>Processed</dt>
-                              <dd className="text-foreground/80">
-                                {formatDocumentDate(document.processedDate!)}
-                              </dd>
-                            </div>
-                          ) : null}
-                          {showExpiryDate(document) ? (
-                            <div className="flex gap-1.5">
-                              <dt>Expires</dt>
-                              <dd className="text-foreground/80">
-                                {formatDocumentDate(document.expiryDate!)}
-                              </dd>
-                            </div>
-                          ) : null}
-                        </dl>
-                      ) : null}
+                      <h3
+                        id={`doc-${document.documentType}-title`}
+                        className="min-w-0 text-base font-semibold leading-tight text-foreground"
+                      >
+                        {document.label}
+                      </h3>
 
                       <ul className="mt-4 divide-y divide-border/70 rounded-xl border border-border/70">
                           {document.files.map((file) => {

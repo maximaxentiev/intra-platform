@@ -8,7 +8,8 @@ import { useCarerUpcomingAvailability } from "@/lib/carer-availability-upcoming"
 
 export function CarerAvailabilityDashboardSummary() {
   const { data, isLoading, isError } = useCarerUpcomingAvailability(1, 10);
-  const hasUpcoming = (data?.items.length ?? 0) > 0;
+  const previewItems = data?.items.slice(0, 4) ?? [];
+  const hasUpcoming = previewItems.length > 0;
 
   if (isLoading) {
     return (
@@ -40,19 +41,20 @@ export function CarerAvailabilityDashboardSummary() {
         <p className="text-muted-foreground">No upcoming availability added.</p>
       ) : (
         <>
-          <ul className="space-y-3">
-            {data!.items.map((item) => (
-              <li key={item.calendarDate}>
-                <p className="font-medium">
+          <ul className="space-y-2">
+            {previewItems.map((item) => (
+              <li
+                key={item.calendarDate}
+                className="rounded-lg border border-border/70 bg-card px-3 py-2.5"
+              >
+                <p className="font-semibold text-foreground">
                   {formatDashboardAvailabilityDateLabel(item.calendarDate)}
                 </p>
-                <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                  {item.windows.map((window) => (
-                    <li key={window.id}>
-                      {formatAvailabilityWindowDisplay(window.startTime, window.endTime)}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-muted-foreground">
+                  {item.windows
+                    .map((window) => formatAvailabilityWindowDisplay(window.startTime, window.endTime))
+                    .join(", ")}
+                </p>
               </li>
             ))}
           </ul>

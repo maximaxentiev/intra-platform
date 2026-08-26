@@ -24,9 +24,9 @@ export const Route = createFileRoute("/_authenticated/users")({
   component: UsersPage,
   head: () => ({
     meta: [
-      { title: "Users · Ops Portal" },
+      { title: "Users · Intra Platform" },
       { name: "description", content: "Manage ops team members: invite, deactivate, or reactivate users." },
-      { property: "og:title", content: "Users · Ops Portal" },
+      { property: "og:title", content: "Users · Intra Platform" },
       { property: "og:description", content: "Manage ops team members." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

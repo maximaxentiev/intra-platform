@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { centresApi, saveCentreSecondaryChannels } from "@/lib/db";
 import { CentreForm } from "@/components/CentreForm";
 import { PageHeader } from "@/components/PageHeader";
+import { BackLink } from "@/components/ui-kit";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -13,13 +14,8 @@ function NewCentre() {
   const navigate = useNavigate();
   return (
     <div className="max-w-2xl space-y-6">
-      <PageHeader
-        eyebrow="New"
-        backTo="/centres"
-        backLabel="Back to Centres"
-        title="Add centre"
-        subtitle="Create a new childcare centre. You'll add contacts and staff lists on the next screen."
-      />
+      <BackLink to="/centres" label="Back to Centres" />
+      <PageHeader title="Add centre" />
       <Card className="border-border/70 shadow-xs">
         <CardContent className="pt-6">
           <CentreForm

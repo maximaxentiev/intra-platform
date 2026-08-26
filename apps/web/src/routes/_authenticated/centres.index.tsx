@@ -70,7 +70,6 @@ function CentresIndex() {
     <div className="space-y-6">
       <PageHeader
         title="Centres"
-        subtitle="All childcare centres in the directory."
         actions={
           <Button asChild>
             <Link to="/centres/new">

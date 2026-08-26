@@ -20,12 +20,12 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/shifts", label: "Shifts", icon: CalendarClock },
+  { to: "/centres", label: "Centres", icon: Building2 },
+  { to: "/staff", label: "Staff", icon: Users },
+  { to: "/availability", label: "Availability", icon: CalendarDays },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/applications", label: "Applications", icon: ClipboardList },
-  { to: "/shifts", label: "Shifts", icon: CalendarClock },
-  { to: "/staff", label: "Staff", icon: Users },
-  { to: "/centres", label: "Centres", icon: Building2 },
-  { to: "/availability", label: "Availability", icon: CalendarDays },
   { to: "/users", label: "Users", icon: UserCircle2 },
 ] as const;
 
@@ -95,16 +95,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (to: string) => path === to || path.startsWith(to + "/");
 
   const Brand = (
-    <Link to="/dashboard" className="flex items-center gap-2.5 px-1">
+    <Link to="/dashboard" className="flex items-center gap-2.5 px-1" aria-label="Intra Platform">
+      {/*
+        Branding slot. Replace the placeholder mark below with the official Intra
+        logo asset (import from `@/assets/intra-logo.svg`) once supplied — the
+        surrounding layout does not need to change.
+      */}
       <div
         aria-hidden
         className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-sm"
       >
-        OP
+        IN
       </div>
       <div className="min-w-0">
-        <div className="text-sm font-semibold leading-none text-foreground">Ops Portal</div>
-        <div className="mt-1 text-[11px] text-muted-foreground">Childcare Staffing</div>
+        <div className="text-sm font-semibold leading-none text-foreground">Intra Platform</div>
       </div>
     </Link>
   );

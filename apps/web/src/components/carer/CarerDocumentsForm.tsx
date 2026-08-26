@@ -553,18 +553,6 @@ function CarerDocumentCategoryCard({
             (draft.processedDate ? deriveVscRenewalDueDate(draft.processedDate) : null),
         )
       : null;
-  const showApprovedReplacementHint =
-    category.reviewStatus === "approved" && (dirty || category.isSubmitted);
-  const nextAction =
-    category.reviewStatus === "issue_flagged"
-      ? "Replace the file(s) or fix the details below, then save."
-      : category.reviewStatus === "not_submitted"
-        ? meta.required
-          ? "Upload this document to continue."
-          : "Optional — upload it if you have it."
-        : category.reviewStatus === "pending_review"
-          ? "Submitted. Intra will review this shortly."
-          : "Approved — no action needed.";
 
   return (
     <Card
@@ -588,10 +576,6 @@ function CarerDocumentCategoryCard({
                 </CardTitle>
                 <RequirementPill required={meta.required} />
               </div>
-              <p className="text-xs text-muted-foreground">{nextAction}</p>
-              {meta.helperText ? (
-                <p className="text-xs text-muted-foreground">{meta.helperText}</p>
-              ) : null}
             </div>
           </div>
 
@@ -606,11 +590,6 @@ function CarerDocumentCategoryCard({
           <IssueNoteCallout note={category.issueNote} />
         ) : null}
 
-        {showApprovedReplacementHint ? (
-          <p className="text-xs text-muted-foreground">
-            Replacing an approved document will require Intra to review the new submission.
-          </p>
-        ) : null}
       </CardHeader>
 
       <CardContent className="space-y-5 pt-0">
@@ -624,15 +603,8 @@ function CarerDocumentCategoryCard({
                 className="h-11"
                 value={draft.processedDate}
                 disabled={disabled}
-                aria-describedby={`processed-hint-${category.documentType}`}
                 onChange={(e) => onProcessedDateChange(e.target.value)}
               />
-              <p
-                id={`processed-hint-${category.documentType}`}
-                className="text-xs text-muted-foreground"
-              >
-                As shown on your Vulnerable Sector Check.
-              </p>
             </div>
             {vscRenewalDue ? (
               <div className="space-y-1.5 sm:self-end">
@@ -652,12 +624,8 @@ function CarerDocumentCategoryCard({
                 className="h-11"
                 value={draft.expiryDate}
                 disabled={disabled}
-                aria-describedby={`expiry-hint-${category.documentType}`}
                 onChange={(e) => onExpiryDateChange(e.target.value)}
               />
-              <p id={`expiry-hint-${category.documentType}`} className="text-xs text-muted-foreground">
-                The expiry date printed on your certification.
-              </p>
             </div>
           </div>
         ) : null}
@@ -667,9 +635,9 @@ function CarerDocumentCategoryCard({
             <Label htmlFor={inputId} className="text-sm">
               Files
             </Label>
-            <span className="text-xs text-muted-foreground">
-              {fileCount === 0 ? "None attached" : `${fileCount} attached`}
-            </span>
+            {fileCount === 0 ? (
+              <span className="text-xs text-muted-foreground">None attached</span>
+            ) : null}
           </div>
 
           {fileCount > 0 ? (
@@ -677,10 +645,15 @@ function CarerDocumentCategoryCard({
               {retainedFiles.map((file) => (
                 <li
                   key={file.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2.5"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border border-primary/25 bg-primary-soft px-3 py-2.5"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span
+                      aria-hidden="true"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary/15 text-primary"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium" title={file.originalFilename}>
                         {file.originalFilename}
@@ -724,10 +697,15 @@ function CarerDocumentCategoryCard({
               {draft.newFiles.map((file, index) => (
                 <li
                   key={`${file.name}-${index}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-warning-soft/40 px-3 py-2.5"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border border-primary/25 bg-primary-soft px-3 py-2.5"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span
+                      aria-hidden="true"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary/15 text-primary"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium" title={file.name}>
                         {file.name}

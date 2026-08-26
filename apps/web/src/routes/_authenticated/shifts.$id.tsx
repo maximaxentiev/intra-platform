@@ -37,7 +37,7 @@ import { ShiftComments } from "@/components/ShiftComments";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
+import { BackLink, ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
 import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
@@ -242,10 +242,8 @@ function ShiftDetail() {
 
   return (
     <div className="space-y-6">
+      <BackLink to="/shifts" label="Back to Shifts" />
       <PageHeader
-        eyebrow="Shift"
-        backTo="/shifts"
-        backLabel="Back to Shifts"
         title={`${shift.centreName ?? "Shift"} · ${shift.shiftDate}`}
         subtitle={`${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)} · ${shift.roleNeeded || "No role"}`}
         meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}

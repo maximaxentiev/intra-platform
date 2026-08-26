@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -210,13 +211,17 @@ export function ReportMoreFiltersSection({
     <div className="space-y-3 border-t border-border/70 pt-3">
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="h-8 px-2"
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
       >
         {open ? "Hide filters" : "More filters"}
+        {open ? (
+          <ChevronUp className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+        )}
       </Button>
       {open ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{children}</div>

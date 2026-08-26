@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 
 /**
- * Compact operational overview. Server-authoritative values only:
+ * Compact vertical status panel. Server-authoritative values only:
  * portal-account state, portal onboarding fields and the documents API's own
  * `documentStatus`.
  */
@@ -25,8 +25,8 @@ export function StaffOperationalSummary({
   const onboarding = onboardingSummary(portalAccount);
 
   return (
-    <Card className="gap-0 border-border/70 px-4 py-3 shadow-xs">
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
+    <Card className="w-full gap-0 border-border/70 px-4 py-3 shadow-xs sm:w-64 shrink-0">
+      <dl className="space-y-2.5">
         <Row label="Portal">
           <PortalStatusBadge status={portalStatus} size="xs" />
         </Row>
@@ -59,8 +59,8 @@ export function StaffOperationalSummary({
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-start">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:w-24 sm:shrink-0">
+    <div className="flex items-center justify-between gap-3">
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
       <dd className="flex min-w-0 items-center">{children}</dd>

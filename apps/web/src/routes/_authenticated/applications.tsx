@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -26,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { ApplicationActionButtons } from "@/components/applications/ApplicationActions";
 import { ApplicationDrawer } from "@/components/applications/ApplicationDrawer";
 import { ApplicationStatusBadge } from "@/components/applications/primitives";
@@ -178,30 +178,18 @@ function ApplicationsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Applications"
-        subtitle="Review and action incoming ECA, ECE/RECE and Nanny applications."
-      />
+      <PageHeader title="Applications" />
 
       {/* Role switcher */}
-      <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-muted/40 p-1 w-fit">
-        {ROLE_TABS.map((t) => (
-          <button
-            key={t.role}
-            type="button"
-            onClick={() => changeRole(t.role)}
-            aria-pressed={role === t.role}
-            className={cn(
-              "rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              role === t.role
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={role} onValueChange={(v) => changeRole(v as ApplicationRole)}>
+        <TabsList>
+          {ROLE_TABS.map((t) => (
+            <TabsTrigger key={t.role} value={t.role}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

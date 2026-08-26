@@ -8,7 +8,6 @@ export function RecentActivitySection({ items }: { items: ActivityLogItem[] }) {
     <DashboardSection
       id="recent-activity"
       title="Recent activity"
-      description="Latest changes across shifts, staff and documents."
       action={<DashboardFooterLink to="/reports/activity">View activity log</DashboardFooterLink>}
     >
       {items.length === 0 ? (

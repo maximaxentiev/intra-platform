@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Centre, Staff } from "@/lib/db";
+import type { Centre, CurrentUser, Staff } from "@/lib/db";
 import type { ActivityLogActorType, ActivityLogCategory } from "@/lib/reports-types";
 
 const CATEGORY_OPTIONS: { value: "all" | ActivityLogCategory; label: string }[] = [
@@ -39,6 +39,7 @@ type ActivityLogFiltersProps = {
   centreId: string;
   staff: Staff[];
   centres: Centre[];
+  opsUsers: CurrentUser[];
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
@@ -58,6 +59,7 @@ export function ActivityLogFilters({
   centreId,
   staff,
   centres,
+  opsUsers,
   onDateFromChange,
   onDateToChange,
   onCategoryChange,
@@ -128,6 +130,41 @@ export function ActivityLogFilters({
             </SelectContent>
           </Select>
         </div>
+        {actorType === "ops_user" ? (
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="activity-ops-user"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              Ops user
+            </Label>
+            {/*
+              BACKEND GAP: The reports API (`reportsApi.activityLog` / GET /reports/activity)
+              has no parameter to filter results by a specific ops user id — only `staffId`,
+              which filters Staff actors, not Ops users. Wiring this selector would require
+              the backend to accept something like `actorId` (or `opsUserId`) on
+              GET /reports/activity and filter activity rows where actor.type === "ops_user"
+              && actor.id === actorId. Until that exists, this selector stays disabled so it
+              never silently fails to filter.
+            */}
+            <Select value="all" disabled>
+              <SelectTrigger id="activity-ops-user" className="h-10">
+                <SelectValue placeholder="All ops users" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ops users</SelectItem>
+                {opsUsers.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.fullName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Filtering by a specific ops user isn't supported by the reports API yet.
+            </p>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
           <Label htmlFor="activity-staff" className="text-xs font-medium text-muted-foreground">
             Staff

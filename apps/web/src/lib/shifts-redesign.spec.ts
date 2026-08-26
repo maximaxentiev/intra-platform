@@ -27,7 +27,7 @@ describe("shift cancellation reason", () => {
 describe("shifts list redesign", () => {
   it("keeps the page header and dominant create action", () => {
     expect(list).toContain('title="Shifts"');
-    expect(list).toContain('subtitle="All shifts across every centre."');
+    expect(list).not.toContain("All shifts across every centre");
     expect(list).toContain('<Link to="/shifts/new">');
     expect(list).toContain("Create shift");
   });

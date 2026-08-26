@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { BackLink } from "@/components/ui-kit";
 import { ActivityLogFilters } from "@/components/reports/ActivityLogFilters";
 import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ActivityLogEmptyState, ActivityLogList } from "@/components/reports/ActivityLogList";
@@ -19,7 +19,7 @@ import {
   resolveActivityLogPageSize,
   type ActivityLogPageSize,
 } from "@/lib/activity-log-labels";
-import { centresApi, staffApi } from "@/lib/db";
+import { centresApi, staffApi, usersApi } from "@/lib/db";
 import { formatOpsDateToronto } from "@/lib/ops-report-formatters";
 import { defaultActivityLogSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
@@ -76,6 +76,10 @@ function ActivityLogReport() {
   const centresQ = useQuery({
     queryKey: ["centres-all"],
     queryFn: () => centresApi.list(),
+  });
+  const opsUsersQ = useQuery({
+    queryKey: ["ops-users-list"],
+    queryFn: () => usersApi.list(),
   });
 
   const reportQ = useQuery({
@@ -153,9 +157,9 @@ function ActivityLogReport() {
     });
   }
 
-  const rangeLabel = reportQ.data
-    ? `${formatOpsDateToronto(reportQ.data.dateFrom)} – ${formatOpsDateToronto(reportQ.data.dateTo)}`
-    : null;
+  // Reflect the currently selected Start/End filters directly, rather than the
+  // server-echoed range, so this can never disagree with the applied filters.
+  const rangeLabel = `${formatOpsDateToronto(applied.dateFrom)} – ${formatOpsDateToronto(applied.dateTo)}`;
 
   const paginationProps = reportQ.data
     ? {
@@ -172,6 +176,8 @@ function ActivityLogReport() {
 
   return (
     <div className="space-y-6">
+      <BackLink to="/reports" label="All reports" />
+
       <PageHeader
         title="Activity Log"
         subtitle="Review recorded Staff, Shift, document, communication, and administrative activity."
@@ -191,13 +197,6 @@ function ActivityLogReport() {
               ready={reportReady}
               totalCount={reportQ.data?.totalCount}
             />
-            <Link
-              to="/reports"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              All reports
-            </Link>
           </>
         }
       />
@@ -218,6 +217,7 @@ function ActivityLogReport() {
         centreId={centreId}
         staff={staffQ.data ?? []}
         centres={centresQ.data ?? []}
+        opsUsers={opsUsersQ.data ?? []}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onCategoryChange={setCategory}

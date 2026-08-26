@@ -41,7 +41,8 @@ export function SectionCard({
             {title && (
               <h2
                 id={headingId}
-                className="text-[15px] font-semibold tracking-tight text-foreground"
+                className="text-base font-semibold tracking-tight text-foreground"
+
               >
                 {title}
               </h2>

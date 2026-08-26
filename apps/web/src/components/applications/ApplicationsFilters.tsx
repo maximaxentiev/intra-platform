@@ -280,14 +280,17 @@ export function ApplicationsFilterPanel({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[22rem] p-0">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <PopoverContent
+        align="end"
+        className="flex max-h-[min(70vh,32rem)] w-[22rem] flex-col overflow-hidden p-0"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
           <div className="text-sm font-semibold">Filters</div>
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClear}>
             <X className="h-3.5 w-3.5 mr-1" /> Clear all
           </Button>
         </div>
-        <ScrollArea className="max-h-[70vh]">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-3 p-4">
             <OptionSelect
               label="Status"

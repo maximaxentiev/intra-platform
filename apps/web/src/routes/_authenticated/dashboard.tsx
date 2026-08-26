@@ -1,13 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  CalendarClock,
-  CheckCircle2,
-  ChevronDown,
-  Plus,
-  UserCheck,
-} from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,10 +21,7 @@ import { Next7DaysSection } from "@/components/dashboard/Next7DaysSection";
 import { WorkforceReadinessSection } from "@/components/dashboard/WorkforceReadinessSection";
 import { RecentActivitySection } from "@/components/dashboard/RecentActivitySection";
 import { dashboardOverviewApi } from "@/lib/dashboard-api";
-import {
-  formatDashboardHeaderDate,
-  todayShiftsSearch,
-} from "@/lib/dashboard-overview-ui";
+import { todayShiftsSearch } from "@/lib/dashboard-overview-ui";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -55,7 +45,6 @@ function Dashboard() {
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
-        subtitle={data ? formatDashboardHeaderDate(data.today.date) : "Toronto"}
         actions={
           <>
             <Button asChild size="sm">
@@ -107,16 +96,11 @@ function Dashboard() {
         <>
           <NeedsAttentionSection attention={data.attention} />
 
-          <DashboardSection
-            id="today"
-            title="Today"
-            description="Toronto schedule at a glance."
-          >
+          <DashboardSection id="today" title="Today">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <DashboardMetric
                 label="Shifts"
                 value={data.today.total}
-                icon={CalendarClock}
                 tone="primary"
                 to="/shifts"
                 search={todayShiftsSearch(data.today.date)}
@@ -124,7 +108,6 @@ function Dashboard() {
               <DashboardMetric
                 label="Pending"
                 value={data.today.pending}
-                icon={AlertCircle}
                 tone="warning"
                 to="/shifts"
                 search={todayShiftsSearch(data.today.date, "pending")}
@@ -132,7 +115,6 @@ function Dashboard() {
               <DashboardMetric
                 label="Filled"
                 value={data.today.filled}
-                icon={UserCheck}
                 tone="primary"
                 to="/shifts"
                 search={todayShiftsSearch(data.today.date, "filled")}
@@ -140,7 +122,6 @@ function Dashboard() {
               <DashboardMetric
                 label="Completed"
                 value={data.today.completed}
-                icon={CheckCircle2}
                 tone="success"
                 to="/shifts"
                 search={todayShiftsSearch(data.today.date, "completed")}

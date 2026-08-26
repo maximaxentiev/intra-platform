@@ -67,10 +67,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ops Portal — Childcare Staffing" },
+      { title: "Intra Platform" },
       { name: "description", content: "Internal operations platform for managing childcare staff, centres, availability, and shifts." },
       { name: "robots", content: "noindex, nofollow" },
-      { property: "og:title", content: "Ops Portal — Childcare Staffing" },
+      { property: "og:title", content: "Intra Platform" },
       { property: "og:description", content: "Internal operations platform for managing childcare staff, centres, availability, and shifts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

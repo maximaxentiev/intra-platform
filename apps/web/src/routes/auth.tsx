@@ -49,10 +49,9 @@ function AuthPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-base font-bold shadow-sm">
-            OP
+            IN
           </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Ops Portal</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Childcare Staffing — Internal Team</p>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Intra Platform</h1>
         </div>
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="space-y-1 pb-4">

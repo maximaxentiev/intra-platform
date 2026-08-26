@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { BackLink } from "@/components/ui-kit";
 import { StaffUsageFilters } from "@/components/reports/StaffUsageFilters";
 import {
   StaffUsageSummaryCards,
@@ -241,6 +241,8 @@ function StaffUsageReport() {
 
   return (
     <div className="space-y-6">
+      <BackLink to="/reports" label="All reports" />
+
       <PageHeader
         title="Staff Usage"
         subtitle="Review completed and upcoming shift usage by Staff member."
@@ -257,13 +259,6 @@ function StaffUsageReport() {
               ready={reportReady}
               totalCount={reportQ.data?.totalCount}
             />
-            <Link
-              to="/reports"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              All reports
-            </Link>
           </>
         }
       />
