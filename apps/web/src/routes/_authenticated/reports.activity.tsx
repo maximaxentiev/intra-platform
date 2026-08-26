@@ -19,7 +19,7 @@ import {
   resolveActivityLogPageSize,
   type ActivityLogPageSize,
 } from "@/lib/activity-log-labels";
-import { centresApi, staffApi } from "@/lib/db";
+import { centresApi, staffApi, usersApi } from "@/lib/db";
 import { formatOpsDateToronto } from "@/lib/ops-report-formatters";
 import { defaultActivityLogSearch } from "@/lib/reports-dates";
 import { reportsApi } from "@/lib/reports-api";
@@ -76,6 +76,10 @@ function ActivityLogReport() {
   const centresQ = useQuery({
     queryKey: ["centres-all"],
     queryFn: () => centresApi.list(),
+  });
+  const opsUsersQ = useQuery({
+    queryKey: ["ops-users-list"],
+    queryFn: () => usersApi.list(),
   });
 
   const reportQ = useQuery({
@@ -213,6 +217,7 @@ function ActivityLogReport() {
         centreId={centreId}
         staff={staffQ.data ?? []}
         centres={centresQ.data ?? []}
+        opsUsers={opsUsersQ.data ?? []}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
         onCategoryChange={setCategory}
