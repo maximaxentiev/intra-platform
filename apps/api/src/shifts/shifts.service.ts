@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { aliasedTable, and, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
   centres,
@@ -16,6 +16,7 @@ import {
   users,
 } from '../db/schema';
 import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
+import { resolveCentreUsageCentreIds } from '../reports/dto/report-centre-ids.util';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftReminderService } from './shift-reminder.service';
@@ -59,7 +60,13 @@ export class ShiftsService {
 
   list(q: ListShiftsQuery) {
     const conds: SQL[] = [];
-    if (q.centreId) conds.push(eq(shifts.centreId, q.centreId));
+    const centreIds = resolveCentreUsageCentreIds({
+      centreIds: q.centreIds,
+      centreId: q.centreId,
+    });
+    if (centreIds?.length) {
+      conds.push(inArray(shifts.centreId, centreIds));
+    }
     if (q.staffId) conds.push(eq(shifts.assignedStaffId, q.staffId));
     if (q.status) conds.push(eq(shifts.status, q.status as never));
     if (q.from) conds.push(gte(shifts.shiftDate, q.from));

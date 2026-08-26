@@ -25,6 +25,7 @@ import {
 } from "@/components/ui-kit";
 import {
   EMPTY_STAFF_FILTERS,
+  STAFF_DOCUMENT_FILTER_OPTIONS,
   buildStaffFilterChips,
   clearStaffFilterChip,
   filterStaffList,
@@ -126,7 +127,7 @@ function StaffIndex() {
 
       {/* Live filters — results update as you type / select. */}
       <Card className="gap-0 border-border/70 px-3.5 py-3 shadow-xs sm:px-4">
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_10rem_12rem]">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_9rem_11rem_11rem]">
           <div className="space-y-1.5">
             <Label htmlFor="staff-search" className="text-xs font-medium text-muted-foreground">
               Search
@@ -162,6 +163,24 @@ function StaffIndex() {
             </Select>
           </div>
           <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Document status</Label>
+            <Select
+              value={filters.documents}
+              onValueChange={(v) => set("documents", v as StaffFilterState["documents"])}
+            >
+              <SelectTrigger className="h-9" aria-label="Filter by document status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STAFF_DOCUMENT_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
             <Label className="text-xs font-medium text-muted-foreground">Portal account</Label>
             <Select
               value={filters.portal}

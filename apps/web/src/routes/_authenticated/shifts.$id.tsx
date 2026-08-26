@@ -244,8 +244,7 @@ function ShiftDetail() {
     <div className="space-y-6">
       <BackLink to="/shifts" label="Back to Shifts" />
       <PageHeader
-        title={`${shift.centreName ?? "Shift"} · ${shift.shiftDate}`}
-        subtitle={`${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)} · ${shift.roleNeeded || "No role"}`}
+        title={shift.centreName ?? "Shift"}
         meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}
         actions={
           <>

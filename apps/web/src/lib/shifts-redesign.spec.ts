@@ -33,10 +33,11 @@ describe("shifts list redesign", () => {
   });
 
   it("preserves the Zod search schema and URL param names", () => {
-    for (const param of ["from", "to", "centre", "status", "staff", "staffpoint"]) {
+    for (const param of ["from", "to", "centre", "centreIds", "status", "staff", "staffpoint"]) {
       expect(list).toContain(`  ${param}:`);
     }
     expect(list).toContain("validateSearch: (s) => searchSchema.parse(s)");
+    expect(list).toContain("ReportCentreMultiSelect");
   });
 
   it("keeps explicit Apply filters behaviour (no live filtering)", () => {
@@ -92,6 +93,13 @@ describe("shifts list redesign", () => {
 });
 
 describe("shift detail redesign", () => {
+  it("uses centre name only in the page header title", () => {
+    expect(detail).toContain('title={shift.centreName ?? "Shift"}');
+    expect(detail).not.toMatch(/PageHeader[\s\S]*subtitle=\{`\$\{fmtTime/);
+    expect(detail).toContain('label: "Centre"');
+    expect(detail).toContain('label: "Date"');
+  });
+
   it("keeps assignment as the primary pending workflow", () => {
     expect(detail).toContain('title={assignedName ? "Assignment" : "Available staff"}');
     expect(detail).toContain("Eligible based on availability, conflicts, centre restrictions and compliance.");

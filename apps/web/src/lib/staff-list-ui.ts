@@ -3,6 +3,10 @@ import {
   PORTAL_ACCOUNT_STATUS_LABELS,
   type PortalAccountDisplayStatus,
 } from "@/lib/portal-account-status";
+import {
+  STAFF_DOCUMENT_LIST_STATUS_LABELS,
+  type StaffDocumentListStatus,
+} from "@/lib/ops-staff-documents";
 
 /**
  * Presentation helpers for the Ops Staff directory.
@@ -11,19 +15,34 @@ import {
  * live-filter semantics exactly. No API calls, no new business rules.
  */
 
+export type StaffDocumentFilter = "all" | StaffDocumentListStatus;
+
+/** Filter options aligned with server-computed StaffDocumentListStatus values. */
+export const STAFF_DOCUMENT_FILTER_OPTIONS: {
+  value: StaffDocumentFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "Any" },
+  ...(
+    Object.entries(STAFF_DOCUMENT_LIST_STATUS_LABELS) as [StaffDocumentListStatus, string][]
+  ).map(([value, label]) => ({ value, label })),
+];
+
 export type StaffFilterState = {
   q: string;
   role: string;
   portal: "all" | PortalAccountDisplayStatus;
+  documents: StaffDocumentFilter;
 };
 
 export const EMPTY_STAFF_FILTERS: StaffFilterState = {
   q: "",
   role: "all",
   portal: "all",
+  documents: "all",
 };
 
-export type StaffFilterChipKey = "search" | "role" | "portal";
+export type StaffFilterChipKey = "search" | "role" | "portal" | "documents";
 
 export type StaffFilterChipDescriptor = {
   id: StaffFilterChipKey;
@@ -37,7 +56,21 @@ export function staffPortalStatusOf(s: Staff): PortalAccountDisplayStatus {
 
 /** True when any control differs from its default "everything" value. */
 export function hasActiveStaffFilters(state: StaffFilterState): boolean {
-  return state.q.trim() !== "" || state.role !== "all" || state.portal !== "all";
+  return (
+    state.q.trim() !== "" ||
+    state.role !== "all" ||
+    state.portal !== "all" ||
+    state.documents !== "all"
+  );
+}
+
+/** Resolved list status for filtering — matches DocumentStatusBadge fallback. */
+export function staffDocumentListStatusOf(s: Staff): StaffDocumentListStatus {
+  const status = s.documentStatus ?? "no_documents_submitted";
+  if (status in STAFF_DOCUMENT_LIST_STATUS_LABELS) {
+    return status as StaffDocumentListStatus;
+  }
+  return "no_documents_submitted";
 }
 
 /** Chips for non-default filters only. */
@@ -56,6 +89,13 @@ export function buildStaffFilterChips(state: StaffFilterState): StaffFilterChipD
       label: PORTAL_ACCOUNT_STATUS_LABELS[state.portal],
     });
   }
+  if (state.documents !== "all") {
+    chips.push({
+      id: "documents",
+      field: "Document status",
+      label: STAFF_DOCUMENT_LIST_STATUS_LABELS[state.documents],
+    });
+  }
   return chips;
 }
 
@@ -71,6 +111,8 @@ export function clearStaffFilterChip(
       return { ...state, role: "all" };
     case "portal":
       return { ...state, portal: "all" };
+    case "documents":
+      return { ...state, documents: "all" };
     default:
       return state;
   }
@@ -85,6 +127,12 @@ export function filterStaffList(list: Staff[], state: StaffFilterState): Staff[]
   return list.filter((s) => {
     if (state.role !== "all" && s.role !== state.role) return false;
     if (state.portal !== "all" && staffPortalStatusOf(s) !== state.portal) return false;
+    if (
+      state.documents !== "all" &&
+      staffDocumentListStatusOf(s) !== state.documents
+    ) {
+      return false;
+    }
     if (
       state.q &&
       !displayStaff(s).toLowerCase().includes(q) &&

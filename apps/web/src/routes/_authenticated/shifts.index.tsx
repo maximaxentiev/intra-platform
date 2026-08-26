@@ -26,10 +26,13 @@ import {
   clearShiftFilterChip,
   hasActiveShiftFilters,
   shiftAssigneeLabel,
+  shiftCentreSelectionFromSearch,
+  shiftCentreSelectionToApiQuery,
   shiftFiltersToSearch,
   shiftResultCountLabel,
   type ShiftFilterState,
 } from "@/lib/shifts-list-ui";
+import { ReportCentreMultiSelect } from "@/components/reports/CentreUsageFilters";
 import { AlertCircle, CalendarClock, ChevronRight, Info, Plus, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 
@@ -37,10 +40,24 @@ const searchSchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   centre: z.string().optional(),
+  centreIds: z.string().optional(),
   status: z.enum(["pending", "filled", "cancelled", "completed"]).optional(),
   staff: z.string().optional(),
   staffpoint: z.enum(["yes", "no"]).optional(),
 });
+
+type ShiftSearch = z.infer<typeof searchSchema>;
+
+function shiftFiltersFromSearch(search: ShiftSearch): ShiftFilterState {
+  return {
+    from: search.from ?? "",
+    to: search.to ?? "",
+    centres: shiftCentreSelectionFromSearch(search),
+    status: (search.status ?? "all") as ShiftStatus | "all",
+    staffId: search.staff ?? "all",
+    staffpoint: (search.staffpoint ?? "all") as "all" | "yes" | "no",
+  };
+}
 
 export const Route = createFileRoute("/_authenticated/shifts/")({
   validateSearch: (s) => searchSchema.parse(s),
@@ -55,24 +72,10 @@ function ShiftsIndex() {
   const navigate = Route.useNavigate();
 
   // Draft filter state — applied explicitly, never live-filtered.
-  const [draft, setDraft] = useState<ShiftFilterState>({
-    from: search.from ?? "",
-    to: search.to ?? "",
-    centreId: search.centre ?? "all",
-    status: (search.status ?? "all") as ShiftStatus | "all",
-    staffId: search.staff ?? "all",
-    staffpoint: (search.staffpoint ?? "all") as "all" | "yes" | "no",
-  });
+  const [draft, setDraft] = useState<ShiftFilterState>(() => shiftFiltersFromSearch(search));
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const applied: ShiftFilterState = {
-    from: search.from ?? "",
-    to: search.to ?? "",
-    centreId: search.centre ?? "all",
-    status: (search.status ?? "all") as ShiftStatus | "all",
-    staffId: search.staff ?? "all",
-    staffpoint: (search.staffpoint ?? "all") as "all" | "yes" | "no",
-  };
+  const applied = shiftFiltersFromSearch(search);
 
   const set = <K extends keyof ShiftFilterState>(key: K, value: ShiftFilterState[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -91,7 +94,8 @@ function ShiftsIndex() {
       "shifts-list",
       applied.from,
       applied.to,
-      applied.centreId,
+      applied.centres.mode,
+      applied.centres.centreIds.join(","),
       applied.status,
       applied.staffId,
       applied.staffpoint,
@@ -100,7 +104,7 @@ function ShiftsIndex() {
       const rows = await shiftsApi.list({
         from: applied.from || undefined,
         to: applied.to || undefined,
-        centreId: applied.centreId === "all" ? undefined : applied.centreId,
+        ...shiftCentreSelectionToApiQuery(applied),
         status: applied.status === "all" ? undefined : applied.status,
         staffId: applied.staffId === "all" ? undefined : applied.staffId,
       });
@@ -115,7 +119,7 @@ function ShiftsIndex() {
   const hasDraftFilters = hasActiveShiftFilters(draft);
 
   const chips = buildShiftFilterChips(applied, {
-    centreName: (id) => (centresQ.data ?? []).find((c) => c.id === id)?.name,
+    centres: centresQ.data ?? [],
     staffName: (id) => {
       const found = (staffQ.data ?? []).find((s) => s.id === id);
       return found ? displayStaff(found) : undefined;
@@ -171,14 +175,12 @@ function ShiftsIndex() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Centre</Label>
-        <Select value={draft.centreId} onValueChange={(v) => set("centreId", v)}>
-          <SelectTrigger className="h-9" aria-label="Filter by centre"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All centres</SelectItem>
-            {(centresQ.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <Label className="text-xs font-medium text-muted-foreground">Centres</Label>
+        <ReportCentreMultiSelect
+          centres={centresQ.data ?? []}
+          selection={draft.centres}
+          onSelectionChange={(centres) => set("centres", centres)}
+        />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-muted-foreground">Status</Label>

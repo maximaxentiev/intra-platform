@@ -376,8 +376,14 @@ export const availabilityApi = {
 };
 
 export const shiftsApi = {
-  list: (q: { centreId?: string; staffId?: string; status?: string; from?: string; to?: string }) =>
-    api.get<Shift[]>("/shifts", q),
+  list: (q: {
+    centreId?: string;
+    centreIds?: string[];
+    staffId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+  }) => api.get<Shift[]>("/shifts", q),
   get: (id: string) => api.get<Shift>(`/shifts/${id}`),
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
   update: (id: string, values: Partial<Shift>) => api.patch<Shift>(`/shifts/${id}`, values),

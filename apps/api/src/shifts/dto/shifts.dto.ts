@@ -6,7 +6,14 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  ArrayMaxSize,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  MAX_REPORT_CENTRE_IDS,
+  parseReportCentreIds,
+  resolveCentreUsageCentreIds,
+} from '../../reports/dto/report-centre-ids.util';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -99,6 +106,14 @@ export class ListShiftsQuery {
   @IsOptional()
   @IsUUID('4')
   centreId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => parseReportCentreIds(value))
+  @IsUUID('4', { each: true })
+  @ArrayMaxSize(MAX_REPORT_CENTRE_IDS, {
+    message: `centreIds may include at most ${MAX_REPORT_CENTRE_IDS} centres.`,
+  })
+  centreIds?: string[];
 
   @IsOptional()
   @IsUUID('4')

@@ -1,4 +1,12 @@
 import type { ShiftStatus } from "@/lib/db";
+import {
+  centreSelectionLabel,
+  centreSelectionToApiQuery,
+  centreSelectionToSearchParams,
+  hasExplicitCentreSelection,
+  resolveAppliedCentreSelection,
+  type CentreSelectionState,
+} from "@/lib/reports-centre-selection";
 
 /**
  * Presentation helpers for the Ops Shifts list.
@@ -10,7 +18,7 @@ import type { ShiftStatus } from "@/lib/db";
 export type ShiftFilterState = {
   from: string;
   to: string;
-  centreId: string;
+  centres: CentreSelectionState;
   status: ShiftStatus | "all";
   staffId: string;
   staffpoint: "all" | "yes" | "no";
@@ -27,7 +35,7 @@ export type ShiftFilterChipDescriptor = {
 export const EMPTY_SHIFT_FILTERS: ShiftFilterState = {
   from: "",
   to: "",
-  centreId: "all",
+  centres: { mode: "all", centreIds: [] },
   status: "all",
   staffId: "all",
   staffpoint: "all",
@@ -61,7 +69,7 @@ export function hasActiveShiftFilters(state: ShiftFilterState): boolean {
   return (
     state.from !== "" ||
     state.to !== "" ||
-    state.centreId !== "all" ||
+    hasExplicitCentreSelection(state.centres) ||
     state.status !== "all" ||
     state.staffId !== "all" ||
     state.staffpoint !== "all"
@@ -75,7 +83,7 @@ export function hasActiveShiftFilters(state: ShiftFilterState): boolean {
 export function buildShiftFilterChips(
   state: ShiftFilterState,
   lookups: {
-    centreName?: (id: string) => string | undefined;
+    centres?: { id: string; name: string }[];
     staffName?: (id: string) => string | undefined;
   } = {},
 ): ShiftFilterChipDescriptor[] {
@@ -84,11 +92,11 @@ export function buildShiftFilterChips(
   const dates = dateRangeLabel(state.from, state.to);
   if (dates) chips.push({ id: "dates", field: "Dates", label: dates });
 
-  if (state.centreId !== "all") {
+  if (hasExplicitCentreSelection(state.centres)) {
     chips.push({
       id: "centre",
-      field: "Centre",
-      label: lookups.centreName?.(state.centreId) ?? "Selected centre",
+      field: "Centres",
+      label: centreSelectionLabel(state.centres, lookups.centres ?? []),
     });
   }
 
@@ -124,7 +132,7 @@ export function clearShiftFilterChip(
     case "dates":
       return { ...state, from: "", to: "" };
     case "centre":
-      return { ...state, centreId: "all" };
+      return { ...state, centres: { mode: "all", centreIds: [] } };
     case "status":
       return { ...state, status: "all" };
     case "staff":
@@ -141,11 +149,27 @@ export function shiftFiltersToSearch(state: ShiftFilterState) {
   return {
     from: state.from || undefined,
     to: state.to || undefined,
-    centre: state.centreId === "all" ? undefined : state.centreId,
+    ...centreSelectionToSearchParams(state.centres),
     status: state.status === "all" ? undefined : state.status,
     staff: state.staffId === "all" ? undefined : state.staffId,
     staffpoint: state.staffpoint === "all" ? undefined : state.staffpoint,
   };
+}
+
+/** Resolves URL search params into applied centre selection (supports legacy `centre`). */
+export function shiftCentreSelectionFromSearch(search: {
+  centreIds?: string;
+  centre?: string;
+}): CentreSelectionState {
+  return resolveAppliedCentreSelection({
+    centreIds: search.centreIds,
+    centreId: search.centre,
+  });
+}
+
+/** Maps applied centre selection to shift list API query params. */
+export function shiftCentreSelectionToApiQuery(state: ShiftFilterState) {
+  return centreSelectionToApiQuery(state.centres);
 }
 
 export function shiftResultCountLabel(count: number): string {

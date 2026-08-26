@@ -52,7 +52,7 @@ export function PageHeader({
             </div>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
-            <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-foreground truncate">
+            <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-foreground break-words">
               {title}
             </h1>
             {meta}

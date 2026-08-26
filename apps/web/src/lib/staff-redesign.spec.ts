@@ -22,6 +22,8 @@ describe("staff list redesign", () => {
     expect(list).not.toContain("validateSearch");
     expect(list).not.toContain("Apply filters");
     expect(list).toContain('queryKey: ["staff-list"]');
+    expect(list).toContain("Document status");
+    expect(list).toContain("STAFF_DOCUMENT_FILTER_OPTIONS");
   });
 
   it("uses filter chips and distinguishes API error from empty results", () => {
@@ -121,6 +123,16 @@ describe("availability desktop layout", () => {
     expect(availability).toContain("xl:grid-cols-7");
     expect(availability).toContain("min-w-max");
     expect(availability).toContain("xl:min-w-0");
+  });
+
+  it("uses weekly navigation without arbitrary from/to date range controls", () => {
+    expect(availability).toContain('aria-label="Previous week"');
+    expect(availability).toContain('aria-label="Next week"');
+    expect(availability).toContain("Jump to date");
+    expect(availability).toContain("formatWeekRangeLabel");
+    expect(availability).not.toContain("From date");
+    expect(availability).not.toContain("To date (optional)");
+    expect(availability).not.toContain("Clear dates");
   });
 });
 

@@ -6,6 +6,8 @@ import {
   formatShiftDateLabel,
   hasActiveShiftFilters,
   shiftAssigneeLabel,
+  shiftCentreSelectionFromSearch,
+  shiftCentreSelectionToApiQuery,
   shiftFiltersToSearch,
   shiftResultCountLabel,
   type ShiftFilterState,
@@ -20,7 +22,9 @@ describe("shift filter chips", () => {
   });
 
   it("never renders meaningless 'All centres' / 'All statuses' chips", () => {
-    const labels = buildShiftFilterChips({ ...base, centreId: "all", status: "all" }).map((c) => c.label);
+    const labels = buildShiftFilterChips({ ...base, centres: { mode: "all", centreIds: [] } }).map(
+      (c) => c.label,
+    );
     expect(labels).not.toContain("All centres");
     expect(labels).not.toContain("All statuses");
   });
@@ -36,17 +40,24 @@ describe("shift filter chips", () => {
     expect(buildShiftFilterChips({ ...base, to: "2026-08-30" })[0].label).toBe("Until Aug 30");
   });
 
-  it("resolves centre and staff names via lookups", () => {
+  it("resolves multi-centre selection via lookups", () => {
+    const centres = [
+      { id: "c1", name: "Centre A" },
+      { id: "c2", name: "Centre B" },
+    ];
     const chips = buildShiftFilterChips(
-      { ...base, centreId: "c1", staffId: "s1" },
-      { centreName: () => "TEST CENTRE", staffName: () => "Max" },
+      { ...base, centres: { mode: "subset", centreIds: ["c1", "c2"] } },
+      { centres },
     );
-    expect(chips.map((c) => c.label)).toEqual(["TEST CENTRE", "Max"]);
+    expect(chips[0]).toMatchObject({ id: "centre", label: "2 centres selected" });
   });
 
-  it("falls back gracefully when a lookup has not loaded", () => {
-    const chips = buildShiftFilterChips({ ...base, centreId: "c1" });
-    expect(chips[0].label).toBe("Selected centre");
+  it("shows centre name for single selection", () => {
+    const chips = buildShiftFilterChips(
+      { ...base, centres: { mode: "subset", centreIds: ["c1"] } },
+      { centres: [{ id: "c1", name: "TEST CENTRE" }] },
+    );
+    expect(chips[0].label).toBe("TEST CENTRE");
   });
 
   it("labels status and staffpoint chips", () => {
@@ -63,25 +74,28 @@ describe("removing filters preserves the search schema", () => {
   const applied: ShiftFilterState = {
     from: "2026-08-01",
     to: "2026-08-30",
-    centreId: "c1",
+    centres: { mode: "subset", centreIds: ["c1", "c2"] },
     status: "pending",
     staffId: "s1",
     staffpoint: "yes",
   };
 
   it("clears only the targeted filter", () => {
-    expect(clearShiftFilterChip(applied, "centre")).toMatchObject({ centreId: "all", status: "pending" });
-    expect(clearShiftFilterChip(applied, "dates")).toMatchObject({ from: "", to: "", centreId: "c1" });
+    expect(clearShiftFilterChip(applied, "centre")).toMatchObject({
+      centres: { mode: "all", centreIds: [] },
+      status: "pending",
+    });
+    expect(clearShiftFilterChip(applied, "dates")).toMatchObject({ from: "", to: "", centres: applied.centres });
     expect(clearShiftFilterChip(applied, "status").status).toBe("all");
     expect(clearShiftFilterChip(applied, "staff").staffId).toBe("all");
     expect(clearShiftFilterChip(applied, "staffpoint").staffpoint).toBe("all");
   });
 
-  it("serializes to the existing URL param names", () => {
+  it("serializes multi-centre selection to centreIds URL param", () => {
     expect(shiftFiltersToSearch(applied)).toEqual({
       from: "2026-08-01",
       to: "2026-08-30",
-      centre: "c1",
+      centreIds: "c1,c2",
       status: "pending",
       staff: "s1",
       staffpoint: "yes",
@@ -92,7 +106,6 @@ describe("removing filters preserves the search schema", () => {
     expect(shiftFiltersToSearch(EMPTY_SHIFT_FILTERS)).toEqual({
       from: undefined,
       to: undefined,
-      centre: undefined,
       status: undefined,
       staff: undefined,
       staffpoint: undefined,
@@ -102,7 +115,29 @@ describe("removing filters preserves the search schema", () => {
   it("clearing a chip then serializing drops just that param", () => {
     const next = clearShiftFilterChip(applied, "status");
     expect(shiftFiltersToSearch(next).status).toBeUndefined();
-    expect(shiftFiltersToSearch(next).centre).toBe("c1");
+    expect(shiftFiltersToSearch(next).centreIds).toBe("c1,c2");
+  });
+
+  it("maps centre selection to API query params", () => {
+    expect(shiftCentreSelectionToApiQuery(applied)).toEqual({ centreIds: ["c1", "c2"] });
+    expect(shiftCentreSelectionToApiQuery(EMPTY_SHIFT_FILTERS)).toEqual({});
+  });
+
+  it("supports legacy single centre URL param", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const selection = shiftCentreSelectionFromSearch({ centre: id });
+    expect(selection).toEqual({ mode: "subset", centreIds: [id] });
+    expect(shiftFiltersToSearch({ ...EMPTY_SHIFT_FILTERS, centres: selection }).centreIds).toBe(id);
+  });
+
+  it("prefers centreIds over legacy centre when both present", () => {
+    const idA = "11111111-1111-4111-8111-111111111111";
+    const idB = "22222222-2222-4222-8222-222222222222";
+    const selection = shiftCentreSelectionFromSearch({
+      centreIds: `${idA},${idB}`,
+      centre: idB,
+    });
+    expect(selection.centreIds).toEqual([idA, idB]);
   });
 });
 
