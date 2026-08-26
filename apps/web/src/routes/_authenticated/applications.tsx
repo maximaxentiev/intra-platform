@@ -29,7 +29,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ApplicationActionButtons } from "@/components/applications/ApplicationActions";
 import { ApplicationDrawer } from "@/components/applications/ApplicationDrawer";
-import { ApplicationStatusBadge } from "@/components/applications/primitives";
 import { useDocumentViewer } from "@/components/applications/documents";
 import {
   ActiveFilterChips,
@@ -363,19 +362,6 @@ function ApplicationsPage() {
                       Applicant {sortIcon("applicant")}
                     </button>
                   </th>
-                  <th
-                    scope="col"
-                    className="sticky top-0 z-20 border-b border-border bg-muted px-3 py-2 text-left font-medium text-muted-foreground"
-                    style={{ minWidth: 110 }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleSort("status")}
-                      className="inline-flex items-center gap-1 hover:text-foreground"
-                    >
-                      Status {sortIcon("status")}
-                    </button>
-                  </th>
                   {columns.map((c) => (
                     <th
                       key={c.key}
@@ -418,9 +404,6 @@ function ApplicationsPage() {
                   >
                     <td className="sticky left-0 z-20 border-b border-r border-border bg-card px-3 py-2 group-hover:bg-muted">
                       <div className="max-w-[15rem] truncate font-medium">{fullName(r)}</div>
-                    </td>
-                    <td className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted">
-                      <ApplicationStatusBadge status={r.status} />
                     </td>
                     {columns.map((c) => (
                       <td

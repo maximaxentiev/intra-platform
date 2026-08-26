@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   STATUS_OPTIONS,
   label as toLabel,
@@ -266,9 +265,10 @@ export function ApplicationsFilterPanel({
     onChange({ ...filters, [key]: value });
 
   const count = countActiveFilters(filters);
+  const [open, setOpen] = useState(false);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="h-10">
           <Filter className="h-4 w-4 mr-1.5" />
@@ -282,15 +282,21 @@ export function ApplicationsFilterPanel({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="flex max-h-[min(70vh,32rem)] w-[22rem] flex-col overflow-hidden p-0"
+        sideOffset={8}
+        className="flex max-h-[min(calc(100dvh-2rem),32rem)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden p-0"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="text-sm font-semibold">Filters</div>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClear}>
-            <X className="h-3.5 w-3.5 mr-1" /> Clear all
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClear}>
+              <X className="h-3.5 w-3.5 mr-1" /> Clear all
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          </div>
         </div>
-        <ScrollArea className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="space-y-3 p-4">
             <OptionSelect
               label="Status"
@@ -395,7 +401,7 @@ export function ApplicationsFilterPanel({
               onTo={(v) => set("cprTo", v)}
             />
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );

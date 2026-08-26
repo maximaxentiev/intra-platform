@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarCheck2, Check, Loader2, ThumbsDown, UserCheck } from "lucide-react";
+import { CalendarCheck2, Check, Loader2, UserCheck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +37,7 @@ export function ApplicationActionButtons({
   const busy = pendingAction !== null;
   const h = size === "md" ? "h-9 px-3 text-sm" : "h-7 px-2 text-xs";
 
-  if (avail.interview === "hidden" && avail.reject === "hidden" && avail.hire === "hidden") {
+  if (avail.interview === "hidden" && avail.hire === "hidden") {
     return (
       <span className="text-xs text-muted-foreground whitespace-nowrap">
         {status === "hired" ? "Hired — no further actions" : "Rejected — no further actions"}
@@ -74,22 +74,6 @@ export function ApplicationActionButtons({
             Interview
           </Button>
         )}
-        <Button
-          variant="outline"
-          className={cn(
-            h,
-            "whitespace-nowrap border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive",
-          )}
-          disabled={busy}
-          onClick={() => setDialog("reject")}
-        >
-          {pendingAction === "reject" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-          ) : (
-            <ThumbsDown className="h-3.5 w-3.5 mr-1" />
-          )}
-          Reject
-        </Button>
         <Button className={cn(h, "whitespace-nowrap")} disabled={busy} onClick={() => setDialog("hire")}>
           {pendingAction === "hire" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
@@ -111,11 +95,6 @@ export function ApplicationActionButtons({
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  className={
-                    dialog === "reject"
-                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      : undefined
-                  }
                   onClick={() => {
                     const action = dialog;
                     setDialog(null);

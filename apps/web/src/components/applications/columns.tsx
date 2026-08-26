@@ -114,48 +114,6 @@ const SHARED_AFTER: AppColumn[] = [
     cell: (r) => <YesNo value={r.eligibility.gtaEligible} />,
   },
   {
-    key: "vsc",
-    header: "VSC",
-    minWidth: 100,
-    cell: (r) => <YesNo value={asYesNo(r.compliance.vscStatus)} />,
-  },
-  {
-    key: "vscDate",
-    header: "VSC Date",
-    minWidth: 115,
-    sortValue: (r) => r.compliance.vscIssueOrRequestDate ?? "",
-    cell: (r) =>
-      r.compliance.vscIssueOrRequestDate ? (
-        <span className="text-sm whitespace-nowrap">{fmtDate(r.compliance.vscIssueOrRequestDate)}</span>
-      ) : (
-        <Dash />
-      ),
-  },
-  {
-    key: "firstAid",
-    header: "First Aid & CPR",
-    minWidth: 135,
-    cell: (r) => <YesNo value={asYesNo(r.compliance.firstAidCprStatus)} />,
-  },
-  {
-    key: "cprExpiry",
-    header: "CPR Expiry",
-    minWidth: 115,
-    sortValue: (r) => r.compliance.firstAidCprExpiry ?? "",
-    cell: (r) =>
-      r.compliance.firstAidCprExpiry ? (
-        <span className="text-sm whitespace-nowrap">{fmtDate(r.compliance.firstAidCprExpiry)}</span>
-      ) : (
-        <Dash />
-      ),
-  },
-  {
-    key: "immunizations",
-    header: "Immunizations",
-    minWidth: 130,
-    cell: (r) => <YesNo value={asYesNo(r.compliance.immunizationStatus)} />,
-  },
-  {
     key: "covid",
     header: "COVID-19",
     minWidth: 130,
@@ -195,7 +153,7 @@ const SHARED_AFTER: AppColumn[] = [
   },
 ];
 
-/** Middle columns (Applicant / Status / Actions are rendered by the table). */
+/** Middle columns (Applicant / Actions are rendered by the table). */
 export function columnsForRole(role: ApplicationRole): AppColumn[] {
   return role === "nanny"
     ? [...SHARED_BEFORE, ...NANNY_ONLY, ...SHARED_AFTER]
@@ -267,8 +225,6 @@ export function matchesFilters(r: ApplicationRow, f: ApplicationFilters): boolea
 
 export type SortState = { key: string; dir: "asc" | "desc" } | null;
 
-const STATUS_ORDER: Record<string, number> = { new: 0, contacted: 1, hired: 2, rejected: 3 };
-
 export function sortRows(rows: ApplicationRow[], sort: SortState, columns: AppColumn[]): ApplicationRow[] {
   if (!sort) {
     return [...rows].sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""));
@@ -276,9 +232,7 @@ export function sortRows(rows: ApplicationRow[], sort: SortState, columns: AppCo
   const getter: ((r: ApplicationRow) => string | number) | undefined =
     sort.key === "applicant"
       ? (r) => fullName(r).toLowerCase()
-      : sort.key === "status"
-        ? (r) => STATUS_ORDER[r.status] ?? 9
-        : columns.find((c) => c.key === sort.key)?.sortValue;
+      : columns.find((c) => c.key === sort.key)?.sortValue;
   if (!getter) return rows;
   const factor = sort.dir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {

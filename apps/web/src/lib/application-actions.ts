@@ -2,16 +2,15 @@
 //
 // TODO(cursor): replace `defaultApplicationActionHandler` with the real API
 // mutation once the backend status endpoints exist, e.g.
-//   api.post(`/applications/${id}/interview` | `/reject` | `/hire`)
+//   api.post(`/applications/${id}/interview` | `/hire`)
 // The UI only depends on the `ApplicationActionHandler` contract below, so no
 // component changes are needed when the real endpoint is wired.
 import type { ApplicationStatus } from "@/lib/applications";
 
-export type ApplicationAction = "interview" | "reject" | "hire";
+export type ApplicationAction = "interview" | "hire";
 
 export const ACTION_RESULT_STATUS: Record<ApplicationAction, ApplicationStatus> = {
   interview: "contacted",
-  reject: "rejected",
   hire: "hired",
 };
 
@@ -36,16 +35,15 @@ export const defaultApplicationActionHandler: ApplicationActionHandler = async (
 /** Which actions are offered for a given status (terminal states offer none). */
 export function availableActions(status: ApplicationStatus): {
   interview: "available" | "done" | "hidden";
-  reject: "available" | "hidden";
   hire: "available" | "hidden";
 } {
   switch (status) {
     case "new":
-      return { interview: "available", reject: "available", hire: "available" };
+      return { interview: "available", hire: "available" };
     case "contacted":
-      return { interview: "done", reject: "available", hire: "available" };
+      return { interview: "done", hire: "available" };
     default:
-      return { interview: "hidden", reject: "hidden", hire: "hidden" };
+      return { interview: "hidden", hire: "hidden" };
   }
 }
 
@@ -57,12 +55,6 @@ export const ACTION_COPY: Record<
     title: (n) => `Invite ${n} to Interview?`,
     body: (n) => `Are you sure you want to invite ${n} to an interview?`,
     confirm: "Yes, Interview",
-  },
-  reject: {
-    title: (n) => `Reject ${n}?`,
-    body: (n) =>
-      `Are you sure you want to reject ${n}? This action will eventually send the applicant a rejection email once the backend automation is connected.`,
-    confirm: "Yes, Reject",
   },
   hire: {
     title: (n) => `Hire ${n}?`,
