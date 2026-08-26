@@ -1,17 +1,17 @@
+import { getStaffLegalFullName } from '@intra/shared';
 import {
   normalizeStaffDocumentSlug,
-  resolveStaffPublicDisplayName,
   staffDocumentSlugCandidate,
 } from './staff-document-slug.util';
 
 export const STAFF_DOCUMENT_SLUG_COLLISION_MAX_ATTEMPTS = 50;
 
 export function baseStaffDocumentSlugFromStaff(staff: {
-  displayName: string;
-  useDisplayName: boolean;
+  legalFirstName?: string | null;
+  legalLastName?: string | null;
   legalName: string;
 }): string {
-  return normalizeStaffDocumentSlug(resolveStaffPublicDisplayName(staff));
+  return normalizeStaffDocumentSlug(getStaffLegalFullName(staff));
 }
 
 export function staffDocumentSlugCandidates(baseSlug: string): string[] {

@@ -8,7 +8,7 @@ import type {
 import type { StaffDocumentCategoryCompliance } from './staff-document-compliance.util';
 import { STAFF_DOCUMENT_PUBLIC_SHARE_LABELS } from './staff-document-share-public.constants';
 import { isPubliclyShareableCategory, mapPublicShareExpiryDisplay } from './staff-document-share-public-eligibility.util';
-import { resolveStaffPublicDisplayName } from './staff-document-slug.util';
+import { getStaffLegalFullName } from '@intra/shared';
 
 export function mapPublicStaffDocumentShareFile(row: StaffDocumentFile): PublicStaffDocumentShareFileDto {
   return {
@@ -19,7 +19,10 @@ export function mapPublicStaffDocumentShareFile(row: StaffDocumentFile): PublicS
 }
 
 export function mapPublicStaffDocumentShareMetadata(input: {
-  staff: Pick<typeof staff.$inferSelect, 'displayName' | 'useDisplayName' | 'legalName' | 'role'>;
+  staff: Pick<
+    typeof staff.$inferSelect,
+    'displayName' | 'useDisplayName' | 'legalName' | 'legalFirstName' | 'legalLastName' | 'role'
+  >;
   categories: StaffDocumentCategoryCompliance[];
   filesByType: Map<string, StaffDocumentFile[]>;
 }): PublicStaffDocumentShareMetadataDto {
@@ -47,7 +50,7 @@ export function mapPublicStaffDocumentShareMetadata(input: {
 
   return {
     staff: {
-      displayName: resolveStaffPublicDisplayName(input.staff),
+      legalName: getStaffLegalFullName(input.staff),
       role: input.staff.role,
     },
     documents,

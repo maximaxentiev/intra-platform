@@ -127,10 +127,10 @@ function buildCopy(
     return { title: 'Shift record created', description: centreLabel(ctx) };
   }
   if (action === 'assignment_confirmation_sent' || action === 'assignment_confirmation_failed') {
-    const label = action.endsWith('sent') ? 'sent' : 'failed';
+    const verb = action.endsWith('sent') ? 'sent' : 'failed';
     return {
-      title: `Assignment confirmation ${label}`,
-      description: staffCentreShiftSentence(ctx),
+      title: `Assignment confirmation ${verb}`,
+      description: assignmentConfirmationDescription(ctx, verb),
     };
   }
   if (action === 'communication_sent' || action === 'communication_failed') {
@@ -138,8 +138,16 @@ function buildCopy(
       typeof ctx.metadata?.communicationType === 'string'
         ? ctx.metadata.communicationType
         : 'communication';
-    const label = communicationTypeLabel(commType);
     const verb = action === 'communication_sent' ? 'sent' : 'failed';
+
+    if (commType === 'shift_cancellation_centre' || commType === 'shift_cancellation_carer') {
+      return {
+        title: `Cancellation confirmation ${verb}`,
+        description: cancellationConfirmationDescription(commType, ctx, verb),
+      };
+    }
+
+    const label = communicationTypeLabel(commType);
     return {
       title: `Reminder ${verb}`,
       description: ctx.staffName ? `${label} ${verb} to ${ctx.staffName}` : `${label} ${verb}`,
@@ -184,6 +192,39 @@ function staffCentreShiftSentence(ctx: {
   return centreLabel(ctx);
 }
 
+function assignmentConfirmationDescription(
+  ctx: {
+    staffName?: string;
+    centreName?: string;
+    shiftDate?: string;
+    metadata?: Record<string, unknown>;
+  },
+  verb: 'sent' | 'failed',
+): string | null {
+  const recipientType = ctx.metadata?.recipientType;
+  if (recipientType === 'carer' && ctx.staffName) {
+    return `Carer confirmation ${verb} to ${ctx.staffName}`;
+  }
+  if (recipientType === 'centre' && ctx.centreName) {
+    return `Centre confirmation ${verb} to ${ctx.centreName}`;
+  }
+  return staffCentreShiftSentence(ctx);
+}
+
+function cancellationConfirmationDescription(
+  commType: string,
+  ctx: { staffName?: string; centreName?: string },
+  verb: 'sent' | 'failed',
+): string | null {
+  if (commType === 'shift_cancellation_centre' && ctx.centreName) {
+    return `Centre confirmation ${verb} to ${ctx.centreName}`;
+  }
+  if (commType === 'shift_cancellation_carer' && ctx.staffName) {
+    return `Carer confirmation ${verb} to ${ctx.staffName}`;
+  }
+  return communicationTypeLabel(commType);
+}
+
 function describeChanges(metadata?: Record<string, unknown>): string | null {
   const changes = metadata?.changes;
   if (!changes || typeof changes !== 'object') return null;
@@ -205,7 +246,11 @@ function sanitizeReportMetadata(
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(metadata)) {
     if (/token|password|secret|hash|storage|provider|url/i.test(key)) continue;
-    if (['changes', 'communicationType', 'eventType', 'cancellationReasonPreview'].includes(key)) {
+    if (
+      ['changes', 'communicationType', 'eventType', 'cancellationReasonPreview', 'recipientType'].includes(
+        key,
+      )
+    ) {
       out[key] = value;
     }
   }

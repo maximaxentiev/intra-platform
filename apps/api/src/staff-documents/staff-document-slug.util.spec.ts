@@ -7,17 +7,19 @@ import {
 } from './staff-document-slug.util';
 
 describe('resolveStaffPublicDisplayName', () => {
-  it('prefers display name when useDisplayName is true', () => {
+  it('returns legal first and last name for external surfaces', () => {
     expect(
       resolveStaffPublicDisplayName({
-        displayName: 'Jane Doe',
+        legalFirstName: 'Jaspreet',
+        legalLastName: 'Singh',
+        displayName: 'Jaz',
         useDisplayName: true,
-        legalName: 'Janet Doe',
+        legalName: 'Jaspreet Singh',
       }),
-    ).toBe('Jane Doe');
+    ).toBe('Jaspreet Singh');
   });
 
-  it('falls back to legal name when not using display name', () => {
+  it('falls back to legalName when first/last are empty', () => {
     expect(
       resolveStaffPublicDisplayName({
         displayName: 'Jane Doe',

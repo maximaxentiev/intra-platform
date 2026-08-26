@@ -42,7 +42,4 @@ export const carerShiftsApi = {
     api.get<CarerShiftsPageResponse>("/staff-portal/shifts/history", { page, pageSize }),
 
   get: (id: string) => api.get<CarerShift>(`/staff-portal/shifts/${id}`),
-
-  cancel: (id: string, reason: string) =>
-    api.post<CarerShift>(`/staff-portal/shifts/${id}/cancel`, { reason }),
 };

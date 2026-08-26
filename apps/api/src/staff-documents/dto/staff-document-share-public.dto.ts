@@ -14,7 +14,7 @@ export class ExchangeStaffDocumentShareSessionDto {
 }
 
 export type PublicStaffDocumentShareStaffDto = {
-  displayName: string;
+  legalName: string;
   role: string;
 };
 

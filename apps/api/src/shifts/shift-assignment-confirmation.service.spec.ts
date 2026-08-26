@@ -45,6 +45,8 @@ describe('ShiftAssignmentConfirmationService', () => {
       centreCity: 'Toronto',
       centreNotes: 'Use rear entrance.',
       legalName: 'Jane Legal',
+      legalFirstName: 'Jaspreet',
+      legalLastName: 'Singh',
       displayName: 'Jane Doe',
       useDisplayName: true,
       staffEmail: 'carer@example.test',
@@ -116,6 +118,9 @@ describe('ShiftAssignmentConfirmationService', () => {
     expect(transport.sent[0]?.to).toBe('centre@example.test');
     expect(transport.sent[1]?.to).toBe('carer@example.test');
     expect(notificationRecords).toHaveLength(2);
+    const centreEmail = transport.sent.find((m) => m.to === 'centre@example.test');
+    expect(centreEmail?.text).toContain('Jaspreet Singh');
+    expect(centreEmail?.text).not.toContain('Jane Doe');
   });
 
   it('skips centre email when document share is unavailable but still attempts carer email', async () => {

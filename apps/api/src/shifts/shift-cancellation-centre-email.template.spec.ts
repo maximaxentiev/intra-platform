@@ -7,7 +7,7 @@ import {
 describe('buildShiftCancellationCentreEmailContent', () => {
   const base = {
     centreName: 'Sunrise Child Care',
-    carerDisplayName: 'Jane Carer',
+    carerLegalName: 'Jane Carer',
     roleNeeded: 'RECE',
     shiftDate: '2026-09-10',
     startTime: '09:00:00',
@@ -26,7 +26,7 @@ describe('buildShiftCancellationCentreEmailContent', () => {
   it('excludes cancellation reason and internal fields', () => {
     const content = buildShiftCancellationCentreEmailContent({
       ...base,
-      carerDisplayName: 'Jane Carer',
+      carerLegalName: 'Jane Carer',
     });
     expect(content.text).not.toContain('Family emergency');
     expect(centreCancellationEmailContainsNoSensitiveInternals(content)).toBe(true);
@@ -38,5 +38,14 @@ describe('buildShiftCancellationCentreEmailContent', () => {
       centreName: 'Care <script>',
     });
     expect(content.html).toContain('Care &lt;script&gt;');
+  });
+
+  it('uses legal full name for centre-facing carer label', () => {
+    const content = buildShiftCancellationCentreEmailContent({
+      ...base,
+      carerLegalName: 'Jaspreet Singh',
+    });
+    expect(content.text).toContain('Jaspreet Singh');
+    expect(content.text).not.toContain('Jaz');
   });
 });

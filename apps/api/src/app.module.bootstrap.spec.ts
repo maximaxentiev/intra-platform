@@ -57,9 +57,9 @@ describe('Nest module graph bootstrap', () => {
     expect(imports[0]).toBe(StaffDocumentsModule);
   });
 
-  it('StaffPortalModule imports ShiftCommunicationsModule instead of ShiftsModule (breaks StaffPortal cycle)', () => {
+  it('StaffPortalModule imports AuthModule only (no shift communications after carer cancel removal)', () => {
     const imports = moduleImports(StaffPortalModule);
-    expect(imports).toContain(ShiftCommunicationsModule);
+    expect(imports).not.toContain(ShiftCommunicationsModule);
     expect(imports).not.toContain(ShiftsModule);
   });
 

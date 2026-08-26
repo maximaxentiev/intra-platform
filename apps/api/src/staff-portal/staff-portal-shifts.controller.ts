@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/session.guard';
 import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
 import {
-  CancelStaffPortalShiftDto,
   ListStaffPortalShiftHistoryQuery,
   ListStaffPortalShiftsQuery,
   StaffPortalShiftsSummaryQuery,
@@ -41,15 +40,6 @@ export class StaffPortalShiftsController {
     @Query() query: StaffPortalShiftsSummaryQuery,
   ) {
     return this.shifts.summary(session, query.limit);
-  }
-
-  @Post(':id/cancel')
-  cancelShift(
-    @CurrentStaff() session: StaffSessionPayload,
-    @Param('id') id: string,
-    @Body() dto: CancelStaffPortalShiftDto,
-  ) {
-    return this.shifts.cancelShift(session, id, dto.reason);
   }
 
   @Get(':id')

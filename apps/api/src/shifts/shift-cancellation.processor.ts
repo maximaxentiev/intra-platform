@@ -16,7 +16,7 @@ import type {
   CommunicationType,
 } from '../automated-communications/automated-communications.types';
 import type { CommunicationProcessorContext } from '../automated-communications/communication-processor.registry';
-import { resolveStaffPublicDisplayName } from '../staff-documents/staff-document-slug.util';
+import { getStaffLegalFullName } from '@intra/shared';
 import {
   normalizeStaffEmail,
   resolvePortalAccountDisplayStatus,
@@ -66,6 +66,8 @@ abstract class ShiftCancellationCommunicationProcessorBase implements Communicat
         centreAddress: centres.address,
         centreCity: centres.city,
         legalName: staff.legalName,
+        legalFirstName: staff.legalFirstName,
+        legalLastName: staff.legalLastName,
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         staffEmail: staff.email,
@@ -110,6 +112,8 @@ abstract class ShiftCancellationCommunicationProcessorBase implements Communicat
       roleNeeded: string | null;
       assignedStaffId: string | null;
       legalName: string | null;
+      legalFirstName: string | null;
+      legalLastName: string | null;
       displayName: string | null;
       useDisplayName: boolean | null;
     },
@@ -139,15 +143,15 @@ abstract class ShiftCancellationCommunicationProcessorBase implements Communicat
       };
     }
 
-    const carerDisplayName = resolveStaffPublicDisplayName({
+    const carerLegalName = getStaffLegalFullName({
+      legalFirstName: row.legalFirstName ?? '',
+      legalLastName: row.legalLastName ?? '',
       legalName: row.legalName ?? '',
-      displayName: row.displayName ?? '',
-      useDisplayName: row.useDisplayName ?? false,
     });
 
     const content = buildShiftCancellationCentreEmailContent({
       centreName: row.centreName,
-      carerDisplayName,
+      carerLegalName,
       roleNeeded: normalizeShiftRoleNeeded(row.roleNeeded),
       shiftDate: String(row.shiftDate),
       startTime: String(row.startTime),

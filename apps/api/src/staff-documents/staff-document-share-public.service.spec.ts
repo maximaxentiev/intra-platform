@@ -36,8 +36,10 @@ function createShareService() {
 function staffRow(overrides: Record<string, unknown> = {}) {
   return {
     id: STAFF_A_ID,
-    legalName: 'Jane Doe',
-    displayName: 'Jane Doe',
+    legalName: 'Jaspreet Singh',
+    legalFirstName: 'Jaspreet',
+    legalLastName: 'Singh',
+    displayName: 'Jaz',
     useDisplayName: true,
     role: 'ECE',
     documentSlug: 'jane-doe',
@@ -428,7 +430,7 @@ describe('StaffDocumentSharePublicService metadata', () => {
     const req = { cookies: { [STAFF_DOCUMENT_SHARE_SESSION_COOKIE_NAME]: session } } as never;
 
     const metadata = await harness.service.getMetadata(req);
-    expect(metadata.staff.displayName).toBe('Jane Doe');
+    expect(metadata.staff.legalName).toBe('Jaspreet Singh');
     expect(metadata.staff.role).toBe('ECE');
     expect(metadata.documents.map((doc) => doc.documentType)).toEqual([
       'vulnerable_sector_check',

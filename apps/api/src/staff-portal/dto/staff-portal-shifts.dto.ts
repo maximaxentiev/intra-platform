@@ -1,7 +1,5 @@
-import { Transform, Type } from 'class-transformer';
-import { IsInt, IsIn, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
-
-export const CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH = 1000;
+import { Type } from 'class-transformer';
+import { IsInt, IsIn, IsOptional, Max, Min } from 'class-validator';
 
 export const STAFF_PORTAL_SHIFT_PAGE_SIZES = [10, 25] as const;
 export type StaffPortalShiftPageSize = (typeof STAFF_PORTAL_SHIFT_PAGE_SIZES)[number];
@@ -35,14 +33,6 @@ export class StaffPortalShiftsSummaryQuery {
   @Min(1)
   @Max(5)
   limit: number = 3;
-}
-
-export class CancelStaffPortalShiftDto {
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString()
-  @MinLength(1, { message: 'Reason is required.' })
-  @MaxLength(CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH)
-  reason!: string;
 }
 
 export type CarerShiftStatus = 'upcoming' | 'today' | 'completed' | 'cancelled';

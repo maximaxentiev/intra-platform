@@ -9,7 +9,7 @@ export const PUBLIC_SHARE_EMPTY_MESSAGE =
 export const PUBLIC_SHARE_FILE_OPEN_ERROR_MESSAGE = "This document could not be opened.";
 
 export type PublicStaffDocumentShareStaff = {
-  displayName: string;
+  legalName: string;
   role: string;
 };
 

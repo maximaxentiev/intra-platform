@@ -27,9 +27,11 @@ describe('mapPublicStaffDocumentShareMetadata', () => {
   it('returns all shareable approved categories with canonical labels', () => {
     const metadata = mapPublicStaffDocumentShareMetadata({
       staff: {
-        displayName: 'Jane Doe',
+        displayName: 'Jaz',
         useDisplayName: true,
         legalName: 'Janet Doe',
+        legalFirstName: 'Janet',
+        legalLastName: 'Doe',
         role: 'ECE',
       },
       categories: [
@@ -102,7 +104,7 @@ describe('mapPublicStaffDocumentShareMetadata', () => {
       ]),
     });
 
-    expect(metadata.staff).toEqual({ displayName: 'Jane Doe', role: 'ECE' });
+    expect(metadata.staff).toEqual({ legalName: 'Janet Doe', role: 'ECE' });
     expect(metadata.documents).toHaveLength(4);
     expect(metadata.documents.map((doc) => doc.label)).toEqual([
       'Vulnerable Sector Check',

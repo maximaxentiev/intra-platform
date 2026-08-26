@@ -10,7 +10,7 @@ import {
 
 export function buildShiftAssignmentCentreEmailContent(params: {
   centreName: string;
-  carerDisplayName: string;
+  carerLegalName: string;
   roleNeeded: string | null;
   shiftDate: string;
   startTime: string;
@@ -29,12 +29,12 @@ export function buildShiftAssignmentCentreEmailContent(params: {
   const text = [
     'Staffing confirmation',
     '',
-    `Carer: ${params.carerDisplayName}`,
+    `Carer: ${params.carerLegalName}`,
     ...roleLines,
     `Date: ${dateLabel}`,
     `Time: ${timeLabel}`,
     '',
-    `View ${params.carerDisplayName}'s current approved documents:`,
+    `View ${params.carerLegalName}'s current approved documents:`,
     params.documentShareUrl,
   ].join('\n');
 
@@ -45,12 +45,12 @@ export function buildShiftAssignmentCentreEmailContent(params: {
 
   const html = wrapShiftAssignmentEmailHtml(`
         <tr><td style="font-size:18px;font-weight:600;color:#111;">Staffing confirmation</td></tr>
-        <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Carer:</strong> ${escapeShiftAssignmentEmailHtml(params.carerDisplayName)}</td></tr>
+        <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Carer:</strong> ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}</td></tr>
         ${roleHtml}
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Date:</strong> ${escapeShiftAssignmentEmailHtml(dateLabel)}</td></tr>
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Time:</strong> ${escapeShiftAssignmentEmailHtml(timeLabel)}</td></tr>
         <tr><td style="padding-top:24px;" align="center">
-          <a href="${escapeShiftAssignmentEmailHtml(params.documentShareUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 24px;border-radius:8px;">View ${escapeShiftAssignmentEmailHtml(params.carerDisplayName)}&apos;s current approved documents</a>
+          <a href="${escapeShiftAssignmentEmailHtml(params.documentShareUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 24px;border-radius:8px;">View ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}&apos;s current approved documents</a>
         </td></tr>`);
 
   return { subject, html, text };

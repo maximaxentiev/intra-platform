@@ -1,19 +1,15 @@
+import { getStaffLegalFullName, type StaffLegalNameInput } from '@intra/shared';
 import { STAFF_DOCUMENT_SLUG_MAX_LENGTH } from './staff-document-share.constants';
 
 const SLUG_FALLBACK = 'staff';
 
-/** Resolve the public-facing name used for cosmetic slug generation. */
-export function resolveStaffPublicDisplayName(staff: {
-  displayName: string;
-  useDisplayName: boolean;
+/** @deprecated Prefer getStaffLegalFullName for external surfaces. */
+export function resolveStaffPublicDisplayName(staff: StaffLegalNameInput & {
+  displayName?: string;
+  useDisplayName?: boolean;
   legalName: string;
 }): string {
-  const displayName = staff.displayName.trim();
-  const legalName = staff.legalName.trim();
-  if (staff.useDisplayName && displayName) {
-    return displayName;
-  }
-  return legalName || displayName;
+  return getStaffLegalFullName(staff);
 }
 
 /**

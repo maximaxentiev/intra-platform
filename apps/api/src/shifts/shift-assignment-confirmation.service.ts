@@ -11,7 +11,7 @@ import type { PlatformUrlEnv } from '../config/platform-url';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centreContacts, centres, shifts, staff, staffAccounts } from '../db/schema';
 import { EmailService } from '../email/email.service';
-import { resolveStaffPublicDisplayName } from '../staff-documents/staff-document-slug.util';
+import { getStaffLegalFullName } from '@intra/shared';
 import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-document-share-lifecycle.service';
 import {
   normalizeStaffEmail,
@@ -46,7 +46,7 @@ type ShiftNotificationContext = {
   centreAddress: string;
   centreCity: string;
   centreNotes: string;
-  carerDisplayName: string;
+  carerLegalName: string;
   carerStaffEmail: string;
   carerAccountEmail: string | null;
   includePortalLink: boolean;
@@ -97,6 +97,8 @@ export class ShiftAssignmentConfirmationService {
         centreCity: centres.city,
         centreNotes: centres.notes,
         legalName: staff.legalName,
+        legalFirstName: staff.legalFirstName,
+        legalLastName: staff.legalLastName,
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
         staffEmail: staff.email,
@@ -138,10 +140,10 @@ export class ShiftAssignmentConfirmationService {
       centreAddress: row.centreAddress,
       centreCity: row.centreCity,
       centreNotes: row.centreNotes,
-      carerDisplayName: resolveStaffPublicDisplayName({
+      carerLegalName: getStaffLegalFullName({
+        legalFirstName: row.legalFirstName,
+        legalLastName: row.legalLastName,
         legalName: row.legalName,
-        displayName: row.displayName,
-        useDisplayName: row.useDisplayName,
       }),
       carerStaffEmail: row.staffEmail,
       carerAccountEmail: row.accountEmail,
@@ -206,7 +208,7 @@ export class ShiftAssignmentConfirmationService {
 
     const content = buildShiftAssignmentCentreEmailContent({
       centreName: context.centreName,
-      carerDisplayName: context.carerDisplayName,
+      carerLegalName: context.carerLegalName,
       roleNeeded: context.roleNeeded,
       shiftDate: context.shiftDate,
       startTime: context.startTime,

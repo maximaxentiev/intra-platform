@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -13,16 +12,12 @@ import {
 } from '../availability/availability-toronto.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staffAccounts } from '../db/schema';
-import { ShiftReminderService } from '../shifts/shift-reminder.service';
-import { ShiftCancellationService } from '../shifts/shift-cancellation.service';
 import {
-  isCarerDirectCancellationEligible,
   type ShiftInternalStatus,
   type ShiftRowForCarer,
   toCarerShiftSummaryDto,
 } from './carer-shift.util';
 import {
-  CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH,
   type CarerShiftSummaryDto,
   StaffPortalShiftPageSize,
   StaffPortalShiftsPageResponseDto,
@@ -44,11 +39,7 @@ type ShiftQueryRow = {
 
 @Injectable()
 export class StaffPortalShiftsService {
-  constructor(
-    @Inject(DRIZZLE) private readonly db: Database,
-    private readonly shiftReminders: ShiftReminderService,
-    private readonly shiftCancellations: ShiftCancellationService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: Database) {}
 
   async listUpcoming(
     session: StaffSessionPayload,
@@ -142,148 +133,6 @@ export class StaffPortalShiftsService {
 
     if (dto.status === 'cancelled' && row.cancellationReason.trim()) {
       dto.cancellationReason = row.cancellationReason.trim();
-    }
-
-    return dto;
-  }
-
-  async cancelShift(
-    session: StaffSessionPayload,
-    shiftId: string,
-    reason: string,
-  ): Promise<CarerShiftSummaryDto> {
-    await this.loadOnboardedAccount(session);
-
-    const trimmed = reason.trim();
-    if (!trimmed) {
-      throw new BadRequestException('Reason is required.');
-    }
-    if (trimmed.length > CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH) {
-      throw new BadRequestException(
-        `Reason must be at most ${CARER_SHIFT_CANCELLATION_REASON_MAX_LENGTH} characters.`,
-      );
-    }
-
-    const today = torontoTodayDateString();
-    const nowTime = torontoNowTimeString();
-
-    let scheduledCancellationIds: string[] = [];
-
-    const dto = await this.db.transaction(async (tx) => {
-      const locked = await tx
-        .select({
-          id: shifts.id,
-          centreId: shifts.centreId,
-          shiftDate: shifts.shiftDate,
-          startTime: shifts.startTime,
-          endTime: shifts.endTime,
-          roleNeeded: shifts.roleNeeded,
-          status: shifts.status,
-          assignedStaffId: shifts.assignedStaffId,
-          centreName: centres.name,
-          centreAddress: centres.address,
-          centreCity: centres.city,
-        })
-        .from(shifts)
-        .innerJoin(centres, eq(centres.id, shifts.centreId))
-        .where(eq(shifts.id, shiftId))
-        .for('update');
-
-      const shift = locked[0];
-      if (!shift || shift.assignedStaffId !== session.staffId) {
-        throw new NotFoundException('Shift not found.');
-      }
-
-      if (shift.status === 'cancelled') {
-        throw new ConflictException('Shift is already cancelled.');
-      }
-
-      if (
-        !isCarerDirectCancellationEligible(
-          shift.status as ShiftInternalStatus,
-          shift.shiftDate,
-          shift.endTime,
-          today,
-          nowTime,
-        )
-      ) {
-        throw new BadRequestException('This shift cannot be cancelled.');
-      }
-
-      const updated = await tx
-        .update(shifts)
-        .set({
-          status: 'cancelled',
-          cancellationReason: trimmed,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(shifts.id, shiftId),
-            eq(shifts.assignedStaffId, session.staffId),
-            eq(shifts.status, 'filled'),
-            sql`(
-              ${shifts.shiftDate} > ${today}::date
-              OR (${shifts.shiftDate} = ${today}::date AND ${shifts.endTime} > ${nowTime}::time)
-            )`,
-          ),
-        )
-        .returning({
-          id: shifts.id,
-          shiftDate: shifts.shiftDate,
-          startTime: shifts.startTime,
-          endTime: shifts.endTime,
-          roleNeeded: shifts.roleNeeded,
-          status: shifts.status,
-          cancellationReason: shifts.cancellationReason,
-          updatedAt: shifts.updatedAt,
-        });
-
-      const row = updated[0];
-      if (!row) {
-        throw new BadRequestException('This shift cannot be cancelled.');
-      }
-
-      await this.shiftReminders.cancelPendingForShift(shiftId, tx);
-
-      if (shift.assignedStaffId) {
-        scheduledCancellationIds = await this.shiftCancellations.scheduleForAssignedCancellation(
-          {
-            shiftId,
-            assignedStaffId: shift.assignedStaffId,
-            centreId: shift.centreId,
-            scheduledFor: row.updatedAt,
-          },
-          tx,
-        );
-      }
-
-      const summary = toCarerShiftSummaryDto(
-        {
-          id: row.id,
-          shiftDate: row.shiftDate,
-          startTime: row.startTime,
-          endTime: row.endTime,
-          roleNeeded: row.roleNeeded,
-          status: row.status as ShiftInternalStatus,
-          centreName: shift.centreName,
-          centreAddress: shift.centreAddress,
-          centreCity: shift.centreCity,
-        },
-        today,
-        nowTime,
-      );
-
-      if (!summary) {
-        throw new BadRequestException('This shift cannot be cancelled.');
-      }
-
-      summary.cancellationReason = trimmed;
-      return summary;
-    });
-
-    if (scheduledCancellationIds.length > 0) {
-      await this.shiftCancellations.enqueueScheduledIds(scheduledCancellationIds);
     }
 
     return dto;

@@ -7,7 +7,7 @@ import {
 describe('buildShiftAssignmentCentreEmailContent', () => {
   const base = {
     centreName: 'ABC Child Care Centre',
-    carerDisplayName: 'Jane Doe',
+    carerLegalName: 'Jane Doe',
     roleNeeded: 'ECE' as string | null,
     shiftDate: '2026-08-25',
     startTime: '08:30:00',
@@ -35,10 +35,20 @@ describe('buildShiftAssignmentCentreEmailContent', () => {
   it('escapes HTML in dynamic values', () => {
     const content = buildShiftAssignmentCentreEmailContent({
       ...base,
-      carerDisplayName: 'Jane <script>alert(1)</script>',
+      carerLegalName: 'Jane <script>alert(1)</script>',
     });
     expect(content.html).not.toContain('<script>');
     expect(content.html).toContain('&lt;script&gt;');
+  });
+
+  it('uses legal full name and never display name for centre-facing copy', () => {
+    const content = buildShiftAssignmentCentreEmailContent({
+      ...base,
+      carerLegalName: 'Jaspreet Singh',
+    });
+    expect(content.text).toContain('Jaspreet Singh');
+    expect(content.text).not.toContain('Jaz');
+    expect(content.html).toContain('Jaspreet Singh');
   });
 
   it('excludes internal shift fields', () => {

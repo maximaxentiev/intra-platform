@@ -1,31 +1,13 @@
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import { CarerShiftStatusBadge } from "@/components/carer/CarerShiftStatusBadge";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import {
   formatAvailabilityWindowDisplay,
   formatFullCalendarDateWithYearLabel,
 } from "@/lib/carer-availability-dates";
-import {
-  isCarerCancellationEligible,
-  useCancelCarerShift,
-} from "@/lib/carer-shift-cancellation";
 import type { CarerShift } from "@/lib/carer-shifts";
 import { useCarerShift } from "@/lib/carer-shifts-queries";
 
@@ -67,85 +49,6 @@ function CarerShiftLoadError({ onRetry }: { onRetry: () => void }) {
         Try again
       </Button>
     </div>
-  );
-}
-
-function CarerShiftCancellationSection({ shift }: { shift: CarerShift }) {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const cancel = useCancelCarerShift(shift.id);
-
-  if (!isCarerCancellationEligible(shift)) {
-    return null;
-  }
-
-  async function handleCancel() {
-    const trimmed = reason.trim();
-    if (!trimmed) {
-      toast.error("Please enter a reason for cancellation.");
-      return;
-    }
-    try {
-      await cancel.mutateAsync(trimmed);
-      setOpen(false);
-      setReason("");
-      toast.success("Shift cancelled", {
-        description: "This shift has been cancelled.",
-      });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not cancel shift.");
-    }
-  }
-
-  return (
-    <section className="space-y-3 border-t pt-5">
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
-          >
-            Cancel shift
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cancelling this shift will take effect immediately. Please provide a reason before confirming.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="cancellation-reason">Reason for cancellation</Label>
-            <Textarea
-              id="cancellation-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Please tell us why you need to cancel this shift."
-              rows={4}
-              maxLength={1000}
-              className="min-h-[6rem] resize-y"
-              disabled={cancel.isPending}
-            />
-          </div>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col-reverse">
-            <AlertDialogCancel className="h-11 w-full" disabled={cancel.isPending}>
-              Keep shift
-            </AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              className="h-11 w-full"
-              disabled={cancel.isPending}
-              onClick={() => void handleCancel()}
-            >
-              {cancel.isPending ? "Cancelling…" : "Cancel shift"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </section>
   );
 }
 
@@ -205,8 +108,6 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
           </div>
         ) : null}
       </dl>
-
-      <CarerShiftCancellationSection shift={shift} />
     </article>
   );
 }

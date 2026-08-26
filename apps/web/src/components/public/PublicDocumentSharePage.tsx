@@ -222,7 +222,7 @@ function StaffIdentity({
   return (
     <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
       <h1 className="break-words text-2xl font-semibold tracking-tight text-foreground">
-        {staff.displayName}
+        {staff.legalName}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{staff.role}</p>
     </div>

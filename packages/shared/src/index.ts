@@ -16,3 +16,4 @@ export {
   geographicTier,
 } from './city-adjacency';
 export { compareStaffMatchingSort, type StaffMatchingSortInput } from './shift-matching-sort';
+export { getStaffLegalFullName, type StaffLegalNameInput } from './staff-legal-name';

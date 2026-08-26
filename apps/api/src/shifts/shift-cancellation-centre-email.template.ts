@@ -9,7 +9,7 @@ import {
 
 export function buildShiftCancellationCentreEmailContent(params: {
   centreName: string;
-  carerDisplayName: string;
+  carerLegalName: string;
   roleNeeded: string | null;
   shiftDate: string;
   startTime: string;
@@ -28,7 +28,7 @@ export function buildShiftCancellationCentreEmailContent(params: {
     'The scheduled shift below has been cancelled.',
     '',
     `Centre: ${params.centreName}`,
-    `Carer: ${params.carerDisplayName}`,
+    `Carer: ${params.carerLegalName}`,
     ...roleLines,
     `Date: ${dateLabel}`,
     `Time: ${timeLabel}`,
@@ -43,7 +43,7 @@ export function buildShiftCancellationCentreEmailContent(params: {
         <tr><td style="font-size:18px;font-weight:600;color:#111;">Shift cancelled</td></tr>
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;">The scheduled shift below has been cancelled.</td></tr>
         <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Centre:</strong> ${escapeShiftAssignmentEmailHtml(params.centreName)}</td></tr>
-        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Carer:</strong> ${escapeShiftAssignmentEmailHtml(params.carerDisplayName)}</td></tr>
+        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Carer:</strong> ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}</td></tr>
         ${roleHtml}
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Date:</strong> ${escapeShiftAssignmentEmailHtml(dateLabel)}</td></tr>
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Time:</strong> ${escapeShiftAssignmentEmailHtml(timeLabel)}</td></tr>`);

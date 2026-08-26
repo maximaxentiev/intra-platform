@@ -22,7 +22,7 @@ function readSrc(rel: string) {
 }
 
 const sampleMetadata = {
-  staff: { displayName: "Jane Doe", role: "ECE" },
+  staff: { legalName: "Jane Doe", role: "ECE" },
   documents: [
     {
       documentType: "vulnerable_sector_check" as const,
@@ -203,6 +203,12 @@ describe("public share page source hygiene", () => {
     const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
     expect(pageSrc).toContain('aria-label={`View document ${file.originalFilename}`}');
     expect(pageSrc).not.toMatch(/\bstaffId\b|\bsubmissionId\b|\bstorageKey\b/i);
+  });
+
+  it("shows staff legal name on the centre-facing share page", () => {
+    const pageSrc = readSrc("components/public/PublicDocumentSharePage.tsx");
+    expect(pageSrc).toContain("staff.legalName");
+    expect(pageSrc).not.toContain("staff.displayName");
   });
 
   it("keeps file-open failures local to the file action", () => {
