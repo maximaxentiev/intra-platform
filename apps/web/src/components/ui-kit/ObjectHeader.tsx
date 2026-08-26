@@ -48,9 +48,9 @@ export function ObjectHeader({
       {backTo && (
         <Button
           asChild
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="-ml-2 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="h-8 gap-1.5 rounded-lg px-2.5 font-medium text-muted-foreground"
         >
           <Link to={backTo as never} params={backParams as never}>
             <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />

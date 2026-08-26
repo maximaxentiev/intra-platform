@@ -21,3 +21,4 @@ export { ConfirmDestructiveDialog } from "./ConfirmDestructiveDialog";
 export { ActivityItem, ActivityFeed } from "./ActivityItem";
 export { ComboboxField } from "./ComboboxField";
 export type { ComboboxOption } from "./ComboboxField";
+export { BackLink } from "./BackLink";
