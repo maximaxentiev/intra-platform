@@ -70,6 +70,7 @@ import {
   assertAssignmentResolutionForUpdate,
   evaluateAssigneeImpactForProposedUpdate,
   hasScheduleChange,
+  requiresAssigneeRevalidation,
 } from './shift-update-assignee-impact.util';
 
 const assignee = aliasedTable(staff, 'assignee');
@@ -212,7 +213,7 @@ export class ShiftsService {
     if (
       before.assignedStaffId &&
       before.status === 'filled' &&
-      hasScheduleChange(beforeSnapshot, afterSnapshot)
+      requiresAssigneeRevalidation(beforeSnapshot, afterSnapshot)
     ) {
       const staffName = await this.loadStaffLegalName(before.assignedStaffId);
       assigneeImpact = await evaluateAssigneeImpactForProposedUpdate({
@@ -257,19 +258,6 @@ export class ShiftsService {
 
     const communicationChanges = detectShiftCommunicationChanges(beforeSnapshot, afterSnapshot);
 
-    if (
-      before.assignedStaffId &&
-      communicationChanges.some((change) => change.field === 'role')
-    ) {
-      await assertAssignedStaffCompatibleWithRoleChange({
-        shiftMatching: this.shiftMatching,
-        shiftId: id,
-        assignedStaffId: before.assignedStaffId,
-        before: beforeSnapshot,
-        after: afterSnapshot,
-      });
-    }
-
     const previousAssignedStaffId = before.assignedStaffId;
     const assignmentResolution = await assertAssignmentResolutionForUpdate({
       shiftMatching: this.shiftMatching,
@@ -283,6 +271,20 @@ export class ShiftsService {
 
     const shouldUnassign = assignmentResolution.shouldUnassign;
     const availabilityOverride = assignmentResolution.availabilityOverride;
+
+    if (
+      before.assignedStaffId &&
+      communicationChanges.some((change) => change.field === 'role') &&
+      !shouldUnassign
+    ) {
+      await assertAssignedStaffCompatibleWithRoleChange({
+        shiftMatching: this.shiftMatching,
+        shiftId: id,
+        assignedStaffId: before.assignedStaffId,
+        before: beforeSnapshot,
+        after: afterSnapshot,
+      });
+    }
 
     const communicationSelections = validateShiftUpdateCommunicationsInput({
       changes: communicationChanges,
@@ -312,7 +314,6 @@ export class ShiftsService {
     if (shouldUnassign) {
       patch.assignedStaffId = null;
       patch.status = 'pending';
-      await this.shiftReminders.cancelPendingForShift(id);
     }
 
     const scheduleChanged = hasScheduleChange(beforeSnapshot, afterSnapshot);
@@ -321,6 +322,10 @@ export class ShiftsService {
     const row = await this.db.transaction(async (tx) => {
       const rows = await tx.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
       if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+      if (shouldUnassign) {
+        await this.shiftReminders.cancelPendingForShift(id, tx);
+      }
 
       const metadata = buildShiftUpdateMetadata(
         shiftAuditSnapshot(before),

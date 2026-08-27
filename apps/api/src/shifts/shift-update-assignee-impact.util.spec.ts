@@ -4,6 +4,8 @@ import {
   assertAssignmentResolutionForUpdate,
   classifyAssigneeImpact,
   hasScheduleChange,
+  hasRoleChange,
+  requiresAssigneeRevalidation,
   isAvailabilityOnlyFailure,
   reasonMessages,
 } from './shift-update-assignee-impact.util';
@@ -33,6 +35,14 @@ describe('shift-update-assignee-impact.util', () => {
     expect(hasScheduleChange(before, snap({ shiftDate: '2026-08-29' }))).toBe(true);
     expect(hasScheduleChange(before, snap({ startTime: '09:00:00' }))).toBe(true);
     expect(hasScheduleChange(before, snap({ roleNeeded: 'RECE' }))).toBe(false);
+  });
+
+  it('requires revalidation when role changes', () => {
+    const before = snap({ roleNeeded: 'ECA' });
+    const after = snap({ roleNeeded: 'ECE' });
+    expect(hasRoleChange(before, after)).toBe(true);
+    expect(requiresAssigneeRevalidation(before, after)).toBe(true);
+    expect(requiresAssigneeRevalidation(before, before)).toBe(false);
   });
 
   it('classifies availability-only failure', () => {
@@ -145,6 +155,36 @@ describe('shift-update-assignee-impact.util', () => {
       status: 'filled',
       before: snap(),
       after: snap({ shiftDate: '2026-08-29' }),
+      assignmentResolution: 'unassign',
+    });
+    expect(result.shouldUnassign).toBe(true);
+  });
+
+  it('requires resolution for role-only incompatibility', async () => {
+    const shiftMatching = mockMatching({ eligible: false, reasons: ['role_mismatch'] });
+    await expect(
+      assertAssignmentResolutionForUpdate({
+        shiftMatching,
+        shiftId: 'shift-1',
+        assignedStaffId: 'staff-1',
+        status: 'filled',
+        before: snap({ roleNeeded: 'ECA' }),
+        after: snap({ roleNeeded: 'ECE' }),
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'assignee_impact_required' }),
+    });
+  });
+
+  it('allows role-only unassign when assignee is incompatible', async () => {
+    const shiftMatching = mockMatching({ eligible: false, reasons: ['role_mismatch'] });
+    const result = await assertAssignmentResolutionForUpdate({
+      shiftMatching,
+      shiftId: 'shift-1',
+      assignedStaffId: 'staff-1',
+      status: 'filled',
+      before: snap({ roleNeeded: 'ECA' }),
+      after: snap({ roleNeeded: 'ECE' }),
       assignmentResolution: 'unassign',
     });
     expect(result.shouldUnassign).toBe(true);

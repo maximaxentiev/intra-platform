@@ -32,6 +32,13 @@ export function hasScheduleEditChange(
   );
 }
 
+export function hasAssigneeRevalidationEditChange(
+  before: { shiftDate: string; startTime: string; endTime: string; roleNeeded: string },
+  edit: { shiftDate: string; startTime: string; endTime: string; roleNeeded: string },
+): boolean {
+  return hasScheduleEditChange(before, edit) || before.roleNeeded !== edit.roleNeeded;
+}
+
 export function formatAssigneeImpactScheduleLine(preview: ShiftUpdatePreviewResponse): string | null {
   const dateChange = preview.relevantChanges.find((c) => c.field === "date");
   const timeChange = preview.relevantChanges.find((c) => c.field === "time");

@@ -102,9 +102,9 @@ describe('ShiftsService update communications', () => {
 
     await expect(
       service.update('shift-1', { roleNeeded: 'RECE' }, 'ops-1'),
-    ).rejects.toThrow(
-      'The assigned Staff member does not meet the new RECE requirement. Reassign this Shift before changing the role.',
-    );
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'assignee_impact_required' }),
+    });
   });
 
   it('allows unassigned shift role change', async () => {

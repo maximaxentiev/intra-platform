@@ -141,7 +141,7 @@ describe('ShiftsService update assignee impact', () => {
       'ops-1',
     );
 
-    expect(shiftReminders.cancelPendingForShift).toHaveBeenCalledWith('shift-1');
+    expect(shiftReminders.cancelPendingForShift).toHaveBeenCalledWith('shift-1', tx);
     expect(tx.update).toHaveBeenCalled();
     expect(result.assignmentImpact).toEqual({
       action: 'unassigned',
@@ -288,5 +288,219 @@ describe('ShiftsService update assignee impact', () => {
     expect(preview.requiresAssignmentResolution).toBe(true);
     expect(preview.assigneeImpact?.status).toBe('availability_override_available');
     expect(preview.assigneeImpact?.staffName).toBe('Jaspreet Kaur');
+  });
+
+  it('does not cancel reminders when the DB transaction fails', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['not_available'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const shiftReminders = createMockShiftReminderService();
+
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([filledBefore]),
+        }),
+      }),
+      transaction: vi.fn(async () => {
+        throw new Error('db failure');
+      }),
+    };
+
+    const service = new ShiftsService(
+      db as never,
+      {} as ShiftAssignmentConfirmationService,
+      shiftMatching,
+      shiftReminders,
+      createMockShiftCancellationService(),
+      mockPlatformAudit(),
+      createMockShiftUpdateCommunicationService(),
+    );
+
+    await expect(
+      service.update('shift-1', { shiftDate: '2026-08-29', assignmentResolution: 'unassign' }, 'ops-1'),
+    ).rejects.toThrow('db failure');
+
+    expect(shiftReminders.cancelPendingForShift).not.toHaveBeenCalled();
+  });
+
+  it('cancels reminders inside the transaction after the shift update', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['not_available'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const shiftReminders = createMockShiftReminderService();
+    const callOrder: string[] = [];
+    const { service, tx } = createUpdateService({
+      before: filledBefore,
+      shiftMatching,
+      shiftReminders,
+    });
+
+    vi.mocked(tx.update).mockImplementation(() => {
+      callOrder.push('shift-update');
+      return {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              {
+                id: 'shift-1',
+                centreId: 'centre-1',
+                shiftDate: '2026-08-29',
+                startTime: '08:00:00',
+                endTime: '16:00:00',
+                roleNeeded: 'ECE',
+                notes: '',
+                addedToStaffpoint: false,
+                status: 'pending',
+                assignedStaffId: null,
+              },
+            ]),
+          }),
+        }),
+      };
+    });
+    vi.mocked(shiftReminders.cancelPendingForShift).mockImplementation(async () => {
+      callOrder.push('cancel-reminders');
+      return 2;
+    });
+
+    await service.update(
+      'shift-1',
+      { shiftDate: '2026-08-29', assignmentResolution: 'unassign' },
+      'ops-1',
+    );
+
+    expect(callOrder).toEqual(['shift-update', 'cancel-reminders']);
+    expect(shiftReminders.cancelPendingForShift).toHaveBeenCalledWith('shift-1', tx);
+  });
+
+  it('allows ECA to ECE role change with explicit unassign', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['role_mismatch'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service, returning } = createUpdateService({
+      before: { ...filledBefore, roleNeeded: 'ECA' },
+      shiftMatching,
+    });
+
+    const result = await service.update(
+      'shift-1',
+      { roleNeeded: 'ECE', assignmentResolution: 'unassign' },
+      'ops-1',
+    );
+
+    expect(returning).toHaveBeenCalled();
+    expect(result.assignmentImpact.action).toBe('unassigned');
+  });
+
+  it('allows ECE to ECA role change with explicit unassign', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['role_mismatch'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service } = createUpdateService({
+      before: filledBefore,
+      shiftMatching,
+    });
+
+    const result = await service.update(
+      'shift-1',
+      { roleNeeded: 'ECA', assignmentResolution: 'unassign' },
+      'ops-1',
+    );
+
+    expect(result.assignmentImpact.action).toBe('unassigned');
+  });
+
+  it('allows ECE to RECE role change without RECE proof when unassigning', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['rece_required'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service } = createUpdateService({
+      before: filledBefore,
+      shiftMatching,
+    });
+
+    const result = await service.update(
+      'shift-1',
+      { roleNeeded: 'RECE', assignmentResolution: 'unassign' },
+      'ops-1',
+    );
+
+    expect(result.assignmentImpact.action).toBe('unassigned');
+  });
+
+  it('blocks ECE to RECE role change while keeping incompatible assignee', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['rece_required'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service } = createUpdateService({
+      before: filledBefore,
+      shiftMatching,
+    });
+
+    await expect(service.update('shift-1', { roleNeeded: 'RECE' }, 'ops-1')).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'assignee_impact_required' }),
+    });
+  });
+
+  it('blocks availability override for role mismatch', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['role_mismatch'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service } = createUpdateService({
+      before: { ...filledBefore, roleNeeded: 'ECA' },
+      shiftMatching,
+    });
+
+    await expect(
+      service.update(
+        'shift-1',
+        { roleNeeded: 'ECE', assignmentResolution: 'availability_override' },
+        'ops-1',
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'assignee_override_not_allowed' }),
+    });
+  });
+
+  it('blocks availability override for missing RECE proof', async () => {
+    const shiftMatching = {
+      evaluateStaffForShift: vi.fn().mockResolvedValue({
+        eligible: false,
+        reasons: ['rece_required'],
+      }),
+    } as unknown as ShiftMatchingService;
+    const { service } = createUpdateService({ before: filledBefore, shiftMatching });
+
+    await expect(
+      service.update(
+        'shift-1',
+        { roleNeeded: 'RECE', assignmentResolution: 'availability_override' },
+        'ops-1',
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'assignee_override_not_allowed' }),
+    });
   });
 });

@@ -47,6 +47,21 @@ export function hasScheduleChange(
   );
 }
 
+export function hasRoleChange(
+  before: ShiftCommunicationSnapshot,
+  after: ShiftCommunicationSnapshot,
+): boolean {
+  return before.roleNeeded !== after.roleNeeded;
+}
+
+/** Filled-shift assignee must be revalidated when schedule or role requirements change. */
+export function requiresAssigneeRevalidation(
+  before: ShiftCommunicationSnapshot,
+  after: ShiftCommunicationSnapshot,
+): boolean {
+  return hasScheduleChange(before, after) || hasRoleChange(before, after);
+}
+
 export function isAvailabilityOnlyFailure(reasons: readonly ShiftEligibilityReason[]): boolean {
   return reasons.length > 0 && reasons.every((reason) => reason === AVAILABILITY_ONLY_REASON);
 }
@@ -70,7 +85,7 @@ export async function evaluateAssigneeImpactForProposedUpdate(input: {
   proposed: Partial<ShiftCommunicationSnapshot>;
 }): Promise<AssigneeImpactPreview | null> {
   const after = applyShiftUpdatePatch(input.before, input.proposed);
-  if (!hasScheduleChange(input.before, after)) return null;
+  if (!requiresAssigneeRevalidation(input.before, after)) return null;
 
   const result = await input.shiftMatching.evaluateStaffForShift(
     input.shiftId,
@@ -125,10 +140,10 @@ export async function assertAssignmentResolutionForUpdate(input: {
     return { shouldUnassign: false, availabilityOverride: false, impact: null };
   }
 
-  if (!hasScheduleChange(input.before, input.after)) {
+  if (!requiresAssigneeRevalidation(input.before, input.after)) {
     if (input.assignmentResolution) {
       throw new BadRequestException(
-        'Assignment resolution is not applicable when the schedule did not change.',
+        'Assignment resolution is not applicable when the Shift schedule and role did not change.',
       );
     }
     return { shouldUnassign: false, availabilityOverride: false, impact: null };

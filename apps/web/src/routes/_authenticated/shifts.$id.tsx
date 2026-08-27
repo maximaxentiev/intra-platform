@@ -57,6 +57,7 @@ import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpa
 import {
   formatAssigneeImpactScheduleLine,
   hasScheduleEditChange,
+  hasAssigneeRevalidationEditChange,
   type AssigneeImpactPreview,
   type ShiftAssignmentResolution,
   type ShiftUpdatePreviewResponse,
@@ -301,11 +302,12 @@ function ShiftDetail() {
     if (
       shift.status === "filled" &&
       shift.assignedStaffId &&
-      hasScheduleEditChange(
+      hasAssigneeRevalidationEditChange(
         {
           shiftDate: shift.shiftDate,
           startTime: shift.startTime,
           endTime: shift.endTime,
+          roleNeeded: shift.roleNeeded,
         },
         editVals,
       )
