@@ -69,9 +69,11 @@ export class AuthController {
   @Post('replace-password')
   async replaceForcedPassword(
     @CurrentUser() user: SessionPayload,
+    @Req() req: Request & { sessionId?: string },
     @Body() dto: ReplaceForcedPasswordDto,
   ) {
     await this.auth.replaceForcedPassword(user.userId, dto.newPassword);
+    await this.sessions.update(req.sessionId ?? '', { mustChangePassword: false });
     return this.users.getProfile(user.userId);
   }
 }

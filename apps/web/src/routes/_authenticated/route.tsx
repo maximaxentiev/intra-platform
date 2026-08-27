@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { authApi } from "@/lib/db";
+import { requiresForcedPasswordChange } from "@/lib/ops-auth";
 import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -7,7 +8,7 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     try {
       const user = await authApi.session();
-      if (user.mustChangePassword) {
+      if (requiresForcedPasswordChange(user)) {
         throw redirect({ to: "/auth/change-password", replace: true });
       }
       return { user };

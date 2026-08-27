@@ -1,4 +1,10 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { assertStrongPassword, hashPassword } from '../auth/password.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
@@ -6,11 +12,10 @@ import { users } from '../db/schema';
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService, buildFieldChanges } from '../platform-audit/platform-audit.service';
 import { InviteUserDto, UpdateUserDto } from './dto/users.dto';
+import { toOpsUserProfile, type OpsUserProfile } from './ops-user-profile.util';
 
-function publicUser(u: typeof users.$inferSelect) {
-  const { passwordHash, ...rest } = u;
-  void passwordHash;
-  return rest;
+function publicUser(u: typeof users.$inferSelect): OpsUserProfile {
+  return toOpsUserProfile(u);
 }
 
 @Injectable()
@@ -30,10 +35,15 @@ export class UsersService {
     return rows[0] ?? null;
   }
 
-  async getProfile(id: string) {
+  async getProfile(id: string): Promise<OpsUserProfile> {
     const u = await this.findByIdRaw(id);
     if (!u) throw new NotFoundException('User not found.');
     return publicUser(u);
+  }
+
+  async mustChangePassword(userId: string): Promise<boolean> {
+    const row = await this.findByIdRaw(userId);
+    return row?.mustChangePassword === true;
   }
 
   async list() {
@@ -186,6 +196,9 @@ export class UsersService {
         .where(eq(users.id, params.userId))
         .returning();
       if (!rows[0]) throw new NotFoundException('User not found.');
+      if (!rows[0].mustChangePassword) {
+        throw new InternalServerErrorException('Forced password change flag was not persisted.');
+      }
 
       await this.platformAudit.record(
         {

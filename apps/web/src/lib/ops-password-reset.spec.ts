@@ -9,8 +9,7 @@ function readSrc(rel: string) {
   return readFileSync(join(webRoot, rel), 'utf8');
 }
 
-describe('ops admin password reset UI', () => {
-  it('shows Reset password for admins with confirmation and success dialogs', () => {
+describe('ops admin password reset UI contracts', () => {  it('shows Reset password for admins with confirmation and success dialogs', () => {
     const users = readSrc('routes/_authenticated/users.tsx');
     expect(users).toContain('Reset password?');
     expect(users).toContain('usersApi.resetPassword');
@@ -23,7 +22,7 @@ describe('ops admin password reset UI', () => {
 
   it('routes forced password change users away from authenticated shell', () => {
     const authRoute = readSrc('routes/_authenticated/route.tsx');
-    expect(authRoute).toContain('mustChangePassword');
+    expect(authRoute).toContain('requiresForcedPasswordChange');
     expect(authRoute).toContain('/auth/change-password');
   });
 
@@ -37,8 +36,7 @@ describe('ops admin password reset UI', () => {
 
   it('redirects login to forced change when required', () => {
     const auth = readSrc('routes/auth.tsx');
-    expect(auth).toContain('mustChangePassword');
-    expect(auth).toContain('/auth/change-password');
+    expect(auth).toContain('opsLoginDestination');
   });
 });
 

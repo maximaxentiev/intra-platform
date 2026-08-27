@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
+import { requiresForcedPasswordChange } from "@/lib/ops-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/auth/change-password")({
   beforeLoad: async () => {
     try {
       const user = await authApi.session();
-      if (!user.mustChangePassword) {
+      if (!requiresForcedPasswordChange(user)) {
         throw redirect({ to: "/dashboard", replace: true });
       }
       return { user };

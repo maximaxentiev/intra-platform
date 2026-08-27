@@ -8,6 +8,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   role: 'admin' | 'ops';
+  mustChangePassword: boolean;
 }
 
 const PREFIX = 'sess:';
@@ -44,6 +45,19 @@ export class SessionService {
 
   async destroy(sid: string): Promise<void> {
     if (sid) await this.redis.del(PREFIX + sid);
+  }
+
+  /** Updates an existing session payload while preserving TTL. */
+  async update(sid: string, patch: Partial<SessionPayload>): Promise<SessionPayload | null> {
+    if (!sid) return null;
+    const current = await this.get(sid);
+    if (!current) return null;
+
+    const next: SessionPayload = { ...current, ...patch };
+    const ttl = await this.redis.ttl(PREFIX + sid);
+    const expirySeconds = ttl > 0 ? ttl : this.ttl;
+    await this.redis.set(PREFIX + sid, JSON.stringify(next), 'EX', expirySeconds);
+    return next;
   }
 
   /** Invalidates every Ops session for the given platform user. */

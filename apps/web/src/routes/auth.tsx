@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
+import { opsLoginDestination } from "@/lib/ops-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +24,7 @@ function AuthPage() {
     authApi
       .session()
       .then((user) => {
-        if (user.mustChangePassword) {
-          navigate({ to: "/auth/change-password", replace: true });
-          return;
-        }
-        navigate({ to: "/dashboard", replace: true });
+        navigate({ to: opsLoginDestination(user), replace: true });
       })
       .catch(() => {
         /* not signed in — stay */
@@ -41,11 +38,7 @@ function AuthPage() {
       const user = await authApi.login(email, password);
       await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
       toast.success("Signed in");
-      if (user.mustChangePassword) {
-        navigate({ to: "/auth/change-password", replace: true });
-      } else {
-        navigate({ to: "/dashboard", replace: true });
-      }
+      navigate({ to: opsLoginDestination(user), replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {

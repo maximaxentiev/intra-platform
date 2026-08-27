@@ -38,7 +38,12 @@ export class AuthService {
       }
     }
 
-    const payload: SessionPayload = { userId: user.id, email: user.email, role: user.role };
+    const payload: SessionPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword === true,
+    };
     const sid = await this.sessions.create(payload);
     return { sid, user: payload };
   }

@@ -40,7 +40,8 @@ export class MustChangePasswordGuard implements CanActivate {
     if (!session) return true;
 
     const user = await this.users.findByIdRaw(session.userId);
-    if (user?.mustChangePassword) {
+    const mustChange = user?.mustChangePassword === true;
+    if (mustChange) {
       throw new ForbiddenException('Password change required before accessing the platform.');
     }
 

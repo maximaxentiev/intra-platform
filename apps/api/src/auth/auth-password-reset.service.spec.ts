@@ -67,7 +67,9 @@ describe('AuthService admin password reset', () => {
 
     const result = await service.login('ops@example.test', temp);
     expect(result.sid).toBe('sid-1');
-    expect(sessions.create).toHaveBeenCalled();
+    expect(sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mustChangePassword: true }),
+    );
   });
 
   it('admin reset generates a temporary password and invalidates sessions', async () => {
