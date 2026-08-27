@@ -213,8 +213,16 @@ export type ShiftUpdateCommunicationsPayload = {
   carer?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean } };
 };
 
+export type ShiftAssignmentResolution = "unassign" | "availability_override";
+
+export type ShiftUpdateAssignmentImpactResult = {
+  action: "unchanged" | "unassigned" | "availability_override";
+  previousStaffId?: string | null;
+};
+
 export type ShiftUpdateResponse = Shift & {
   communications: ShiftUpdateCommunicationsResult;
+  assignmentImpact: ShiftUpdateAssignmentImpactResult;
 };
 
 export interface LinkedStaff {
@@ -418,8 +426,18 @@ export const shiftsApi = {
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
   update: (
     id: string,
-    values: Partial<Shift> & { communications?: ShiftUpdateCommunicationsPayload },
+    values: Partial<Shift> & {
+      communications?: ShiftUpdateCommunicationsPayload;
+      assignmentResolution?: ShiftAssignmentResolution;
+    },
   ) => api.patch<ShiftUpdateResponse>(`/shifts/${id}`, values),
+  previewUpdate: (
+    id: string,
+    values: Partial<Pick<Shift, "shiftDate" | "startTime" | "endTime" | "roleNeeded">>,
+  ) => api.post<import("@/lib/shift-assignee-impact").ShiftUpdatePreviewResponse>(
+    `/shifts/${id}/preview-update`,
+    values,
+  ),
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
   assign: (id: string, staffId: string) =>
     api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, { staffId }),

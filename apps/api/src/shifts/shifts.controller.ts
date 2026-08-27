@@ -18,6 +18,7 @@ import {
   ChangeStatusDto,
   ContactedDto,
   ListShiftsQuery,
+  PreviewUpdateShiftDto,
   UpdateShiftDto,
   UpsertShiftDto,
 } from './dto/shifts.dto';
@@ -55,6 +56,11 @@ export class ShiftsController {
     @CurrentUser() user: SessionPayload,
   ) {
     return this.shifts.update(id, dto, user.userId);
+  }
+
+  @Post(':id/preview-update')
+  previewUpdate(@Param('id') id: string, @Body() dto: PreviewUpdateShiftDto) {
+    return this.shifts.previewUpdate(id, dto);
   }
 
   @Delete(':id')

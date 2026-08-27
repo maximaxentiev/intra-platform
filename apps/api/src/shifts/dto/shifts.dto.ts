@@ -81,6 +81,28 @@ export class UpdateShiftDto {
   @ValidateNested()
   @Type(() => ShiftUpdateCommunicationsDto)
   communications?: ShiftUpdateCommunicationsDto;
+
+  @IsOptional()
+  @IsIn(['unassign', 'availability_override'])
+  assignmentResolution?: 'unassign' | 'availability_override';
+}
+
+export class PreviewUpdateShiftDto {
+  @IsOptional()
+  @Matches(DATE)
+  shiftDate?: string;
+
+  @IsOptional()
+  @Matches(TIME)
+  startTime?: string;
+
+  @IsOptional()
+  @Matches(TIME)
+  endTime?: string;
+
+  @IsOptional()
+  @IsIn(['ECA', 'ECE', 'RECE', 'Nanny', ''])
+  roleNeeded?: string;
 }
 
 export class ChangeStatusDto {

@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { getStaffLegalFullName } from '@intra/shared';
 import { aliasedTable, and, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
@@ -41,6 +42,7 @@ import {
   AddCommentDto,
   ChangeStatusDto,
   ListShiftsQuery,
+  PreviewUpdateShiftDto,
   UpdateShiftDto,
   UpsertShiftDto,
 } from './dto/shifts.dto';
@@ -52,7 +54,11 @@ import {
   ShiftUpdateCommunicationService,
   assertShiftUpdateCommunicationsSelection,
 } from './shift-update-communication.service';
-import type { ShiftUpdateCommunicationsResult } from './dto/shift-update.dto';
+import type {
+  ShiftUpdateAssignmentImpactResult,
+  ShiftUpdateCommunicationsResult,
+  ShiftUpdatePreviewResponse,
+} from './dto/shift-update.dto';
 import {
   applyShiftUpdatePatch,
   detectShiftCommunicationChanges,
@@ -60,6 +66,11 @@ import {
   validateShiftUpdateCommunicationsInput,
 } from './shift-update-changes.util';
 import { assertAssignedStaffCompatibleWithRoleChange } from './shift-update-role-validation.util';
+import {
+  assertAssignmentResolutionForUpdate,
+  evaluateAssigneeImpactForProposedUpdate,
+  hasScheduleChange,
+} from './shift-update-assignee-impact.util';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -181,57 +192,102 @@ export class ShiftsService {
     });
   }
 
-  async update(id: string, dto: UpdateShiftDto, actorUserId: string) {
-    const before = await this.db
-      .select({
-        shiftDate: shifts.shiftDate,
-        startTime: shifts.startTime,
-        endTime: shifts.endTime,
-        centreId: shifts.centreId,
-        roleNeeded: shifts.roleNeeded,
-        notes: shifts.notes,
-        addedToStaffpoint: shifts.addedToStaffpoint,
-        status: shifts.status,
-        assignedStaffId: shifts.assignedStaffId,
-      })
-      .from(shifts)
-      .where(eq(shifts.id, id));
-    if (!before[0]) throw new NotFoundException('Shift not found.');
-
-    assertShiftRoleUpdateAllowed(before[0].roleNeeded, dto.roleNeeded);
-
-    if (dto.startTime !== undefined || dto.endTime !== undefined) {
-      assertSameDayShiftSchedule(
-        dto.startTime ?? String(before[0].startTime),
-        dto.endTime ?? String(before[0].endTime),
-      );
-    }
-
-    const beforeSnapshot = normalizeShiftCommunicationSnapshot(before[0]);
+  async previewUpdate(id: string, dto: PreviewUpdateShiftDto): Promise<ShiftUpdatePreviewResponse> {
+    const before = await this.loadShiftUpdateBefore(id);
+    const beforeSnapshot = normalizeShiftCommunicationSnapshot(before);
     const afterSnapshot = applyShiftUpdatePatch(beforeSnapshot, {
       shiftDate: dto.shiftDate,
       startTime: dto.startTime,
       endTime: dto.endTime,
       roleNeeded: dto.roleNeeded,
     });
+
+    if (dto.startTime !== undefined || dto.endTime !== undefined) {
+      assertSameDayShiftSchedule(afterSnapshot.startTime, afterSnapshot.endTime);
+    }
+
+    const relevantChanges = detectShiftCommunicationChanges(beforeSnapshot, afterSnapshot);
+
+    let assigneeImpact = null;
+    if (
+      before.assignedStaffId &&
+      before.status === 'filled' &&
+      hasScheduleChange(beforeSnapshot, afterSnapshot)
+    ) {
+      const staffName = await this.loadStaffLegalName(before.assignedStaffId);
+      assigneeImpact = await evaluateAssigneeImpactForProposedUpdate({
+        shiftMatching: this.shiftMatching,
+        shiftId: id,
+        assignedStaffId: before.assignedStaffId,
+        staffName,
+        before: beforeSnapshot,
+        proposed: {
+          shiftDate: afterSnapshot.shiftDate,
+          startTime: afterSnapshot.startTime,
+          endTime: afterSnapshot.endTime,
+          roleNeeded: afterSnapshot.roleNeeded,
+        },
+      });
+    }
+
+    return {
+      relevantChanges,
+      assigneeImpact,
+      requiresAssignmentResolution:
+        assigneeImpact !== null && assigneeImpact.status !== 'eligible',
+    };
+  }
+
+  async update(id: string, dto: UpdateShiftDto, actorUserId: string) {
+    const before = await this.loadShiftUpdateBefore(id);
+
+    assertShiftRoleUpdateAllowed(before.roleNeeded, dto.roleNeeded);
+
+    const beforeSnapshot = normalizeShiftCommunicationSnapshot(before);
+    const afterSnapshot = applyShiftUpdatePatch(beforeSnapshot, {
+      shiftDate: dto.shiftDate,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      roleNeeded: dto.roleNeeded,
+    });
+
+    if (dto.startTime !== undefined || dto.endTime !== undefined) {
+      assertSameDayShiftSchedule(afterSnapshot.startTime, afterSnapshot.endTime);
+    }
+
     const communicationChanges = detectShiftCommunicationChanges(beforeSnapshot, afterSnapshot);
 
     if (
-      before[0].assignedStaffId &&
+      before.assignedStaffId &&
       communicationChanges.some((change) => change.field === 'role')
     ) {
       await assertAssignedStaffCompatibleWithRoleChange({
         shiftMatching: this.shiftMatching,
         shiftId: id,
-        assignedStaffId: before[0].assignedStaffId,
+        assignedStaffId: before.assignedStaffId,
         before: beforeSnapshot,
         after: afterSnapshot,
       });
     }
 
+    const previousAssignedStaffId = before.assignedStaffId;
+    const assignmentResolution = await assertAssignmentResolutionForUpdate({
+      shiftMatching: this.shiftMatching,
+      shiftId: id,
+      assignedStaffId: before.assignedStaffId ?? '',
+      status: before.status,
+      before: beforeSnapshot,
+      after: afterSnapshot,
+      assignmentResolution: dto.assignmentResolution,
+    });
+
+    const shouldUnassign = assignmentResolution.shouldUnassign;
+    const availabilityOverride = assignmentResolution.availabilityOverride;
+
     const communicationSelections = validateShiftUpdateCommunicationsInput({
       changes: communicationChanges,
       communications: dto.communications,
+      assignmentUnassigned: shouldUnassign,
     });
     if (communicationSelections) {
       assertShiftUpdateCommunicationsSelection({
@@ -253,13 +309,21 @@ export class ShiftsService {
       if (dto[key] !== undefined) patch[key] = dto[key];
     }
 
+    if (shouldUnassign) {
+      patch.assignedStaffId = null;
+      patch.status = 'pending';
+      await this.shiftReminders.cancelPendingForShift(id);
+    }
+
+    const scheduleChanged = hasScheduleChange(beforeSnapshot, afterSnapshot);
+
     let scheduledReminderIds: string[] = [];
     const row = await this.db.transaction(async (tx) => {
       const rows = await tx.update(shifts).set(patch).where(eq(shifts.id, id)).returning();
       if (!rows[0]) throw new NotFoundException('Shift not found.');
 
       const metadata = buildShiftUpdateMetadata(
-        shiftAuditSnapshot(before[0]!),
+        shiftAuditSnapshot(before),
         shiftAuditSnapshot(rows[0]!),
       );
       if (metadata) {
@@ -278,11 +342,54 @@ export class ShiftsService {
         );
       }
 
-      const scheduleChanged =
-        (dto.shiftDate !== undefined && dto.shiftDate !== String(before[0].shiftDate)) ||
-        (dto.startTime !== undefined && dto.startTime !== String(before[0].startTime));
+      if (shouldUnassign && previousAssignedStaffId) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftStaffUnassignedScheduleChange,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: previousAssignedStaffId,
+            entityId: id,
+            metadata: {
+              previousStaffId: previousAssignedStaffId,
+              eligibilityReasons: assignmentResolution.impact?.reasons ?? [],
+              shiftDate: String(rows[0].shiftDate),
+              startTime: String(rows[0].startTime),
+              endTime: String(rows[0].endTime),
+            },
+          },
+          tx,
+        );
+      }
 
-      if (scheduleChanged && rows[0].status === 'filled' && rows[0].assignedStaffId) {
+      if (availabilityOverride && previousAssignedStaffId) {
+        await this.platformAudit.record(
+          {
+            action: PLATFORM_AUDIT_ACTIONS.shiftAvailabilityOverrideConfirmed,
+            actorType: 'ops_user',
+            actorUserId,
+            shiftId: id,
+            centreId: rows[0].centreId,
+            staffId: previousAssignedStaffId,
+            entityId: id,
+            metadata: {
+              assignedStaffId: previousAssignedStaffId,
+              shiftDate: String(rows[0].shiftDate),
+              startTime: String(rows[0].startTime),
+              endTime: String(rows[0].endTime),
+            },
+          },
+          tx,
+        );
+      }
+
+      if (
+        scheduleChanged &&
+        rows[0].status === 'filled' &&
+        rows[0].assignedStaffId
+      ) {
         scheduledReminderIds = await this.shiftReminders.rescheduleFilledShift(
           {
             shiftId: id,
@@ -310,10 +417,57 @@ export class ShiftsService {
         actorUserId,
         changes: communicationChanges,
         selections: communicationSelections,
+        assignmentUnassigned: shouldUnassign,
+        previousAssignedStaffId,
       });
     }
 
-    return { ...row, communications };
+    const assignmentImpact: ShiftUpdateAssignmentImpactResult = shouldUnassign
+      ? { action: 'unassigned', previousStaffId: previousAssignedStaffId }
+      : availabilityOverride
+        ? { action: 'availability_override', previousStaffId: previousAssignedStaffId }
+        : { action: 'unchanged' };
+
+    return { ...row, communications, assignmentImpact };
+  }
+
+  private async loadShiftUpdateBefore(id: string) {
+    const before = await this.db
+      .select({
+        shiftDate: shifts.shiftDate,
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+        centreId: shifts.centreId,
+        roleNeeded: shifts.roleNeeded,
+        notes: shifts.notes,
+        addedToStaffpoint: shifts.addedToStaffpoint,
+        status: shifts.status,
+        assignedStaffId: shifts.assignedStaffId,
+      })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!before[0]) throw new NotFoundException('Shift not found.');
+    return before[0];
+  }
+
+  private async loadStaffLegalName(staffId: string): Promise<string> {
+    const rows = await this.db
+      .select({
+        legalName: staff.legalName,
+        legalFirstName: staff.legalFirstName,
+        legalLastName: staff.legalLastName,
+      })
+      .from(staff)
+      .where(eq(staff.id, staffId));
+    const row = rows[0];
+    if (!row) return 'Staff member';
+    return (
+      getStaffLegalFullName({
+        legalFirstName: row.legalFirstName,
+        legalLastName: row.legalLastName,
+        legalName: row.legalName,
+      }) || 'Staff member'
+    );
   }
 
   async remove(id: string) {

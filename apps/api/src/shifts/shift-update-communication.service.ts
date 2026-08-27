@@ -16,6 +16,8 @@ import {
 } from './shift-assignment-notification.util';
 import { buildShiftUpdateCarerEmailContent } from './shift-update-carer-email.template';
 import { buildShiftUpdateCentreEmailContent } from './shift-update-centre-email.template';
+import { buildShiftUpdateUnassignCarerEmailContent } from './shift-update-unassign-carer-email.template';
+import { buildShiftUpdateUnassignCentreEmailContent } from './shift-update-unassign-centre-email.template';
 import type {
   ShiftCommunicationChange,
   ShiftCommunicationField,
@@ -39,8 +41,13 @@ export class ShiftUpdateCommunicationService {
     actorUserId: string;
     changes: ShiftCommunicationChange[];
     selections: ValidatedShiftUpdateCommunications;
+    assignmentUnassigned?: boolean;
+    previousAssignedStaffId?: string | null;
   }): Promise<{ centre: ShiftAssignmentRecipientResult | null; carer: ShiftAssignmentRecipientResult | null }> {
-    const context = await this.loadContext(params.shiftId, params.centreId, params.assignedStaffId);
+    const carerContextStaffId = params.assignmentUnassigned
+      ? params.previousAssignedStaffId ?? null
+      : params.assignedStaffId;
+    const context = await this.loadContext(params.shiftId, params.centreId, carerContextStaffId);
 
     let centre: ShiftAssignmentRecipientResult | null = null;
     if (params.selections.centre) {
@@ -49,6 +56,7 @@ export class ShiftUpdateCommunicationService {
           ...params,
           context,
           include: params.selections.centre.include,
+          assignmentUnassigned: params.assignmentUnassigned === true,
         });
       } catch (err) {
         this.logger.error(
@@ -66,6 +74,7 @@ export class ShiftUpdateCommunicationService {
           ...params,
           context,
           include: params.selections.carer.include,
+          assignmentUnassigned: params.assignmentUnassigned === true,
         });
       } catch (err) {
         this.logger.error(
@@ -133,6 +142,7 @@ export class ShiftUpdateCommunicationService {
     changes: ShiftCommunicationChange[];
     include: ShiftCommunicationField[];
     context: Awaited<ReturnType<ShiftUpdateCommunicationService['loadContext']>>;
+    assignmentUnassigned?: boolean;
   }): Promise<ShiftAssignmentRecipientResult> {
     const primary = await this.db
       .select({ email: centreContacts.email })
@@ -164,11 +174,16 @@ export class ShiftUpdateCommunicationService {
     }
 
     const includedChanges = this.filterChanges(params.changes, params.include);
-    const content = buildShiftUpdateCentreEmailContent({
-      centreName: params.context.centreName,
-      carerLegalName: params.context.carerLegalName,
-      includedChanges,
-    });
+    const content = params.assignmentUnassigned
+      ? buildShiftUpdateUnassignCentreEmailContent({
+          centreName: params.context.centreName,
+          includedChanges,
+        })
+      : buildShiftUpdateCentreEmailContent({
+          centreName: params.context.centreName,
+          carerLegalName: params.context.carerLegalName,
+          includedChanges,
+        });
 
     const recipientEmail = normalizeNotificationEmail(primaryEmail);
     try {
@@ -211,6 +226,7 @@ export class ShiftUpdateCommunicationService {
     changes: ShiftCommunicationChange[];
     include: ShiftCommunicationField[];
     context: Awaited<ReturnType<ShiftUpdateCommunicationService['loadContext']>>;
+    assignmentUnassigned?: boolean;
   }): Promise<ShiftAssignmentRecipientResult> {
     const recipientRaw = params.context.carerAccountEmail ?? params.context.carerStaffEmail;
     const normalizedStaffEmail = normalizeStaffEmail(params.context.carerStaffEmail);
@@ -237,10 +253,15 @@ export class ShiftUpdateCommunicationService {
     }
 
     const includedChanges = this.filterChanges(params.changes, params.include);
-    const content = buildShiftUpdateCarerEmailContent({
-      centreName: params.context.centreName,
-      includedChanges,
-    });
+    const content = params.assignmentUnassigned
+      ? buildShiftUpdateUnassignCarerEmailContent({
+          centreName: params.context.centreName,
+          includedChanges,
+        })
+      : buildShiftUpdateCarerEmailContent({
+          centreName: params.context.centreName,
+          includedChanges,
+        });
 
     try {
       const result = await this.email.send({

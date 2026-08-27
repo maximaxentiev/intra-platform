@@ -53,6 +53,14 @@ import {
 } from "@/lib/shift-edit-communications";
 import { shiftUpdateFeedbackMessage } from "@/lib/shift-edit-communications-feedback";
 import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
+import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpactDialog";
+import {
+  formatAssigneeImpactScheduleLine,
+  hasScheduleEditChange,
+  type AssigneeImpactPreview,
+  type ShiftAssignmentResolution,
+  type ShiftUpdatePreviewResponse,
+} from "@/lib/shift-assignee-impact";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -112,6 +120,12 @@ function ShiftDetail() {
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [commDialogOpen, setCommDialogOpen] = useState(false);
+  const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
+  const [assigneeImpact, setAssigneeImpact] = useState<AssigneeImpactPreview | null>(null);
+  const [assigneePreview, setAssigneePreview] = useState<ShiftUpdatePreviewResponse | null>(null);
+  const [pendingAssignmentResolution, setPendingAssignmentResolution] =
+    useState<ShiftAssignmentResolution | null>(null);
+  const [previewingAssignee, setPreviewingAssignee] = useState(false);
   const [savingEdits, setSavingEdits] = useState(false);
 
   const editValsForQueries: EditVals = edit ?? (shift
@@ -204,7 +218,10 @@ function ShiftDetail() {
       : { available: false as const, reason: "Assigned Carer has no valid email address." }
     : { available: false as const, reason: "No Carer assigned." };
 
-  function buildUpdatePayload(communications?: ShiftUpdateCommunicationsPayload) {
+  function buildUpdatePayload(
+    communications?: ShiftUpdateCommunicationsPayload,
+    assignmentResolution?: ShiftAssignmentResolution,
+  ) {
     return {
       centreId: editVals.centreId,
       shiftDate: editVals.shiftDate,
@@ -214,14 +231,36 @@ function ShiftDetail() {
       notes: editVals.notes,
       addedToStaffpoint: editVals.addedToStaffpoint,
       ...(communications ? { communications } : {}),
+      ...(assignmentResolution ? { assignmentResolution } : {}),
     };
   }
 
-  async function performSave(communications?: ShiftUpdateCommunicationsPayload) {
+  function resetAssigneeImpactState() {
+    setAssigneeDialogOpen(false);
+    setAssigneeImpact(null);
+    setAssigneePreview(null);
+    setPendingAssignmentResolution(null);
+  }
+
+  function proceedAfterAssigneeCheck(resolution?: ShiftAssignmentResolution) {
+    const effectiveResolution = resolution ?? pendingAssignmentResolution ?? undefined;
+    const unassigning = effectiveResolution === "unassign";
+    if (hasShiftEditCommunicationChanges(communicationChanges) || unassigning) {
+      setCommDialogOpen(true);
+      return;
+    }
+    void performSave(undefined, effectiveResolution);
+  }
+
+  async function performSave(
+    communications?: ShiftUpdateCommunicationsPayload,
+    assignmentResolution?: ShiftAssignmentResolution,
+  ) {
     if (savingEdits) return;
+    const resolution = assignmentResolution ?? pendingAssignmentResolution ?? undefined;
     setSavingEdits(true);
     try {
-      const result = await shiftsApi.update(id, buildUpdatePayload(communications));
+      const result = await shiftsApi.update(id, buildUpdatePayload(communications, resolution));
       const message = shiftUpdateFeedbackMessage(result.communications);
       const partialFailure =
         result.communications &&
@@ -235,20 +274,80 @@ function ShiftDetail() {
       setEditing(false);
       setEdit(null);
       setCommDialogOpen(false);
+      resetAssigneeImpactState();
       qc.invalidateQueries();
     } catch (err) {
+      if (err instanceof ApiError && err.details) {
+        const code = err.details.code;
+        if (code === "assignee_impact_required" || code === "assignee_override_not_allowed") {
+          const impact = err.details.assigneeImpact as AssigneeImpactPreview | undefined;
+          if (impact) {
+            setAssigneeImpact(impact);
+            setAssigneeDialogOpen(true);
+            setPendingAssignmentResolution(null);
+            setCommDialogOpen(false);
+          }
+          toast.error(err.message);
+          return;
+        }
+      }
       toast.error(err instanceof Error ? err.message : "Update failed");
     } finally {
       setSavingEdits(false);
     }
   }
 
-  function saveEdits() {
-    if (hasShiftEditCommunicationChanges(communicationChanges)) {
-      setCommDialogOpen(true);
-      return;
+  async function saveEdits() {
+    if (
+      shift.status === "filled" &&
+      shift.assignedStaffId &&
+      hasScheduleEditChange(
+        {
+          shiftDate: shift.shiftDate,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+        },
+        editVals,
+      )
+    ) {
+      setPreviewingAssignee(true);
+      try {
+        const preview = await shiftsApi.previewUpdate(id, {
+          shiftDate: editVals.shiftDate,
+          startTime: editVals.startTime + ":00",
+          endTime: editVals.endTime + ":00",
+          roleNeeded: editVals.roleNeeded,
+        });
+        if (preview.requiresAssignmentResolution && preview.assigneeImpact) {
+          setAssigneePreview(preview);
+          setAssigneeImpact(preview.assigneeImpact);
+          setAssigneeDialogOpen(true);
+          return;
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not preview schedule impact");
+        return;
+      } finally {
+        setPreviewingAssignee(false);
+      }
     }
-    void performSave();
+    proceedAfterAssigneeCheck();
+  }
+
+  function handleAssigneeUnassign() {
+    setPendingAssignmentResolution("unassign");
+    setAssigneeDialogOpen(false);
+    proceedAfterAssigneeCheck("unassign");
+  }
+
+  function handleAssigneeOverride() {
+    setPendingAssignmentResolution("availability_override");
+    setAssigneeDialogOpen(false);
+    proceedAfterAssigneeCheck("availability_override");
+  }
+
+  function handleAssigneeGoBack() {
+    resetAssigneeImpactState();
   }
 
   async function changeStatus(newStatus: ShiftStatus, reason?: string) {
@@ -621,7 +720,7 @@ function ShiftDetail() {
                     <Textarea id="edit-notes" rows={3} value={editVals.notes} onChange={(e) => setEdit({ ...editVals, notes: e.target.value })} />
                   </div>
                 </FieldGroup>
-                <Button onClick={saveEdits} disabled={savingEdits}>
+                <Button onClick={saveEdits} disabled={savingEdits || previewingAssignee}>
                   Save changes
                 </Button>
               </div>
@@ -672,12 +771,33 @@ function ShiftDetail() {
 
       <ShiftComments shiftId={id} />
 
+      <ShiftAssigneeImpactDialog
+        open={assigneeDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleAssigneeGoBack();
+        }}
+        impact={
+          assigneeImpact ?? {
+            status: "must_unassign",
+            staffId: "",
+            staffName: assignedName ?? "Assigned Staff",
+            reasons: [],
+            reasonMessages: [],
+          }
+        }
+        scheduleSummary={assigneePreview ? formatAssigneeImpactScheduleLine(assigneePreview) : null}
+        onUnassign={handleAssigneeUnassign}
+        onOverride={handleAssigneeOverride}
+        onGoBack={handleAssigneeGoBack}
+      />
+
       <ShiftEditCommunicationsDialog
         open={commDialogOpen}
         onOpenChange={setCommDialogOpen}
         changes={communicationChanges}
         centreAvailability={centreAvailability}
         carerAvailability={carerAvailability}
+        assignmentUnassigned={pendingAssignmentResolution === "unassign"}
         saving={savingEdits}
         onSaveWithoutEmail={() => void performSave()}
         onSaveWithCommunications={(communications) => void performSave(communications)}

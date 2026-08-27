@@ -21,6 +21,8 @@ export const PLATFORM_AUDIT_ACTIONS = {
   shiftCompletedAuto: 'shift_completed_auto',
   shiftUpdateCommunicationSent: 'shift_update_communication_sent',
   shiftUpdateCommunicationFailed: 'shift_update_communication_failed',
+  shiftAvailabilityOverrideConfirmed: 'shift_availability_override_confirmed',
+  shiftStaffUnassignedScheduleChange: 'shift_staff_unassigned_schedule_change',
   centreCreated: 'centre_created',
   centreUpdated: 'centre_updated',
   centreDeleted: 'centre_deleted',
@@ -46,6 +48,8 @@ const ACTION_ENTITY: Record<PlatformAuditAction, PlatformAuditEntityType> = {
   shift_completed_auto: 'shift',
   shift_update_communication_sent: 'shift',
   shift_update_communication_failed: 'shift',
+  shift_availability_override_confirmed: 'shift',
+  shift_staff_unassigned_schedule_change: 'shift',
   centre_created: 'centre',
   centre_updated: 'centre',
   centre_deleted: 'centre',
@@ -84,4 +88,5 @@ export const PLATFORM_AUDIT_METADATA_ALLOWLIST = new Set([
   'deliveryMessageId',
   'failureCode',
   'failureReason',
+  'eligibilityReasons',
 ]);

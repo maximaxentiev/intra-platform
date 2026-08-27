@@ -1,6 +1,8 @@
-import { IsBoolean, IsOptional, ValidateNested } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { ShiftAssignmentRecipientResult } from './shift-assignment.dto';
+import type { AssigneeImpactPreview, AssigneeImpactStatus } from '../shift-update-assignee-impact.util';
+import type { ShiftCommunicationChange } from '../shift-update-changes.util';
 
 export class ShiftUpdateCommunicationIncludeDto {
   @IsOptional()
@@ -42,6 +44,20 @@ export type ShiftUpdateCommunicationsResult = {
   carer: ShiftAssignmentRecipientResult | null;
 } | null;
 
+export type ShiftAssignmentImpactAction = 'unchanged' | 'unassigned' | 'availability_override';
+
+export type ShiftUpdateAssignmentImpactResult = {
+  action: ShiftAssignmentImpactAction;
+  previousStaffId?: string | null;
+};
+
 export type ShiftUpdateResponse = Record<string, unknown> & {
   communications: ShiftUpdateCommunicationsResult;
+  assignmentImpact: ShiftUpdateAssignmentImpactResult;
+};
+
+export type ShiftUpdatePreviewResponse = {
+  relevantChanges: ShiftCommunicationChange[];
+  assigneeImpact: AssigneeImpactPreview | null;
+  requiresAssignmentResolution: boolean;
 };

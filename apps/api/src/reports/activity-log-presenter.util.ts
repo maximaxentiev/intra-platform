@@ -144,6 +144,22 @@ function buildCopy(
       description: included ?? centreLabel(ctx),
     };
   }
+  if (action === 'shift_availability_override_confirmed') {
+    return {
+      title: 'Availability override confirmed',
+      description: ctx.staffName
+        ? `${ctx.staffName} kept assigned after a schedule change outside submitted availability`
+        : 'Assigned Staff kept after availability override',
+    };
+  }
+  if (action === 'shift_staff_unassigned_schedule_change') {
+    return {
+      title: 'Staff unassigned after schedule change',
+      description: ctx.staffName
+        ? `${ctx.staffName} removed after the revised schedule was incompatible`
+        : 'Assigned Staff removed after schedule change',
+    };
+  }
   if (action === 'communication_sent' || action === 'communication_failed') {
     const commType =
       typeof ctx.metadata?.communicationType === 'string'

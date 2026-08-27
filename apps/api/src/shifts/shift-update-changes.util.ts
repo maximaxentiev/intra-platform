@@ -114,16 +114,18 @@ export function validateShiftUpdateCommunicationsInput(input: {
     centre?: { send?: boolean; include?: ShiftUpdateCommunicationInclude };
     carer?: { send?: boolean; include?: ShiftUpdateCommunicationInclude };
   };
+  assignmentUnassigned?: boolean;
 }): ValidatedShiftUpdateCommunications | null {
   if (!input.communications) return null;
 
   const changedFields = new Set(input.changes.map((change) => change.field));
   const result: ValidatedShiftUpdateCommunications = {};
+  const allowEmptyInclude = input.assignmentUnassigned === true;
 
   if (input.communications.centre?.send) {
     assertOnlyChangedFieldsIncluded(input.communications.centre.include, changedFields);
     const include = resolveIncludedFields(input.communications.centre.include, changedFields);
-    if (include.length === 0) {
+    if (include.length === 0 && !allowEmptyInclude) {
       throw new BadRequestException('Centre communication must include at least one changed field.');
     }
     result.centre = { recipientEmail: '', include };
@@ -132,7 +134,7 @@ export function validateShiftUpdateCommunicationsInput(input: {
   if (input.communications.carer?.send) {
     assertOnlyChangedFieldsIncluded(input.communications.carer.include, changedFields);
     const include = resolveIncludedFields(input.communications.carer.include, changedFields);
-    if (include.length === 0) {
+    if (include.length === 0 && !allowEmptyInclude) {
       throw new BadRequestException('Carer communication must include at least one changed field.');
     }
     result.carer = { recipientEmail: '', include };

@@ -7,6 +7,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -59,7 +60,9 @@ async function request<T>(method: string, path: string, body?: unknown, query?: 
           ? ((payload as { message: string[] }).message.join(", "))
           : String((payload as { message: unknown }).message)
         : undefined) ?? `Request failed (${res.status})`;
-    throw new ApiError(res.status, message);
+    const details =
+      payload && typeof payload === "object" ? (payload as Record<string, unknown>) : undefined;
+    throw new ApiError(res.status, message, details);
   }
 
   return payload as T;
@@ -93,7 +96,9 @@ export const api = {
             ? (payload as { message: string[] }).message.join(", ")
             : String((payload as { message: unknown }).message)
           : `Request failed (${res.status})`;
-      throw new ApiError(res.status, message);
+      const details =
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : undefined;
+      throw new ApiError(res.status, message, details);
     }
     return payload as T;
   },

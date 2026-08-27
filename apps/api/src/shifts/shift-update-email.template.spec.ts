@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildShiftUpdateCarerEmailContent } from './shift-update-carer-email.template';
 import { buildShiftUpdateCentreEmailContent } from './shift-update-centre-email.template';
+import { buildShiftUpdateUnassignCarerEmailContent } from './shift-update-unassign-carer-email.template';
+import { buildShiftUpdateUnassignCentreEmailContent } from './shift-update-unassign-centre-email.template';
 import type { ShiftCommunicationChange } from './shift-update-changes.util';
 
 const dateChange: ShiftCommunicationChange = {
@@ -52,5 +54,25 @@ describe('shift update email templates', () => {
     });
     expect(content.text).toContain('August 29, 2026');
     expect(content.text).toContain('9:00 AM');
+  });
+
+  it('centre unassign email includes replacement wording without availability details', () => {
+    const content = buildShiftUpdateUnassignCentreEmailContent({
+      centreName: 'Sunshine Centre',
+      includedChanges: [dateChange, timeChange],
+    });
+    expect(content.text).toContain('previously assigned educator is no longer assigned');
+    expect(content.text).toContain('August 29, 2026');
+    expect(content.text).not.toContain('availability');
+  });
+
+  it('carer unassign email includes only selected changes and unassignment wording', () => {
+    const content = buildShiftUpdateUnassignCarerEmailContent({
+      centreName: 'Sunshine Centre',
+      includedChanges: [dateChange],
+    });
+    expect(content.text).toContain('no longer assigned');
+    expect(content.text).toContain('August 29, 2026');
+    expect(content.text).not.toContain('9:00 AM');
   });
 });

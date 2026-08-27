@@ -121,4 +121,15 @@ describe('validateShiftUpdateCommunicationsInput', () => {
       }),
     ).toThrow(BadRequestException);
   });
+
+  it('allows empty include selections when assignment is being removed', () => {
+    const result = validateShiftUpdateCommunicationsInput({
+      changes,
+      communications: {
+        centre: { send: true, include: {} },
+      },
+      assignmentUnassigned: true,
+    });
+    expect(result?.centre?.include).toEqual([]);
+  });
 });

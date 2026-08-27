@@ -100,11 +100,25 @@ export class ShiftMatchingService {
     shiftId: string,
     staffId: string,
     tx: DbLike = this.db,
-    overrides?: { roleNeeded?: string },
+    overrides?: {
+      roleNeeded?: string;
+      shiftDate?: string;
+      startTime?: string;
+      endTime?: string;
+    },
   ): Promise<ShiftEligibilityResult> {
     const shift = await this.loadShift(shiftId, tx);
     if (overrides?.roleNeeded !== undefined) {
       shift.roleNeeded = overrides.roleNeeded;
+    }
+    if (overrides?.shiftDate !== undefined) {
+      shift.shiftDate = overrides.shiftDate;
+    }
+    if (overrides?.startTime !== undefined) {
+      shift.startTime = overrides.startTime;
+    }
+    if (overrides?.endTime !== undefined) {
+      shift.endTime = overrides.endTime;
     }
     const context = await this.loadEvaluationContext(shift, tx, staffId);
     const candidate = context.candidates.find((row) => row.id === staffId);

@@ -29,6 +29,7 @@ type Props = {
   changes: ShiftCommunicationChange[];
   centreAvailability: RecipientAvailability;
   carerAvailability: RecipientAvailability;
+  assignmentUnassigned?: boolean;
   saving: boolean;
   onSaveWithoutEmail: () => void;
   onSaveWithCommunications: (communications: ShiftUpdateCommunicationsPayload) => void;
@@ -42,6 +43,7 @@ export function ShiftEditCommunicationsDialog({
   changes,
   centreAvailability,
   carerAvailability,
+  assignmentUnassigned = false,
   saving,
   onSaveWithoutEmail,
   onSaveWithCommunications,
@@ -77,8 +79,14 @@ export function ShiftEditCommunicationsDialog({
     [changes, carerSelected],
   );
 
-  const centreHasSelection = !centreSelected || changes.some((change) => centreInclude[change.field]);
-  const carerHasSelection = !carerSelected || changes.some((change) => carerInclude[change.field]);
+  const centreHasSelection =
+    !centreSelected ||
+    assignmentUnassigned ||
+    changes.some((change) => centreInclude[change.field]);
+  const carerHasSelection =
+    !carerSelected ||
+    assignmentUnassigned ||
+    changes.some((change) => carerInclude[change.field]);
   const recipientSelected = centreSelected || carerSelected;
   const canSubmit =
     recipientSelected && centreHasSelection && carerHasSelection && !saving;
@@ -127,6 +135,13 @@ export function ShiftEditCommunicationsDialog({
               </div>
             ))}
           </div>
+
+          {assignmentUnassigned && (
+            <p className="text-sm text-muted-foreground">
+              The assigned Staff member will be removed. You can still notify the Centre and Carer about
+              the schedule change and assignment impact.
+            </p>
+          )}
 
           {step === "prompt" ? (
             <p className="text-sm text-foreground">Notify the Centre or Carer about these changes?</p>
