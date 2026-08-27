@@ -18,6 +18,7 @@ import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftReminderService } from './shift-reminder.service';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
+import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -61,6 +62,7 @@ function buildService(db: NodePgDatabase<typeof schema>, platformAudit?: Platfor
     createMockShiftReminderService(),
     createMockShiftCancellationService(),
     platformAudit ?? new PlatformAuditService(db),
+    createMockShiftUpdateCommunicationService(),
   );
 }
 

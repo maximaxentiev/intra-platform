@@ -11,6 +11,7 @@ import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmat
 import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
+import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -51,6 +52,7 @@ function buildService(db: NodePgDatabase<typeof schema>) {
     createMockShiftReminderService(),
     createMockShiftCancellationService(),
     new PlatformAuditService(db),
+    createMockShiftUpdateCommunicationService(),
   );
 }
 

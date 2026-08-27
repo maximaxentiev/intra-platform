@@ -7,13 +7,15 @@ import {
   Matches,
   MaxLength,
   ArrayMaxSize,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   MAX_REPORT_CENTRE_IDS,
   parseReportCentreIds,
   resolveCentreUsageCentreIds,
 } from '../../reports/dto/report-centre-ids.util';
+import { ShiftUpdateCommunicationsDto } from './shift-update.dto';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -74,6 +76,11 @@ export class UpdateShiftDto {
   @IsOptional()
   @IsBoolean()
   addedToStaffpoint?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShiftUpdateCommunicationsDto)
+  communications?: ShiftUpdateCommunicationsDto;
 }
 
 export class ChangeStatusDto {

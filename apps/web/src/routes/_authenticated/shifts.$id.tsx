@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
+import { shiftsApi, centresApi, staffApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
 import { ApiError } from "@/lib/api";
 import {
   shiftAssignmentFeedbackMessage,
@@ -44,6 +44,15 @@ import {
   formatAvailableStaffPriorityLine,
   isAvailableStaffPriorityBoundary,
 } from "@/lib/shift-matching-priority-ui";
+import {
+  detectShiftEditCommunicationChanges,
+  hasShiftEditCommunicationChanges,
+  isValidCommunicationEmail,
+  resolveCarerCommunicationEmail,
+  type ShiftUpdateCommunicationsPayload,
+} from "@/lib/shift-edit-communications";
+import { shiftUpdateFeedbackMessage } from "@/lib/shift-edit-communications-feedback";
+import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -102,6 +111,40 @@ function ShiftDetail() {
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [commDialogOpen, setCommDialogOpen] = useState(false);
+  const [savingEdits, setSavingEdits] = useState(false);
+
+  const editValsForQueries: EditVals = edit ?? (shift
+    ? {
+        centreId: shift.centreId,
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime.slice(0, 5),
+        endTime: shift.endTime.slice(0, 5),
+        roleNeeded: shift.roleNeeded,
+        notes: shift.notes,
+        addedToStaffpoint: !!shift.addedToStaffpoint,
+      }
+    : {
+        centreId: "",
+        shiftDate: "",
+        startTime: "",
+        endTime: "",
+        roleNeeded: "",
+        notes: "",
+        addedToStaffpoint: false,
+      });
+
+  const centreContactsQ = useQuery({
+    enabled: !!shift && editing && commDialogOpen,
+    queryKey: ["centre-contacts", editValsForQueries.centreId],
+    queryFn: () => centresApi.contacts(editValsForQueries.centreId),
+  });
+
+  const assignedStaffQ = useQuery({
+    enabled: !!shift && editing && commDialogOpen && !!shift.assignedStaffId,
+    queryKey: ["staff", shift?.assignedStaffId],
+    queryFn: () => staffApi.get(shift!.assignedStaffId!),
+  });
 
   if (!shift) return <DetailLoading />;
 
@@ -126,24 +169,86 @@ function ShiftDetail() {
     addedToStaffpoint: !!shift.addedToStaffpoint,
   };
 
-  async function saveEdits() {
+  const communicationChanges = detectShiftEditCommunicationChanges(
+    {
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      roleNeeded: shift.roleNeeded,
+    },
+    {
+      shiftDate: editVals.shiftDate,
+      startTime: `${editVals.startTime}:00`,
+      endTime: `${editVals.endTime}:00`,
+      roleNeeded: editVals.roleNeeded,
+    },
+  );
+
+  const primaryCentreEmail = [...(centreContactsQ.data ?? [])]
+    .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
+  const centreAvailability = primaryCentreEmail && isValidCommunicationEmail(primaryCentreEmail)
+    ? { available: true as const }
+    : {
+        available: false as const,
+        reason: primaryCentreEmail
+          ? "Centre primary contact email is invalid."
+          : "No centre primary contact email is configured.",
+      };
+
+  const carerEmail = assignedStaffQ.data
+    ? resolveCarerCommunicationEmail(assignedStaffQ.data)
+    : null;
+  const carerAvailability = shift.assignedStaffId
+    ? carerEmail
+      ? { available: true as const }
+      : { available: false as const, reason: "Assigned Carer has no valid email address." }
+    : { available: false as const, reason: "No Carer assigned." };
+
+  function buildUpdatePayload(communications?: ShiftUpdateCommunicationsPayload) {
+    return {
+      centreId: editVals.centreId,
+      shiftDate: editVals.shiftDate,
+      startTime: editVals.startTime + ":00",
+      endTime: editVals.endTime + ":00",
+      roleNeeded: editVals.roleNeeded,
+      notes: editVals.notes,
+      addedToStaffpoint: editVals.addedToStaffpoint,
+      ...(communications ? { communications } : {}),
+    };
+  }
+
+  async function performSave(communications?: ShiftUpdateCommunicationsPayload) {
+    if (savingEdits) return;
+    setSavingEdits(true);
     try {
-      await shiftsApi.update(id, {
-        centreId: editVals.centreId,
-        shiftDate: editVals.shiftDate,
-        startTime: editVals.startTime + ":00",
-        endTime: editVals.endTime + ":00",
-        roleNeeded: editVals.roleNeeded,
-        notes: editVals.notes,
-        addedToStaffpoint: editVals.addedToStaffpoint,
-      });
-      toast.success("Shift updated");
+      const result = await shiftsApi.update(id, buildUpdatePayload(communications));
+      const message = shiftUpdateFeedbackMessage(result.communications);
+      const partialFailure =
+        result.communications &&
+        ((result.communications.centre?.attempted && !result.communications.centre.sent) ||
+          (result.communications.carer?.attempted && !result.communications.carer?.sent));
+      if (partialFailure) {
+        toast.warning(message);
+      } else {
+        toast.success(message);
+      }
       setEditing(false);
       setEdit(null);
+      setCommDialogOpen(false);
       qc.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSavingEdits(false);
     }
+  }
+
+  function saveEdits() {
+    if (hasShiftEditCommunicationChanges(communicationChanges)) {
+      setCommDialogOpen(true);
+      return;
+    }
+    void performSave();
   }
 
   async function changeStatus(newStatus: ShiftStatus, reason?: string) {
@@ -516,7 +621,9 @@ function ShiftDetail() {
                     <Textarea id="edit-notes" rows={3} value={editVals.notes} onChange={(e) => setEdit({ ...editVals, notes: e.target.value })} />
                   </div>
                 </FieldGroup>
-                <Button onClick={saveEdits}>Save changes</Button>
+                <Button onClick={saveEdits} disabled={savingEdits}>
+                  Save changes
+                </Button>
               </div>
             )}
           </SectionCard>
@@ -564,6 +671,17 @@ function ShiftDetail() {
       </div>
 
       <ShiftComments shiftId={id} />
+
+      <ShiftEditCommunicationsDialog
+        open={commDialogOpen}
+        onOpenChange={setCommDialogOpen}
+        changes={communicationChanges}
+        centreAvailability={centreAvailability}
+        carerAvailability={carerAvailability}
+        saving={savingEdits}
+        onSaveWithoutEmail={() => void performSave()}
+        onSaveWithCommunications={(communications) => void performSave(communications)}
+      />
     </div>
   );
 }

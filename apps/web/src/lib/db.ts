@@ -203,8 +203,18 @@ export type ShiftAssignResponse = {
   notifications: ShiftAssignmentNotificationsResult | null;
 };
 
-export type ShiftResendConfirmationsResponse = {
-  notifications: ShiftAssignmentNotificationsResult;
+export type ShiftUpdateCommunicationsResult = {
+  centre: ShiftAssignmentRecipientResult | null;
+  carer: ShiftAssignmentRecipientResult | null;
+} | null;
+
+export type ShiftUpdateCommunicationsPayload = {
+  centre?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean } };
+  carer?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean } };
+};
+
+export type ShiftUpdateResponse = Shift & {
+  communications: ShiftUpdateCommunicationsResult;
 };
 
 export interface LinkedStaff {
@@ -406,7 +416,10 @@ export const shiftsApi = {
   }) => api.get<Shift[]>("/shifts", q),
   get: (id: string) => api.get<Shift>(`/shifts/${id}`),
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
-  update: (id: string, values: Partial<Shift>) => api.patch<Shift>(`/shifts/${id}`, values),
+  update: (
+    id: string,
+    values: Partial<Shift> & { communications?: ShiftUpdateCommunicationsPayload },
+  ) => api.patch<ShiftUpdateResponse>(`/shifts/${id}`, values),
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
   assign: (id: string, staffId: string) =>
     api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, { staffId }),

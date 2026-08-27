@@ -133,6 +133,17 @@ function buildCopy(
       description: assignmentConfirmationDescription(ctx, verb),
     };
   }
+  if (action === 'shift_update_communication_sent' || action === 'shift_update_communication_failed') {
+    const verb = action.endsWith('sent') ? 'sent' : 'failed';
+    const recipientType =
+      typeof ctx.metadata?.recipientType === 'string' ? ctx.metadata.recipientType : 'recipient';
+    const included = formatIncludedChanges(ctx.metadata?.includedChanges);
+    const recipientLabel = recipientType === 'centre' ? 'Centre' : recipientType === 'carer' ? 'Carer' : 'Recipient';
+    return {
+      title: `Shift update ${verb} to ${recipientLabel}`,
+      description: included ?? centreLabel(ctx),
+    };
+  }
   if (action === 'communication_sent' || action === 'communication_failed') {
     const commType =
       typeof ctx.metadata?.communicationType === 'string'
@@ -250,6 +261,15 @@ function cancellationConfirmationDescription(
   return communicationTypeLabel(commType);
 }
 
+function formatIncludedChanges(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const labels: Record<string, string> = { date: 'Date', time: 'Time', role: 'Role required' };
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => labels[item] ?? item)
+    .join(', ');
+}
+
 function describeChanges(metadata?: Record<string, unknown>): string | null {
   const changes = metadata?.changes;
   if (!changes || typeof changes !== 'object') return null;
@@ -272,7 +292,7 @@ function sanitizeReportMetadata(
   for (const [key, value] of Object.entries(metadata)) {
     if (/token|password|secret|hash|storage|provider|url/i.test(key)) continue;
     if (
-      ['changes', 'communicationType', 'eventType', 'cancellationReasonPreview', 'recipientType'].includes(
+      ['changes', 'communicationType', 'eventType', 'cancellationReasonPreview', 'recipientType', 'includedChanges'].includes(
         key,
       )
     ) {

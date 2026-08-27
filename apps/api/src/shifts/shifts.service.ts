@@ -48,6 +48,18 @@ import {
   assertActiveShiftRoleForCreate,
   assertShiftRoleUpdateAllowed,
 } from './shift-role-update.util';
+import {
+  ShiftUpdateCommunicationService,
+  assertShiftUpdateCommunicationsSelection,
+} from './shift-update-communication.service';
+import type { ShiftUpdateCommunicationsResult } from './dto/shift-update.dto';
+import {
+  applyShiftUpdatePatch,
+  detectShiftCommunicationChanges,
+  normalizeShiftCommunicationSnapshot,
+  validateShiftUpdateCommunicationsInput,
+} from './shift-update-changes.util';
+import { assertAssignedStaffCompatibleWithRoleChange } from './shift-update-role-validation.util';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -60,6 +72,7 @@ export class ShiftsService {
     private readonly shiftReminders: ShiftReminderService,
     private readonly shiftCancellations: ShiftCancellationService,
     private readonly platformAudit: PlatformAuditService,
+    private readonly shiftUpdateCommunications: ShiftUpdateCommunicationService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -194,6 +207,39 @@ export class ShiftsService {
       );
     }
 
+    const beforeSnapshot = normalizeShiftCommunicationSnapshot(before[0]);
+    const afterSnapshot = applyShiftUpdatePatch(beforeSnapshot, {
+      shiftDate: dto.shiftDate,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      roleNeeded: dto.roleNeeded,
+    });
+    const communicationChanges = detectShiftCommunicationChanges(beforeSnapshot, afterSnapshot);
+
+    if (
+      before[0].assignedStaffId &&
+      communicationChanges.some((change) => change.field === 'role')
+    ) {
+      await assertAssignedStaffCompatibleWithRoleChange({
+        shiftMatching: this.shiftMatching,
+        shiftId: id,
+        assignedStaffId: before[0].assignedStaffId,
+        before: beforeSnapshot,
+        after: afterSnapshot,
+      });
+    }
+
+    const communicationSelections = validateShiftUpdateCommunicationsInput({
+      changes: communicationChanges,
+      communications: dto.communications,
+    });
+    if (communicationSelections) {
+      assertShiftUpdateCommunicationsSelection({
+        changes: communicationChanges,
+        selections: communicationSelections,
+      });
+    }
+
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of [
       'shiftDate',
@@ -255,7 +301,19 @@ export class ShiftsService {
       await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
     }
 
-    return row;
+    let communications: ShiftUpdateCommunicationsResult = null;
+    if (communicationSelections) {
+      communications = await this.shiftUpdateCommunications.sendCommunications({
+        shiftId: id,
+        centreId: row.centreId,
+        assignedStaffId: row.assignedStaffId,
+        actorUserId,
+        changes: communicationChanges,
+        selections: communicationSelections,
+      });
+    }
+
+    return { ...row, communications };
   }
 
   async remove(id: string) {

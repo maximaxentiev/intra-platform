@@ -22,6 +22,7 @@ import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
+import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { ShiftsService } from './shifts.service';
 import {
   availability,
@@ -123,6 +124,7 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       createMockShiftReminderService(),
       createMockShiftCancellationService(),
       new PlatformAuditService(db),
+      createMockShiftUpdateCommunicationService(),
     );
 
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
