@@ -126,3 +126,28 @@ describe('presentActivityLogItem cancellation confirmations', () => {
     expect(reminder.description).toContain('1-day shift reminder');
   });
 });
+
+describe('presentActivityLogItem password reset events', () => {
+  it('describes admin reset without exposing credentials', () => {
+    const reset = presentActivityLogItem(
+      {
+        source_key: 'platform:reset',
+        occurred_at: new Date('2026-08-20T12:00:00.000Z'),
+        category: 'users',
+        action: 'user_password_reset',
+        actor_type: 'ops_user',
+        actor_user_id: 'admin-1',
+        staff_id: null,
+        centre_id: null,
+        shift_id: null,
+        target_user_id: 'user-1',
+        metadata: { name: 'Jane Smith', email: 'jane@example.test' },
+      },
+      { ...emptyNames, users: new Map([['admin-1', 'Admin User']]) },
+    );
+
+    expect(reset.title).toBe('Password reset');
+    expect(reset.description).toBe('Temporary password generated for Jane Smith');
+    expect(JSON.stringify(reset)).not.toContain('temporaryPassword');
+  });
+});

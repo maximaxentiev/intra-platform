@@ -9,6 +9,7 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { MustChangePasswordGuard } from './auth/must-change-password.guard';
 import { UsersModule } from './users/users.module';
 import { StaffModule } from './staff/staff.module';
 import { CentresModule } from './centres/centres.module';
@@ -54,6 +55,8 @@ import { ReportsModule } from './reports/reports.module';
     { provide: APP_GUARD, useClass: SessionGuard },
     // Role checks run after authentication for @Roles()-annotated routes.
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Block normal routes until forced admin password reset is completed.
+    { provide: APP_GUARD, useClass: MustChangePasswordGuard },
   ],
 })
 export class AppModule {}

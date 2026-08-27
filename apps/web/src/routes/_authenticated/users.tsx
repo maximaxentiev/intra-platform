@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MoreHorizontal, UserPlus, Ban, CheckCircle2, Loader2 } from "lucide-react";
+import { MoreHorizontal, UserPlus, Ban, CheckCircle2, Loader2, KeyRound, Copy } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { authApi, usersApi, type CurrentUser, type UserRole } from "@/lib/db";
+import { authApi, usersApi, type AdminPasswordResetResult, type CurrentUser, type UserRole } from "@/lib/db";
 
 export const Route = createFileRoute("/_authenticated/users")({
   component: UsersPage,
@@ -58,6 +58,9 @@ function UsersPage() {
   const [inviteRole, setInviteRole] = useState<UserRole>("ops");
   const [invitePassword, setInvitePassword] = useState("");
 
+  const [resetTarget, setResetTarget] = useState<CurrentUser | null>(null);
+  const [resetResult, setResetResult] = useState<AdminPasswordResetResult | null>(null);
+
   const inviteMut = useMutation({
     mutationFn: () =>
       usersApi.invite({
@@ -88,6 +91,30 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message ?? "Update failed"),
   });
 
+  const resetMut = useMutation({
+    mutationFn: (userId: string) => usersApi.resetPassword(userId),
+    onSuccess: (result) => {
+      setResetResult(result);
+      qc.invalidateQueries({ queryKey: ["ops-users"] });
+    },
+    onError: (e: Error) => toast.error(e.message ?? "Password reset failed"),
+  });
+
+  function closeResetDialogs() {
+    setResetTarget(null);
+    setResetResult(null);
+  }
+
+  async function copyTemporaryPassword() {
+    if (!resetResult?.temporaryPassword) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.temporaryPassword);
+      toast.success("Password copied");
+    } catch {
+      toast.error("Unable to copy password");
+    }
+  }
+
   function rowActions(u: CurrentUser, isMe: boolean) {
     return (
       <DropdownMenu>
@@ -97,6 +124,9 @@ function UsersPage() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setResetTarget(u)}>
+            <KeyRound className="h-4 w-4 mr-2" /> Reset password
+          </DropdownMenuItem>
           {u.isActive && !isMe && (
             <DropdownMenuItem onClick={() => activeMut.mutate({ userId: u.id, active: false })}>
               <Ban className="h-4 w-4 mr-2" /> Deactivate
@@ -287,6 +317,79 @@ function UsersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetTarget !== null && resetResult === null}
+        onOpenChange={(open) => {
+          if (!open) closeResetDialogs();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset password?</DialogTitle>
+            <DialogDescription>
+              This will replace the user&apos;s current password, sign them out of existing sessions,
+              and create a temporary password. They will be required to choose a new password the
+              next time they sign in.
+            </DialogDescription>
+          </DialogHeader>
+          {resetTarget ? (
+            <p className="text-sm text-foreground">
+              <span className="font-medium">{resetTarget.fullName || resetTarget.email}</span>
+              <span className="block text-muted-foreground">{resetTarget.email}</span>
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeResetDialogs}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={resetMut.isPending || !resetTarget}
+              onClick={() => resetTarget && resetMut.mutate(resetTarget.id)}
+            >
+              {resetMut.isPending ? "Resetting…" : "Reset password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetResult !== null}
+        onOpenChange={(open) => {
+          if (!open) closeResetDialogs();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Temporary password</DialogTitle>
+            <DialogDescription>
+              Send this temporary password securely to the user. They will be required to choose a
+              new password when they next sign in.
+            </DialogDescription>
+          </DialogHeader>
+          {resetResult ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                <p className="font-mono text-sm font-semibold tracking-wide break-all">
+                  {resetResult.temporaryPassword}
+                </p>
+              </div>
+              <Button type="button" variant="outline" className="w-full" onClick={() => void copyTemporaryPassword()}>
+                <Copy className="mr-2 h-4 w-4" /> Copy password
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                This temporary password will only be shown once and expires in 24 hours.
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" onClick={closeResetDialogs}>
+              Done
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

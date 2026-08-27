@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { AuthService } from '../auth/auth.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.guard';
 import type { SessionPayload } from '../auth/session.service';
@@ -9,7 +10,10 @@ import { UsersService } from './users.service';
 @ApiTags('users')
 @Controller()
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly auth: AuthService,
+  ) {}
 
   // Current ops user's own profile (self only).
   @Get('me')
@@ -43,5 +47,11 @@ export class UsersController {
     @CurrentUser() user: SessionPayload,
   ) {
     return this.users.update(id, dto, user.userId);
+  }
+
+  @Roles('admin')
+  @Post('users/:id/reset-password')
+  resetPassword(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.auth.adminResetPassword(id, user.userId);
   }
 }

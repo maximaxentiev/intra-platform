@@ -20,3 +20,10 @@ export class ChangePasswordDto {
   @MaxLength(200)
   newPassword!: string;
 }
+
+export class ReplaceForcedPasswordDto {
+  @IsString()
+  @MinLength(12)
+  @MaxLength(200)
+  newPassword!: string;
+}

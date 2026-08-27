@@ -32,6 +32,8 @@ export interface CurrentUser {
   fullName: string;
   role: UserRole;
   isActive: boolean;
+  mustChangePassword: boolean;
+  temporaryPasswordExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -213,8 +215,15 @@ export const authApi = {
   logout: () => api.post<{ ok: true }>("/auth/logout"),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<{ ok: true }>("/auth/change-password", { currentPassword, newPassword }),
+  replacePassword: (newPassword: string) =>
+    api.post<CurrentUser>("/auth/replace-password", { newPassword }),
   me: () => api.get<CurrentUser>("/me"),
   updateMe: (fullName: string) => api.patch<CurrentUser>("/me", { fullName }),
+};
+
+export type AdminPasswordResetResult = {
+  temporaryPassword: string;
+  expiresAt: string;
 };
 
 export const usersApi = {
@@ -223,6 +232,7 @@ export const usersApi = {
     api.post<CurrentUser>("/users", values),
   update: (id: string, values: Partial<Pick<CurrentUser, "fullName" | "role" | "isActive">>) =>
     api.patch<CurrentUser>(`/users/${id}`, values),
+  resetPassword: (id: string) => api.post<AdminPasswordResetResult>(`/users/${id}/reset-password`),
 };
 
 export type StaffCsvPreviewRowStatus = "valid" | "invalid" | "duplicate";

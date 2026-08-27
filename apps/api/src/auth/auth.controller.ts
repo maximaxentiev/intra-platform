@@ -5,7 +5,8 @@ import type { Request, Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
-import { ChangePasswordDto, LoginDto } from './dto/auth.dto';
+import { ChangePasswordDto, LoginDto, ReplaceForcedPasswordDto } from './dto/auth.dto';
+import { AllowPendingPasswordChange } from './must-change-password.guard';
 import { Public } from './session.guard';
 import type { SessionPayload } from './session.service';
 import { SessionService } from './session.service';
@@ -44,6 +45,7 @@ export class AuthController {
     return this.users.getProfile(user.userId);
   }
 
+  @AllowPendingPasswordChange()
   @Post('logout')
   async logout(@Req() req: Request & { sessionId?: string }, @Res({ passthrough: true }) res: Response) {
     await this.auth.logout(req.sessionId ?? '');
@@ -51,6 +53,7 @@ export class AuthController {
     return { ok: true };
   }
 
+  @AllowPendingPasswordChange()
   @Get('session')
   session(@CurrentUser() user: SessionPayload) {
     return this.users.getProfile(user.userId);
@@ -60,5 +63,15 @@ export class AuthController {
   async changePassword(@CurrentUser() user: SessionPayload, @Body() dto: ChangePasswordDto) {
     await this.auth.changePassword(user.userId, dto.currentPassword, dto.newPassword);
     return { ok: true };
+  }
+
+  @AllowPendingPasswordChange()
+  @Post('replace-password')
+  async replaceForcedPassword(
+    @CurrentUser() user: SessionPayload,
+    @Body() dto: ReplaceForcedPasswordDto,
+  ) {
+    await this.auth.replaceForcedPassword(user.userId, dto.newPassword);
+    return this.users.getProfile(user.userId);
   }
 }

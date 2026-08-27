@@ -85,6 +85,8 @@ export const users = pgTable('users', {
   fullName: text('full_name').notNull().default(''),
   role: userRole('role').notNull().default('ops'),
   isActive: boolean('is_active').notNull().default(true),
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
+  temporaryPasswordExpiresAt: timestamp('temporary_password_expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

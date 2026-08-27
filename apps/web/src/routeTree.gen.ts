@@ -21,6 +21,7 @@ import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
 import { Route as CarerDocumentsRouteImport } from './routes/carer/documents'
 import { Route as CarerAvailabilityRouteImport } from './routes/carer/availability'
+import { Route as AuthChangePasswordRouteImport } from './routes/auth.change-password'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
@@ -114,6 +115,11 @@ const CarerAvailabilityRoute = CarerAvailabilityRouteImport.update({
   id: '/availability',
   path: '/availability',
   getParentRoute: () => CarerRouteRoute,
+} as any)
+const AuthChangePasswordRoute = AuthChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
@@ -302,7 +308,7 @@ const AuthenticatedCentresIdRoute = AuthenticatedCentresIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carer': typeof CarerRouteRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/staff': typeof AuthenticatedStaffRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
   '/carer/availability': typeof CarerAvailabilityRoute
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
@@ -348,12 +355,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
   '/carer/availability': typeof CarerAvailabilityRoute
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
@@ -391,7 +399,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/carer': typeof CarerRouteRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/_authenticated/applications': typeof AuthenticatedApplicationsRoute
   '/_authenticated/availability': typeof AuthenticatedAvailabilityRoute
@@ -402,6 +410,7 @@ export interface FileRoutesById {
   '/_authenticated/shifts': typeof AuthenticatedShiftsRouteWithChildren
   '/_authenticated/staff': typeof AuthenticatedStaffRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
   '/carer/availability': typeof CarerAvailabilityRoute
   '/carer/documents': typeof CarerDocumentsRoute
   '/carer/forgot-password': typeof CarerForgotPasswordRoute
@@ -451,6 +460,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/staff'
     | '/users'
+    | '/auth/change-password'
     | '/carer/availability'
     | '/carer/documents'
     | '/carer/forgot-password'
@@ -492,6 +502,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/users'
+    | '/auth/change-password'
     | '/carer/availability'
     | '/carer/documents'
     | '/carer/forgot-password'
@@ -539,6 +550,7 @@ export interface FileRouteTypes {
     | '/_authenticated/shifts'
     | '/_authenticated/staff'
     | '/_authenticated/users'
+    | '/auth/change-password'
     | '/carer/availability'
     | '/carer/documents'
     | '/carer/forgot-password'
@@ -577,7 +589,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CarerRouteRoute: typeof CarerRouteRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   DocumentsSlugRoute: typeof DocumentsSlugRoute
 }
 
@@ -666,6 +678,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/carer/availability'
       preLoaderRoute: typeof CarerAvailabilityRouteImport
       parentRoute: typeof CarerRouteRoute
+    }
+    '/auth/change-password': {
+      id: '/auth/change-password'
+      path: '/change-password'
+      fullPath: '/auth/change-password'
+      preLoaderRoute: typeof AuthChangePasswordRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_authenticated/users': {
       id: '/_authenticated/users'
@@ -1065,11 +1084,21 @@ const CarerRouteRouteWithChildren = CarerRouteRoute._addFileChildren(
   CarerRouteRouteChildren,
 )
 
+interface AuthRouteChildren {
+  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthChangePasswordRoute: AuthChangePasswordRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CarerRouteRoute: CarerRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   DocumentsSlugRoute: DocumentsSlugRoute,
 }
 export const routeTree = rootRouteImport

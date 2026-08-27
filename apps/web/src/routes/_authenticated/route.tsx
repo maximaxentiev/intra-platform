@@ -7,8 +7,12 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     try {
       const user = await authApi.session();
+      if (user.mustChangePassword) {
+        throw redirect({ to: "/auth/change-password", replace: true });
+      }
       return { user };
-    } catch {
+    } catch (err) {
+      if (err && typeof err === "object" && "to" in err) throw err;
       throw redirect({ to: "/auth" });
     }
   },

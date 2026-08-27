@@ -19,11 +19,16 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // If already signed in, skip the login screen.
   useEffect(() => {
     authApi
       .session()
-      .then(() => navigate({ to: "/dashboard", replace: true }))
+      .then((user) => {
+        if (user.mustChangePassword) {
+          navigate({ to: "/auth/change-password", replace: true });
+          return;
+        }
+        navigate({ to: "/dashboard", replace: true });
+      })
       .catch(() => {
         /* not signed in — stay */
       });
@@ -33,10 +38,14 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await authApi.login(email, password);
+      const user = await authApi.login(email, password);
       await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
       toast.success("Signed in");
-      navigate({ to: "/dashboard", replace: true });
+      if (user.mustChangePassword) {
+        navigate({ to: "/auth/change-password", replace: true });
+      } else {
+        navigate({ to: "/dashboard", replace: true });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -45,7 +54,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-dvh items-center justify-center bg-surface-muted px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-base font-bold shadow-sm">
@@ -54,7 +63,7 @@ function AuthPage() {
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Intra Platform</h1>
         </div>
         <Card className="border-border/70 shadow-sm">
-          <CardHeader className="space-y-1 pb-4">
+          <CardHeader className="space-y-1.5 pb-4">
             <CardTitle className="text-lg">Sign in</CardTitle>
             <CardDescription>
               Access is invite-only. Contact an administrator if you need an account.

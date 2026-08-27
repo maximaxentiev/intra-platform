@@ -158,6 +158,31 @@ function buildCopy(
       typeof ctx.metadata?.eventType === 'string' ? ctx.metadata.eventType : 'activity';
     return { title: humanizeAction(eventType), description: ctx.staffName ?? null };
   }
+  if (action === 'user_password_reset') {
+    const targetName =
+      typeof ctx.metadata?.name === 'string'
+        ? ctx.metadata.name
+        : (ctx.metadata?.email as string | undefined);
+    return {
+      title: 'Password reset',
+      description: targetName ? `Temporary password generated for ${targetName}` : null,
+    };
+  }
+  if (action === 'user_password_changed') {
+    const targetName =
+      typeof ctx.metadata?.name === 'string'
+        ? ctx.metadata.name
+        : (ctx.metadata?.email as string | undefined);
+    const forced = ctx.metadata?.forced === true;
+    return {
+      title: 'Password changed',
+      description: targetName
+        ? forced
+          ? `${targetName} replaced an administrator-issued temporary password`
+          : `${targetName} changed their password`
+        : null,
+    };
+  }
 
   return { title: humanizeAction(action), description: ctx.staffName ?? ctx.centreName ?? null };
 }

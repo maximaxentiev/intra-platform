@@ -24,6 +24,8 @@ export const PLATFORM_AUDIT_ACTIONS = {
   centreDeleted: 'centre_deleted',
   userInvited: 'user_invited',
   userUpdated: 'user_updated',
+  userPasswordReset: 'user_password_reset',
+  userPasswordChanged: 'user_password_changed',
   staffUpdated: 'staff_updated',
   staffDeleted: 'staff_deleted',
 } as const;
@@ -45,6 +47,8 @@ const ACTION_ENTITY: Record<PlatformAuditAction, PlatformAuditEntityType> = {
   centre_deleted: 'centre',
   user_invited: 'user',
   user_updated: 'user',
+  user_password_reset: 'user',
+  user_password_changed: 'user',
   staff_updated: 'staff',
   staff_deleted: 'staff',
 };
@@ -69,4 +73,5 @@ export const PLATFORM_AUDIT_METADATA_ALLOWLIST = new Set([
   'isActive',
   'email',
   'name',
+  'forced',
 ]);
