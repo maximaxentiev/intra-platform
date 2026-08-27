@@ -40,6 +40,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink, ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
 import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
 import { formatShiftRoleLabel, shiftRoleEditOptions } from "@/lib/shift-role-ui";
+import {
+  formatAvailableStaffPriorityLine,
+  isAvailableStaffPriorityBoundary,
+} from "@/lib/shift-matching-priority-ui";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -363,13 +367,20 @@ function ShiftDetail() {
                   </p>
                 )}
                 <ul className="divide-y divide-border/60">
-                  {otherCandidates.map((s) => (
+                  {otherCandidates.map((s, index) => {
+                    const previous = index > 0 ? otherCandidates[index - 1] : undefined;
+                    const showPriorityBoundary = isAvailableStaffPriorityBoundary(previous, s);
+
+                    return (
                     <li
                       key={s.id}
-                      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/40 motion-reduce:transition-none"
+                      className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/40 motion-reduce:transition-none${showPriorityBoundary ? " border-t border-border/80 pt-3.5" : ""}`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{displayStaff(s)}</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {formatAvailableStaffPriorityLine(s)}
+                        </p>
                         <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
                           <span>{s.role || "No role"}</span>
                           {s.isTop && (
@@ -399,7 +410,8 @@ function ShiftDetail() {
                         </Button>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </>
             )}

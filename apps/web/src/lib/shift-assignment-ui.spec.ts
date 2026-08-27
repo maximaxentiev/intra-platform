@@ -37,6 +37,7 @@ describe('ops shift smart matching UI', () => {
     expect(page).toContain('Eligible staff are filtered automatically');
     expect(page).toContain('No eligible staff found for this shift.');
     expect(page).toContain('document compliance are considered automatically');
+    expect(page).toContain('formatAvailableStaffPriorityLine');
   });
 
   it('invalidates available staff query after assign eligibility conflict', () => {

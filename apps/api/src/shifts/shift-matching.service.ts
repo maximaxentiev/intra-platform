@@ -27,6 +27,7 @@ import type {
   ShiftMatchingTarget,
   StaffMatchingCandidate,
 } from './shift-matching.types';
+import { buildStaffMatchingPriority } from './shift-matching-priority.util';
 import { evaluateStaffShiftEligibility } from './shift-matching.util';
 import { shiftQualificationPreferenceRank } from './shift-qualification-matching.util';
 
@@ -44,15 +45,27 @@ export class ShiftMatchingService {
     for (const candidate of context.candidates) {
       const result = this.evaluateCandidate(candidate, shift, context);
       if (!result.eligible) continue;
+
+      const qualificationCategoryInputs =
+        context.qualificationInputsByStaff.get(candidate.id) ?? [];
+      const isTop = context.topStaffIds.has(candidate.id);
+
       eligible.push({
         id: candidate.id,
         legalName: candidate.legalName,
         displayName: candidate.displayName,
         useDisplayName: candidate.useDisplayName,
         role: candidate.role,
-        isTop: context.topStaffIds.has(candidate.id),
+        isTop,
         contacted: context.contactedStaffIds.has(candidate.id),
         city: candidate.city,
+        matchingPriority: buildStaffMatchingPriority({
+          shiftRoleNeeded: shift.roleNeeded,
+          isTop,
+          staffCity: candidate.city,
+          centreCity: shift.centreCity,
+          qualificationCategoryInputs,
+        }),
       });
     }
 

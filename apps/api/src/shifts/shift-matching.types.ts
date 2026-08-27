@@ -38,6 +38,15 @@ export type ShiftEligibilityResult = {
   reasons: ShiftEligibilityReason[];
 };
 
+export type StaffMatchingPriority = {
+  group: number;
+  label: string;
+  isTop: boolean;
+  geographicTier: number;
+  geographicLabel: string;
+  qualificationType: string;
+};
+
 export type EligibleAvailableStaffRow = {
   id: string;
   legalName: string;
@@ -46,6 +55,7 @@ export type EligibleAvailableStaffRow = {
   role: string;
   isTop: boolean;
   contacted: boolean;
+  matchingPriority: StaffMatchingPriority;
 };
 
 export const SHIFT_ASSIGN_INELIGIBLE_MESSAGE =

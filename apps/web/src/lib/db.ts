@@ -161,6 +161,15 @@ export interface ShiftComment {
   createdAt: string;
 }
 
+export interface StaffMatchingPriority {
+  group: number;
+  label: string;
+  isTop: boolean;
+  geographicTier: number;
+  geographicLabel: string;
+  qualificationType: string;
+}
+
 export interface AvailableStaff {
   id: string;
   legalName: string;
@@ -169,6 +178,7 @@ export interface AvailableStaff {
   role: string;
   isTop: boolean;
   contacted: boolean;
+  matchingPriority: StaffMatchingPriority;
 }
 
 export type ShiftAssignmentRecipientResult = {
