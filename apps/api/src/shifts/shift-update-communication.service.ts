@@ -42,21 +42,39 @@ export class ShiftUpdateCommunicationService {
   }): Promise<{ centre: ShiftAssignmentRecipientResult | null; carer: ShiftAssignmentRecipientResult | null }> {
     const context = await this.loadContext(params.shiftId, params.centreId, params.assignedStaffId);
 
-    const centre = params.selections.centre
-      ? await this.sendCentreEmail({
+    let centre: ShiftAssignmentRecipientResult | null = null;
+    if (params.selections.centre) {
+      try {
+        centre = await this.sendCentreEmail({
           ...params,
           context,
           include: params.selections.centre.include,
-        })
-      : null;
+        });
+      } catch (err) {
+        this.logger.error(
+          `Centre shift update communication processing failed shiftId=${params.shiftId}`,
+          err instanceof Error ? err.stack : err,
+        );
+        centre = { attempted: true, sent: false };
+      }
+    }
 
-    const carer = params.selections.carer
-      ? await this.sendCarerEmail({
+    let carer: ShiftAssignmentRecipientResult | null = null;
+    if (params.selections.carer) {
+      try {
+        carer = await this.sendCarerEmail({
           ...params,
           context,
           include: params.selections.carer.include,
-        })
-      : null;
+        });
+      } catch (err) {
+        this.logger.error(
+          `Carer shift update communication processing failed shiftId=${params.shiftId}`,
+          err instanceof Error ? err.stack : err,
+        );
+        carer = { attempted: true, sent: false };
+      }
+    }
 
     return { centre, carer };
   }
@@ -160,11 +178,26 @@ export class ShiftUpdateCommunicationService {
         html: content.html,
         text: content.text,
       });
-      await this.recordAudit(params, 'centre', recipientEmail, true, params.include, result.providerId ?? null);
+      await this.persistCommunicationAudit(
+        params,
+        'centre',
+        recipientEmail,
+        true,
+        params.include,
+        result.providerId ?? null,
+      );
       return { attempted: true, sent: true };
     } catch (err) {
       const failure = sanitizeNotificationFailure(err);
-      await this.recordAudit(params, 'centre', recipientEmail, false, params.include, null, failure);
+      await this.persistCommunicationAudit(
+        params,
+        'centre',
+        recipientEmail,
+        false,
+        params.include,
+        null,
+        failure,
+      );
       this.logger.warn(`Centre shift update email failed shiftId=${params.shiftId}`);
       return { attempted: true, sent: false };
     }
@@ -216,13 +249,81 @@ export class ShiftUpdateCommunicationService {
         html: content.html,
         text: content.text,
       });
-      await this.recordAudit(params, 'carer', recipientCandidate, true, params.include, result.providerId ?? null);
+      await this.persistCommunicationAudit(
+        params,
+        'carer',
+        recipientCandidate,
+        true,
+        params.include,
+        result.providerId ?? null,
+      );
       return { attempted: true, sent: true };
     } catch (err) {
       const failure = sanitizeNotificationFailure(err);
-      await this.recordAudit(params, 'carer', recipientCandidate, false, params.include, null, failure);
+      await this.persistCommunicationAudit(
+        params,
+        'carer',
+        recipientCandidate,
+        false,
+        params.include,
+        null,
+        failure,
+      );
       this.logger.warn(`Carer shift update email failed shiftId=${params.shiftId}`);
       return { attempted: true, sent: false };
+    }
+  }
+
+  private async persistCommunicationAudit(
+    params: {
+      shiftId: string;
+      centreId: string;
+      assignedStaffId: string | null;
+      actorUserId: string;
+    },
+    recipientType: 'centre' | 'carer',
+    recipientEmail: string,
+    sent: boolean,
+    includedChanges: ShiftCommunicationField[],
+    providerMessageId: string | null,
+    failure?: { code: string; reason: string },
+  ): Promise<void> {
+    try {
+      await this.recordAudit(
+        params,
+        recipientType,
+        recipientEmail,
+        sent,
+        includedChanges,
+        providerMessageId,
+        failure,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Shift update communication audit record failed shiftId=${params.shiftId} recipient=${recipientType}`,
+        err instanceof Error ? err.stack : err,
+      );
+      if (sent) {
+        try {
+          await this.recordAudit(
+            params,
+            recipientType,
+            recipientEmail,
+            false,
+            includedChanges,
+            providerMessageId,
+            {
+              code: 'audit_record_failed',
+              reason: 'Communication was delivered but the audit record could not be saved.',
+            },
+          );
+        } catch (recoveryErr) {
+          this.logger.error(
+            `Shift update communication audit recovery failed shiftId=${params.shiftId} recipient=${recipientType}`,
+            recoveryErr instanceof Error ? recoveryErr.stack : recoveryErr,
+          );
+        }
+      }
     }
   }
 
@@ -237,7 +338,7 @@ export class ShiftUpdateCommunicationService {
     recipientEmail: string,
     sent: boolean,
     includedChanges: ShiftCommunicationField[],
-    providerId: string | null,
+    providerMessageId: string | null,
     failure?: { code: string; reason: string },
   ) {
     await this.platformAudit.record({
@@ -254,9 +355,9 @@ export class ShiftUpdateCommunicationService {
         recipientType,
         recipientEmail,
         includedChanges,
-        providerId,
-        failureCode: failure?.code,
-        failureReason: failure?.reason,
+        ...(providerMessageId ? { deliveryMessageId: providerMessageId } : {}),
+        ...(failure?.code ? { failureCode: failure.code } : {}),
+        ...(failure?.reason ? { failureReason: failure.reason } : {}),
       },
     });
   }

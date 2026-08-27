@@ -81,7 +81,7 @@ export const PLATFORM_AUDIT_METADATA_ALLOWLIST = new Set([
   'recipientType',
   'recipientEmail',
   'includedChanges',
-  'providerId',
+  'deliveryMessageId',
   'failureCode',
   'failureReason',
 ]);

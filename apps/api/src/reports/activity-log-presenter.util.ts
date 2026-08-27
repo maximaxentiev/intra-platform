@@ -292,7 +292,7 @@ function sanitizeReportMetadata(
   for (const [key, value] of Object.entries(metadata)) {
     if (/token|password|secret|hash|storage|provider|url/i.test(key)) continue;
     if (
-      ['changes', 'communicationType', 'eventType', 'cancellationReasonPreview', 'recipientType', 'includedChanges'].includes(
+      ['changes', 'communicationType', 'eventType', 'cancellationReasonPreview', 'recipientType', 'includedChanges', 'deliveryMessageId'].includes(
         key,
       )
     ) {

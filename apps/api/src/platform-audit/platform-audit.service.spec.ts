@@ -59,6 +59,36 @@ describe('PlatformAuditService.record', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('records shift update communication metadata with deliveryMessageId', async () => {
+    const values = vi.fn().mockResolvedValue(undefined);
+    const insert = vi.fn().mockReturnValue({ values });
+    const service = new PlatformAuditService({ insert } as never);
+
+    await expect(
+      service.record({
+        action: PLATFORM_AUDIT_ACTIONS.shiftUpdateCommunicationSent,
+        actorType: 'ops_user',
+        actorUserId: 'ops-1',
+        shiftId: 'shift-1',
+        centreId: 'centre-1',
+        metadata: {
+          recipientType: 'centre',
+          recipientEmail: 'centre@example.test',
+          includedChanges: ['date'],
+          deliveryMessageId: 'resend-msg-123',
+        },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          deliveryMessageId: 'resend-msg-123',
+        }),
+      }),
+    );
+  });
 });
 
 describe('sanitizePlatformAuditMetadata', () => {
@@ -91,5 +121,32 @@ describe('sanitizePlatformAuditMetadata', () => {
         unexpectedField: 'should-drop',
       }),
     ).toEqual({ shiftDate: '2026-08-25' });
+  });
+
+  it('rejects providerId because the forbidden-key guard matches "provider"', () => {
+    expect(() =>
+      sanitizePlatformAuditMetadata({
+        recipientType: 'centre',
+        recipientEmail: 'centre@example.test',
+        includedChanges: ['date'],
+        providerId: 'resend-msg-1',
+      }),
+    ).toThrow('Unsupported audit metadata key "providerId".');
+  });
+
+  it('accepts shift update communication metadata with deliveryMessageId', () => {
+    expect(
+      sanitizePlatformAuditMetadata({
+        recipientType: 'centre',
+        recipientEmail: 'centre@example.test',
+        includedChanges: ['date', 'time'],
+        deliveryMessageId: 'resend-msg-1',
+      }),
+    ).toEqual({
+      recipientType: 'centre',
+      recipientEmail: 'centre@example.test',
+      includedChanges: ['date', 'time'],
+      deliveryMessageId: 'resend-msg-1',
+    });
   });
 });
