@@ -68,8 +68,6 @@ export class CentresService {
           hourlyRate: dto.hourlyRate ?? null,
           primaryChannel: dto.primaryChannel,
           notes: dto.notes ?? '',
-          requiresQualificationForMatching: dto.requiresQualificationForMatching ?? false,
-          eceQualificationRequirement: dto.eceQualificationRequirement ?? 'ece_or_rece',
         })
         .returning();
       const created = rows[0]!;
@@ -107,10 +105,6 @@ export class CentresService {
           hourlyRate: dto.hourlyRate ?? null,
           primaryChannel: dto.primaryChannel,
           notes: dto.notes ?? '',
-          requiresQualificationForMatching:
-            dto.requiresQualificationForMatching ?? existing.requiresQualificationForMatching,
-          eceQualificationRequirement:
-            dto.eceQualificationRequirement ?? existing.eceQualificationRequirement,
           updatedAt: new Date(),
         })
         .where(eq(centres.id, id))

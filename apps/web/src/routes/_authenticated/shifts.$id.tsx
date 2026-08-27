@@ -39,6 +39,7 @@ import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink, ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
 import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
+import { formatShiftRoleLabel, shiftRoleEditOptions } from "@/lib/shift-role-ui";
 
 export const Route = createFileRoute("/_authenticated/shifts/$id")({
   component: ShiftDetail,
@@ -427,7 +428,7 @@ function ShiftDetail() {
                   { label: "Centre", value: shift.centreName },
                   { label: "Date", value: shift.shiftDate },
                   { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
-                  { label: "Role", value: shift.roleNeeded },
+                  { label: "Role", value: formatShiftRoleLabel(shift.roleNeeded) },
                   { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
                   { label: "Assigned staff", value: assignedName ?? undefined },
                   { label: "Notes", value: shift.notes, className: "sm:col-span-2" },
@@ -472,12 +473,13 @@ function ShiftDetail() {
                 <FieldGroup legend="Requirements">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Role needed</Label>
+                      <Label>Role required</Label>
                       <Select value={editVals.roleNeeded || undefined} onValueChange={(v) => setEdit({ ...editVals, roleNeeded: v })}>
-                        <SelectTrigger aria-label="Role needed"><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                        <SelectTrigger aria-label="Role required"><SelectValue placeholder="Choose role..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="ECA">ECA</SelectItem>
-                          <SelectItem value="ECE">ECE</SelectItem>
+                          {shiftRoleEditOptions(shift.roleNeeded).map(({ value, label }) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

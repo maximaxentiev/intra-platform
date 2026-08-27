@@ -6,8 +6,6 @@ export type ShiftMatchingTarget = {
   id: string;
   centreId: string;
   centreCity: string | null;
-  centreRequiresQualification: boolean;
-  centreEceQualificationRequirement: 'ece_or_rece' | 'rece_required';
   shiftDate: string;
   startTime: string;
   endTime: string;

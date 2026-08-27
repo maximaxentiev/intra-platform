@@ -28,6 +28,7 @@ import type {
   StaffMatchingCandidate,
 } from './shift-matching.types';
 import { evaluateStaffShiftEligibility } from './shift-matching.util';
+import { shiftQualificationPreferenceRank } from './shift-qualification-matching.util';
 
 type DbLike = Pick<Database, 'select' | 'execute'>;
 
@@ -55,7 +56,29 @@ export class ShiftMatchingService {
       });
     }
 
-    eligible.sort((a, b) => compareStaffMatchingSort(a, b, shift.centreCity));
+    eligible.sort((a, b) =>
+      compareStaffMatchingSort(
+        {
+          isTop: a.isTop,
+          legalName: a.legalName,
+          city: a.city,
+          qualificationPreferenceRank: shiftQualificationPreferenceRank(
+            shift.roleNeeded,
+            context.qualificationInputsByStaff.get(a.id) ?? [],
+          ),
+        },
+        {
+          isTop: b.isTop,
+          legalName: b.legalName,
+          city: b.city,
+          qualificationPreferenceRank: shiftQualificationPreferenceRank(
+            shift.roleNeeded,
+            context.qualificationInputsByStaff.get(b.id) ?? [],
+          ),
+        },
+        shift.centreCity,
+      ),
+    );
 
     return eligible.map(({ city: _city, ...row }) => row);
   }
@@ -88,8 +111,6 @@ export class ShiftMatchingService {
       sameDayShifts: context.sameDayShifts,
       documentGate: context.documentGates.get(candidate.id) ?? emptyDocumentGate(),
       qualificationCategoryInputs: context.qualificationInputsByStaff.get(candidate.id) ?? [],
-      centreRequiresQualification: shift.centreRequiresQualification,
-      centreEceQualificationRequirement: shift.centreEceQualificationRequirement,
       shift,
     });
   }
@@ -100,8 +121,6 @@ export class ShiftMatchingService {
         id: shifts.id,
         centreId: shifts.centreId,
         centreCity: centres.city,
-        centreRequiresQualification: centres.requiresQualificationForMatching,
-        centreEceQualificationRequirement: centres.eceQualificationRequirement,
         shiftDate: shifts.shiftDate,
         startTime: shifts.startTime,
         endTime: shifts.endTime,

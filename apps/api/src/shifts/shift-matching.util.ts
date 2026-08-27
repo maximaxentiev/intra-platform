@@ -1,12 +1,12 @@
+import { normalizeShiftRole } from '@intra/shared';
 import { normalizeShiftRoleNeeded } from './shift-assignment-display.util';
 import type { SameDayStaffShift, ShiftEligibilityResult, ShiftMatchingTarget } from './shift-matching.types';
 import type { StaffShiftDocumentGate } from '../staff-documents/staff-document-compliance.util';
 import type { StaffDocumentCategoryComplianceInput } from '../staff-documents/staff-document-compliance.util';
 import {
-  evaluateCentreQualificationEligibility,
-  type CentreEceQualificationRequirement,
+  evaluateShiftReceEligibility,
   type ShiftQualificationEligibilityReason,
-} from './staff-qualification-compliance.util';
+} from './shift-qualification-matching.util';
 
 export type ShiftEligibilityReason =
   | 'not_available'
@@ -17,9 +17,10 @@ export type ShiftEligibilityReason =
   | 'account_disabled'
   | 'onboarding_incomplete'
   | 'documents_ineligible'
-  | 'qualification_required'
   | 'rece_required'
   | 'role_mismatch';
+
+export type { ShiftQualificationEligibilityReason };
 
 export type StaffEligibilityInput = {
   staffId: string;
@@ -33,12 +34,8 @@ export type StaffEligibilityInput = {
   sameDayShifts: SameDayStaffShift[];
   documentGate: StaffShiftDocumentGate;
   qualificationCategoryInputs: StaffDocumentCategoryComplianceInput[];
-  centreRequiresQualification: boolean;
-  centreEceQualificationRequirement: CentreEceQualificationRequirement;
   shift: ShiftMatchingTarget;
 };
-
-export type { ShiftQualificationEligibilityReason };
 
 /** Trim staff role for comparison with shift.roleNeeded. */
 export function normalizeStaffRoleForMatching(role: string | null | undefined): string | null {
@@ -92,9 +89,23 @@ export function staffRolesMatchForShift(
   shiftRoleNeeded: string,
   staffRole: string,
 ): boolean {
-  const required = normalizeShiftRoleNeeded(shiftRoleNeeded);
-  if (!required) return true;
-  return normalizeStaffRoleForMatching(staffRole) === required;
+  const shiftRole = normalizeShiftRole(shiftRoleNeeded);
+  if (!shiftRole) return true;
+
+  const staff = normalizeStaffRoleForMatching(staffRole);
+  if (!staff) return false;
+
+  switch (shiftRole) {
+    case 'ECA':
+      return staff === 'ECA';
+    case 'ECE':
+    case 'RECE':
+      return staff === 'ECE';
+    case 'Nanny':
+      return staff === 'Nanny';
+    default:
+      return staff === normalizeShiftRoleNeeded(shiftRoleNeeded);
+  }
 }
 
 function isOperationalOverlapShift(shift: SameDayStaffShift): boolean {
@@ -172,14 +183,12 @@ export function evaluateStaffShiftEligibility(input: StaffEligibilityInput): Shi
     reasons.push('documents_ineligible');
   }
 
-  const qualificationResult = evaluateCentreQualificationEligibility({
-    staffRole: input.staffRole,
-    centreRequiresQualification: input.centreRequiresQualification,
-    eceQualificationRequirement: input.centreEceQualificationRequirement,
+  const receGate = evaluateShiftReceEligibility({
+    shiftRoleNeeded: input.shift.roleNeeded,
     categoryInputs: input.qualificationCategoryInputs,
   });
-  if (!qualificationResult.eligible && qualificationResult.reason) {
-    reasons.push(qualificationResult.reason);
+  if (!receGate.eligible && receGate.reason) {
+    reasons.push(receGate.reason);
   }
 
   return {

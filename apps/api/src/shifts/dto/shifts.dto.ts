@@ -32,7 +32,7 @@ export class UpsertShiftDto {
   endTime!: string;
 
   @IsOptional()
-  @IsIn(['ECA', 'ECE', ''])
+  @IsIn(['ECA', 'ECE', 'RECE', ''])
   roleNeeded?: string;
 
   @IsOptional()
@@ -63,7 +63,7 @@ export class UpdateShiftDto {
   centreId?: string;
 
   @IsOptional()
-  @IsIn(['ECA', 'ECE', ''])
+  @IsIn(['ECA', 'ECE', 'RECE', 'Nanny', ''])
   roleNeeded?: string;
 
   @IsOptional()

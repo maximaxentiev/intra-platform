@@ -12,6 +12,7 @@ import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink, SectionCard } from "@/components/ui-kit";
 import { Info } from "lucide-react";
+import { NEW_SHIFT_ROLE_OPTIONS } from "@/lib/shift-role-ui";
 
 const STAFFPOINT_HELP =
   "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
@@ -107,12 +108,13 @@ function NewShift() {
           <FieldGroup legend="Requirements">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Role needed *</Label>
+                <Label>Role required *</Label>
                 <Select value={values.roleNeeded || undefined} onValueChange={(v) => set("roleNeeded", v)} required>
-                  <SelectTrigger aria-label="Role needed"><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                  <SelectTrigger aria-label="Role required"><SelectValue placeholder="Choose role..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ECA">ECA</SelectItem>
-                    <SelectItem value="ECE">ECE</SelectItem>
+                    {NEW_SHIFT_ROLE_OPTIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -26,7 +26,8 @@ export function formatShiftAssignmentTimeRange(startTime: string, endTime: strin
   return `${formatShiftAssignmentTimeDisplay(startTime)} – ${formatShiftAssignmentTimeDisplay(endTime)}`;
 }
 
+import { normalizeShiftRole } from '@intra/shared';
+
 export function normalizeShiftRoleNeeded(roleNeeded: string | null | undefined): string | null {
-  const trimmed = (roleNeeded ?? '').trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return normalizeShiftRole(roleNeeded);
 }

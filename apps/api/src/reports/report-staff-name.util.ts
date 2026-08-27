@@ -14,3 +14,9 @@ export function formatStaffReportRole(role: string | null | undefined): string {
   const trimmed = role?.trim();
   return trimmed ? trimmed : '—';
 }
+
+/** Shift role label for reports/exports — preserves RECE and legacy values. */
+export function formatShiftRoleForReport(roleNeeded: string | null | undefined): string {
+  const trimmed = roleNeeded?.trim();
+  return trimmed ? trimmed : '—';
+}

@@ -3,13 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChannelMultiSelect } from "@/components/ChannelMultiSelect";
 import { CityCombobox, validateCityField } from "@/components/CityCombobox";
 import { CENTRE_CHANNEL_OPTIONS, type CentreChannel } from "@/lib/db";
-
-export type CentreEceQualificationRequirement = "ece_or_rece" | "rece_required";
 
 export type CentreFormValues = {
   name: string;
@@ -18,8 +15,6 @@ export type CentreFormValues = {
   hourlyRate: string;
   primaryChannel: CentreChannel;
   notes: string;
-  requiresQualificationForMatching: boolean;
-  eceQualificationRequirement: CentreEceQualificationRequirement;
 };
 
 export function CentreForm({
@@ -33,8 +28,6 @@ export function CentreForm({
   initial: Partial<
     Omit<CentreFormValues, "hourlyRate"> & {
       hourlyRate?: string | null;
-      requiresQualificationForMatching?: boolean;
-      eceQualificationRequirement?: CentreEceQualificationRequirement;
     }
   >;
   secondaryChannels?: CentreChannel[];
@@ -50,8 +43,6 @@ export function CentreForm({
     hourlyRate: initial.hourlyRate != null ? String(initial.hourlyRate) : "",
     notes: initial.notes ?? "",
     primaryChannel: initial.primaryChannel ?? "email",
-    requiresQualificationForMatching: initial.requiresQualificationForMatching ?? false,
-    eceQualificationRequirement: initial.eceQualificationRequirement ?? "ece_or_rece",
   });
   const [secondary, setSecondary] = useState<CentreChannel[]>(secondaryChannels);
   const [saving, setSaving] = useState(false);
@@ -177,54 +168,6 @@ export function CentreForm({
           onChange={(e) => set("notes", e.target.value)}
           placeholder="Parking, entry, age groups, expectations..."
         />
-      </fieldset>
-
-      {/* Group 5 — shift matching qualifications */}
-      <fieldset className="space-y-4">
-        <legend className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Shift matching
-        </legend>
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-border/70 p-4">
-          <div className="space-y-1">
-            <Label htmlFor="requiresQualificationForMatching">
-              Require qualification for Staff matching
-            </Label>
-            <p className="text-[13px] text-muted-foreground">
-              When enabled, only Staff with an approved qualification that meets this Centre&apos;s
-              requirement will appear in Shift matching.
-            </p>
-          </div>
-          <Switch
-            id="requiresQualificationForMatching"
-            checked={values.requiresQualificationForMatching}
-            onCheckedChange={(checked) =>
-              setValues((prev) => ({ ...prev, requiresQualificationForMatching: checked }))
-            }
-          />
-        </div>
-        {values.requiresQualificationForMatching ? (
-          <div className="space-y-2 sm:max-w-md">
-            <Label htmlFor="eceQualificationRequirement">ECE requirement</Label>
-            <Select
-              value={values.eceQualificationRequirement}
-              onValueChange={(value) =>
-                set("eceQualificationRequirement", value as CentreEceQualificationRequirement)
-              }
-            >
-              <SelectTrigger id="eceQualificationRequirement">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ece_or_rece">ECE qualification accepted</SelectItem>
-                <SelectItem value="rece_required">RECE required</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[13px] text-muted-foreground">
-              For ECE staff, choose whether an approved ECE diploma or RECE proof satisfies this
-              centre&apos;s requirement.
-            </p>
-          </div>
-        ) : null}
       </fieldset>
 
       <div className="flex flex-col-reverse gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center">

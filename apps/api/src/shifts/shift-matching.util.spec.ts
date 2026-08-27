@@ -18,8 +18,6 @@ const SHIFT: ShiftMatchingTarget = {
   id: 'target-shift',
   centreId: 'centre-1',
   centreCity: 'Toronto',
-  centreRequiresQualification: false,
-  centreEceQualificationRequirement: 'ece_or_rece',
   shiftDate: '2026-09-15',
   startTime: '08:30:00',
   endTime: '16:30:00',
@@ -44,8 +42,6 @@ function eligibleBase(overrides: Partial<Parameters<typeof evaluateStaffShiftEli
       approved('immunizations'),
     ]),
     qualificationCategoryInputs: defaultQualificationInputs(),
-    centreRequiresQualification: false,
-    centreEceQualificationRequirement: 'ece_or_rece',
     shift: SHIFT,
     ...overrides,
   });
@@ -325,6 +321,12 @@ describe('evaluateStaffShiftEligibility — ban and role', () => {
   it('rejects role mismatch when shift specifies role', () => {
     expect(eligibleBase({ staffRole: 'ECE' }).reasons).toContain('role_mismatch');
   });
+
+  it('allows ECE staff for RECE shifts before document gate', () => {
+    expect(
+      staffRolesMatchForShift('RECE', 'ECE'),
+    ).toBe(true);
+  });
 });
 
 describe('evaluateStaffShiftEligibility — combinations', () => {
@@ -341,55 +343,44 @@ describe('evaluateStaffShiftEligibility — combinations', () => {
   });
 });
 
-describe('evaluateStaffShiftEligibility — qualifications', () => {
-  it('ignores qualifications when centre requirement is disabled', () => {
+describe('evaluateStaffShiftEligibility — shift qualification requirements', () => {
+  it('allows ECA staff without approved diploma on ECA shifts', () => {
     expect(
       eligibleBase({
         staffRole: 'ECA',
-        centreRequiresQualification: false,
+        shift: { ...SHIFT, roleNeeded: 'ECA' },
         qualificationCategoryInputs: [],
       }).eligible,
     ).toBe(true);
   });
 
-  it('blocks ECA staff without approved diploma when required', () => {
-    expect(
-      eligibleBase({
-        staffRole: 'ECA',
-        centreRequiresQualification: true,
-        qualificationCategoryInputs: [],
-      }).reasons,
-    ).toContain('qualification_required');
-  });
-
-  it('allows ECA staff with approved diploma when required', () => {
-    expect(
-      eligibleBase({
-        staffRole: 'ECA',
-        centreRequiresQualification: true,
-        qualificationCategoryInputs: [approved('eca_diploma')],
-      }).eligible,
-    ).toBe(true);
-  });
-
-  it('requires RECE proof for ECE when centre setting is rece_required', () => {
+  it('blocks ECE staff without approved RECE proof on RECE shifts', () => {
     expect(
       eligibleBase({
         staffRole: 'ECE',
-        centreRequiresQualification: true,
-        centreEceQualificationRequirement: 'rece_required',
-        qualificationCategoryInputs: [approved('ece_diploma')],
+        shift: { ...SHIFT, roleNeeded: 'RECE' },
+        qualificationCategoryInputs: [],
       }).reasons,
     ).toContain('rece_required');
   });
 
-  it('does not exempt qualification requirements for otherwise eligible staff', () => {
+  it('allows ECE staff with approved RECE proof on RECE shifts', () => {
     expect(
       eligibleBase({
-        staffRole: 'ECA',
-        centreRequiresQualification: true,
+        staffRole: 'ECE',
+        shift: { ...SHIFT, roleNeeded: 'RECE' },
+        qualificationCategoryInputs: [approved('rece_proof')],
+      }).eligible,
+    ).toBe(true);
+  });
+
+  it('does not require ECE diploma for ordinary ECE on ECE shifts', () => {
+    expect(
+      eligibleBase({
+        staffRole: 'ECE',
+        shift: { ...SHIFT, roleNeeded: 'ECE' },
         qualificationCategoryInputs: [],
       }).eligible,
-    ).toBe(false);
+    ).toBe(true);
   });
 });

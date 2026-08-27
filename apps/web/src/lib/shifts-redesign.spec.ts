@@ -217,6 +217,8 @@ describe("create shift redesign", () => {
     expect(create).toContain('toast.error("Please pick a centre")');
     expect(create).toContain('navigate({ to: "/shifts/$id", params: { id: created.id } })');
     expect(create).toContain("SearchableCentreSelect");
+    expect(create).toContain("NEW_SHIFT_ROLE_OPTIONS");
+    expect(create).not.toContain('value="Nanny"');
   });
 });
 
