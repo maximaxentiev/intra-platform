@@ -44,6 +44,10 @@ import {
   UpdateShiftDto,
   UpsertShiftDto,
 } from './dto/shifts.dto';
+import {
+  assertActiveShiftRoleForCreate,
+  assertShiftRoleUpdateAllowed,
+} from './shift-role-update.util';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -125,6 +129,7 @@ export class ShiftsService {
   }
 
   async create(dto: UpsertShiftDto, actorUserId: string) {
+    assertActiveShiftRoleForCreate(dto.roleNeeded);
     assertSameDayShiftSchedule(dto.startTime, dto.endTime);
 
     return this.db.transaction(async (tx) => {
@@ -179,6 +184,8 @@ export class ShiftsService {
       .from(shifts)
       .where(eq(shifts.id, id));
     if (!before[0]) throw new NotFoundException('Shift not found.');
+
+    assertShiftRoleUpdateAllowed(before[0].roleNeeded, dto.roleNeeded);
 
     if (dto.startTime !== undefined || dto.endTime !== undefined) {
       assertSameDayShiftSchedule(
