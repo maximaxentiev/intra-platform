@@ -58,9 +58,10 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
   const { centre } = shift;
   const showStatus = carerShiftShowsStatusBadge(shift.status);
   const location = [centre.address, centre.city].filter(Boolean).join(", ");
+  const centreNotes = centre.notes?.trim() ?? "";
 
   return (
-    <article className="mx-auto w-full max-w-lg space-y-5">
+    <article className="mx-auto w-full max-w-lg space-y-6">
       {showStatus ? (
         <div className="space-y-2">
           <CarerShiftStatusBadge status={shift.status} />
@@ -95,6 +96,17 @@ export function CarerShiftDetailContent({ shift }: CarerShiftDetailContentProps)
           <p className="min-w-0 break-words">{location}</p>
         </div>
       ) : null}
+
+      <section aria-labelledby="centre-rules-heading" className="rounded-xl border border-border bg-card p-4">
+        <h3 id="centre-rules-heading" className="text-base font-semibold text-foreground">
+          Centre rules and notes
+        </h3>
+        {centreNotes ? (
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{centreNotes}</p>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">No additional rules or notes.</p>
+        )}
+      </section>
     </article>
   );
 }
@@ -126,9 +138,9 @@ export function CarerShiftDetail({ shiftId }: CarerShiftDetailProps) {
 
 export function CarerShiftDetailBackLink() {
   return (
-    <Button asChild variant="ghost" className="h-11 min-h-11 px-0 text-muted-foreground hover:text-foreground">
+    <Button asChild variant="outline" className="h-11 min-h-11 gap-1.5 px-4 font-medium">
       <Link to="/carer/shifts">
-        <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         Back to shifts
       </Link>
     </Button>

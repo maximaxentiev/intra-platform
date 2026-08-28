@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { CarerBackButton } from "@/components/carer/CarerBackButton";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerPersonalInformationForm } from "@/components/carer/CarerPersonalInformationForm";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { carerProfileApi } from "@/lib/carer";
 import { personalProfileFromSession } from "@/lib/carer-personal-profile";
@@ -43,18 +42,9 @@ function CarerProfilePage() {
   const initial = personalProfileFromSession(profile.data);
 
   return (
-    <CarerShell
-      session={carer}
-      title="Personal information"
-      subtitle="Update your contact details."
-    >
+    <CarerShell session={carer} title="Personal information">
       <div className="mb-4">
-        <Button asChild variant="ghost" className="h-10 px-0 text-muted-foreground hover:text-foreground">
-          <Link to="/carer">
-            <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-            Back to portal
-          </Link>
-        </Button>
+        <CarerBackButton to="/carer" label="Back to portal" />
       </div>
       <CarerPersonalInformationForm initial={initial} mode="profile" />
     </CarerShell>

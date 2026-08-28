@@ -150,24 +150,27 @@ describe("carer shifts dashboard", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
     expect(home).toContain("CarerShiftsDashboardSummary");
     expect(home).not.toContain("Your assigned shifts will appear here.");
-    expect(dashboard).toContain("useCarerShiftsSummary(4)");
+    expect(dashboard).toContain("useCarerShiftsSummary(SUMMARY_FETCH_LIMIT)");
   });
 
-  it("renders centre, date, and time without redundant upcoming status badges", () => {
+  it("renders centre, date, and time via preview cards without status badges", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
-    expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
-    expect(dashboard).toContain("formatAvailabilityWindowDisplay");
-    expect(dashboard).toContain("shift.centre.name");
+    const previewCard = readSrc("components/carer/CarerShiftPreviewCard.tsx");
+    expect(dashboard).toContain("CarerShiftPreviewCard");
+    expect(previewCard).toContain("formatDashboardAvailabilityDateLabel");
+    expect(previewCard).toContain("formatAvailabilityWindowDisplay");
+    expect(previewCard).toContain("shift.centre.name");
     expect(dashboard).not.toContain("CarerShiftStatusBadge");
   });
 
-  it("shows empty state, clickable cards, and View more shifts link", () => {
+  it("shows empty state, clickable cards, and conditional View more shifts link", () => {
     const dashboard = readSrc("components/carer/CarerShiftsDashboardSummary.tsx");
-    expect(dashboard).toContain("No upcoming shifts assigned.");
-    expect(dashboard).toContain('to="/carer/shifts/$id"');
-    expect(dashboard).not.toContain("View shift details");
+    const previewCard = readSrc("components/carer/CarerShiftPreviewCard.tsx");
+    expect(dashboard).toContain("CarerShiftPreviewEmptyCard");
+    expect(previewCard).toContain('to="/carer/shifts/$id"');
     expect(dashboard).toContain('to="/carer/shifts"');
     expect(dashboard).toContain("View more shifts");
+    expect(dashboard).toContain("hasMoreShifts");
   });
 
   it("handles summary failure without crashing portal home", () => {
@@ -211,15 +214,15 @@ describe("carer shifts page", () => {
     expect(manager).toContain("setHistoryPage(1)");
   });
 
-  it("renders compact clickable shift cards without list cancel actions", () => {
+  it("renders structured clickable shift rows with view action", () => {
     const card = readSrc("components/carer/CarerShiftCard.tsx");
     const manager = readSrc("components/carer/CarerShiftsManager.tsx");
     expect(card).toContain("formatDashboardAvailabilityDateLabel");
     expect(card).toContain("formatAvailabilityWindowDisplay");
     expect(card).toContain("carerShiftShowsStatusBadge");
     expect(card).toContain("shift.centre.name");
+    expect(card).toContain("View shift");
     expect(card).toContain('to="/carer/shifts/$id"');
-    expect(card).not.toContain("View details");
     expect(card).not.toContain("shift.roleNeeded");
     expect(card).not.toContain("assignedStaffId");
     expect(card).not.toContain("cancellationReason");
@@ -294,10 +297,17 @@ describe("carer shift detail presentation", () => {
     expect(src).toContain("shift.cancellationReason");
   });
 
-  it("provides Back to shifts navigation", () => {
+  it("provides Back to shifts navigation as a button", () => {
     const src = detail();
     expect(src).toContain('to="/carer/shifts"');
     expect(src).toContain("Back to shifts");
+    expect(src).toContain('variant="outline"');
+  });
+
+  it("shows centre rules and notes on detail", () => {
+    const src = detail();
+    expect(src).toContain("Centre rules and notes");
+    expect(src).toContain("centre.notes");
   });
 });
 
@@ -415,7 +425,7 @@ describe("carer shifts read-only security", () => {
     const card = readSrc("components/carer/CarerShiftCard.tsx");
     const display = readSrc("lib/carer-shifts-display.ts");
     expect(card).toContain("carerShiftShowsStatusBadge");
-    expect(card).not.toContain("View details");
+    expect(card).toContain("View shift");
     expect(display).toContain("carerShiftShowsStatusBadge");
     expect(display).not.toContain("torontoToday");
     expect(display).not.toContain("new Date(");

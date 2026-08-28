@@ -13,6 +13,7 @@ export type ShiftRowForCarer = {
   centreName: string;
   centreAddress: string;
   centreCity: string;
+  centreNotes?: string;
 };
 
 /** Normalize stored role text; blank/whitespace becomes null for Carer DTOs. */
@@ -111,6 +112,9 @@ export function toCarerShiftSummaryDto(
       name: row.centreName,
       address: row.centreAddress,
       city: row.centreCity,
+      ...(row.centreNotes !== undefined
+        ? { notes: row.centreNotes.trim() || undefined }
+        : {}),
     },
   };
 }

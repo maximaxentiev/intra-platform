@@ -310,10 +310,10 @@ describe("carer documents UI", () => {
     expect(src).not.toMatch(/ops-expiry-vsc|expiry-\$\{category\.documentType\}.*Vulnerable/);
   });
 
-  it("renders optional qualifications section with role-based visibility", () => {
+  it("renders optional qualifications cards with role-based visibility", () => {
     const src = readSrc("components/carer/CarerDocumentsForm.tsx");
-    expect(src).toContain("Qualifications (Optional)");
-    expect(src).toContain("QUALIFICATIONS_SECTION_COPY");
+    expect(src).not.toContain("Qualifications (Optional)");
+    expect(src).not.toContain("QUALIFICATIONS_SECTION_COPY");
     expect(src).toContain("qualificationTypesForStaffRole");
     expect(src).toContain("STAFF_COMPLIANCE_DOCUMENT_TYPES");
   });

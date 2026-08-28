@@ -38,19 +38,21 @@ function ShiftsTabToggle({
     <div
       role="tablist"
       aria-label="Shift views"
-      className="inline-flex rounded-lg border bg-muted/30 p-1"
+      className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-card p-1.5"
     >
       {(["upcoming", "history"] as const).map((tab) => (
         <button
           key={tab}
           type="button"
           role="tab"
+          id={`carer-shifts-tab-${tab}`}
           aria-selected={value === tab}
+          aria-controls={`carer-shifts-panel-${tab}`}
           className={cn(
-            "min-h-11 rounded-md px-4 py-2 text-sm font-medium capitalize transition-colors",
+            "min-h-12 rounded-lg px-4 py-3 text-base font-semibold capitalize transition-colors",
             value === tab
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-primary-soft text-primary hover:bg-primary/10",
           )}
           onClick={() => onChange(tab)}
         >
@@ -110,10 +112,6 @@ function ShiftsTabPanel({
     tab === "upcoming"
       ? "No upcoming shifts assigned."
       : "No previous shifts yet.";
-  const emptySupport =
-    tab === "upcoming"
-      ? "Your assigned shifts will appear here."
-      : "Your completed and past assigned shifts will appear here.";
 
   function handlePageSizeChange(value: string) {
     onPageSizeChange(Number(value) as CarerShiftPageSize);
@@ -128,12 +126,7 @@ function ShiftsTabPanel({
       hidden={!isActive}
       className="space-y-4"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {tab === "upcoming"
-            ? "Shifts you are currently assigned to."
-            : "Completed and past assigned shifts."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Show:</span>
           <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
@@ -156,10 +149,9 @@ function ShiftsTabPanel({
       {isLoading ? <ShiftsListSkeleton /> : null}
 
       {!isLoading && !isError && (data?.items.length ?? 0) === 0 ? (
-        <div className="space-y-1 text-sm">
-          <p className="font-medium text-foreground">{emptyCopy}</p>
-          <p className="text-muted-foreground">{emptySupport}</p>
-        </div>
+        <p className="rounded-xl border border-border bg-card p-4 text-base font-medium text-foreground">
+          {emptyCopy}
+        </p>
       ) : null}
 
       {!isLoading && !isError && data && data.items.length > 0 ? (

@@ -99,6 +99,7 @@ export class StaffPortalShiftsService {
         centreName: centres.name,
         centreAddress: centres.address,
         centreCity: centres.city,
+        centreNotes: centres.notes,
       })
       .from(shifts)
       .innerJoin(centres, eq(centres.id, shifts.centreId))
@@ -122,6 +123,7 @@ export class StaffPortalShiftsService {
         centreName: row.centreName,
         centreAddress: row.centreAddress,
         centreCity: row.centreCity,
+        centreNotes: row.centreNotes,
       },
       today,
       nowTime,

@@ -2,15 +2,19 @@ import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  formatAvailabilityWindowDisplay,
-  formatDashboardAvailabilityDateLabel,
-} from "@/lib/carer-availability-dates";
+  CarerShiftPreviewCard,
+  CarerShiftPreviewEmptyCard,
+} from "@/components/carer/CarerShiftPreviewCard";
 import { useCarerShiftsSummary } from "@/lib/carer-shifts-queries";
-import { carerShiftDetailLinkLabel } from "@/lib/carer-shifts-display";
+
+const HOME_PREVIEW_LIMIT = 4;
+const SUMMARY_FETCH_LIMIT = 5;
 
 export function CarerShiftsDashboardSummary() {
-  const { data, isLoading, isError, refetch } = useCarerShiftsSummary(4);
-  const items = data?.items ?? [];
+  const { data, isLoading, isError, refetch } = useCarerShiftsSummary(SUMMARY_FETCH_LIMIT);
+  const allItems = data?.items ?? [];
+  const items = allItems.slice(0, HOME_PREVIEW_LIMIT);
+  const hasMoreShifts = allItems.length > HOME_PREVIEW_LIMIT;
 
   if (isLoading) {
     return (
@@ -23,18 +27,16 @@ export function CarerShiftsDashboardSummary() {
 
   if (isError) {
     return (
-      <div className="space-y-2 text-sm">
-        <p className="text-muted-foreground">Unable to load upcoming shifts.</p>
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 font-medium"
-          onClick={() => void refetch()}
-        >
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">Unable to load upcoming shifts.</p>
+        <Button type="button" variant="outline" className="h-11" onClick={() => void refetch()}>
           Retry
         </Button>
         <div>
-          <Link to="/carer/shifts" className="font-medium text-primary hover:underline">
+          <Link
+            to="/carer/shifts"
+            className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+          >
             View more shifts
           </Link>
         </div>
@@ -43,33 +45,27 @@ export function CarerShiftsDashboardSummary() {
   }
 
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-4">
       {items.length === 0 ? (
-        <p className="text-muted-foreground">No upcoming shifts assigned.</p>
+        <CarerShiftPreviewEmptyCard />
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((shift) => (
             <li key={shift.id}>
-              <Link
-                to="/carer/shifts/$id"
-                params={{ id: shift.id }}
-                aria-label={carerShiftDetailLinkLabel(shift)}
-                className="block rounded-lg border border-border/70 bg-card px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <p className="truncate font-semibold text-foreground">{shift.centre.name}</p>
-                <p className="truncate text-muted-foreground">
-                  {formatDashboardAvailabilityDateLabel(shift.shiftDate)} ·{" "}
-                  {formatAvailabilityWindowDisplay(shift.startTime, shift.endTime)}
-                </p>
-              </Link>
+              <CarerShiftPreviewCard shift={shift} className="h-full" />
             </li>
           ))}
         </ul>
       )}
 
-      <Link to="/carer/shifts" className="inline-block pt-1 font-medium text-primary hover:underline">
-        View more shifts
-      </Link>
+      {hasMoreShifts ? (
+        <Link
+          to="/carer/shifts"
+          className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+        >
+          View more shifts
+        </Link>
+      ) : null}
     </div>
   );
 }

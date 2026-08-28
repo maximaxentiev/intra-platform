@@ -48,6 +48,8 @@ export type CarerShiftSummaryDto = {
     name: string;
     address: string;
     city: string;
+    /** Rules, policies, and operational notes — detail responses only. */
+    notes?: string;
   };
   /** Present on detail responses when Ops cancelled the shift. */
   cancellationReason?: string | null;

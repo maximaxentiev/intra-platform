@@ -13,6 +13,7 @@ export type CarerShift = {
     name: string;
     address: string;
     city: string;
+    notes?: string;
   };
   cancellationReason?: string | null;
 };

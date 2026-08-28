@@ -132,10 +132,12 @@ describe("carer availability dashboard summary", () => {
 
   it("shows a concise preview capped at three dates with Edit availability action", () => {
     const dashboard = readSrc("components/carer/CarerAvailabilityDashboardSummary.tsx");
+    const previewCard = readSrc("components/carer/CarerAvailabilityPreviewCard.tsx");
     expect(dashboard).toContain("PREVIEW_LIMIT = 3");
+    expect(dashboard).toContain("CarerAvailabilityPreviewCard");
     expect(dashboard).toContain('to="/carer/availability"');
     expect(dashboard).toContain("Edit availability");
-    expect(dashboard).toContain("formatDashboardAvailabilityDateLabel");
+    expect(previewCard).toContain("formatDashboardAvailabilityDateLabel");
     expect(dashboard).not.toContain("View more");
     expect(dashboard).not.toContain("Remove");
     expect(dashboard).not.toContain("Trash2");

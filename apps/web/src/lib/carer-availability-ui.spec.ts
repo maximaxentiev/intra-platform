@@ -33,6 +33,7 @@ describe("carer availability UI contracts", () => {
     expect(route).toContain("CarerAvailabilityManager");
     expect(manager).toContain("CarerAvailabilityWeekView");
     expect(manager).not.toContain("CarerAvailabilityMonthView");
-    expect(route).toContain("Tell Intra when you can work.");
+    expect(route).not.toContain("Tell Intra when you can work.");
+    expect(route).toContain("CarerBackButton");
   });
 });

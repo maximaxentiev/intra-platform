@@ -39,7 +39,6 @@ import {
   formatVscRenewalDueLabel,
   mapDocumentsApiError,
   qualificationTypesForStaffRole,
-  QUALIFICATIONS_SECTION_COPY,
   STAFF_COMPLIANCE_DOCUMENT_TYPES,
   validateCategoryDraft,
   carerDocumentsApi,
@@ -337,13 +336,8 @@ export function CarerDocumentsForm({
         </div>
 
         {qualificationTypes.length > 0 ? (
-          <div className="space-y-3 border-t border-border/70 pt-4">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold">Qualifications (Optional)</h2>
-              <p className="text-sm text-muted-foreground">{QUALIFICATIONS_SECTION_COPY}</p>
-            </div>
-            <div className="space-y-4">
-              {qualificationTypes.map((type) => {
+          <div className="space-y-4 border-t border-border/70 pt-4">
+            {qualificationTypes.map((type) => {
                 const category = categoriesByType.get(type)!;
                 const meta = CARER_DOCUMENT_CATEGORY_META[type];
                 const draft = drafts[type];
@@ -370,7 +364,6 @@ export function CarerDocumentsForm({
                   />
                 );
               })}
-            </div>
           </div>
         ) : null}
 
@@ -383,8 +376,14 @@ export function CarerDocumentsForm({
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-10 rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:bg-card sm:p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="sticky bottom-0 z-10 rounded-xl border border-border bg-card/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:bg-card">
+          <div
+            className={
+              mode === "account"
+                ? "flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+                : "flex flex-col gap-2 sm:flex-row sm:items-center"
+            }
+          >
             {mode === "onboarding" ? (
               <Button
                 type="button"
@@ -399,8 +398,8 @@ export function CarerDocumentsForm({
             ) : null}
             <Button
               type="button"
-              variant="ghost"
-              className="h-11 w-full text-muted-foreground sm:order-2 sm:ml-auto sm:w-auto"
+              variant="outline"
+              className={`h-11 min-w-[8rem] px-6 ${mode === "account" ? "sm:order-1" : "sm:order-2 sm:ml-auto sm:w-auto"}`}
               disabled={busy || !isDirty}
               onClick={() => setDiscardOpen(true)}
             >
@@ -409,7 +408,7 @@ export function CarerDocumentsForm({
             <Button
               type="submit"
               variant={mode === "onboarding" ? "outline" : "default"}
-              className={`h-11 w-full sm:order-3 sm:w-auto ${mode === "account" ? "sm:ml-0" : ""}`}
+              className={`h-11 min-w-[8rem] px-6 ${mode === "account" ? "sm:order-2" : "sm:order-3 sm:w-auto"}`}
               disabled={busy || !isDirty}
             >
               {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
@@ -427,11 +426,11 @@ export function CarerDocumentsForm({
               </Button>
             ) : null}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground sm:text-right">
-            {mode === "onboarding"
-              ? "Continue to availability saves your changes and opens the availability step."
-              : "Changes are only stored once you save."}
-          </p>
+          {mode === "onboarding" ? (
+            <p className="mt-2 text-xs text-muted-foreground sm:text-right">
+              Continue to availability saves your changes and opens the availability step.
+            </p>
+          ) : null}
         </div>
 
       </form>
@@ -558,7 +557,7 @@ function CarerDocumentCategoryCard({
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <CardTitle id={`doc-title-${category.documentType}`} className="text-base leading-snug">
+              <CardTitle id={`doc-title-${category.documentType}`} className="text-lg font-bold leading-snug">
                 {meta.title}
               </CardTitle>
               <RequirementPill required={meta.required} />

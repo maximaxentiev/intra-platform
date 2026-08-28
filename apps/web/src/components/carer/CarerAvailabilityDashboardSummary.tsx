@@ -1,9 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import {
-  formatAvailabilityWindowDisplay,
-  formatDashboardAvailabilityDateLabel,
-} from "@/lib/carer-availability-dates";
+import { CarerAvailabilityPreviewCard } from "@/components/carer/CarerAvailabilityPreviewCard";
 import { useCarerUpcomingAvailability } from "@/lib/carer-availability-upcoming";
 
 const PREVIEW_LIMIT = 3;
@@ -24,44 +21,45 @@ export function CarerAvailabilityDashboardSummary() {
 
   if (isError) {
     return (
-      <div className="space-y-2 text-sm">
-        <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">Could not load upcoming availability.</p>
+        <Link
+          to="/carer/availability"
+          className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+        >
           Edit availability
         </Link>
-        <p className="text-muted-foreground">Could not load upcoming availability.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-4">
       {!hasUpcoming ? (
         <>
-          <p className="text-muted-foreground">No upcoming availability added.</p>
-          <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+          <p className="rounded-xl border border-border bg-card p-4 text-base font-medium text-foreground">
+            No upcoming availability added.
+          </p>
+          <Link
+            to="/carer/availability"
+            className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+          >
             Edit availability
           </Link>
         </>
       ) : (
         <>
-          <ul className="space-y-1.5">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {previewItems.map((item) => (
-              <li
-                key={item.calendarDate}
-                className="rounded-lg border border-border/70 bg-card px-3 py-2"
-              >
-                <p className="font-medium text-foreground">
-                  {formatDashboardAvailabilityDateLabel(item.calendarDate)}
-                </p>
-                <p className="text-muted-foreground">
-                  {item.windows
-                    .map((window) => formatAvailabilityWindowDisplay(window.startTime, window.endTime))
-                    .join(", ")}
-                </p>
+              <li key={item.calendarDate}>
+                <CarerAvailabilityPreviewCard calendarDate={item.calendarDate} windows={item.windows} />
               </li>
             ))}
           </ul>
-          <Link to="/carer/availability" className="font-medium text-primary hover:underline">
+          <Link
+            to="/carer/availability"
+            className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+          >
             Edit availability
           </Link>
         </>

@@ -5,7 +5,6 @@ import { CarerOnboardingCompleteBanner } from "@/components/carer/CarerOnboardin
 import { CarerAvailabilityDashboardSummary } from "@/components/carer/CarerAvailabilityDashboardSummary";
 import { CarerNeedsActionSummary } from "@/components/carer/CarerNeedsActionSummary";
 import { CarerShiftsDashboardSummary } from "@/components/carer/CarerShiftsDashboardSummary";
-import { carerGreeting } from "@/lib/carer-portal-nav";
 import { readOnboardingJustCompleted } from "@/lib/carer-onboarding-completion";
 import { requireCarerSessionForPortal } from "@/lib/carer-route-guards";
 
@@ -25,25 +24,21 @@ function CarerHomePage() {
   const showOnboardingCompleteBanner = readOnboardingJustCompleted(locationState);
 
   return (
-    <CarerShell
-      session={carer}
-      title={carerGreeting(carer.legalFirstName)}
-      subtitle="Here's what's coming up."
-    >
+    <CarerShell session={carer} title="Home">
       <div className="space-y-6">
         {showOnboardingCompleteBanner ? <CarerOnboardingCompleteBanner /> : null}
 
         <CarerNeedsActionSummary session={carer} />
 
         <section aria-labelledby="home-upcoming-shifts">
-          <h2 id="home-upcoming-shifts" className="mb-2 text-base font-semibold text-foreground">
+          <h2 id="home-upcoming-shifts" className="mb-3 text-lg font-semibold text-foreground">
             Upcoming shifts
           </h2>
           <CarerShiftsDashboardSummary />
         </section>
 
         <section aria-labelledby="home-availability">
-          <h2 id="home-availability" className="mb-2 text-base font-semibold text-foreground">
+          <h2 id="home-availability" className="mb-3 text-lg font-semibold text-foreground">
             Availability
           </h2>
           <CarerAvailabilityDashboardSummary />

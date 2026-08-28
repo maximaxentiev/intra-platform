@@ -199,21 +199,88 @@ export function CarerPersonalInformationForm({
       <form onSubmit={handleSave} className="space-y-4 min-w-0 overflow-x-hidden">
         <Card className="min-w-0">
           <CardHeader className="gap-1 pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-base">Your details</CardTitle>
-              {isDirty ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                  Unsaved changes
-                </span>
-              ) : null}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              All fields are required unless noted. We use these details to contact you about
-              shifts.
-            </p>
+            {mode !== "profile" ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">Your details</CardTitle>
+                {isDirty ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
+                    Unsaved changes
+                  </span>
+                ) : null}
+              </div>
+            ) : isDirty ? (
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
+                Unsaved changes
+              </span>
+            ) : null}
+            {mode !== "profile" ? (
+              <p className="text-sm text-muted-foreground">
+                All fields are required unless noted. We use these details to contact you about
+                shifts.
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-6">
+            {mode === "profile" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  id="legalFirstName"
+                  label="First name"
+                  autoComplete="given-name"
+                  value={values.legalFirstName}
+                  error={fieldErrors.legalFirstName}
+                  onChange={(v) => setField("legalFirstName", v)}
+                />
+                <Field
+                  id="legalLastName"
+                  label="Last name"
+                  autoComplete="family-name"
+                  value={values.legalLastName}
+                  error={fieldErrors.legalLastName}
+                  onChange={(v) => setField("legalLastName", v)}
+                />
+                <Field
+                  id="email"
+                  label="Email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={values.email}
+                  error={fieldErrors.email}
+                  onChange={(v) => setField("email", v)}
+                />
+                <Field
+                  id="phone"
+                  label="Phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={values.phone}
+                  error={fieldErrors.phone}
+                  onChange={(v) => setField("phone", v)}
+                />
+                <Field
+                  id="address"
+                  label="Address"
+                  autoComplete="street-address"
+                  className="sm:col-span-2"
+                  value={values.address}
+                  error={fieldErrors.address}
+                  onChange={(v) => setField("address", v)}
+                />
+                <CityCombobox
+                  id="city"
+                  label="City"
+                  value={values.city}
+                  onChange={(v) => setField("city", v)}
+                  error={fieldErrors.city}
+                  className="sm:col-span-2"
+                />
+              </div>
+            ) : (
+              <>
             <FieldGroup title="Legal name">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
@@ -282,6 +349,8 @@ export function CarerPersonalInformationForm({
                 />
               </div>
             </FieldGroup>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -324,7 +393,7 @@ export function CarerPersonalInformationForm({
           ) : null}
           <Button
             type="submit"
-            variant="outline"
+            variant={mode === "profile" ? "default" : "outline"}
             className="h-11 w-full sm:order-1 sm:w-auto"
             disabled={loading}
           >

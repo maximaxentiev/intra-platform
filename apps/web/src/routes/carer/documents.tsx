@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { CarerBackButton } from "@/components/carer/CarerBackButton";
 import { CarerShell } from "@/components/carer/CarerShell";
 import { CarerDocumentsForm } from "@/components/carer/CarerDocumentsForm";
-import { Button } from "@/components/ui/button";
 import { carerDocumentsApi } from "@/lib/carer-documents";
 import { requireCarerSessionForPortal } from "@/lib/carer-route-guards";
 
@@ -25,18 +24,9 @@ function CarerAccountDocumentsPage() {
   });
 
   return (
-    <CarerShell
-      session={carer}
-      title="Documents"
-      subtitle="Upload the documents Intra needs for your account."
-    >
+    <CarerShell session={carer} title="Documents">
       <div className="mb-4">
-        <Button asChild variant="ghost" className="h-10 px-0 text-muted-foreground hover:text-foreground">
-          <Link to="/carer">
-            <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-            Back to portal
-          </Link>
-        </Button>
+        <CarerBackButton to="/carer" label="Back to portal" />
       </div>
       <CarerDocumentsForm
         mode="account"

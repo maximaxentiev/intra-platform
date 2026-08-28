@@ -82,7 +82,6 @@ describe("carer portal home", () => {
     expect(home).toContain("CarerNeedsActionSummary");
     expect(home).toContain("CarerShiftsDashboardSummary");
     expect(home).toContain("CarerAvailabilityDashboardSummary");
-    expect(home).toContain("carerGreeting");
     expect(home.indexOf("<CarerNeedsActionSummary")).toBeLessThan(
       home.indexOf("<CarerShiftsDashboardSummary"),
     );
@@ -93,10 +92,11 @@ describe("carer portal home", () => {
     expect(home).not.toContain("compliance documents");
   });
 
-  it("greets carers by legal first name", () => {
+  it("uses a simple Home title without greeting copy", () => {
     const home = readSrc("routes/carer/index.tsx");
-    expect(home).toContain("carer.legalFirstName");
-    expect(home).not.toContain("displayName");
+    expect(home).toContain('title="Home"');
+    expect(home).not.toContain("carerGreeting");
+    expect(home).not.toContain("Here's what's coming up.");
   });
 });
 

@@ -283,6 +283,50 @@ describe('StaffPortalShiftsService summary', () => {
 });
 
 describe('StaffPortalShiftsService getDetail', () => {
+  it('returns own assigned shift with centre rules on detail', async () => {
+    const { service, db } = createHarness();
+    db.setDetailRows([
+      {
+        id: SHIFT_A1,
+        shiftDate: '2026-08-20',
+        startTime: '08:30:00',
+        endTime: '16:30:00',
+        roleNeeded: 'ECA',
+        status: 'filled',
+        centreName: 'ABC Child Care',
+        centreAddress: '123 Main St',
+        centreCity: 'Toronto',
+        centreNotes: 'Use rear entrance.',
+      },
+    ]);
+
+    const result = await service.getDetail(SESSION_A, SHIFT_A1);
+    expect(result.id).toBe(SHIFT_A1);
+    expect(result.centre.name).toBe('ABC Child Care');
+    expect(result.centre.notes).toBe('Use rear entrance.');
+  });
+
+  it('omits blank centre notes on detail', async () => {
+    const { service, db } = createHarness();
+    db.setDetailRows([
+      {
+        id: SHIFT_A1,
+        shiftDate: '2026-08-20',
+        startTime: '08:30:00',
+        endTime: '16:30:00',
+        roleNeeded: 'ECA',
+        status: 'filled',
+        centreName: 'ABC Child Care',
+        centreAddress: '123 Main St',
+        centreCity: 'Toronto',
+        centreNotes: '   ',
+      },
+    ]);
+
+    const result = await service.getDetail(SESSION_A, SHIFT_A1);
+    expect(result.centre.notes).toBeUndefined();
+  });
+
   it('returns own assigned shift', async () => {
     const { service, db } = createHarness();
     db.setDetailRows([
@@ -357,6 +401,7 @@ describe('StaffPortalShiftsService DTO leakage', () => {
       address: '123 Main St',
       city: 'Toronto',
     });
+    expect(item.centre).not.toHaveProperty('notes');
     expect(JSON.stringify(item)).not.toContain('internal');
     expect(JSON.stringify(item)).not.toContain('secret');
   });
