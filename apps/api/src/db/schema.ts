@@ -214,6 +214,8 @@ export const staffAccounts = pgTable(
     /** Availability onboarding step explicitly completed (distinct from final onboarding). */
     availabilityCompletedAt: timestamp('availability_completed_at', { withTimezone: true }),
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+    /** Set when the carer clicks Start onboarding; null until onboarding begins. */
+    onboardingStartedAt: timestamp('onboarding_started_at', { withTimezone: true }),
     /** Monday anchor for guided two-week availability onboarding (Toronto calendar). */
     availabilityOnboardingWeek1Start: date('availability_onboarding_week1_start'),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),

@@ -36,6 +36,7 @@ export function carerSessionFixture(
     address: "1",
     city: "C",
     ...overrides,
+    onboardingStartedAt: overrides.onboardingStartedAt ?? null,
     profileComplete,
     documentsComplete,
     availabilityComplete,

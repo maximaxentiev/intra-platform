@@ -42,6 +42,7 @@ import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authent
 import { Route as CarerShiftsIdRouteImport } from './routes/carer/shifts.$id'
 import { Route as CarerResetPasswordTokenRouteImport } from './routes/carer/reset-password.$token'
 import { Route as CarerOnboardingProfileRouteImport } from './routes/carer/onboarding/profile'
+import { Route as CarerOnboardingIntroRouteImport } from './routes/carer/onboarding/intro'
 import { Route as CarerOnboardingDocumentsRouteImport } from './routes/carer/onboarding/documents'
 import { Route as CarerOnboardingAvailabilityRouteImport } from './routes/carer/onboarding/availability'
 import { Route as CarerInviteTokenRouteImport } from './routes/carer/invite.$token'
@@ -227,6 +228,11 @@ const CarerOnboardingProfileRoute = CarerOnboardingProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => CarerOnboardingRouteRoute,
 } as any)
+const CarerOnboardingIntroRoute = CarerOnboardingIntroRouteImport.update({
+  id: '/intro',
+  path: '/intro',
+  getParentRoute: () => CarerOnboardingRouteRoute,
+} as any)
 const CarerOnboardingDocumentsRoute =
   CarerOnboardingDocumentsRouteImport.update({
     id: '/documents',
@@ -350,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/intro': typeof CarerOnboardingIntroRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/intro': typeof CarerOnboardingIntroRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/carer/invite/$token': typeof CarerInviteTokenRoute
   '/carer/onboarding/availability': typeof CarerOnboardingAvailabilityRoute
   '/carer/onboarding/documents': typeof CarerOnboardingDocumentsRoute
+  '/carer/onboarding/intro': typeof CarerOnboardingIntroRoute
   '/carer/onboarding/profile': typeof CarerOnboardingProfileRoute
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
     | '/carer/invite/$token'
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
+    | '/carer/onboarding/intro'
     | '/carer/onboarding/profile'
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/carer/invite/$token'
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
+    | '/carer/onboarding/intro'
     | '/carer/onboarding/profile'
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/carer/invite/$token'
     | '/carer/onboarding/availability'
     | '/carer/onboarding/documents'
+    | '/carer/onboarding/intro'
     | '/carer/onboarding/profile'
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
@@ -836,6 +848,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CarerOnboardingProfileRouteImport
       parentRoute: typeof CarerOnboardingRouteRoute
     }
+    '/carer/onboarding/intro': {
+      id: '/carer/onboarding/intro'
+      path: '/intro'
+      fullPath: '/carer/onboarding/intro'
+      preLoaderRoute: typeof CarerOnboardingIntroRouteImport
+      parentRoute: typeof CarerOnboardingRouteRoute
+    }
     '/carer/onboarding/documents': {
       id: '/carer/onboarding/documents'
       path: '/documents'
@@ -1057,6 +1076,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 interface CarerOnboardingRouteRouteChildren {
   CarerOnboardingAvailabilityRoute: typeof CarerOnboardingAvailabilityRoute
   CarerOnboardingDocumentsRoute: typeof CarerOnboardingDocumentsRoute
+  CarerOnboardingIntroRoute: typeof CarerOnboardingIntroRoute
   CarerOnboardingProfileRoute: typeof CarerOnboardingProfileRoute
   CarerOnboardingIndexRoute: typeof CarerOnboardingIndexRoute
 }
@@ -1064,6 +1084,7 @@ interface CarerOnboardingRouteRouteChildren {
 const CarerOnboardingRouteRouteChildren: CarerOnboardingRouteRouteChildren = {
   CarerOnboardingAvailabilityRoute: CarerOnboardingAvailabilityRoute,
   CarerOnboardingDocumentsRoute: CarerOnboardingDocumentsRoute,
+  CarerOnboardingIntroRoute: CarerOnboardingIntroRoute,
   CarerOnboardingProfileRoute: CarerOnboardingProfileRoute,
   CarerOnboardingIndexRoute: CarerOnboardingIndexRoute,
 }

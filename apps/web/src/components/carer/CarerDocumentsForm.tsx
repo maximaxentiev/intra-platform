@@ -53,6 +53,7 @@ import {
   RequirementPill,
   UnsavedPill,
 } from "@/components/documents/DocumentStatusPills";
+import { CarerOnboardingDocumentCard } from "@/components/carer/CarerOnboardingDocumentCard";
 import { cn } from "@/lib/utils";
 import { carerDocumentCarerFacingStatus } from "@/lib/carer-documents";
 
@@ -94,6 +95,7 @@ export function CarerDocumentsForm({
   const [discardOpen, setDiscardOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
   const fileInputs = useRef<Partial<Record<StaffDocumentType, HTMLInputElement | null>>>({});
+  const dateSaveTimers = useRef<Partial<Record<StaffDocumentType, ReturnType<typeof setTimeout>>>>({});
 
   useEffect(() => {
     if (!documents) return;
@@ -152,6 +154,95 @@ export function CarerDocumentsForm({
     setCategoryErrors({});
     setFormError(null);
     setDiscardOpen(false);
+  }
+
+  async function saveCategoryImmediate(type: StaffDocumentType, nextDrafts = drafts): Promise<boolean> {
+    if (!documents) return false;
+    const category = categoriesByType.get(type);
+    const validationError = validateCategoryDraft(type, nextDrafts[type], category?.files ?? []);
+    if (validationError) {
+      setCategoryErrors((prev) => ({ ...prev, [type]: validationError }));
+      return false;
+    }
+    try {
+      await carerDocumentsApi.saveCategory(type, buildCategorySaveFormData(type, nextDrafts[type]));
+      await onRefresh();
+      setCategoryErrors((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      return true;
+    } catch (err) {
+      setCategoryErrors((prev) => ({
+        ...prev,
+        [type]: mapDocumentsApiError(err, "Could not save this document."),
+      }));
+      return false;
+    }
+  }
+
+  function scheduleOnboardingDateSave(type: StaffDocumentType, nextDrafts: Record<StaffDocumentType, CategoryDraft>) {
+    if (mode !== "onboarding") return;
+    const existing = dateSaveTimers.current[type];
+    if (existing) clearTimeout(existing);
+    dateSaveTimers.current[type] = setTimeout(() => {
+      void saveCategoryImmediate(type, nextDrafts);
+    }, 600);
+  }
+
+  async function handleOnboardingFilesSelected(type: StaffDocumentType, fileList: FileList | null) {
+    if (!fileList?.length) return;
+    const incoming = Array.from(fileList);
+    const nextDraft = { ...drafts[type], newFiles: [...drafts[type].newFiles, ...incoming] };
+    const nextDrafts = { ...drafts, [type]: nextDraft };
+    setDrafts(nextDrafts);
+    setCategoryErrors((prev) => {
+      const next = { ...prev };
+      delete next[type];
+      return next;
+    });
+    const input = fileInputs.current[type];
+    if (input) input.value = "";
+    setSaving(true);
+    await saveCategoryImmediate(type, nextDrafts);
+    setSaving(false);
+  }
+
+  async function handleOnboardingRemoveNewFile(type: StaffDocumentType, index: number) {
+    const nextDraft = {
+      ...drafts[type],
+      newFiles: drafts[type].newFiles.filter((_, i) => i !== index),
+    };
+    const nextDrafts = { ...drafts, [type]: nextDraft };
+    setDrafts(nextDrafts);
+    setSaving(true);
+    await saveCategoryImmediate(type, nextDrafts);
+    setSaving(false);
+  }
+
+  async function handleOnboardingRemoveRetainedFile(type: StaffDocumentType, fileId: string) {
+    const nextDraft = {
+      ...drafts[type],
+      retainFileIds: drafts[type].retainFileIds.filter((id) => id !== fileId),
+    };
+    const nextDrafts = { ...drafts, [type]: nextDraft };
+    setDrafts(nextDrafts);
+    setSaving(true);
+    await saveCategoryImmediate(type, nextDrafts);
+    setSaving(false);
+  }
+
+  function handleOnboardingProcessedDateChange(type: StaffDocumentType, value: string) {
+    const nextDrafts = { ...drafts, [type]: { ...drafts[type], processedDate: value } };
+    setDrafts(nextDrafts);
+    scheduleOnboardingDateSave(type, nextDrafts);
+  }
+
+  function handleOnboardingExpiryDateChange(type: StaffDocumentType, value: string) {
+    const nextDrafts = { ...drafts, [type]: { ...drafts[type], expiryDate: value } };
+    setDrafts(nextDrafts);
+    scheduleOnboardingDateSave(type, nextDrafts);
   }
 
   async function saveDirtyCategories(): Promise<boolean> {
@@ -280,90 +371,84 @@ export function CarerDocumentsForm({
 
   const qualificationTypes = qualificationTypesForStaffRole(documents.staffRole);
 
+  const renderDocumentCard = (type: StaffDocumentType) => {
+    const category = categoriesByType.get(type)!;
+    const meta = CARER_DOCUMENT_CATEGORY_META[type];
+    const draft = drafts[type];
+    const dirty = categoryDraftDirty(draft, savedDrafts[type], type);
+    const commonProps = {
+      category,
+      draft,
+      error: categoryErrors[type],
+      meta,
+      viewingFileId,
+      disabled: busy,
+      fileInputRef: (el: HTMLInputElement | null) => {
+        fileInputs.current[type] = el;
+      },
+      onViewFile: (fileId: string) => void handleViewFile(type, fileId),
+    };
+
+    if (mode === "onboarding") {
+      return (
+        <CarerOnboardingDocumentCard
+          key={type}
+          {...commonProps}
+          onProcessedDateChange={(value) => handleOnboardingProcessedDateChange(type, value)}
+          onExpiryDateChange={(value) => handleOnboardingExpiryDateChange(type, value)}
+          onFilesSelected={(files) => void handleOnboardingFilesSelected(type, files)}
+          onRemoveNewFile={(index) => void handleOnboardingRemoveNewFile(type, index)}
+          onRemoveRetainedFile={(fileId) => void handleOnboardingRemoveRetainedFile(type, fileId)}
+        />
+      );
+    }
+
+    return (
+      <CarerDocumentCategoryCard
+        key={type}
+        {...commonProps}
+        dirty={dirty}
+        onProcessedDateChange={(value) => updateDraft(type, { processedDate: value })}
+        onExpiryDateChange={(value) => updateDraft(type, { expiryDate: value })}
+        onFilesSelected={(files) => handleFilesSelected(type, files)}
+        onRemoveNewFile={(index) => removeNewFile(type, index)}
+        onRemoveRetainedFile={(fileId) => removeRetainedFile(type, fileId)}
+      />
+    );
+  };
+
   return (
     <>
-      <form onSubmit={(e) => void handleSave(e)} className="space-y-4 min-w-0 overflow-x-hidden">
-        <div className="flex items-center justify-end gap-2">
-          {mode === "onboarding" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="mr-auto h-10 justify-self-start px-0 text-muted-foreground hover:text-foreground"
-              disabled={busy}
-              onClick={handleBackRequest}
-            >
-              <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-              Personal Information
-            </Button>
-          ) : null}
-          {isDirty ? (
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warning" />
-              Unsaved changes
-            </span>
-          ) : null}
-        </div>
-
+      <form
+        id={mode === "onboarding" ? "carer-onboarding-documents-form" : undefined}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (mode === "onboarding") {
+            void handleNext();
+          } else {
+            void handleSave(e);
+          }
+        }}
+        className="space-y-4 min-w-0 overflow-x-hidden"
+      >
+        {mode !== "onboarding" ? (
+          <div className="flex items-center justify-end gap-2">
+            {isDirty ? (
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warning" />
+                Unsaved changes
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="space-y-4">
-          {STAFF_COMPLIANCE_DOCUMENT_TYPES.map((type) => {
-            const category = categoriesByType.get(type)!;
-            const meta = CARER_DOCUMENT_CATEGORY_META[type];
-            const draft = drafts[type];
-            const dirty = categoryDraftDirty(draft, savedDrafts[type], type);
-            return (
-              <CarerDocumentCategoryCard
-                key={type}
-                category={category}
-                draft={draft}
-                dirty={dirty}
-                error={categoryErrors[type]}
-                meta={meta}
-                viewingFileId={viewingFileId}
-                disabled={busy}
-                fileInputRef={(el) => {
-                  fileInputs.current[type] = el;
-                }}
-                onProcessedDateChange={(value) => updateDraft(type, { processedDate: value })}
-                onExpiryDateChange={(value) => updateDraft(type, { expiryDate: value })}
-                onFilesSelected={(files) => handleFilesSelected(type, files)}
-                onRemoveNewFile={(index) => removeNewFile(type, index)}
-                onRemoveRetainedFile={(fileId) => removeRetainedFile(type, fileId)}
-                onViewFile={(fileId) => void handleViewFile(type, fileId)}
-              />
-            );
-          })}
+          {STAFF_COMPLIANCE_DOCUMENT_TYPES.map((type) => renderDocumentCard(type))}
         </div>
 
         {qualificationTypes.length > 0 ? (
-          <div className="space-y-4 border-t border-border/70 pt-4">
-            {qualificationTypes.map((type) => {
-                const category = categoriesByType.get(type)!;
-                const meta = CARER_DOCUMENT_CATEGORY_META[type];
-                const draft = drafts[type];
-                const dirty = categoryDraftDirty(draft, savedDrafts[type], type);
-                return (
-                  <CarerDocumentCategoryCard
-                    key={type}
-                    category={category}
-                    draft={draft}
-                    dirty={dirty}
-                    error={categoryErrors[type]}
-                    meta={meta}
-                    viewingFileId={viewingFileId}
-                    disabled={busy}
-                    fileInputRef={(el) => {
-                      fileInputs.current[type] = el;
-                    }}
-                    onProcessedDateChange={(value) => updateDraft(type, { processedDate: value })}
-                    onExpiryDateChange={(value) => updateDraft(type, { expiryDate: value })}
-                    onFilesSelected={(files) => handleFilesSelected(type, files)}
-                    onRemoveNewFile={(index) => removeNewFile(type, index)}
-                    onRemoveRetainedFile={(fileId) => removeRetainedFile(type, fileId)}
-                    onViewFile={(fileId) => void handleViewFile(type, fileId)}
-                  />
-                );
-              })}
+          <div className={mode === "onboarding" ? "space-y-4" : "space-y-4 border-t border-border/70 pt-4"}>
+            {qualificationTypes.map((type) => renderDocumentCard(type))}
           </div>
         ) : null}
 
@@ -376,26 +461,14 @@ export function CarerDocumentsForm({
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-10 rounded-xl border border-border bg-card/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:bg-card">
+        {mode !== "onboarding" ? (
           <div
             className={
               mode === "account"
-                ? "flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+                ? "sticky bottom-0 z-10 flex flex-col items-stretch justify-center gap-3 rounded-xl border border-border bg-card/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:static sm:flex-row sm:items-center sm:bg-card"
                 : "flex flex-col gap-2 sm:flex-row sm:items-center"
             }
           >
-            {mode === "onboarding" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-11 w-full justify-center text-muted-foreground hover:text-foreground sm:order-1 sm:w-auto sm:justify-start"
-                disabled={busy}
-                onClick={handleBackRequest}
-              >
-                <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-                Back
-              </Button>
-            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -407,32 +480,15 @@ export function CarerDocumentsForm({
             </Button>
             <Button
               type="submit"
-              variant={mode === "onboarding" ? "outline" : "default"}
+              variant={mode === "account" ? "default" : "outline"}
               className={`h-11 min-w-[8rem] px-6 ${mode === "account" ? "sm:order-2" : "sm:order-3 sm:w-auto"}`}
               disabled={busy || !isDirty}
             >
               {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
               {saving ? "Saving…" : "Save"}
             </Button>
-            {mode === "onboarding" ? (
-              <Button
-                type="button"
-                className="h-11 w-full font-medium sm:order-4 sm:w-auto"
-                disabled={busy}
-                onClick={() => void handleNext()}
-              >
-                {advancing ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-                Continue to availability
-              </Button>
-            ) : null}
           </div>
-          {mode === "onboarding" ? (
-            <p className="mt-2 text-xs text-muted-foreground sm:text-right">
-              Continue to availability saves your changes and opens the availability step.
-            </p>
-          ) : null}
-        </div>
-
+        ) : null}
       </form>
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>

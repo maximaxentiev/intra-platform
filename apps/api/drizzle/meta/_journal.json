@@ -141,6 +141,13 @@
       "when": 1788000000000,
       "tag": "0019_ops_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788100000000,
+      "tag": "0020_staff_onboarding_started_at",
+      "breakpoints": true
     }
   ]
 }

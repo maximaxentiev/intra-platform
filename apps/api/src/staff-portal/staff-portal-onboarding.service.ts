@@ -30,6 +30,51 @@ export class StaffPortalOnboardingService {
     return buildStaffPortalOnboardingStatus(account);
   }
 
+  /** Marks onboarding as started from the pre-onboarding introduction screen. Idempotent. */
+  async startOnboarding(
+    session: StaffSessionPayload,
+  ): Promise<StaffPortalOnboardingStatusDto> {
+    const account = await this.loadActiveAccount(session);
+
+    if (account.onboardingCompletedAt) {
+      return buildStaffPortalOnboardingStatus(account);
+    }
+
+    if (account.onboardingStartedAt) {
+      return buildStaffPortalOnboardingStatus(account);
+    }
+
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      const locked = await this.loadAccountForUpdateTx(tx, session.accountId, session.staffId);
+
+      if (locked.onboardingCompletedAt || locked.onboardingStartedAt) {
+        return;
+      }
+
+      await tx
+        .update(staffAccounts)
+        .set({
+          onboardingStartedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(staffAccounts.id, locked.id));
+
+      await this.audit.record(
+        {
+          staffId: locked.staffId,
+          staffAccountId: locked.id,
+          eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingStarted,
+          detail: { source: 'carer_portal' },
+        },
+        tx,
+      );
+    });
+
+    const refreshed = await this.loadActiveAccount(session);
+    return buildStaffPortalOnboardingStatus(refreshed);
+  }
+
   /** Marks the guided availability onboarding step complete. Does not finalize onboarding. */
   async completeAvailabilityStep(
     session: StaffSessionPayload,

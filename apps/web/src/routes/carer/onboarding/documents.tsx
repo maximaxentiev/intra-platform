@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
-import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
-import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
+import { Button } from "@/components/ui/button";
+import {
+  CarerOnboardingStepShell,
+  ONBOARDING_STEP_2_INSTRUCTIONS,
+  ONBOARDING_STEP_2_TITLE,
+} from "@/components/carer/CarerOnboardingStepShell";
 import { CarerDocumentsForm } from "@/components/carer/CarerDocumentsForm";
 import { carerAuthApi } from "@/lib/carer";
 import { carerDocumentsApi } from "@/lib/carer-documents";
@@ -33,22 +36,38 @@ function CarerOnboardingDocumentsPage() {
   }
 
   return (
-    <CarerOnboardingHubShell
+    <CarerOnboardingStepShell
       session={carer}
-      title="Documents"
-      subtitle="Upload the documents Intra needs to review before you can be considered fully compliant for shifts."
+      title={ONBOARDING_STEP_2_TITLE}
+      instructions={ONBOARDING_STEP_2_INSTRUCTIONS}
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
+            onClick={() => navigate({ to: "/carer/onboarding/profile" })}
+          >
+            Go back
+          </Button>
+          <Button
+            type="submit"
+            form="carer-onboarding-documents-form"
+            className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
+          >
+            Continue to final step
+          </Button>
+        </>
+      }
     >
-      <CarerOnboardingShell activeStep={2} session={carer}>
-        <CarerOnboardingHomeLink />
-        <CarerDocumentsForm
-          mode="onboarding"
-          documents={documents.data}
-          isLoading={documents.isLoading}
-          step2Complete={carer.documentsComplete}
-          onRefresh={() => documents.refetch()}
-          onStepComplete={() => void handleStepComplete()}
-        />
-      </CarerOnboardingShell>
-    </CarerOnboardingHubShell>
+      <CarerDocumentsForm
+        mode="onboarding"
+        documents={documents.data}
+        isLoading={documents.isLoading}
+        step2Complete={carer.documentsComplete}
+        onRefresh={() => documents.refetch()}
+        onStepComplete={() => void handleStepComplete()}
+      />
+    </CarerOnboardingStepShell>
   );
 }

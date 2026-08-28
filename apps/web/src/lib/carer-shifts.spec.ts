@@ -264,7 +264,7 @@ describe("carer shift detail route", () => {
     const layout = readSrc("routes/carer/shifts.tsx");
     expect(layout).toContain("requireCarerSessionForPortal");
     expect(guards).toContain("onboardingComplete(session)");
-    expect(guards).toContain("CARER_ONBOARDING_HUB_PATH");
+    expect(guards).toContain("carerOnboardingResumePath");
   });
 });
 

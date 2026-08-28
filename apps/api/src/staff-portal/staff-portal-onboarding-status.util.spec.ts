@@ -10,6 +10,7 @@ describe('staff-portal-onboarding-status.util', () => {
     documentsCompletedAt: new Date('2026-01-02T12:00:00.000Z'),
     availabilityCompletedAt: null as Date | null,
     onboardingCompletedAt: null as Date | null,
+    onboardingStartedAt: new Date('2026-01-01T10:00:00.000Z'),
     onboardingStep: 3,
   };
 
@@ -60,6 +61,7 @@ describe('staff-portal-onboarding-status.util', () => {
       documentsCompletedAt: null,
       availabilityCompletedAt: null,
       onboardingCompletedAt: null,
+      onboardingStartedAt: null,
       onboardingStep: 3,
     });
     expect(status.documentsComplete).toBe(false);

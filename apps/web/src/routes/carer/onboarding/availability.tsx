@@ -1,21 +1,28 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
-import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
-import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  CarerOnboardingStepShell,
+  ONBOARDING_STEP_3_INSTRUCTIONS,
+  ONBOARDING_STEP_3_TITLE,
+} from "@/components/carer/CarerOnboardingStepShell";
 import {
   CarerAvailabilityOnboardingWizard,
   CarerAvailabilityOnboardingWizardSkeleton,
 } from "@/components/carer/CarerAvailabilityOnboardingWizard";
+import { CarerAvailabilityLoadError } from "@/components/carer/CarerAvailabilityShared";
 import { carerAuthApi } from "@/lib/carer";
+import { carerOnboardingApi } from "@/lib/carer-onboarding-api";
+import type { CarerOnboardingCompletionLocationState } from "@/lib/carer-onboarding-completion";
+import { mapOnboardingCompleteError } from "@/lib/carer-onboarding-hub";
 import { assertOnboardingStepAccess } from "@/lib/carer-route-guards";
-import { CARER_ONBOARDING_HUB_PATH } from "@/lib/carer-onboarding-hub";
 import {
   CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
   carerAvailabilityApi,
   mapAvailabilityApiError,
 } from "@/lib/carer-availability";
-import { CarerAvailabilityLoadError } from "@/components/carer/CarerAvailabilityShared";
 
 export const Route = createFileRoute("/carer/onboarding/availability")({
   ssr: false,
@@ -29,6 +36,7 @@ function CarerOnboardingAvailabilityPage() {
   const { carer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
+  const [completing, setCompleting] = useState(false);
 
   const onboardingState = useQuery({
     queryKey: CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
@@ -45,46 +53,84 @@ function CarerOnboardingAvailabilityPage() {
     ? mapAvailabilityApiError(onboardingState.error, "Could not load your onboarding availability.")
     : null;
 
-  async function handleAvailabilityStepComplete() {
-    await carerAuthApi.session();
-    await router.invalidate();
-    navigate({ to: CARER_ONBOARDING_HUB_PATH, replace: true });
+  async function handleCompleteOnboarding() {
+    setCompleting(true);
+    try {
+      if (!carer.availabilityComplete) {
+        await carerAvailabilityApi.completeOnboardingStep();
+      }
+      await carerOnboardingApi.complete();
+      await carerAuthApi.session();
+      await router.invalidate();
+      const completionState: CarerOnboardingCompletionLocationState = {
+        onboardingJustCompleted: true,
+      };
+      navigate({
+        to: "/carer",
+        replace: true,
+        state: completionState as never,
+      });
+    } catch (err) {
+      const message = mapOnboardingCompleteError(
+        err,
+        "Could not complete onboarding. Try again.",
+      );
+      toast.error(message);
+    } finally {
+      setCompleting(false);
+    }
   }
 
   return (
-    <CarerOnboardingHubShell
+    <CarerOnboardingStepShell
       session={carer}
-      title="Availability"
-      subtitle="Add the days and times you're available to work."
+      title={ONBOARDING_STEP_3_TITLE}
+      instructions={ONBOARDING_STEP_3_INSTRUCTIONS}
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
+            disabled={completing}
+            onClick={() => navigate({ to: "/carer/onboarding/documents" })}
+          >
+            Go back
+          </Button>
+          <Button
+            type="button"
+            className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
+            disabled={completing || onboardingState.isLoading || !state?.anchorEstablished}
+            onClick={() => void handleCompleteOnboarding()}
+          >
+            {completing ? "Completing…" : "Complete onboarding"}
+          </Button>
+        </>
+      }
     >
-      <CarerOnboardingShell activeStep={3} session={carer}>
-        <CarerOnboardingHomeLink />
-
-        {onboardingState.isLoading || !state?.anchorEstablished ? (
-          initFailed ? (
-            <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
-          ) : (
-            <CarerAvailabilityOnboardingWizardSkeleton />
-          )
-        ) : initFailed ? (
-          <div className="space-y-2">
-            {initError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {initError}
-              </p>
-            ) : null}
-            <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
-          </div>
+      {onboardingState.isLoading || !state?.anchorEstablished ? (
+        initFailed ? (
+          <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
         ) : (
-          <CarerAvailabilityOnboardingWizard
-            onboardingState={state}
-            isFetching={onboardingState.isFetching}
-            loadFailed={false}
-            onRefresh={() => onboardingState.refetch()}
-            onComplete={() => void handleAvailabilityStepComplete()}
-          />
-        )}
-      </CarerOnboardingShell>
-    </CarerOnboardingHubShell>
+          <CarerAvailabilityOnboardingWizardSkeleton />
+        )
+      ) : initFailed ? (
+        <div className="space-y-2">
+          {initError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {initError}
+            </p>
+          ) : null}
+          <CarerAvailabilityLoadError onRetry={() => void onboardingState.refetch()} />
+        </div>
+      ) : (
+        <CarerAvailabilityOnboardingWizard
+          onboardingState={state}
+          isFetching={onboardingState.isFetching}
+          loadFailed={false}
+          onRefresh={() => onboardingState.refetch()}
+        />
+      )}
+    </CarerOnboardingStepShell>
   );
 }

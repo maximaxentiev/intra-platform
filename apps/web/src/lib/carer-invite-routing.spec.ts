@@ -21,12 +21,12 @@ describe("resolveUnusableInviteRedirect", () => {
     ).resolves.toBe(CARER_LOGIN_PATH);
   });
 
-  it("redirects incomplete onboarding to hub", async () => {
+  it("redirects incomplete onboarding to resume path", async () => {
     await expect(
       resolveUnusableInviteRedirect({
         getSession: vi.fn().mockResolvedValue(carerSessionFixture()),
       }),
-    ).resolves.toBe("/carer/onboarding");
+    ).resolves.toBe("/carer/onboarding/intro");
   });
 
   it("redirects fully onboarded carers to portal home", async () => {
@@ -44,8 +44,8 @@ describe("resolveUnusableInviteRedirect", () => {
 });
 
 describe("carerLandingPath integration", () => {
-  it("sends incomplete users to onboarding hub", () => {
-    expect(carerLandingPath(carerSessionFixture())).toBe("/carer/onboarding");
+  it("sends incomplete users to onboarding intro", () => {
+    expect(carerLandingPath(carerSessionFixture())).toBe("/carer/onboarding/intro");
   });
 });
 

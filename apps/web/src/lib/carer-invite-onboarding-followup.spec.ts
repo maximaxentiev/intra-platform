@@ -24,11 +24,9 @@ describe("carer onboarding revisit navigation", () => {
     expect(form).toContain("completeStep1");
   });
 
-  it("progress shell uses authoritative session completion flags", () => {
-    const shell = readSrc("components/carer/CarerOnboardingShell.tsx");
-    expect(shell).toContain("profileComplete");
-    expect(shell).toContain("documentsComplete");
-    expect(shell).toContain("availabilityComplete");
-    expect(shell).toContain("resolveOnboardingStepDisplayState");
+  it("onboarding uses simplified step shell without progress stepper", () => {
+    const shell = readSrc("components/carer/CarerOnboardingStepShell.tsx");
+    expect(shell).not.toContain("CarerOnboardingShell");
+    expect(shell).not.toContain("resolveOnboardingStepDisplayState");
   });
 });

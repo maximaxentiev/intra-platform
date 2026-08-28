@@ -52,6 +52,7 @@ export const STAFF_PORTAL_AUDIT_EVENTS = {
   onboardingStep3Completed: 'onboarding_step_3_completed',
   onboardingAvailabilityStepCompleted: 'onboarding_availability_step_completed',
   onboardingCompleted: 'onboarding_completed',
+  onboardingStarted: 'onboarding_started',
   shareLinkGenerated: 'share_link_generated',
   shareLinkRotated: 'share_link_rotated',
   shareLinkRevoked: 'share_link_revoked',

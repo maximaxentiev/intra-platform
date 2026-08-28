@@ -159,8 +159,7 @@ describe("carer portal simplification — personal information", () => {
   });
 
   it("does not show Your details heading in profile mode", () => {
-    expect(form()).toContain('mode !== "profile"');
-    expect(form()).not.toMatch(/mode === "profile"[\s\S]*Your details/);
+    expect(form()).not.toContain("Your details");
   });
 });
 

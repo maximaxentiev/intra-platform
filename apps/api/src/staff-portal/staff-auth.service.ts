@@ -209,6 +209,7 @@ export class StaffAuthService {
       availabilityComplete: onboarding.availabilityComplete,
       onboardingComplete: onboarding.onboardingComplete,
       canCompleteOnboarding: onboarding.canCompleteOnboarding,
+      onboardingStartedAt: onboarding.onboardingStartedAt,
       legalFirstName: person?.legalFirstName ?? '',
       legalLastName: person?.legalLastName ?? '',
       phone: person?.phone ?? '',

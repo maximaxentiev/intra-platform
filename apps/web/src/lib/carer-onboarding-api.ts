@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-/** Mirrors POST /staff-portal/onboarding/complete and availability step status DTO. */
+/** Mirrors staff-portal onboarding status DTO. */
 export type CarerOnboardingStatus = {
   profileComplete: boolean;
   profileCompletedAt: string | null;
@@ -12,8 +12,10 @@ export type CarerOnboardingStatus = {
   onboardingCompletedAt: string | null;
   canCompleteOnboarding: boolean;
   onboardingStep: number;
+  onboardingStartedAt: string | null;
 };
 
 export const carerOnboardingApi = {
+  start: () => api.post<CarerOnboardingStatus>("/staff-portal/onboarding/start"),
   complete: () => api.post<CarerOnboardingStatus>("/staff-portal/onboarding/complete"),
 };

@@ -6,6 +6,7 @@ export type StaffAccountOnboardingFields = {
   documentsCompletedAt: Date | null;
   availabilityCompletedAt: Date | null;
   onboardingCompletedAt: Date | null;
+  onboardingStartedAt: Date | null;
   onboardingStep: number;
 };
 
@@ -36,5 +37,6 @@ export function buildStaffPortalOnboardingStatus(
     canCompleteOnboarding:
       profileComplete && documentsComplete && availabilityComplete && !onboardingComplete,
     onboardingStep: account.onboardingStep,
+    onboardingStartedAt: account.onboardingStartedAt?.toISOString() ?? null,
   };
 }

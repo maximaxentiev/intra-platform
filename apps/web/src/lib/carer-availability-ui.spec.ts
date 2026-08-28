@@ -14,12 +14,13 @@ describe("carer availability UI contracts", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
     const wizard = readSrc("components/carer/CarerAvailabilityOnboardingWizard.tsx");
     expect(route).toContain("CarerAvailabilityOnboardingWizard");
-    expect(route).toContain("CarerOnboardingHomeLink");
+    expect(route).toContain("CarerOnboardingStepShell");
+    expect(route).toContain("Complete onboarding");
     expect(wizard).toContain("Week {activeWeek} of 2");
     expect(wizard).toContain("Next week");
     expect(wizard).toContain("Previous week");
-    expect(wizard).toContain("Complete availability step");
-    expect(wizard).toContain("Your changes are saved automatically");
+    expect(wizard).not.toContain("CarerOnboardingHomeLink");
+    expect(wizard).not.toContain("Complete availability step");
     expect(wizard).not.toContain("week1Complete");
     expect(wizard).not.toContain("canCompleteOnboarding");
     expect(wizard).not.toContain("Needs a response");

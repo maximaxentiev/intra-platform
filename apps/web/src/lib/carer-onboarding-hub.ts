@@ -3,7 +3,7 @@ import { CARER_ONBOARDING_STEPS, type CarerOnboardingStepPath } from "./carer-on
 
 export type HubStepNumber = 1 | 2 | 3;
 
-export const CARER_ONBOARDING_HUB_PATH = "/carer/onboarding" as const;
+export { CARER_ONBOARDING_HUB_PATH } from "./carer-onboarding";
 
 export function countCompletedHubSteps(
   session: Pick<CarerSession, "profileComplete" | "documentsComplete" | "availabilityComplete">,

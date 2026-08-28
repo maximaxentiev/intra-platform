@@ -15,6 +15,7 @@ export interface CarerSession {
   documentsCompletedAt: string | null;
   availabilityCompletedAt: string | null;
   onboardingCompletedAt: string | null;
+  onboardingStartedAt: string | null;
   profileComplete: boolean;
   documentsComplete: boolean;
   availabilityComplete: boolean;

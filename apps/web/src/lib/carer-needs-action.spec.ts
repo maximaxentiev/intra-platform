@@ -70,7 +70,7 @@ describe("buildCarerNeedsActionItems", () => {
       {
         id: "onboarding-incomplete",
         label: "Finish setting up your account",
-        href: "/carer/onboarding",
+        href: "/carer/onboarding/intro",
       },
     ]);
   });

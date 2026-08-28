@@ -36,6 +36,7 @@ type AccountRow = {
   availabilityCompletedAt: Date | null;
   onboardingStep: number;
   onboardingCompletedAt: Date | null;
+  onboardingStartedAt: Date | null;
   availabilityOnboardingWeek1Start: string | null;
   inviteTokenHash: string | null;
   inviteTokenExpiresAt: Date | null;
@@ -57,6 +58,7 @@ function createHarness(initial?: Partial<AccountRow>) {
     availabilityCompletedAt: null,
     onboardingStep: 3,
     onboardingCompletedAt: null,
+    onboardingStartedAt: null,
     availabilityOnboardingWeek1Start: MONDAY,
     inviteTokenHash: null,
     inviteTokenExpiresAt: null,
@@ -106,6 +108,49 @@ describe('StaffPortalOnboardingService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe('startOnboarding', () => {
+    it('persists onboardingStartedAt and records audit on first start', async () => {
+      const harness = createHarness({ onboardingStartedAt: null });
+      const before = Date.now();
+      const result = await harness.onboarding.startOnboarding(SESSION_A);
+      const after = Date.now();
+
+      expect(result.onboardingStartedAt).not.toBeNull();
+      expect(harness.account.onboardingStartedAt).not.toBeNull();
+      const startedMs = harness.account.onboardingStartedAt!.getTime();
+      expect(startedMs).toBeGreaterThanOrEqual(before);
+      expect(startedMs).toBeLessThanOrEqual(after);
+      expect(harness.audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingStarted,
+        }),
+        expect.anything(),
+      );
+    });
+
+    it('is idempotent when onboarding already started', async () => {
+      const started = new Date('2026-08-01T10:00:00.000Z');
+      const harness = createHarness({ onboardingStartedAt: started });
+      harness.audit.mockClear();
+      const result = await harness.onboarding.startOnboarding(SESSION_A);
+      expect(result.onboardingStartedAt).toBe(started.toISOString());
+      expect(harness.audit).not.toHaveBeenCalled();
+    });
+
+    it('returns status without starting when onboarding already complete', async () => {
+      const completed = new Date('2026-08-20T12:00:00.000Z');
+      const harness = createHarness({
+        onboardingCompletedAt: completed,
+        onboardingStartedAt: null,
+      });
+      harness.audit.mockClear();
+      const result = await harness.onboarding.startOnboarding(SESSION_A);
+      expect(result.onboardingComplete).toBe(true);
+      expect(harness.account.onboardingStartedAt).toBeNull();
+      expect(harness.audit).not.toHaveBeenCalled();
+    });
   });
 
   describe('completeAvailabilityStep', () => {

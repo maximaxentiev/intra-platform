@@ -13,6 +13,11 @@ import { StaffPortalOnboardingService } from './staff-portal-onboarding.service'
 export class StaffPortalOnboardingController {
   constructor(private readonly onboarding: StaffPortalOnboardingService) {}
 
+  @Post('start')
+  start(@CurrentStaff() session: StaffSessionPayload) {
+    return this.onboarding.startOnboarding(session);
+  }
+
   @Post('complete')
   complete(@CurrentStaff() session: StaffSessionPayload) {
     return this.onboarding.completeOnboarding(session);

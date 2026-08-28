@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CarerOnboardingHubShell } from "@/components/carer/CarerOnboardingHubShell";
-import { CarerOnboardingShell } from "@/components/carer/CarerOnboardingShell";
-import { CarerOnboardingHomeLink } from "@/components/carer/CarerOnboardingHomeLink";
+import {
+  CarerOnboardingStepShell,
+  ONBOARDING_STEP_1_INSTRUCTIONS,
+  ONBOARDING_STEP_1_TITLE,
+} from "@/components/carer/CarerOnboardingStepShell";
 import { CarerPersonalInformationForm } from "@/components/carer/CarerPersonalInformationForm";
 import { carerAuthApi, carerProfileApi } from "@/lib/carer";
 import { personalProfileFromSession } from "@/lib/carer-personal-profile";
@@ -41,28 +43,25 @@ function CarerOnboardingProfilePage() {
 
   if (profile.isLoading && !profile.data) {
     return (
-      <CarerOnboardingHubShell session={carer} title="Personal information">
+      <CarerOnboardingStepShell session={carer} title={ONBOARDING_STEP_1_TITLE}>
         <Skeleton className="h-40 w-full" />
-      </CarerOnboardingHubShell>
+      </CarerOnboardingStepShell>
     );
   }
 
   const initial = personalProfileFromSession(profile.data);
 
   return (
-    <CarerOnboardingHubShell
+    <CarerOnboardingStepShell
       session={carer}
-      title="Personal information"
-      subtitle="Confirm your contact details so we can reach you about shifts."
+      title={ONBOARDING_STEP_1_TITLE}
+      instructions={ONBOARDING_STEP_1_INSTRUCTIONS}
     >
-      <CarerOnboardingShell activeStep={1} session={carer}>
-        <CarerOnboardingHomeLink />
-        <CarerPersonalInformationForm
-          initial={initial}
-          step1Complete={carer.profileComplete}
-          onStepComplete={() => void handleStepComplete()}
-        />
-      </CarerOnboardingShell>
-    </CarerOnboardingHubShell>
+      <CarerPersonalInformationForm
+        initial={initial}
+        step1Complete={carer.profileComplete}
+        onStepComplete={() => void handleStepComplete()}
+      />
+    </CarerOnboardingStepShell>
   );
 }

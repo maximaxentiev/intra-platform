@@ -14,4 +14,6 @@ export type StaffPortalOnboardingStatusDto = {
   canCompleteOnboarding: boolean;
 
   onboardingStep: number;
+
+  onboardingStartedAt: string | null;
 };

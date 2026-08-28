@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CityCombobox, cityValueForSubmit } from "@/components/CityCombobox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +57,8 @@ export function CarerPersonalInformationForm({
   }, [initial]);
 
   const isDirty = useMemo(() => personalProfileDirty(values, saved), [values, saved]);
-  const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(isDirty);
+  const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(mode === "onboarding" ? false : isDirty);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function setField<K extends keyof PersonalProfileFields>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -147,7 +148,44 @@ export function CarerPersonalInformationForm({
     setDiscardOpen(false);
   }
 
+  useEffect(() => {
+    if (mode !== "onboarding" || !isDirty) return;
+    const trimmed = trimPersonalProfile(values);
+    const errors = validatePersonalProfileFields(trimmed, saved.city);
+    if (Object.keys(errors).length > 0) return;
+
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      void persist(false).catch(() => {});
+    }, 1200);
+
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [values, saved.city, isDirty, mode]);
+
+  async function handleOnboardingContinue() {
+    const trimmed = trimPersonalProfile(values);
+    const errors = validatePersonalProfileFields(trimmed, saved.city);
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setFormError("Complete all required fields before continuing.");
+      toast.error("Complete all required fields before continuing.");
+      return;
+    }
+    try {
+      await persist(false);
+      await completeStep();
+    } catch (err) {
+      reportError(err, "Could not continue");
+    }
+  }
+
   async function handleNext() {
+    if (mode === "onboarding") {
+      await handleOnboardingContinue();
+      return;
+    }
     const trimmed = trimPersonalProfile(values);
     const errors = validatePersonalProfileFields(trimmed, saved.city);
     if (Object.keys(errors).length) {
@@ -197,162 +235,131 @@ export function CarerPersonalInformationForm({
   return (
     <>
       <form onSubmit={handleSave} className="space-y-4 min-w-0 overflow-x-hidden">
+        {mode === "onboarding" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="legalFirstName"
+              label="First name"
+              autoComplete="given-name"
+              value={values.legalFirstName}
+              error={fieldErrors.legalFirstName}
+              onChange={(v) => setField("legalFirstName", v)}
+            />
+            <Field
+              id="legalLastName"
+              label="Last name"
+              autoComplete="family-name"
+              value={values.legalLastName}
+              error={fieldErrors.legalLastName}
+              onChange={(v) => setField("legalLastName", v)}
+            />
+            <Field
+              id="email"
+              label="Email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={values.email}
+              error={fieldErrors.email}
+              onChange={(v) => setField("email", v)}
+            />
+            <Field
+              id="phone"
+              label="Phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={values.phone}
+              error={fieldErrors.phone}
+              onChange={(v) => setField("phone", v)}
+            />
+            <Field
+              id="address"
+              label="Address"
+              autoComplete="street-address"
+              className="sm:col-span-2"
+              value={values.address}
+              error={fieldErrors.address}
+              onChange={(v) => setField("address", v)}
+            />
+            <CityCombobox
+              id="city"
+              label="City"
+              value={values.city}
+              onChange={(v) => setField("city", v)}
+              error={fieldErrors.city}
+              className="sm:col-span-2"
+            />
+          </div>
+        ) : (
         <Card className="min-w-0">
           <CardHeader className="gap-1 pb-3">
-            {mode !== "profile" ? (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">Your details</CardTitle>
-                {isDirty ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                    Unsaved changes
-                  </span>
-                ) : null}
-              </div>
-            ) : isDirty ? (
+            {isDirty ? (
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                 <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/50" />
                 Unsaved changes
               </span>
             ) : null}
-            {mode !== "profile" ? (
-              <p className="text-sm text-muted-foreground">
-                All fields are required unless noted. We use these details to contact you about
-                shifts.
-              </p>
-            ) : null}
           </CardHeader>
           <CardContent className="space-y-6">
-            {mode === "profile" ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="legalFirstName"
-                  label="First name"
-                  autoComplete="given-name"
-                  value={values.legalFirstName}
-                  error={fieldErrors.legalFirstName}
-                  onChange={(v) => setField("legalFirstName", v)}
-                />
-                <Field
-                  id="legalLastName"
-                  label="Last name"
-                  autoComplete="family-name"
-                  value={values.legalLastName}
-                  error={fieldErrors.legalLastName}
-                  onChange={(v) => setField("legalLastName", v)}
-                />
-                <Field
-                  id="email"
-                  label="Email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  value={values.email}
-                  error={fieldErrors.email}
-                  onChange={(v) => setField("email", v)}
-                />
-                <Field
-                  id="phone"
-                  label="Phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={values.phone}
-                  error={fieldErrors.phone}
-                  onChange={(v) => setField("phone", v)}
-                />
-                <Field
-                  id="address"
-                  label="Address"
-                  autoComplete="street-address"
-                  className="sm:col-span-2"
-                  value={values.address}
-                  error={fieldErrors.address}
-                  onChange={(v) => setField("address", v)}
-                />
-                <CityCombobox
-                  id="city"
-                  label="City"
-                  value={values.city}
-                  onChange={(v) => setField("city", v)}
-                  error={fieldErrors.city}
-                  className="sm:col-span-2"
-                />
-              </div>
-            ) : (
-              <>
-            <FieldGroup title="Legal name">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="legalFirstName"
-                  label="Legal first name"
-                  autoComplete="given-name"
-                  value={values.legalFirstName}
-                  error={fieldErrors.legalFirstName}
-                  onChange={(v) => setField("legalFirstName", v)}
-                />
-                <Field
-                  id="legalLastName"
-                  label="Legal last name"
-                  autoComplete="family-name"
-                  value={values.legalLastName}
-                  error={fieldErrors.legalLastName}
-                  onChange={(v) => setField("legalLastName", v)}
-                />
-              </div>
-            </FieldGroup>
-
-            <FieldGroup title="Contact details">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="email"
-                  label="Email address"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  hint="Used for sign-in and shift notifications."
-                  value={values.email}
-                  error={fieldErrors.email}
-                  onChange={(v) => setField("email", v)}
-                />
-                <Field
-                  id="phone"
-                  label="Phone number"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={values.phone}
-                  error={fieldErrors.phone}
-                  onChange={(v) => setField("phone", v)}
-                />
-              </div>
-            </FieldGroup>
-
-            <FieldGroup title="Where you live">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="address"
-                  label="Home address"
-                  autoComplete="street-address"
-                  className="sm:col-span-2"
-                  value={values.address}
-                  error={fieldErrors.address}
-                  onChange={(v) => setField("address", v)}
-                />
-                <CityCombobox
-                  id="city"
-                  label="City"
-                  value={values.city}
-                  onChange={(v) => setField("city", v)}
-                  error={fieldErrors.city}
-                  className="sm:col-span-2"
-                />
-              </div>
-            </FieldGroup>
-              </>
-            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                id="legalFirstName"
+                label="First name"
+                autoComplete="given-name"
+                value={values.legalFirstName}
+                error={fieldErrors.legalFirstName}
+                onChange={(v) => setField("legalFirstName", v)}
+              />
+              <Field
+                id="legalLastName"
+                label="Last name"
+                autoComplete="family-name"
+                value={values.legalLastName}
+                error={fieldErrors.legalLastName}
+                onChange={(v) => setField("legalLastName", v)}
+              />
+              <Field
+                id="email"
+                label="Email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={values.email}
+                error={fieldErrors.email}
+                onChange={(v) => setField("email", v)}
+              />
+              <Field
+                id="phone"
+                label="Phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={values.phone}
+                error={fieldErrors.phone}
+                onChange={(v) => setField("phone", v)}
+              />
+              <Field
+                id="address"
+                label="Address"
+                autoComplete="street-address"
+                className="sm:col-span-2"
+                value={values.address}
+                error={fieldErrors.address}
+                onChange={(v) => setField("address", v)}
+              />
+              <CityCombobox
+                id="city"
+                label="City"
+                value={values.city}
+                onChange={(v) => setField("city", v)}
+                error={fieldErrors.city}
+                className="sm:col-span-2"
+              />
+            </div>
           </CardContent>
         </Card>
+        )}
 
         <div aria-live="polite" className="space-y-2">
           {errorCount > 0 ? (
@@ -371,7 +378,7 @@ export function CarerPersonalInformationForm({
               <span className="min-w-0 break-words">{formError}</span>
             </p>
           ) : null}
-          {!formError && savedAt ? (
+          {!formError && savedAt && mode !== "onboarding" ? (
             <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span>Personal information saved at {savedAt}.</span>
@@ -379,18 +386,31 @@ export function CarerPersonalInformationForm({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-center">
           {mode === "onboarding" ? (
-            <Button
-              type="button"
-              className="h-11 w-full font-medium sm:order-3 sm:w-auto sm:ml-auto"
-              disabled={loading}
-              onClick={() => void handleNext()}
-            >
-              {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-              {isDirty ? "Save and continue to documents" : "Continue to documents"}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
+                disabled={loading || !isDirty}
+                onClick={handleDiscardRequest}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
+                disabled={loading}
+                onClick={() => void handleNext()}
+              >
+                {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
+                Continue to step 2
+              </Button>
+            </>
           ) : null}
+          {mode !== "onboarding" ? (
+            <>
           <Button
             type="submit"
             variant={mode === "profile" ? "default" : "outline"}
@@ -409,6 +429,8 @@ export function CarerPersonalInformationForm({
           >
             Discard changes
           </Button>
+            </>
+          ) : null}
         </div>
       </form>
 
@@ -477,17 +499,6 @@ export function CarerPersonalInformationForm({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="min-w-0 space-y-3">
-      <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </legend>
-      {children}
-    </fieldset>
   );
 }
 

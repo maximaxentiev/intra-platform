@@ -6,12 +6,12 @@ import {
   type CarerDocumentsList,
   type StaffDocumentType,
 } from "./carer-documents";
-import { CARER_ONBOARDING_HUB_PATH, onboardingComplete } from "./carer-onboarding";
+import { carerOnboardingResumePath, onboardingComplete, type CarerOnboardingPath } from "./carer-onboarding";
 
 export type CarerNeedsActionItem = {
   id: string;
   label: string;
-  href: "/carer/onboarding" | "/carer/documents";
+  href: CarerOnboardingPath | "/carer/documents";
 };
 
 function documentNeedsAction(category: CarerDocumentCategory): string | null {
@@ -47,7 +47,7 @@ export function buildCarerNeedsActionItems(
       {
         id: "onboarding-incomplete",
         label: "Finish setting up your account",
-        href: CARER_ONBOARDING_HUB_PATH,
+        href: carerOnboardingResumePath(session),
       },
     ];
   }

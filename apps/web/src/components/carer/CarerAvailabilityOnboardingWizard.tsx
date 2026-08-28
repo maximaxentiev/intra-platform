@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   CARER_DAY_NAMES,
   formatShortCalendarDate,
-  formatWeekRangeLabel,
   isTodayCalendarDate,
   torontoTodayDateString,
 } from "@/lib/carer-availability-dates";
 import {
   CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
-  carerAvailabilityApi,
   defaultOnboardingWizardWeek,
-  mapAvailabilityApiError,
   type CarerGuidedAvailabilityOnboardingState,
   type CarerOnboardingAvailabilityDay,
 } from "@/lib/carer-availability";
@@ -35,7 +30,6 @@ type CarerAvailabilityOnboardingWizardProps = {
   isFetching?: boolean;
   loadFailed?: boolean;
   onRefresh: () => Promise<unknown>;
-  onComplete: () => void;
 };
 
 export function CarerAvailabilityOnboardingWizard({
@@ -43,14 +37,11 @@ export function CarerAvailabilityOnboardingWizard({
   isFetching = false,
   loadFailed = false,
   onRefresh,
-  onComplete,
 }: CarerAvailabilityOnboardingWizardProps) {
   const queryClient = useQueryClient();
   const today = torontoTodayDateString();
 
   const [wizardWeek, setWizardWeek] = useState<WizardWeek | null>(null);
-  const [finishing, setFinishing] = useState(false);
-  const [finishError, setFinishError] = useState<string | null>(null);
 
   useEffect(() => {
     if (wizardWeek === null) {
@@ -59,8 +50,6 @@ export function CarerAvailabilityOnboardingWizard({
   }, [onboardingState, wizardWeek]);
 
   const activeWeek = wizardWeek ?? defaultOnboardingWizardWeek(onboardingState);
-  const weekStart =
-    activeWeek === 1 ? onboardingState.week1Start! : onboardingState.week2Start!;
   const weekDays = useMemo(
     () => onboardingState.days.filter((d) => d.weekIndex === activeWeek),
     [onboardingState.days, activeWeek],
@@ -77,40 +66,15 @@ export function CarerAvailabilityOnboardingWizard({
     onAfterMutation: refreshOnboardingState,
   });
 
-  async function handleCompleteAvailabilityStep() {
-    setFinishError(null);
-    setFinishing(true);
-    try {
-      await carerAvailabilityApi.completeOnboardingStep();
-      onComplete();
-    } catch (err) {
-      await refreshOnboardingState();
-      const message = mapAvailabilityApiError(err, "Could not complete your availability step.");
-      setFinishError(message);
-      toast.error(message);
-    } finally {
-      setFinishing(false);
-    }
-  }
-
-  const busy = mutations.saving || mutations.removing || finishing;
+  const busy = mutations.saving || mutations.removing;
   const anchorReady = onboardingState.anchorEstablished;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Share an initial two-week snapshot of when you might be available to work. You can leave
-          days blank — this step is optional and does not require availability on every day.
-        </p>
-        <p className="text-sm text-muted-foreground">Your changes are saved automatically.</p>
-      </div>
-
       <div className="space-y-1">
-        <p className="text-lg font-semibold">Week {activeWeek} of 2</p>
-        <p className="text-sm text-muted-foreground">{formatWeekRangeLabel(weekStart)}</p>
+        <p className="text-xl font-semibold text-foreground">Week {activeWeek} of 2</p>
         {isFetching && !loadFailed ? (
-          <p className="text-xs text-muted-foreground">Refreshing…</p>
+          <p className="text-sm text-muted-foreground">Refreshing…</p>
         ) : null}
       </div>
 
@@ -130,50 +94,26 @@ export function CarerAvailabilityOnboardingWizard({
         ))}
       </div>
 
-      <div className="space-y-3 border-t pt-4">
+      <div className="border-t pt-4">
         {activeWeek === 1 ? (
           <Button
             type="button"
-            className="h-11 w-full"
+            className="h-12 w-full text-base font-semibold"
             disabled={!anchorReady || busy}
             onClick={() => setWizardWeek(2)}
           >
             Next week
           </Button>
         ) : (
-          <>
-            {finishError ? (
-              <p className="text-sm text-destructive" role="alert" aria-live="polite">
-                {finishError}
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 w-full sm:w-auto"
-                disabled={busy}
-                onClick={() => setWizardWeek(1)}
-              >
-                Previous week
-              </Button>
-              <Button
-                type="button"
-                className="h-11 w-full sm:flex-1"
-                disabled={!anchorReady || busy}
-                onClick={() => void handleCompleteAvailabilityStep()}
-              >
-                {finishing ? (
-                  <>
-                    <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-                    Completing step...
-                  </>
-                ) : (
-                  "Complete availability step"
-                )}
-              </Button>
-            </div>
-          </>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 w-full text-base font-medium"
+            disabled={busy}
+            onClick={() => setWizardWeek(1)}
+          >
+            Previous week
+          </Button>
         )}
       </div>
 

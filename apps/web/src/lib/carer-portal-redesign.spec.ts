@@ -67,12 +67,21 @@ describe("carer portal shell", () => {
       "routes/carer/onboarding/profile.tsx",
       "routes/carer/onboarding/documents.tsx",
       "routes/carer/onboarding/availability.tsx",
+      "routes/carer/onboarding/intro.tsx",
     ]) {
       const src = readSrc(rel);
-      expect(src).toContain("CarerOnboardingHubShell");
+      expect(src).toContain("CarerOnboardingStepShell");
       expect(src).not.toContain("CarerBottomNav");
       expect(src).not.toMatch(/from "@\/components\/carer\/CarerShell"/);
     }
+  });
+});
+
+describe("carer onboarding hub presentation", () => {
+  it("legacy hub component remains available but is not used by the simplified flow", () => {
+    const hubRoute = readSrc("routes/carer/onboarding/index.tsx");
+    expect(hubRoute).not.toContain("CarerOnboardingHub");
+    expect(hubRoute).toContain("carerOnboardingResumePath");
   });
 });
 
@@ -97,21 +106,6 @@ describe("carer portal home", () => {
     expect(home).toContain('title="Home"');
     expect(home).not.toContain("carerGreeting");
     expect(home).not.toContain("Here's what's coming up.");
-  });
-});
-
-describe("carer onboarding hub presentation", () => {
-  it("shows ready-to-finish copy when all steps are complete but onboarding is not submitted", () => {
-    const hub = readSrc("components/carer/CarerOnboardingHub.tsx");
-    expect(hub).toContain("You're ready to finish setup");
-    expect(hub).toContain("canFinish");
-    expect(hub).toContain("Complete onboarding");
-  });
-
-  it("does not show the ready heading unconditionally", () => {
-    const hub = readSrc("components/carer/CarerOnboardingHub.tsx");
-    expect(hub).toContain("Onboarding not complete");
-    expect(hub).toMatch(/canFinish \? "You're ready to finish setup"/);
   });
 });
 

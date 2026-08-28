@@ -14,41 +14,33 @@ describe("carer onboarding step navigation", () => {
     const route = readSrc("routes/carer/onboarding/profile.tsx");
     const form = readSrc("components/carer/CarerPersonalInformationForm.tsx");
     expect(route).toContain('to: "/carer/onboarding/documents"');
-    expect(route).toContain("CarerOnboardingHomeLink");
-    expect(form).toContain("Continue to documents");
+    expect(form).toContain("Continue to step 2");
+    expect(route).not.toContain("CarerOnboardingHomeLink");
   });
 
   it("documents step advances to availability after completion", () => {
     const route = readSrc("routes/carer/onboarding/documents.tsx");
-    const form = readSrc("components/carer/CarerDocumentsForm.tsx");
     expect(route).toContain('to: "/carer/onboarding/availability"');
-    expect(route).toContain("CarerOnboardingHomeLink");
-    expect(form).toContain("Continue to availability");
+    expect(route).toContain("Continue to final step");
+    expect(route).not.toContain("CarerOnboardingHomeLink");
   });
 
-  it("availability step still returns to hub after step completion", () => {
+  it("availability completes onboarding to home", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
-    expect(route).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(route).toContain("CarerOnboardingHomeLink");
-    expect(route).not.toContain('to: "/carer"');
+    expect(route).toContain("carerOnboardingApi.complete");
+    expect(route).toContain('to: "/carer"');
+    expect(route).not.toContain("CarerOnboardingHomeLink");
   });
 
-  it("onboarding home link is shared across step pages", () => {
-    const link = readSrc("components/carer/CarerOnboardingHomeLink.tsx");
-    expect(link).toContain("Onboarding home");
-    expect(link).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(link).toContain("h-11");
-  });
-
-  it("final complete onboarding remains hub-only", () => {
+  it("onboarding hub redirects instead of showing overview", () => {
     const hub = readSrc("routes/carer/onboarding/index.tsx");
-    expect(hub).toContain("carerOnboardingApi.complete");
-    expect(hub).toContain('to: "/carer"');
+    expect(hub).toContain("carerOnboardingResumePath");
+    expect(hub).not.toContain("CarerOnboardingHub");
   });
 
   it("step access guards remain enforced", () => {
     const guards = readSrc("lib/carer-route-guards.ts");
     expect(guards).toContain("assertOnboardingStepAccess");
-    expect(guards).toContain("maxAccessibleOnboardingStep");
+    expect(guards).toContain("assertOnboardingStarted");
   });
 });

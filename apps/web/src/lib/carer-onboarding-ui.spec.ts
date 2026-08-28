@@ -10,46 +10,32 @@ function readSrc(rel: string) {
 }
 
 describe("carer onboarding routing", () => {
-  it("gates portal home through onboarding hub", () => {
+  it("gates portal home through onboarding resume routing", () => {
     const src = readSrc("routes/carer/index.tsx");
     expect(src).toContain("requireCarerSessionForPortal");
-    expect(src).not.toContain("carerOnboardingResumePath");
   });
 
-  it("redirects incomplete portal routes to hub", () => {
+  it("redirects incomplete portal routes to onboarding resume path", () => {
     const guards = readSrc("lib/carer-route-guards.ts");
-    expect(guards).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(guards).not.toContain("carerOnboardingResumePath");
+    expect(guards).toContain("carerOnboardingResumePath");
   });
 
-  it("implements a real onboarding hub page", () => {
+  it("uses intro screen before onboarding starts", () => {
+    const intro = readSrc("routes/carer/onboarding/intro.tsx");
+    expect(intro).toContain("carerOnboardingApi.start");
+    expect(intro).toContain("/carer/onboarding/profile");
+  });
+
+  it("hub index redirects instead of rendering overview", () => {
     const hub = readSrc("routes/carer/onboarding/index.tsx");
-    const component = readSrc("components/carer/CarerOnboardingHub.tsx");
-    expect(hub).toContain("CarerOnboardingHub");
-    expect(hub).toContain("carerOnboardingApi.complete");
-    expect(component).toContain("Onboarding not complete");
-    expect(component).toContain("Complete onboarding");
-    expect(component).toContain("canCompleteOnboarding");
+    expect(hub).toContain("carerOnboardingResumePath");
+    expect(hub).not.toContain("CarerOnboardingHub");
   });
 
-  it("documents step advances to availability after completion", () => {
-    const route = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(route).toContain('to: "/carer/onboarding/availability"');
-    expect(route).toContain("CarerOnboardingHomeLink");
-    expect(route).not.toContain("stepPathForNumber(3)");
-  });
-
-  it("profile step advances to documents after completion", () => {
-    const route = readSrc("routes/carer/onboarding/profile.tsx");
-    expect(route).toContain('to: "/carer/onboarding/documents"');
-    expect(route).toContain("CarerOnboardingHomeLink");
-  });
-
-  it("availability step returns to hub without success banner", () => {
+  it("availability completion redirects home with success state", () => {
     const route = readSrc("routes/carer/onboarding/availability.tsx");
-    expect(route).toContain("CARER_ONBOARDING_HUB_PATH");
-    expect(route).toContain("CarerOnboardingHomeLink");
-    expect(route).not.toContain("CARER_ONBOARDING_JUST_COMPLETED_STATE");
-    expect(route).not.toContain('to: "/carer"');
+    expect(route).toContain("carerOnboardingApi.complete");
+    expect(route).toContain("onboardingJustCompleted: true");
+    expect(route).toContain('to: "/carer"');
   });
 });
