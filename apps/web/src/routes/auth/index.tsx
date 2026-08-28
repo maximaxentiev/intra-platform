@@ -1,15 +1,23 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
-import { opsLoginDestination } from "@/lib/ops-auth";
+import { opsLoginDestination, resolveOpsPostLoginNavigation } from "@/lib/ops-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/auth")({
+export const Route = createFileRoute("/auth/")({
+  beforeLoad: async () => {
+    try {
+      const user = await authApi.session();
+      throw redirect({ to: opsLoginDestination(user), replace: true });
+    } catch (err) {
+      if (err && typeof err === "object" && "to" in err) throw err;
+    }
+  },
   component: AuthPage,
 });
 
@@ -20,25 +28,17 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    authApi
-      .session()
-      .then((user) => {
-        navigate({ to: opsLoginDestination(user), replace: true });
-      })
-      .catch(() => {
-        /* not signed in — stay */
-      });
-  }, [navigate]);
-
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
       const user = await authApi.login(email, password);
-      await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
-      toast.success("Signed in");
-      navigate({ to: opsLoginDestination(user), replace: true });
+      queryClient.setQueryData(["auth", "session"], user);
+      const navigation = resolveOpsPostLoginNavigation(user);
+      await navigate(navigation);
+      toast.success(
+        user.mustChangePassword ? "Signed in — create your new password" : "Signed in",
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {

@@ -9,11 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CarerRouteRouteImport } from './routes/carer/route'
+import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarerIndexRouteImport } from './routes/carer/index'
+import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
 import { Route as CarerShiftsRouteImport } from './routes/carer/shifts'
 import { Route as CarerProfileRouteImport } from './routes/carer/profile'
@@ -21,7 +22,7 @@ import { Route as CarerLoginRouteImport } from './routes/carer/login'
 import { Route as CarerForgotPasswordRouteImport } from './routes/carer/forgot-password'
 import { Route as CarerDocumentsRouteImport } from './routes/carer/documents'
 import { Route as CarerAvailabilityRouteImport } from './routes/carer/availability'
-import { Route as AuthChangePasswordRouteImport } from './routes/auth.change-password'
+import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-password'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedShiftsRouteImport } from './routes/_authenticated/shifts'
@@ -57,14 +58,14 @@ import { Route as AuthenticatedReportsActivityRouteImport } from './routes/_auth
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CarerRouteRoute = CarerRouteRouteImport.update({
   id: '/carer',
   path: '/carer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRouteRoute = AuthRouteRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -80,6 +81,11 @@ const CarerIndexRoute = CarerIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CarerRouteRoute,
+} as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const DocumentsSlugRoute = DocumentsSlugRouteImport.update({
   id: '/documents/$slug',
@@ -119,7 +125,7 @@ const CarerAvailabilityRoute = CarerAvailabilityRouteImport.update({
 const AuthChangePasswordRoute = AuthChangePasswordRouteImport.update({
   id: '/change-password',
   path: '/change-password',
-  getParentRoute: () => AuthRoute,
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
@@ -307,8 +313,8 @@ const AuthenticatedCentresIdRoute = AuthenticatedCentresIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteRouteWithChildren
   '/carer': typeof CarerRouteRouteWithChildren
-  '/auth': typeof AuthRouteWithChildren
   '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
@@ -327,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/carer/profile': typeof CarerProfileRoute
   '/carer/shifts': typeof CarerShiftsRouteWithChildren
   '/documents/$slug': typeof DocumentsSlugRoute
+  '/auth/': typeof AuthIndexRoute
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -355,7 +362,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
   '/applications': typeof AuthenticatedApplicationsRoute
   '/availability': typeof AuthenticatedAvailabilityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -368,6 +374,7 @@ export interface FileRoutesByTo {
   '/carer/login': typeof CarerLoginRoute
   '/carer/profile': typeof CarerProfileRoute
   '/documents/$slug': typeof DocumentsSlugRoute
+  '/auth': typeof AuthIndexRoute
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
@@ -398,8 +405,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRouteRouteWithChildren
   '/carer': typeof CarerRouteRouteWithChildren
-  '/auth': typeof AuthRouteWithChildren
   '/carer/onboarding': typeof CarerOnboardingRouteRouteWithChildren
   '/_authenticated/applications': typeof AuthenticatedApplicationsRoute
   '/_authenticated/availability': typeof AuthenticatedAvailabilityRoute
@@ -418,6 +425,7 @@ export interface FileRoutesById {
   '/carer/profile': typeof CarerProfileRoute
   '/carer/shifts': typeof CarerShiftsRouteWithChildren
   '/documents/$slug': typeof DocumentsSlugRoute
+  '/auth/': typeof AuthIndexRoute
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
@@ -448,8 +456,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/carer'
     | '/auth'
+    | '/carer'
     | '/carer/onboarding'
     | '/applications'
     | '/availability'
@@ -468,6 +476,7 @@ export interface FileRouteTypes {
     | '/carer/profile'
     | '/carer/shifts'
     | '/documents/$slug'
+    | '/auth/'
     | '/carer/'
     | '/centres/$id'
     | '/centres/new'
@@ -496,7 +505,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
     | '/applications'
     | '/availability'
     | '/dashboard'
@@ -509,6 +517,7 @@ export interface FileRouteTypes {
     | '/carer/login'
     | '/carer/profile'
     | '/documents/$slug'
+    | '/auth'
     | '/carer'
     | '/centres/$id'
     | '/centres/new'
@@ -538,8 +547,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/carer'
     | '/auth'
+    | '/carer'
     | '/carer/onboarding'
     | '/_authenticated/applications'
     | '/_authenticated/availability'
@@ -558,6 +567,7 @@ export interface FileRouteTypes {
     | '/carer/profile'
     | '/carer/shifts'
     | '/documents/$slug'
+    | '/auth/'
     | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
@@ -588,25 +598,25 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRouteRoute: typeof AuthRouteRouteWithChildren
   CarerRouteRoute: typeof CarerRouteRouteWithChildren
-  AuthRoute: typeof AuthRouteWithChildren
   DocumentsSlugRoute: typeof DocumentsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/carer': {
       id: '/carer'
       path: '/carer'
       fullPath: '/carer'
       preLoaderRoute: typeof CarerRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -629,6 +639,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/carer/'
       preLoaderRoute: typeof CarerIndexRouteImport
       parentRoute: typeof CarerRouteRoute
+    }
+    '/auth/': {
+      id: '/auth/'
+      path: '/'
+      fullPath: '/auth/'
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/documents/$slug': {
       id: '/documents/$slug'
@@ -684,7 +701,7 @@ declare module '@tanstack/react-router' {
       path: '/change-password'
       fullPath: '/auth/change-password'
       preLoaderRoute: typeof AuthChangePasswordRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof AuthRouteRoute
     }
     '/_authenticated/users': {
       id: '/_authenticated/users'
@@ -1023,6 +1040,20 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AuthRouteRouteChildren {
+  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
+  AuthIndexRoute: typeof AuthIndexRoute
+}
+
+const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthChangePasswordRoute: AuthChangePasswordRoute,
+  AuthIndexRoute: AuthIndexRoute,
+}
+
+const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
+  AuthRouteRouteChildren,
+)
+
 interface CarerOnboardingRouteRouteChildren {
   CarerOnboardingAvailabilityRoute: typeof CarerOnboardingAvailabilityRoute
   CarerOnboardingDocumentsRoute: typeof CarerOnboardingDocumentsRoute
@@ -1084,21 +1115,11 @@ const CarerRouteRouteWithChildren = CarerRouteRoute._addFileChildren(
   CarerRouteRouteChildren,
 )
 
-interface AuthRouteChildren {
-  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthChangePasswordRoute: AuthChangePasswordRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRouteRoute: AuthRouteRouteWithChildren,
   CarerRouteRoute: CarerRouteRouteWithChildren,
-  AuthRoute: AuthRouteWithChildren,
   DocumentsSlugRoute: DocumentsSlugRoute,
 }
 export const routeTree = rootRouteImport

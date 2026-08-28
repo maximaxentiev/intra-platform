@@ -45,10 +45,10 @@ function ChangePasswordPage() {
 
     setLoading(true);
     try {
-      await authApi.replacePassword(newPassword);
-      await queryClient.invalidateQueries({ queryKey: ["auth", "session"] });
+      const user = await authApi.replacePassword(newPassword);
+      queryClient.setQueryData(["auth", "session"], user);
       toast.success("Password updated");
-      navigate({ to: "/dashboard", replace: true });
+      await navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to change password");
     } finally {

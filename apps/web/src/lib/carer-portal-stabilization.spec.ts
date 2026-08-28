@@ -17,7 +17,7 @@ describe("ops vs carer auth separation", () => {
   });
 
   it("uses carerAuthApi only under carer routes", () => {
-    const authRoute = readSrc("routes/auth.tsx");
+    const authRoute = readSrc("routes/auth/index.tsx");
     expect(authRoute).not.toContain("carerAuthApi");
 
     const carerLogin = readSrc("routes/carer/login.tsx");

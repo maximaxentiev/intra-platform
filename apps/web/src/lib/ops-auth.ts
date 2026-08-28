@@ -11,3 +11,10 @@ export function opsLoginDestination(user: {
 }): '/auth/change-password' | '/dashboard' {
   return requiresForcedPasswordChange(user) ? '/auth/change-password' : '/dashboard';
 }
+
+/** Navigation target after a successful Ops login mutation. */
+export function resolveOpsPostLoginNavigation(user: {
+  mustChangePassword?: boolean | null;
+}): { to: '/auth/change-password' | '/dashboard'; replace: true } {
+  return { to: opsLoginDestination(user), replace: true };
+}
