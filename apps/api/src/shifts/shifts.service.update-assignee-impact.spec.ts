@@ -6,6 +6,7 @@ import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
+import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { ShiftsService } from './shifts.service';
 import type { ShiftUpdateCommunicationService } from './shift-update-communication.service';
 import type { ShiftReminderService } from './shift-reminder.service';
@@ -73,6 +74,7 @@ function createUpdateService(input: {
     createMockShiftCancellationService(),
     platformAudit,
     shiftUpdateCommunications,
+    createMockShiftManualUnassignCommunicationService(),
   );
 
   return { service, returning, shiftUpdateCommunications, shiftMatching, shiftReminders, platformAudit, tx };
@@ -282,6 +284,7 @@ describe('ShiftsService update assignee impact', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
     const preview = await service.previewUpdate('shift-1', { shiftDate: '2026-08-29' });
@@ -318,6 +321,7 @@ describe('ShiftsService update assignee impact', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
     await expect(

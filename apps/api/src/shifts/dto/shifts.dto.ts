@@ -16,6 +16,7 @@ import {
   resolveCentreUsageCentreIds,
 } from '../../reports/dto/report-centre-ids.util';
 import { ShiftUpdateCommunicationsDto } from './shift-update.dto';
+import { ShiftCommunicationRecipientsDto } from './shift-communication-recipients.dto';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -113,6 +114,11 @@ export class ChangeStatusDto {
   @IsString()
   @MaxLength(1000)
   cancellationReason?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShiftCommunicationRecipientsDto)
+  communications?: ShiftCommunicationRecipientsDto;
 }
 
 export class AssignDto {

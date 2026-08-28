@@ -37,16 +37,38 @@ export class ShiftCancellationService {
     },
     executor: DbLike,
   ): Promise<string[]> {
+    return this.scheduleCancellation(
+      {
+        ...params,
+        recipients: { centre: true, carer: true },
+      },
+      executor,
+    );
+  }
+
+  async scheduleCancellation(
+    params: {
+      shiftId: string;
+      assignedStaffId: string | null;
+      centreId: string;
+      scheduledFor: Date;
+      recipients: { centre: boolean; carer: boolean };
+    },
+    executor: DbLike,
+  ): Promise<string[]> {
     const cancellationVersion = deriveCancellationVersion(params.scheduledFor);
     const scheduledIds: string[] = [];
 
     const recipients: Array<{
       recipient: ShiftCancellationRecipient;
       recipientEntityId: string;
-    }> = [
-      { recipient: 'centre', recipientEntityId: params.centreId },
-      { recipient: 'carer', recipientEntityId: params.assignedStaffId },
-    ];
+    }> = [];
+    if (params.recipients.centre) {
+      recipients.push({ recipient: 'centre', recipientEntityId: params.centreId });
+    }
+    if (params.recipients.carer && params.assignedStaffId) {
+      recipients.push({ recipient: 'carer', recipientEntityId: params.assignedStaffId });
+    }
 
     for (const item of recipients) {
       const row = await this.automated.schedule(

@@ -12,6 +12,7 @@ import { ShiftMatchingService } from './shift-matching.service';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
+import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -53,6 +54,7 @@ function buildService(db: NodePgDatabase<typeof schema>) {
     createMockShiftCancellationService(),
     new PlatformAuditService(db),
     createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
   );
 }
 
@@ -193,8 +195,8 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
     await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     const unassigned = await service.unassign(created.id, FIXTURE.opsUser);
-    expect(unassigned.status).toBe('pending');
-    expect(unassigned.assignedStaffId).toBeNull();
+    expect(unassigned.shift.status).toBe('pending');
+    expect(unassigned.shift.assignedStaffId).toBeNull();
   });
 
   it('rejects generic status transition to pending', async () => {

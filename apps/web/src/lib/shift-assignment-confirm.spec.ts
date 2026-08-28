@@ -55,7 +55,7 @@ describe("ops shift assignment confirmation UI", () => {
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
     expect(db).toContain("ShiftAssignResponse");
     expect(page).toContain("shiftAssignmentFeedbackMessage");
-    expect(page).toContain("Resend confirmations");
+    expect(page).toContain("Resend confirmation");
     expect(page).toContain("assigningStaffId");
   });
 

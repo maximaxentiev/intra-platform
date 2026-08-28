@@ -5,6 +5,7 @@ import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmat
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
 import { ShiftUpdateCommunicationService } from './shift-update-communication.service';
+import { ShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication.service';
 import { ShiftCommunicationsModule } from './shift-communications.module';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsCron } from './shifts.cron';
@@ -20,6 +21,7 @@ import { ShiftsService } from './shifts.service';
     ShiftAssignmentConfirmationService,
     ShiftAssignmentNotificationsService,
     ShiftUpdateCommunicationService,
+    ShiftManualUnassignCommunicationService,
   ],
   exports: [ShiftsService, ShiftCommunicationsModule],
 })

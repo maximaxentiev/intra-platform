@@ -6,6 +6,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
+import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { ShiftsService } from './shifts.service';
 import type { ShiftUpdateCommunicationService } from './shift-update-communication.service';
 
@@ -67,6 +68,7 @@ function createUpdateService(input: {
     createMockShiftCancellationService(),
     mockPlatformAudit(),
     shiftUpdateCommunications,
+    createMockShiftManualUnassignCommunicationService(),
   );
 
   return { service, returning, shiftUpdateCommunications, shiftMatching };

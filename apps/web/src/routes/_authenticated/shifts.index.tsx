@@ -361,8 +361,8 @@ function ShiftsIndex() {
               <Table>
                 <TableHeader className={dataTable.header}>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className={dataTable.headerCell}>Date</TableHead>
                     <TableHead className={dataTable.headerCell}>Centre</TableHead>
+                    <TableHead className={dataTable.headerCell}>Date</TableHead>
                     <TableHead className={dataTable.headerCell}>Time</TableHead>
                     <TableHead className={dataTable.headerCell}>Role</TableHead>
                     <TableHead className={dataTable.headerCell}>Assigned to</TableHead>
@@ -383,7 +383,7 @@ function ShiftsIndex() {
                         </Tooltip>
                       </span>
                     </TableHead>
-                    <TableHead className={dataTable.headerCell}>Status</TableHead>
+                    <TableHead className={dataTable.headerCell}>Filled</TableHead>
                     <TableHead className={dataTable.headerCell}><span className="sr-only">Open</span></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -403,17 +403,17 @@ function ShiftsIndex() {
                         key={s.id}
                         className={`relative ${dataTable.row} ${dataTable.rowInteractive} ${quiet ? "opacity-75" : ""}`}
                       >
-                        <TableCell className={`${dataTable.cell} font-medium tabular-nums`}>
+                        <TableCell className={`${dataTable.cell} max-w-[220px] truncate font-medium`}>
                           <Link
                             to="/shifts/$id"
                             params={{ id: s.id }}
                             aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}
                             className="after:absolute after:inset-0 focus-visible:outline-none"
                           >
-                            {s.shiftDate}
+                            {s.centreName}
                           </Link>
                         </TableCell>
-                        <TableCell className={`${dataTable.cell} max-w-[220px] truncate`}>{s.centreName}</TableCell>
+                        <TableCell className={`${dataTable.cell} tabular-nums`}>{s.shiftDate}</TableCell>
                         <TableCell className={`${dataTable.cell} ${dataTable.cellMuted} tabular-nums`}>
                           {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
                         </TableCell>

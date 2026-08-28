@@ -69,12 +69,19 @@ export class ShiftAssignmentConfirmationService {
     assignedStaffId: string;
     actorUserId: string;
     trigger: ConfirmationTrigger;
+    recipients?: { centre?: boolean; carer?: boolean };
   }): Promise<ShiftAssignmentNotificationsResult> {
+    const sendCentre = params.recipients?.centre ?? true;
+    const sendCarer = params.recipients?.carer ?? true;
     const context = await this.loadContext(params.shiftId, params.assignedStaffId);
     const platformEnv = this.platformEnv();
 
-    const centre = await this.processCentreConfirmation(context, params, platformEnv);
-    const carer = await this.processCarerConfirmation(context, params, platformEnv);
+    const centre = sendCentre
+      ? await this.processCentreConfirmation(context, params, platformEnv)
+      : { attempted: false, sent: false };
+    const carer = sendCarer
+      ? await this.processCarerConfirmation(context, params, platformEnv)
+      : { attempted: false, sent: false };
 
     return { centre, carer };
   }

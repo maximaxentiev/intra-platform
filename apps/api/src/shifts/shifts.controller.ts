@@ -22,6 +22,7 @@ import {
   UpdateShiftDto,
   UpsertShiftDto,
 } from './dto/shifts.dto';
+import { ResendConfirmationDto, UnassignShiftDto } from './dto/shift-communication-recipients.dto';
 import { ShiftsService } from './shifts.service';
 
 @ApiTags('shifts')
@@ -78,13 +79,21 @@ export class ShiftsController {
   }
 
   @Post(':id/send-assignment-confirmation')
-  sendAssignmentConfirmation(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
-    return this.shifts.sendAssignmentConfirmation(id, user.userId);
+  sendAssignmentConfirmation(
+    @Param('id') id: string,
+    @Body() dto: ResendConfirmationDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.sendAssignmentConfirmation(id, user.userId, dto);
   }
 
   @Post(':id/unassign')
-  unassign(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
-    return this.shifts.unassign(id, user.userId);
+  unassign(
+    @Param('id') id: string,
+    @Body() dto: UnassignShiftDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shifts.unassign(id, user.userId, dto);
   }
 
   @Post(':id/status')

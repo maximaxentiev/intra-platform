@@ -12,6 +12,7 @@ import { ShiftReminderService } from './shift-reminder.service';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
+import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -54,6 +55,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService schedule validation integration'
       {} as ShiftCancellationService,
       new PlatformAuditService(db),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
     await db.delete(centres).where(eq(centres.id, FIXTURE.centre));

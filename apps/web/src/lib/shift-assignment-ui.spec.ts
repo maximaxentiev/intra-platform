@@ -20,7 +20,7 @@ describe('ops shift assignment confirmation UI', () => {
     expect(db).toContain('ShiftAssignResponse');
     expect(db).toContain('send-assignment-confirmation');
     expect(page).toContain('shiftAssignmentFeedbackMessage');
-    expect(page).toContain('Resend confirmations');
+    expect(page).toContain('Resend confirmation');
     expect(page).toContain('assigningStaffId');
   });
 });

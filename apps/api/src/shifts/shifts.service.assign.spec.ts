@@ -6,6 +6,7 @@ import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
+import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { ShiftsService } from './shifts.service';
 
 function mockPlatformAudit() {
@@ -68,6 +69,7 @@ describe('ShiftsService.assign idempotency', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
@@ -111,6 +113,7 @@ describe('ShiftsService.assign idempotency', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
@@ -142,6 +145,7 @@ describe('ShiftsService.assign idempotency', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
@@ -181,11 +185,12 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
-    await expect(service.sendAssignmentConfirmation('shift-1', 'ops-1')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.sendAssignmentConfirmation('shift-1', 'ops-1', { recipients: { centre: true } }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
@@ -204,6 +209,7 @@ describe('ShiftsService.availableStaff', () => {
       createMockShiftCancellationService(),
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
+    createMockShiftManualUnassignCommunicationService(),
     );
 
     const rows = await service.availableStaff('shift-1');

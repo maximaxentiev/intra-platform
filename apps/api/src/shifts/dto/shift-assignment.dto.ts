@@ -23,3 +23,11 @@ export type ShiftAssignResponse = {
 export type ShiftResendConfirmationsResponse = {
   notifications: ShiftAssignmentNotificationsResult;
 };
+
+export type UnassignShiftResponse = {
+  shift: Record<string, unknown>;
+  notifications: {
+    centre: ShiftAssignmentRecipientResult | null;
+    carer: ShiftAssignmentRecipientResult | null;
+  } | null;
+};

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { getStaffLegalFullName } from '@intra/shared';
@@ -16,7 +17,11 @@ import {
   staff,
   users,
 } from '../db/schema';
-import type { ShiftAssignResponse, ShiftResendConfirmationsResponse } from './dto/shift-assignment.dto';
+import type {
+  ShiftAssignResponse,
+  ShiftResendConfirmationsResponse,
+  UnassignShiftResponse,
+} from './dto/shift-assignment.dto';
 import { resolveCentreUsageCentreIds } from '../reports/dto/report-centre-ids.util';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftMatchingService } from './shift-matching.service';
@@ -38,6 +43,13 @@ import {
 } from './shifts-lifecycle.util';
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
+import { ShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication.service';
+import { resolveSelectedRecipients } from './dto/shift-communication-recipients.dto';
+import type {
+  ResendConfirmationDto,
+  ShiftCommunicationRecipientsDto,
+  UnassignShiftDto,
+} from './dto/shift-communication-recipients.dto';
 import {
   AddCommentDto,
   ChangeStatusDto,
@@ -85,6 +97,7 @@ export class ShiftsService {
     private readonly shiftCancellations: ShiftCancellationService,
     private readonly platformAudit: PlatformAuditService,
     private readonly shiftUpdateCommunications: ShiftUpdateCommunicationService,
+    private readonly manualUnassignCommunications: ShiftManualUnassignCommunicationService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -594,6 +607,7 @@ export class ShiftsService {
   async sendAssignmentConfirmation(
     id: string,
     actorUserId: string,
+    dto: ResendConfirmationDto,
   ): Promise<ShiftResendConfirmationsResponse> {
     const row = await this.db
       .select({ assignedStaffId: shifts.assignedStaffId, status: shifts.status })
@@ -607,25 +621,38 @@ export class ShiftsService {
       throw new NotFoundException('Shift is not in a resendable assigned state.');
     }
 
+    const recipients = resolveSelectedRecipients(dto.recipients);
+    if (!recipients.centre && !recipients.carer) {
+      throw new BadRequestException('At least one recipient must be selected.');
+    }
+
     const notifications = await this.assignmentConfirmations.sendAssignmentConfirmations({
       shiftId: id,
       assignedStaffId: row[0].assignedStaffId,
       actorUserId,
       trigger: 'resend',
+      recipients,
     });
     return { notifications };
   }
 
-  async unassign(id: string, actorUserId: string) {
+  async unassign(id: string, actorUserId: string, dto?: UnassignShiftDto): Promise<UnassignShiftResponse> {
     const existing = await this.db
       .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId })
       .from(shifts)
       .where(eq(shifts.id, id));
     if (!existing[0]) throw new NotFoundException('Shift not found.');
+    if (!existing[0].assignedStaffId) {
+      throw new BadRequestException('Shift has no assigned staff member to unassign.');
+    }
+
+    const previousStaffId = existing[0].assignedStaffId;
+    const commRecipients = resolveSelectedRecipients(dto?.communications);
+    const sendComms = commRecipients.centre || commRecipients.carer;
 
     await this.shiftReminders.cancelPendingForShift(id);
 
-    return this.db.transaction(async (tx) => {
+    const row = await this.db.transaction(async (tx) => {
       const rows = await tx
         .update(shifts)
         .set({ assignedStaffId: null, status: 'pending', updatedAt: new Date() })
@@ -633,31 +660,47 @@ export class ShiftsService {
         .returning();
       if (!rows[0]) throw new NotFoundException('Shift not found.');
 
-      if (existing[0].assignedStaffId) {
-        await this.platformAudit.record(
-          {
-            action: PLATFORM_AUDIT_ACTIONS.shiftUnassigned,
-            actorType: 'ops_user',
-            actorUserId,
-            shiftId: id,
-            centreId: rows[0].centreId,
-            staffId: existing[0].assignedStaffId,
-            entityId: id,
-            metadata: {
-              previousStaffId: existing[0].assignedStaffId,
-            },
+      await this.platformAudit.record(
+        {
+          action: PLATFORM_AUDIT_ACTIONS.shiftUnassigned,
+          actorType: 'ops_user',
+          actorUserId,
+          shiftId: id,
+          centreId: rows[0].centreId,
+          staffId: previousStaffId,
+          entityId: id,
+          metadata: {
+            previousStaffId,
           },
-          tx,
-        );
-      }
+        },
+        tx,
+      );
 
       return rows[0];
     });
+
+    let notifications = null;
+    if (sendComms) {
+      notifications = await this.manualUnassignCommunications.sendCommunications({
+        shiftId: id,
+        centreId: row.centreId,
+        previousStaffId,
+        actorUserId,
+        recipients: commRecipients,
+      });
+    }
+
+    return { shift: row, notifications };
   }
 
   async changeStatus(id: string, dto: ChangeStatusDto, actorUserId: string) {
     if (dto.status === 'cancelled') {
-      return this.transitionToCancelled(id, dto.cancellationReason, actorUserId);
+      return this.transitionToCancelled(
+        id,
+        dto.cancellationReason,
+        actorUserId,
+        dto.communications,
+      );
     }
 
     if (dto.status === 'pending') {
@@ -709,8 +752,10 @@ export class ShiftsService {
     id: string,
     cancellationReason: string | undefined,
     actorUserId: string,
+    communications?: ShiftCommunicationRecipientsDto,
   ) {
     let scheduledCancellationIds: string[] = [];
+    const commRecipients = resolveSelectedRecipients(communications);
 
     const row = await this.db.transaction(async (tx) => {
       const locked = await tx
@@ -765,13 +810,14 @@ export class ShiftsService {
 
       await this.shiftReminders.cancelPendingForShift(id, tx);
 
-      if (cancelled.assignedStaffId) {
-        scheduledCancellationIds = await this.shiftCancellations.scheduleForAssignedCancellation(
+      if (commRecipients.centre || (commRecipients.carer && cancelled.assignedStaffId)) {
+        scheduledCancellationIds = await this.shiftCancellations.scheduleCancellation(
           {
             shiftId: id,
             assignedStaffId: cancelled.assignedStaffId,
             centreId: cancelled.centreId,
             scheduledFor: cancelled.updatedAt,
+            recipients: commRecipients,
           },
           tx,
         );

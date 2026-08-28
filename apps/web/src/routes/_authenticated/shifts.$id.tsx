@@ -6,11 +6,11 @@ import { ApiError } from "@/lib/api";
 import {
   shiftAssignmentFeedbackMessage,
   shiftResendFeedbackMessage,
+  shiftUnassignFeedbackMessage,
 } from "@/lib/shift-assignment-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -21,24 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { MoreHorizontal, Star, Trash2, UserCheck } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
-import { ShiftComments } from "@/components/ShiftComments";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink, ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
-import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
 import { formatShiftRoleLabel, shiftRoleEditOptions } from "@/lib/shift-role-ui";
 import {
   formatAvailableStaffPriorityLine,
@@ -55,6 +42,11 @@ import { shiftUpdateFeedbackMessage } from "@/lib/shift-edit-communications-feed
 import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
 import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpactDialog";
 import { ShiftAssignmentConfirmDialog } from "@/components/shifts/ShiftAssignmentConfirmDialog";
+import { ShiftResendConfirmationDialog } from "@/components/shifts/ShiftResendConfirmationDialog";
+import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
+import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
+import { ShiftInternalNotesCard } from "@/components/shifts/ShiftInternalNotesCard";
+import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
 import {
   formatAssigneeImpactScheduleLine,
@@ -77,13 +69,6 @@ type EditVals = {
   roleNeeded: string;
   notes: string;
   addedToStaffpoint: boolean;
-};
-
-const STATUS_SUMMARY: Record<ShiftStatus, string> = {
-  pending: "Pending until staff is assigned.",
-  filled: "Staff assigned.",
-  completed: "Automatically completed after the scheduled end time.",
-  cancelled: "This shift was cancelled.",
 };
 
 function FieldGroup({ legend, children }: { legend: string; children: React.ReactNode }) {
@@ -123,6 +108,11 @@ function ShiftDetail() {
   const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [pendingAssignStaff, setPendingAssignStaff] = useState<AvailableStaff | null>(null);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [commDialogOpen, setCommDialogOpen] = useState(false);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
@@ -154,13 +144,13 @@ function ShiftDetail() {
       });
 
   const centreContactsQ = useQuery({
-    enabled: !!shift && editing && commDialogOpen,
-    queryKey: ["centre-contacts", editValsForQueries.centreId],
-    queryFn: () => centresApi.contacts(editValsForQueries.centreId),
+    enabled: !!shift,
+    queryKey: ["centre-contacts", shift?.centreId],
+    queryFn: () => centresApi.contacts(shift!.centreId),
   });
 
   const assignedStaffQ = useQuery({
-    enabled: !!shift && editing && commDialogOpen && !!shift.assignedStaffId,
+    enabled: !!shift?.assignedStaffId,
     queryKey: ["staff", shift?.assignedStaffId],
     queryFn: () => staffApi.get(shift!.assignedStaffId!),
   });
@@ -205,7 +195,7 @@ function ShiftDetail() {
 
   const primaryCentreEmail = [...(centreContactsQ.data ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
-  const centreAvailability = primaryCentreEmail && isValidCommunicationEmail(primaryCentreEmail)
+  const centreCommAvailability = primaryCentreEmail && isValidCommunicationEmail(primaryCentreEmail)
     ? { available: true as const }
     : {
         available: false as const,
@@ -217,8 +207,34 @@ function ShiftDetail() {
   const carerEmail = assignedStaffQ.data
     ? resolveCarerCommunicationEmail(assignedStaffQ.data)
     : null;
-  const carerAvailability = shift.assignedStaffId
+  const carerCommAvailability = shift.assignedStaffId
     ? carerEmail
+      ? { available: true as const }
+      : { available: false as const, reason: "Assigned Carer has no valid email address." }
+    : { available: false as const, reason: "No Carer assigned." };
+
+  const editCentreContactsQ = useQuery({
+    enabled: !!shift && editing && commDialogOpen,
+    queryKey: ["centre-contacts", editValsForQueries.centreId],
+    queryFn: () => centresApi.contacts(editValsForQueries.centreId),
+  });
+
+  const editPrimaryCentreEmail = [...(editCentreContactsQ.data ?? [])]
+    .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
+  const centreAvailability = editPrimaryCentreEmail && isValidCommunicationEmail(editPrimaryCentreEmail)
+    ? { available: true as const }
+    : {
+        available: false as const,
+        reason: editPrimaryCentreEmail
+          ? "Centre primary contact email is invalid."
+          : "No centre primary contact email is configured.",
+      };
+
+  const editCarerEmail = assignedStaffQ.data
+    ? resolveCarerCommunicationEmail(assignedStaffQ.data)
+    : null;
+  const carerAvailability = shift.assignedStaffId
+    ? editCarerEmail
       ? { available: true as const }
       : { available: false as const, reason: "Assigned Carer has no valid email address." }
     : { available: false as const, reason: "No Carer assigned." };
@@ -356,16 +372,6 @@ function ShiftDetail() {
     resetAssigneeImpactState();
   }
 
-  async function changeStatus(newStatus: ShiftStatus, reason?: string) {
-    try {
-      await shiftsApi.changeStatus(id, newStatus, reason);
-      toast.success(`Status changed to ${newStatus}`);
-      qc.invalidateQueries();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Status change failed");
-    }
-  }
-
   async function assignStaff(staffId: string, staffLegalName: string): Promise<boolean> {
     if (assigningStaffId) return false;
     setAssigningStaffId(staffId);
@@ -432,17 +438,42 @@ function ShiftDetail() {
       })
     : null;
 
-  async function resendConfirmations() {
+  async function cancelShift(input: {
+    reason: string;
+    communications?: { centre: boolean; carer: boolean };
+  }) {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      await shiftsApi.changeStatus(id, "cancelled", {
+        cancellationReason: input.reason,
+        communications: input.communications,
+      });
+      toast.success("Shift cancelled");
+      setCancelDialogOpen(false);
+      qc.invalidateQueries();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Cancellation failed");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  async function confirmResend(recipients: { centre: boolean; carer: boolean }) {
     if (resendingConfirmations) return;
     setResendingConfirmations(true);
     try {
-      const result = await shiftsApi.resendAssignmentConfirmation(id);
+      const result = await shiftsApi.resendAssignmentConfirmation(id, recipients);
       const message = shiftResendFeedbackMessage(result.notifications);
-      if (result.notifications.centre.sent && result.notifications.carer.sent) {
-        toast.success(message);
-      } else {
+      const partialFailure =
+        (result.notifications.centre.attempted && !result.notifications.centre.sent) ||
+        (result.notifications.carer.attempted && !result.notifications.carer.sent);
+      if (partialFailure) {
         toast.warning(message);
+      } else {
+        toast.success(message);
       }
+      setResendDialogOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not resend confirmations");
     } finally {
@@ -450,13 +481,27 @@ function ShiftDetail() {
     }
   }
 
-  async function unassign() {
+  async function confirmUnassign(communications?: { centre: boolean; carer: boolean }) {
+    if (unassigning) return;
+    setUnassigning(true);
     try {
-      await shiftsApi.unassign(id);
-      toast.success("Assignment cleared");
+      const result = await shiftsApi.unassign(id, communications);
+      const message = shiftUnassignFeedbackMessage(result.notifications);
+      const partialFailure =
+        result.notifications &&
+        ((result.notifications.centre?.attempted && !result.notifications.centre.sent) ||
+          (result.notifications.carer?.attempted && !result.notifications.carer.sent));
+      if (partialFailure) {
+        toast.warning(message);
+      } else {
+        toast.success(message);
+      }
+      setUnassignDialogOpen(false);
       qc.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unassign failed");
+    } finally {
+      setUnassigning(false);
     }
   }
 
@@ -489,7 +534,6 @@ function ShiftDetail() {
       <BackLink to="/shifts" label="Back to Shifts" />
       <PageHeader
         title={shift.centreName ?? "Shift"}
-        meta={<StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>}
         actions={
           <>
             <DropdownMenu>
@@ -530,23 +574,135 @@ function ShiftDetail() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {/* Assignment — the primary operational workflow */}
+          <SectionCard
+            id="shift-details"
+            title="Shift details"
+            action={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditing((v) => !v);
+                  setEdit(null);
+                }}
+              >
+                {editing ? "Cancel" : "Edit"}
+              </Button>
+            }
+          >
+            {!editing ? (
+              <PropertyList
+                items={[
+                  { label: "Centre", value: shift.centreName },
+                  { label: "Date", value: shift.shiftDate },
+                  { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
+                  { label: "Role", value: formatShiftRoleLabel(shift.roleNeeded) },
+                  { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
+                  ...(status === "cancelled" && shift.cancellationReason
+                    ? [
+                        {
+                          label: "Cancellation reason",
+                          value: shift.cancellationReason,
+                          className: "sm:col-span-2",
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : (
+              <div className="space-y-5">
+                <FieldGroup legend="Where">
+                  <div className="space-y-2">
+                    <Label>Centre</Label>
+                    <SearchableCentreSelect
+                      value={editVals.centreId}
+                      onChange={(v) => setEdit({ ...editVals, centreId: v })}
+                    />
+                  </div>
+                </FieldGroup>
+                <FieldGroup legend="When">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-date">Date</Label>
+                      <Input id="edit-date" type="date" value={editVals.shiftDate} onChange={(e) => setEdit({ ...editVals, shiftDate: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-start">Start time</Label>
+                      <Input id="edit-start" type="time" value={editVals.startTime} onChange={(e) => setEdit({ ...editVals, startTime: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-end">End time</Label>
+                      <Input id="edit-end" type="time" value={editVals.endTime} onChange={(e) => setEdit({ ...editVals, endTime: e.target.value })} />
+                    </div>
+                  </div>
+                </FieldGroup>
+                <FieldGroup legend="Requirements">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Role required</Label>
+                      <Select value={editVals.roleNeeded || undefined} onValueChange={(v) => setEdit({ ...editVals, roleNeeded: v })}>
+                        <SelectTrigger aria-label="Role required"><SelectValue placeholder="Choose role..." /></SelectTrigger>
+                        <SelectContent>
+                          {shiftRoleEditOptions(shift.roleNeeded).map(({ value, label }) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Added to Staffpoint</Label>
+                      <Select
+                        value={editVals.addedToStaffpoint ? "yes" : "no"}
+                        onValueChange={(v) => setEdit({ ...editVals, addedToStaffpoint: v === "yes" })}
+                      >
+                        <SelectTrigger aria-label="Added to Staffpoint"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no">No</SelectItem>
+                          <SelectItem value="yes">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </FieldGroup>
+                <Button onClick={saveEdits} disabled={savingEdits || previewingAssignee}>
+                  Save changes
+                </Button>
+              </div>
+            )}
+          </SectionCard>
+
           <SectionCard
             id="assignment"
             title={assignedName ? "Assignment" : "Available staff"}
             description={
               assignedName
-                ? "This shift is staffed."
+                ? undefined
                 : "Eligible based on availability, conflicts, centre restrictions and compliance."
             }
             padded={false}
           >
+            <div className="border-b border-border/70 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </p>
+                  <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
+                </div>
+                {status === "cancelled" && shift.cancellationReason && (
+                  <p className="text-[13px] text-muted-foreground">
+                    <span className="font-medium text-foreground">Reason:</span> {shift.cancellationReason}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {assignedName && (
               <div className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-success-soft/60 px-4 py-3">
                 <UserCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Assigned staff
+                    Assigned Carer
                   </p>
                   <p className="text-sm font-semibold text-foreground">{assignedName}</p>
                 </div>
@@ -557,17 +713,37 @@ function ShiftDetail() {
                       variant="outline"
                       size="sm"
                       disabled={resendingConfirmations}
-                      onClick={() => void resendConfirmations()}
+                      onClick={() => setResendDialogOpen(true)}
                     >
-                      {resendingConfirmations ? "Sending…" : "Resend confirmations"}
+                      Resend confirmation
                     </Button>
                   )}
                   {!isHistorical && (
-                    <Button type="button" variant="ghost" size="sm" onClick={unassign}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={unassigning}
+                      onClick={() => setUnassignDialogOpen(true)}
+                    >
                       Unassign
                     </Button>
                   )}
                 </div>
+              </div>
+            )}
+
+            {!isHistorical && status !== "cancelled" && (
+              <div className="border-b border-border/70 px-4 py-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  disabled={cancelling}
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  Cancel shift
+                </Button>
               </div>
             )}
 
@@ -655,156 +831,15 @@ function ShiftDetail() {
               </>
             )}
           </SectionCard>
-
-          {/* Supporting information */}
-          <SectionCard
-            id="shift-details"
-            title="Shift details"
-            action={
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setEditing((v) => !v);
-                  setEdit(null);
-                }}
-              >
-                {editing ? "Cancel" : "Edit"}
-              </Button>
-            }
-          >
-            {!editing ? (
-              <PropertyList
-                items={[
-                  { label: "Centre", value: shift.centreName },
-                  { label: "Date", value: shift.shiftDate },
-                  { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
-                  { label: "Role", value: formatShiftRoleLabel(shift.roleNeeded) },
-                  { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
-                  { label: "Assigned staff", value: assignedName ?? undefined },
-                  { label: "Notes", value: shift.notes, className: "sm:col-span-2" },
-                  ...(status === "cancelled" && shift.cancellationReason
-                    ? [
-                        {
-                          label: "Cancellation reason",
-                          value: shift.cancellationReason,
-                          className: "sm:col-span-2",
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            ) : (
-              <div className="space-y-5">
-                <FieldGroup legend="Where">
-                  <div className="space-y-2">
-                    <Label>Centre</Label>
-                    <SearchableCentreSelect
-                      value={editVals.centreId}
-                      onChange={(v) => setEdit({ ...editVals, centreId: v })}
-                    />
-                  </div>
-                </FieldGroup>
-                <FieldGroup legend="When">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-date">Date</Label>
-                      <Input id="edit-date" type="date" value={editVals.shiftDate} onChange={(e) => setEdit({ ...editVals, shiftDate: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-start">Start time</Label>
-                      <Input id="edit-start" type="time" value={editVals.startTime} onChange={(e) => setEdit({ ...editVals, startTime: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-end">End time</Label>
-                      <Input id="edit-end" type="time" value={editVals.endTime} onChange={(e) => setEdit({ ...editVals, endTime: e.target.value })} />
-                    </div>
-                  </div>
-                </FieldGroup>
-                <FieldGroup legend="Requirements">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Role required</Label>
-                      <Select value={editVals.roleNeeded || undefined} onValueChange={(v) => setEdit({ ...editVals, roleNeeded: v })}>
-                        <SelectTrigger aria-label="Role required"><SelectValue placeholder="Choose role..." /></SelectTrigger>
-                        <SelectContent>
-                          {shiftRoleEditOptions(shift.roleNeeded).map(({ value, label }) => (
-                            <SelectItem key={value} value={value}>{label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Added to Staffpoint</Label>
-                      <Select
-                        value={editVals.addedToStaffpoint ? "yes" : "no"}
-                        onValueChange={(v) => setEdit({ ...editVals, addedToStaffpoint: v === "yes" })}
-                      >
-                        <SelectTrigger aria-label="Added to Staffpoint"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no">No</SelectItem>
-                          <SelectItem value="yes">Yes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </FieldGroup>
-                <FieldGroup legend="Internal">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-notes">Notes</Label>
-                    <Textarea id="edit-notes" rows={3} value={editVals.notes} onChange={(e) => setEdit({ ...editVals, notes: e.target.value })} />
-                  </div>
-                </FieldGroup>
-                <Button onClick={saveEdits} disabled={savingEdits || previewingAssignee}>
-                  Save changes
-                </Button>
-              </div>
-            )}
-          </SectionCard>
         </div>
 
-        {/* Lifecycle */}
-        <div className="lg:col-span-1">
-          <SectionCard id="lifecycle" title="Shift status">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
-              </div>
-              <p className="text-[13px] text-muted-foreground">{STATUS_SUMMARY[status]}</p>
-
-              {status === "cancelled" && shift.cancellationReason && (
-                <p className="text-[13px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Reason:</span> {shift.cancellationReason}
-                </p>
-              )}
-
-              {!isHistorical && (
-                <div className="space-y-2 border-t border-border/70 pt-3">
-                  {status === "filled" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                        onClick={() => changeStatus("completed")}
-                      >
-                        Mark completed
-                      </Button>
-                      <p className="text-[13px] text-muted-foreground">
-                        Filled shifts are automatically marked Completed once their end time passes.
-                      </p>
-                    </>
-                  )}
-                  <CancelShiftButton onCancel={(reason) => changeStatus("cancelled", reason)} />
-                </div>
-              )}
-
-            </div>
-          </SectionCard>
+        <div className="space-y-6 lg:col-span-1">
+          <div className="space-y-6 rounded-xl bg-surface-muted p-4 lg:p-5">
+            <ShiftInternalNotesCard key={shift.notes} shiftId={id} notes={shift.notes ?? ""} />
+            <ShiftActivityLogPanel shiftId={id} />
+          </div>
         </div>
       </div>
-
-      <ShiftComments shiftId={id} />
 
       <ShiftAssignmentConfirmDialog
         open={assignConfirmOpen}
@@ -825,7 +860,7 @@ function ShiftDetail() {
           assigneeImpact ?? {
             status: "must_unassign",
             staffId: "",
-            staffName: assignedName ?? "Assigned Staff",
+            staffName: assignedName ?? "Assigned Carer",
             reasons: [],
             reasonMessages: [],
           }
@@ -847,65 +882,39 @@ function ShiftDetail() {
         onSaveWithoutEmail={() => void performSave()}
         onSaveWithCommunications={(communications) => void performSave(communications)}
       />
+
+      <ShiftResendConfirmationDialog
+        open={resendDialogOpen}
+        onOpenChange={setResendDialogOpen}
+        centreAvailability={centreCommAvailability}
+        carerAvailability={carerCommAvailability}
+        submitting={resendingConfirmations}
+        onConfirmSend={(recipients) => void confirmResend(recipients)}
+      />
+
+      {assignedName && (
+        <ShiftUnassignDialog
+          open={unassignDialogOpen}
+          onOpenChange={setUnassignDialogOpen}
+          carerName={assignedName}
+          centreName={shift.centreName ?? "Centre"}
+          shiftDate={shift.shiftDate}
+          centreAvailability={centreCommAvailability}
+          carerAvailability={carerCommAvailability}
+          submitting={unassigning}
+          onConfirmWithoutEmail={() => void confirmUnassign()}
+          onConfirmWithRecipients={(recipients) => void confirmUnassign(recipients)}
+        />
+      )}
+
+      <ShiftCancelDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        centreAvailability={centreCommAvailability}
+        carerAvailability={carerCommAvailability}
+        submitting={cancelling}
+        onConfirm={(input) => void cancelShift(input)}
+      />
     </div>
-  );
-}
-
-function CancelShiftButton({ onCancel }: { onCancel: (reason: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const normalizedReason = normalizeCancellationReason(reason);
-
-  function handleOpenChange(next: boolean) {
-    setOpen(next);
-    if (!next) setReason("");
-  }
-
-  function submitCancellation() {
-    const trimmed = normalizeCancellationReason(reason);
-    if (!trimmed) return;
-    onCancel(trimmed);
-    setReason("");
-    setOpen(false);
-  }
-
-  return (
-    <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive"
-        >
-          Cancel shift
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel this shift?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The shift stays on record as Cancelled and any assigned staff member is kept for history.
-            A reason is required for internal records.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="cancel-reason">Cancellation reason *</Label>
-          <Textarea
-            id="cancel-reason"
-            required
-            placeholder="Why is this shift being cancelled?"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            aria-invalid={reason.length > 0 && !normalizedReason}
-          />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep shift</AlertDialogCancel>
-          <AlertDialogAction disabled={!normalizedReason} onClick={submitCancellation}>
-            Cancel shift
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

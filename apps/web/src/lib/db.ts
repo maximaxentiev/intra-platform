@@ -203,6 +203,23 @@ export type ShiftAssignResponse = {
   notifications: ShiftAssignmentNotificationsResult | null;
 };
 
+export type ShiftResendConfirmationsResponse = {
+  notifications: ShiftAssignmentNotificationsResult;
+};
+
+export type ShiftCommunicationRecipientsPayload = {
+  centre?: boolean;
+  carer?: boolean;
+};
+
+export type UnassignShiftResponse = {
+  shift: Shift;
+  notifications: {
+    centre: ShiftAssignmentRecipientResult | null;
+    carer: ShiftAssignmentRecipientResult | null;
+  } | null;
+};
+
 export type ShiftUpdateCommunicationsResult = {
   centre: ShiftAssignmentRecipientResult | null;
   carer: ShiftAssignmentRecipientResult | null;
@@ -441,11 +458,25 @@ export const shiftsApi = {
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
   assign: (id: string, staffId: string) =>
     api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, { staffId }),
-  resendAssignmentConfirmation: (id: string) =>
-    api.post<ShiftResendConfirmationsResponse>(`/shifts/${id}/send-assignment-confirmation`),
-  unassign: (id: string) => api.post<Shift>(`/shifts/${id}/unassign`),
-  changeStatus: (id: string, status: ShiftStatus, cancellationReason?: string) =>
-    api.post<Shift>(`/shifts/${id}/status`, { status, cancellationReason }),
+  resendAssignmentConfirmation: (
+    id: string,
+    recipients: ShiftCommunicationRecipientsPayload,
+  ) =>
+    api.post<ShiftResendConfirmationsResponse>(`/shifts/${id}/send-assignment-confirmation`, {
+      recipients,
+    }),
+  unassign: (id: string, communications?: ShiftCommunicationRecipientsPayload) =>
+    api.post<UnassignShiftResponse>(`/shifts/${id}/unassign`, communications ? { communications } : {}),
+  changeStatus: (
+    id: string,
+    status: ShiftStatus,
+    options?: { cancellationReason?: string; communications?: ShiftCommunicationRecipientsPayload },
+  ) =>
+    api.post<Shift>(`/shifts/${id}/status`, {
+      status,
+      cancellationReason: options?.cancellationReason,
+      communications: options?.communications,
+    }),
   availableStaff: (id: string) => api.get<AvailableStaff[]>(`/shifts/${id}/available-staff`),
   markContacted: (id: string, staffId: string) =>
     api.post<{ ok: true }>(`/shifts/${id}/contacted`, { staffId }),

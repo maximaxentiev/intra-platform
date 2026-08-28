@@ -57,20 +57,54 @@ export function shiftAssignmentFeedbackMessage(
 export function shiftResendFeedbackMessage(
   notifications: ShiftAssignmentNotificationsResult,
 ): string {
-  if (notifications.centre.sent && notifications.carer.sent) {
+  const centreSent = notifications.centre.sent;
+  const carerSent = notifications.carer.sent;
+  const centreAttempted = notifications.centre.attempted;
+  const carerAttempted = notifications.carer.attempted;
+
+  if (centreSent && carerSent) {
     return "Confirmation emails sent.";
   }
+  if (centreSent && !carerAttempted) {
+    return "Centre confirmation email sent.";
+  }
+  if (carerSent && !centreAttempted) {
+    return "Carer confirmation email sent.";
+  }
   if (
-    (notifications.centre.attempted && !notifications.centre.sent) ||
-    (notifications.carer.attempted && !notifications.carer.sent)
+    (centreAttempted && !centreSent) ||
+    (carerAttempted && !carerSent)
   ) {
     return "Some confirmation emails could not be sent.";
   }
-  if (
-    notifications.centre.skippedReason === "no_centre_primary_contact" ||
-    notifications.centre.skippedReason === "no_centre_email"
-  ) {
-    return "No centre primary contact email is configured.";
-  }
   return "Confirmation emails sent.";
+}
+
+export function shiftUnassignFeedbackMessage(
+  notifications: ShiftAssignmentNotificationsResult | null,
+): string {
+  if (!notifications) {
+    return "Carer unassigned.";
+  }
+  const centreSent = notifications.centre?.sent;
+  const carerSent = notifications.carer?.sent;
+  const centreAttempted = notifications.centre?.attempted;
+  const carerAttempted = notifications.carer?.attempted;
+
+  if (centreSent && carerSent) {
+    return "Carer unassigned. Communication sent.";
+  }
+  if (centreSent && !carerAttempted) {
+    return "Carer unassigned. Centre notified.";
+  }
+  if (carerSent && !centreAttempted) {
+    return "Carer unassigned. Carer notified.";
+  }
+  if (
+    (centreAttempted && !centreSent) ||
+    (carerAttempted && !carerSent)
+  ) {
+    return "Carer unassigned. Some communication could not be sent.";
+  }
+  return "Carer unassigned.";
 }
