@@ -116,7 +116,6 @@ export function CentreContactsEditor({ centreId }: { centreId: string }) {
   return (
     <SectionCard
       title="Contacts"
-      description="Order matters — the first contact is the primary contact."
       action={
         <Button
           type="button"

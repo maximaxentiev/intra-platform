@@ -57,7 +57,6 @@ import {
   categoryDraftFromCategory,
   categoryDraftDirty,
   deriveVscRenewalDueDate,
-  expiryDisplayLabel,
   formatDocumentByteSize,
   formatDocumentDate,
   formatVscRenewalDueLabel,
@@ -77,7 +76,6 @@ import {
   openOpsStaffDocumentFile,
 } from "@/lib/staff-document-content";
 import { StaffDocumentShareControls } from "@/components/staff/StaffDocumentShareControls";
-import { DocumentStatusBadge } from "@/components/DocumentStatusBadge";
 import { IssueNoteCallout } from "@/components/documents/DocumentStatusPills";
 import { cn } from "@/lib/utils";
 
@@ -96,24 +94,18 @@ export function invalidateStaffDocumentQueries(
   void qc.invalidateQueries({ queryKey: ["staff", staffId] });
 }
 
-/** Compact status line: review status, then expiry information when relevant. */
-function statusLine(category: CarerDocumentCategory): string {
-  if (!category.isSubmitted) return "Not submitted";
-  const parts = [reviewStatusLabel(category.reviewStatus)];
-  const expiryLabel = expiryDisplayLabel(category.expiryDisplay);
-  if (expiryLabel && expiryLabel !== "Current") {
-    parts.push(
-      category.expiryDate
-        ? `${expiryLabel} · Expires ${formatDocumentDate(category.expiryDate)}`
-        : expiryLabel,
-    );
-  } else if (category.expiryDate) {
-    parts.push(`Expires ${formatDocumentDate(category.expiryDate)}`);
-  }
-  return parts.join(" · ");
+/** Per-row status label for the aligned status column. */
+function categoryRowStatusLabel(category: CarerDocumentCategory): string {
+  if (!category.isSubmitted) return "Missing";
+  if (category.reviewStatus === "issue_flagged") return "Issue Flagged";
+  if (category.reviewStatus === "pending_review") return "Pending Review";
+  if (category.expiryDisplay === "expired") return "Expired";
+  if (category.expiryDisplay === "expiring_soon") return "Expiring Soon";
+  if (category.reviewStatus === "approved") return "Approved";
+  return reviewStatusLabel(category.reviewStatus);
 }
 
-function statusToneClass(category: CarerDocumentCategory): string {
+function categoryRowStatusToneClass(category: CarerDocumentCategory): string {
   if (!category.isSubmitted) return "text-muted-foreground";
   if (category.reviewStatus === "issue_flagged" || category.expiryDisplay === "expired") {
     return "text-destructive";
@@ -419,46 +411,38 @@ export function StaffDocumentsSection({
 
   return (
     <div className="space-y-3 min-w-0">
-      {/* Compact compliance summary — all values come from the backend. */}
+      {/* Shift-matching eligibility summary — document gate only. */}
       <Card
         className={cn(
           "border-l-4 shadow-sm",
           documents.shiftEligible ? "border-l-success" : "border-l-destructive",
         )}
       >
-        <CardContent className="grid gap-2 p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Documents</span>
-            <DocumentStatusBadge status={documents.documentStatus} />
-          </div>
-          <div className="min-w-0">
-            <p
-              className={cn(
-                "flex items-center gap-2 text-sm font-semibold",
-                documents.shiftEligible ? "text-success" : "text-destructive",
-              )}
-            >
-              {documents.shiftEligible ? (
-                <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
-              ) : (
-                <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0" />
-              )}
-              {documents.shiftEligible
-                ? "Eligible for shift matching"
-                : "Not eligible for shift matching"}
+        <CardContent className="p-4">
+          <p
+            className={cn(
+              "flex items-center gap-2 text-sm font-semibold",
+              documents.shiftEligible ? "text-success" : "text-destructive",
+            )}
+          >
+            {documents.shiftEligible ? (
+              <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+            ) : (
+              <ShieldAlert aria-hidden="true" className="h-4 w-4 shrink-0" />
+            )}
+            {documents.shiftEligible
+              ? "Eligible for shift matching"
+              : "Not eligible for shift matching"}
+          </p>
+          {!documents.shiftEligible && documents.shiftEligibilityReasons.length > 0 ? (
+            <p className="mt-1 pl-6 text-xs text-muted-foreground">
+              {documents.shiftEligibilityReasons
+                .map((reason) => shiftEligibilityReasonLabel(reason))
+                .join(" · ")}
             </p>
-            {!documents.shiftEligible && documents.shiftEligibilityReasons.length > 0 ? (
-              <p className="pl-6 text-xs text-muted-foreground">
-                {documents.shiftEligibilityReasons
-                  .map((reason) => shiftEligibilityReasonLabel(reason))
-                  .join(" · ")}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </CardContent>
       </Card>
-
-      <StaffDocumentShareControls staffId={staffId} />
 
       {[
         { types: STAFF_COMPLIANCE_DOCUMENT_TYPES },
@@ -492,91 +476,181 @@ export function StaffDocumentsSection({
           const PrimaryIcon = primary.icon;
 
           return (
-            <li key={type} className={cn("min-w-0", isOpen && "bg-muted/30")}>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-4">
-                <div className="min-w-0">
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <p className="truncate text-sm font-semibold">{meta.title}</p>
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {meta.required ? "Required" : "Optional"}
-                    </span>
-                  </div>
-                  <p className={cn("truncate text-xs", statusToneClass(category))}>
-                    {statusLine(category)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={
-                      primary.mode === "edit" && !category.isSubmitted
-                        ? "default"
-                        : needsReview
-                          ? "default"
-                          : "outline"
-                    }
-                    className="h-9 gap-1.5"
-                    aria-expanded={isOpen}
-                    aria-controls={isOpen ? panelId : undefined}
-                    disabled={busy}
-                    onClick={() => openPanel(type, primary.mode)}
+            <li
+              key={type}
+              className={cn(
+                "min-w-0 transition-colors",
+                isOpen && "bg-primary-soft",
+              )}
+            >
+              <div className="px-3 py-3 sm:px-4">
+                <div className="hidden sm:grid sm:grid-cols-[14rem_11rem_minmax(0,1fr)] sm:items-center sm:gap-4">
+                  <p className="truncate text-sm font-semibold">{meta.title}</p>
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      categoryRowStatusToneClass(category),
+                    )}
                   >
-                    <PrimaryIcon className="h-4 w-4" aria-hidden />
-                    <span>{primary.label}</span>
-                    <span className="sr-only"> {meta.title}</span>
-                    <ChevronDown
-                      aria-hidden
-                      className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
-                    />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-9 w-9 p-0 text-muted-foreground"
-                        disabled={busy}
-                      >
-                        <MoreHorizontal className="h-4 w-4" aria-hidden />
-                        <span className="sr-only">More actions for {meta.title}</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      {category.isSubmitted ? (
-                        <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
-                          <FileText className="h-4 w-4" aria-hidden />
-                          Details &amp; files
-                        </DropdownMenuItem>
-                      ) : null}
-                      <DropdownMenuItem onSelect={() => openPanel(type, "edit")}>
+                    {categoryRowStatusLabel(category)}
+                  </span>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        primary.mode === "edit" && !category.isSubmitted
+                          ? "default"
+                          : needsReview
+                            ? "default"
+                            : "outline"
+                      }
+                      className="h-9 gap-1.5"
+                      aria-expanded={isOpen}
+                      aria-controls={isOpen ? panelId : undefined}
+                      disabled={busy}
+                      onClick={() => openPanel(type, primary.mode)}
+                    >
+                      <PrimaryIcon className="h-4 w-4" aria-hidden />
+                      <span>{primary.label}</span>
+                      <span className="sr-only"> {meta.title}</span>
+                      <ChevronDown
+                        aria-hidden
+                        className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
+                      />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 w-9 p-0 text-muted-foreground"
+                          disabled={busy}
+                        >
+                          <MoreHorizontal className="h-4 w-4" aria-hidden />
+                          <span className="sr-only">More actions for {meta.title}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
                         {category.isSubmitted ? (
-                          <>
-                            <Pencil className="h-4 w-4" aria-hidden />
-                            Replace
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4" aria-hidden />
-                            Upload
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      {canClear ? (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => setClearTarget(type)}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                            Clear Submission
+                          <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
+                            <FileText className="h-4 w-4" aria-hidden />
+                            Details &amp; files
                           </DropdownMenuItem>
-                        </>
-                      ) : null}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        ) : null}
+                        <DropdownMenuItem onSelect={() => openPanel(type, "edit")}>
+                          {category.isSubmitted ? (
+                            <>
+                              <Pencil className="h-4 w-4" aria-hidden />
+                              Replace
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4" aria-hidden />
+                              Upload
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        {canClear ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setClearTarget(type)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                              Clear Submission
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                <div className="space-y-2 sm:hidden">
+                  <p className="text-sm font-semibold">{meta.title}</p>
+                  <span
+                    className={cn(
+                      "block text-sm font-medium",
+                      categoryRowStatusToneClass(category),
+                    )}
+                  >
+                    {categoryRowStatusLabel(category)}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        primary.mode === "edit" && !category.isSubmitted
+                          ? "default"
+                          : needsReview
+                            ? "default"
+                            : "outline"
+                      }
+                      className="h-9 gap-1.5"
+                      aria-expanded={isOpen}
+                      aria-controls={isOpen ? panelId : undefined}
+                      disabled={busy}
+                      onClick={() => openPanel(type, primary.mode)}
+                    >
+                      <PrimaryIcon className="h-4 w-4" aria-hidden />
+                      <span>{primary.label}</span>
+                      <ChevronDown
+                        aria-hidden
+                        className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
+                      />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 w-9 p-0 text-muted-foreground"
+                          disabled={busy}
+                        >
+                          <MoreHorizontal className="h-4 w-4" aria-hidden />
+                          <span className="sr-only">More actions for {meta.title}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {category.isSubmitted ? (
+                          <DropdownMenuItem onSelect={() => openPanel(type, "details")}>
+                            <FileText className="h-4 w-4" aria-hidden />
+                            Details &amp; files
+                          </DropdownMenuItem>
+                        ) : null}
+                        <DropdownMenuItem onSelect={() => openPanel(type, "edit")}>
+                          {category.isSubmitted ? (
+                            <>
+                              <Pencil className="h-4 w-4" aria-hidden />
+                              Replace
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4" aria-hidden />
+                              Upload
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        {canClear ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setClearTarget(type)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                              Clear Submission
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
 
@@ -864,6 +938,8 @@ export function StaffDocumentsSection({
           </ul>
         </div>
       ))}
+
+      <StaffDocumentShareControls staffId={staffId} />
 
       <AlertDialog open={approveTarget !== null} onOpenChange={(open) => !open && setApproveTarget(null)}>
         <AlertDialogContent>

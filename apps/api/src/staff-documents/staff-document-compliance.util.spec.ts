@@ -102,24 +102,35 @@ describe('deriveStaffDocumentListStatus', () => {
     );
   });
 
-  it('returns warning when approved but expiring soon', () => {
+  it('returns expiring_soon when approved but expiring soon', () => {
     const inputs = [
       submittedApproved('vulnerable_sector_check', '2026-09-10'),
       submittedApproved('first_aid_cpr', '2027-01-01'),
       submittedApproved('immunizations'),
     ];
     const required = complianceForRequiredCategories(inputs, AS_OF);
-    expect(deriveStaffDocumentListStatus(required)).toBe('warning');
+    expect(deriveStaffDocumentListStatus(required)).toBe('expiring_soon');
   });
 
-  it('returns warning when approved but expired', () => {
+  it('returns expired when approved but expired', () => {
     const inputs = [
       submittedApproved('vulnerable_sector_check', '2026-08-10'),
       submittedApproved('first_aid_cpr', '2027-01-01'),
       submittedApproved('immunizations'),
     ];
     expect(deriveStaffDocumentListStatus(complianceForRequiredCategories(inputs, AS_OF))).toBe(
-      'warning',
+      'expired',
+    );
+  });
+
+  it('returns expired when both expired and expiring soon are present', () => {
+    const inputs = [
+      submittedApproved('vulnerable_sector_check', '2026-08-10'),
+      submittedApproved('first_aid_cpr', '2026-09-10'),
+      submittedApproved('immunizations'),
+    ];
+    expect(deriveStaffDocumentListStatus(complianceForRequiredCategories(inputs, AS_OF))).toBe(
+      'expired',
     );
   });
 });
@@ -178,7 +189,7 @@ describe('deriveStaffShiftDocumentGate', () => {
       submittedApproved('immunizations'),
     ], AS_OF);
     expect(gate.eligible).toBe(true);
-    expect(gate.documentStatus).toBe('warning');
+    expect(gate.documentStatus).toBe('expiring_soon');
   });
 
   it('is eligible when all required approved and current', () => {

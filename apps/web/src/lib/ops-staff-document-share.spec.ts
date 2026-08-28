@@ -24,16 +24,18 @@ describe("ops staff document share API client", () => {
 });
 
 describe("ops share UI", () => {
-  it("places staff-level share controls in StaffDocumentsSection", () => {
+  it("places staff-level share controls at the bottom of StaffDocumentsSection", () => {
     const sectionSrc = readSrc("components/staff/StaffDocumentsSection.tsx");
     expect(sectionSrc).toContain("StaffDocumentShareControls");
-    expect(sectionSrc).not.toContain("Share documents</");
+    const shareIndex = sectionSrc.indexOf("StaffDocumentShareControls");
+    const alertIndex = sectionSrc.indexOf("AlertDialog open={approveTarget");
+    expect(shareIndex).toBeLessThan(alertIndex);
   });
 
   it("supports none, active, and revoked states with confirmations", () => {
     const controlsSrc = readSrc("components/staff/StaffDocumentShareControls.tsx");
     expect(controlsSrc).toContain("Generate share link");
-    expect(controlsSrc).toContain("Share link active");
+    expect(controlsSrc).not.toContain("Share link active");
     expect(controlsSrc).toContain("Copy link");
     expect(controlsSrc).toContain("Rotate share link?");
     expect(controlsSrc).toContain("Revoke share link?");

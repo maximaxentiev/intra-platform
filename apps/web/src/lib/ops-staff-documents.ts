@@ -25,7 +25,8 @@ import {
 export type StaffDocumentListStatus =
   | "no_documents_submitted"
   | "pending_review"
-  | "warning"
+  | "expired"
+  | "expiring_soon"
   | "approved";
 
 export type ShiftEligibilityReason =
@@ -43,7 +44,8 @@ export type OpsStaffDocumentsList = CarerDocumentsList & {
 export const STAFF_DOCUMENT_LIST_STATUS_LABELS: Record<StaffDocumentListStatus, string> = {
   no_documents_submitted: "No Documents Submitted",
   pending_review: "Pending Review",
-  warning: "Warning",
+  expired: "Expired",
+  expiring_soon: "Expiring Soon",
   approved: "Approved",
 };
 

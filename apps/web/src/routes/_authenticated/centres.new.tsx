@@ -24,10 +24,7 @@ function NewCentre() {
             savingLabel="Creating..."
             onSubmit={async (values, secondary) => {
               try {
-                const created = await centresApi.create({
-                  ...values,
-                  hourlyRate: values.hourlyRate.trim() ? values.hourlyRate.trim() : null,
-                });
+                const created = await centresApi.create(values);
                 await saveCentreSecondaryChannels(created.id, secondary);
                 toast.success("Centre created");
                 navigate({ to: "/centres/$id", params: { id: created.id }, search: { tab: "staff-lists" } });

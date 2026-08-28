@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('centre form staff-facing notes label', () => {
-  it('labels notes as Rules, Policies, and Other Notes with helper copy', () => {
+  it('labels notes as Rules, Policies, and Other Notes without helper copy', () => {
     const form = readFileSync(join(webRoot, 'components/CentreForm.tsx'), 'utf8');
     expect(form).toContain('Rules, Policies, and Other Notes');
-    expect(form).toContain('shared with carers when they are assigned to shifts');
+    expect(form).not.toContain('shared with carers when they are assigned to shifts');
   });
 });
 
@@ -48,11 +48,9 @@ describe('ops shift smart matching UI', () => {
 });
 
 describe('centre hourly rate UI', () => {
-  it('includes Hourly Rate field with neutral helper copy', () => {
+  it('does not expose hourly rate in the active centre edit form', () => {
     const form = readFileSync(join(webRoot, 'components/CentreForm.tsx'), 'utf8');
-    expect(form).toContain('Hourly Rate');
-    expect(form).toContain('Stores the agreed hourly rate for this centre.');
-    expect(form).not.toContain('future invoicing and reporting');
-    expect(form).toContain('hourlyRate');
+    expect(form).not.toContain('Hourly Rate');
+    expect(form).not.toContain('id="hourlyRate"');
   });
 });

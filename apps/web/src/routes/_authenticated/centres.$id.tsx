@@ -160,10 +160,7 @@ function CentreDetail() {
             secondaryChannels={secondaryQ.data ?? []}
             onSave={async (values, secondary) => {
               try {
-                await centresApi.update(id, {
-                  ...values,
-                  hourlyRate: values.hourlyRate.trim() ? values.hourlyRate.trim() : null,
-                });
+                await centresApi.update(id, values);
                 await saveCentreSecondaryChannels(id, secondary);
                 toast.success("Centre saved");
                 qc.invalidateQueries({ queryKey: ["centre", id] });

@@ -20,7 +20,6 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
       <SectionCard
         id="staff-profile"
         title="Profile"
-        description="Update this staff member's identity, contact and location details."
         action={
           <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
             Cancel
@@ -44,6 +43,26 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
     );
   }
 
+  const profileItems = [
+    ...(staff.useDisplayName
+      ? [{ label: "Display name", value: staff.displayName }]
+      : []),
+    { label: "Legal name", value: staff.legalName },
+    { label: "Role", value: staff.role },
+    { label: "Email", value: staff.email },
+    { label: "Phone", value: staff.phone },
+    { label: "Home address", value: staff.address },
+    { label: "City", value: staff.city },
+    {
+      label: "Notes",
+      value: staff.notes ? (
+        <span className="whitespace-pre-wrap">{staff.notes}</span>
+      ) : (
+        ""
+      ),
+    },
+  ];
+
   return (
     <SectionCard
       id="staff-profile"
@@ -59,64 +78,7 @@ export function StaffProfileCard({ staff }: { staff: StaffDetail }) {
         </Button>
       }
     >
-      <div className="space-y-5">
-        <ProfileGroup label="Identity">
-          <PropertyList
-            items={[
-              ...(staff.useDisplayName
-                ? [{ label: "Display name", value: staff.displayName }]
-                : []),
-              { label: "Legal name", value: staff.legalName },
-              { label: "Role", value: staff.role },
-            ]}
-          />
-        </ProfileGroup>
-
-        <ProfileGroup label="Contact">
-          <PropertyList
-            items={[
-              { label: "Email", value: staff.email },
-              { label: "Phone", value: staff.phone },
-            ]}
-          />
-        </ProfileGroup>
-
-        <ProfileGroup label="Location">
-          <PropertyList
-            items={[
-              { label: "Home address", value: staff.address },
-              { label: "City", value: staff.city },
-            ]}
-          />
-        </ProfileGroup>
-
-        <ProfileGroup label="Additional">
-          <PropertyList
-            columns={1}
-            items={[
-              {
-                label: "Notes",
-                value: staff.notes ? (
-                  <span className="whitespace-pre-wrap">{staff.notes}</span>
-                ) : (
-                  ""
-                ),
-              },
-            ]}
-          />
-        </ProfileGroup>
-      </div>
+      <PropertyList columns={1} items={profileItems} />
     </SectionCard>
-  );
-}
-
-function ProfileGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <section aria-label={label} className="space-y-2.5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </h3>
-      {children}
-    </section>
   );
 }

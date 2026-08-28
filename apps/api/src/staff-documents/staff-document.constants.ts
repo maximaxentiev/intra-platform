@@ -66,7 +66,8 @@ export type StaffDocumentExpiryDisplay = (typeof STAFF_DOCUMENT_EXPIRY_DISPLAY_V
 export const STAFF_DOCUMENT_LIST_STATUS_VALUES = [
   'no_documents_submitted',
   'pending_review',
-  'warning',
+  'expired',
+  'expiring_soon',
   'approved',
 ] as const;
 

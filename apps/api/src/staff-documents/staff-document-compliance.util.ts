@@ -187,11 +187,16 @@ export function deriveStaffDocumentListStatus(
 
   if (
     allApproved &&
-    required.some(
-      (c) => c.expiryDisplay === 'expiring_soon' || c.expiryDisplay === 'expired',
-    )
+    required.some((c) => c.expiryDisplay === 'expired')
   ) {
-    return 'warning';
+    return 'expired';
+  }
+
+  if (
+    allApproved &&
+    required.some((c) => c.expiryDisplay === 'expiring_soon')
+  ) {
+    return 'expiring_soon';
   }
 
   if (allApproved) {

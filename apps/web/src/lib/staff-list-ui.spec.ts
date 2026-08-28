@@ -51,16 +51,18 @@ describe("staff list filters", () => {
     const list = [
       staffWithStatus("approved"),
       staffWithStatus("pending_review", { id: "s-pending" }),
-      staffWithStatus("warning", { id: "s-warning" }),
+      staffWithStatus("expiring_soon", { id: "s-expiring" }),
+      staffWithStatus("expired", { id: "s-expired" }),
       staffWithStatus("no_documents_submitted", { id: "s-missing" }),
     ];
     expect(filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "approved" })).toHaveLength(1);
     expect(filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "pending_review" })).toHaveLength(1);
-    expect(filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "warning" })).toHaveLength(1);
+    expect(filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "expiring_soon" })).toHaveLength(1);
+    expect(filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "expired" })).toHaveLength(1);
     expect(
       filterStaffList(list, { ...EMPTY_STAFF_FILTERS, documents: "no_documents_submitted" }),
     ).toHaveLength(1);
-    expect(filterStaffList(list, EMPTY_STAFF_FILTERS)).toHaveLength(4);
+    expect(filterStaffList(list, EMPTY_STAFF_FILTERS)).toHaveLength(5);
   });
 
   it("combines document status filter with search", () => {
@@ -92,7 +94,7 @@ describe("staff list filters", () => {
       q: "Alex",
       role: "ECE",
       portal: "invited" as const,
-      documents: "warning" as const,
+      documents: "expired" as const,
     };
     expect(hasActiveStaffFilters(state)).toBe(true);
     const chips = buildStaffFilterChips(state);

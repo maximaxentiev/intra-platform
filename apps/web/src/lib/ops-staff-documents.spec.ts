@@ -59,7 +59,8 @@ describe("staff list document status labels", () => {
   it("maps backend aggregate statuses to exact Ops copy", () => {
     expect(staffDocumentListStatusLabel("no_documents_submitted")).toBe("No Documents Submitted");
     expect(staffDocumentListStatusLabel("pending_review")).toBe("Pending Review");
-    expect(staffDocumentListStatusLabel("warning")).toBe("Warning");
+    expect(staffDocumentListStatusLabel("expiring_soon")).toBe("Expiring Soon");
+    expect(staffDocumentListStatusLabel("expired")).toBe("Expired");
     expect(staffDocumentListStatusLabel("approved")).toBe("Approved");
   });
 
@@ -211,8 +212,8 @@ describe("document detail statuses", () => {
 });
 
 describe("status label completeness", () => {
-  it("defines all four list statuses", () => {
-    expect(Object.keys(STAFF_DOCUMENT_LIST_STATUS_LABELS)).toHaveLength(4);
+  it("defines all five list statuses", () => {
+    expect(Object.keys(STAFF_DOCUMENT_LIST_STATUS_LABELS)).toHaveLength(5);
   });
 });
 

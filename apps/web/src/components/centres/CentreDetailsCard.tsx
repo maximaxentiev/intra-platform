@@ -24,7 +24,7 @@ export function CentreDetailsCard({
 
   if (editing) {
     return (
-      <SectionCard title="Centre details" description="Update the centre record.">
+      <SectionCard>
         <CentreForm
           initial={centre}
           secondaryChannels={secondaryChannels}
@@ -41,7 +41,6 @@ export function CentreDetailsCard({
 
   return (
     <SectionCard
-      title="Centre details"
       action={
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
           <Pencil className="h-4 w-4" aria-hidden /> Edit details
@@ -52,10 +51,6 @@ export function CentreDetailsCard({
         items={[
           { label: "Centre name", value: centre.name },
           { label: "Location", value: centreLocationLabel(centre.address, centre.city) },
-          {
-            label: "Hourly rate",
-            value: centre.hourlyRate ? `$${centre.hourlyRate}` : undefined,
-          },
           {
             label: "Primary channel",
             value: (

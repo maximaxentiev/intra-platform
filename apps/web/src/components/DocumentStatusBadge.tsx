@@ -3,7 +3,7 @@ import {
   staffDocumentListStatusLabel,
   type StaffDocumentListStatus,
 } from "@/lib/ops-staff-documents";
-import { AlertCircle, CheckCircle2, Circle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Clock, Timer } from "lucide-react";
 
 const TONES: Record<
   StaffDocumentListStatus,
@@ -17,9 +17,13 @@ const TONES: Record<
     cls: "bg-info-soft text-info border-info/25",
     icon: Clock,
   },
-  warning: {
-    cls: "bg-warning-soft text-warning border-warning/30",
+  expired: {
+    cls: "bg-destructive/10 text-destructive border-destructive/30",
     icon: AlertCircle,
+  },
+  expiring_soon: {
+    cls: "bg-warning-soft text-warning border-warning/30",
+    icon: Timer,
   },
   approved: {
     cls: "bg-success-soft text-success border-success/25",

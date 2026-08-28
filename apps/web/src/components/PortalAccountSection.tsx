@@ -20,14 +20,6 @@ import {
 import { type PortalAccountDisplayStatus } from "@/lib/portal-account-status";
 import { formatDateTime, onboardingSummary, portalMetaVisibility } from "@/lib/staff-detail-ui";
 
-const STATE_COPY: Record<PortalAccountDisplayStatus, string> = {
-  no_account: "No carer portal account yet. Send an invitation so they can complete onboarding.",
-  invited: "Invitation sent — waiting for them to set a password.",
-  incomplete: "Signed in, but onboarding is not finished yet.",
-  disabled: "Portal access is currently disabled.",
-  active: "Portal account is active.",
-};
-
 export function PortalAccountSection({
   staffId,
   portalAccount,
@@ -105,7 +97,6 @@ export function PortalAccountSection({
           <PortalStatusBadge status={status} size="xs" />
         </span>
       }
-      description={STATE_COPY[status]}
     >
       <div className="space-y-4">
         {items.length > 0 && <PropertyList items={items} />}

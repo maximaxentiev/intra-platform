@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import {
   STAFF_DOCUMENT_SHARE_POLICY,
   copyTextToClipboard,
@@ -122,37 +121,13 @@ export function StaffDocumentShareControls({ staffId }: { staffId: string }) {
   const state = shareQ.data?.state ?? "none";
   const isBusy = pendingAction !== null || shareQ.isLoading;
 
-  const stateLabel =
-    state === "active" ? "Share link active" : state === "revoked" ? "Share link revoked" : "No active share link";
-
   return (
     <>
       <Card className="shadow-sm">
         <CardContent className="space-y-3 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <h3 className="text-sm font-medium">Share documents</h3>
-            </div>
-            {shareQ.isLoading ? null : (
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                  state === "active"
-                    ? "border-success/30 bg-success/10 text-success"
-                    : "border-border bg-muted text-muted-foreground",
-                )}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    state === "active" ? "bg-success" : "bg-muted-foreground/60",
-                  )}
-                />
-                {stateLabel}
-              </span>
-            )}
+          <div className="flex min-w-0 items-center gap-2">
+            <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Share documents</h3>
           </div>
 
           <p className="text-xs leading-relaxed text-muted-foreground">{STAFF_DOCUMENT_SHARE_POLICY}</p>
