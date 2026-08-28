@@ -49,7 +49,7 @@ export type CarerShiftSummaryDto = {
     address: string;
     city: string;
   };
-  /** Present on detail/cancel responses when the shift is cancelled. */
+  /** Present on detail responses when Ops cancelled the shift. */
   cancellationReason?: string | null;
 };
 

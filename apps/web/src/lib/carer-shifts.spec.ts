@@ -344,6 +344,37 @@ describe("carer shift detail has no self-cancellation UI", () => {
   });
 });
 
+describe("carer portal has no shift cancellation entry points", () => {
+  const carerSources = [
+    "components/carer/CarerShiftsManager.tsx",
+    "components/carer/CarerShiftsDashboardSummary.tsx",
+    "components/carer/CarerShiftCard.tsx",
+    "components/carer/CarerShell.tsx",
+    "routes/carer/index.tsx",
+    "routes/carer/shifts.index.tsx",
+    "routes/carer/shifts.$id.tsx",
+    "lib/carer-shifts.ts",
+    "lib/carer-shifts-queries.ts",
+  ];
+
+  it("does not expose cancel shift UI or client mutations anywhere in the carer portal", () => {
+    for (const rel of carerSources) {
+      const src = readSrc(rel);
+      expect(src).not.toMatch(/\bCancel shift\b/);
+      expect(src).not.toContain("carer-shift-cancellation");
+      expect(src).not.toContain("useCancelCarerShift");
+      expect(src).not.toMatch(/\/cancel['"`]/);
+    }
+  });
+
+  it("does not post shift status changes from carer shift queries", () => {
+    const queries = readSrc("lib/carer-shifts-queries.ts");
+    expect(queries).not.toContain("api.post");
+    expect(queries).not.toContain("api.patch");
+    expect(queries).not.toContain("cancel");
+  });
+});
+
 describe("carer shifts read-only security", () => {
   it("does not expose direct shift status mutation in carer UI source", () => {
     const sources = [
