@@ -1,8 +1,10 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
 import { opsLoginDestination, resolveOpsPostLoginNavigation } from "@/lib/ops-auth";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
+import { isCarerPortalEnabled } from "@/lib/carer-portal-flag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,10 +52,11 @@ function AuthPage() {
     <div className="flex min-h-dvh items-center justify-center bg-surface-muted px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground text-base font-bold shadow-sm">
-            IN
-          </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Intra Platform</h1>
+          <IntraAuthLogo size="lg" />
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
+            Intra Operations Team
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to the Intra Platform</p>
         </div>
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="space-y-1.5 pb-4">
@@ -70,6 +73,7 @@ function AuthPage() {
                   id="si-email"
                   type="email"
                   required
+                  className="h-11"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -80,16 +84,27 @@ function AuthPage() {
                   id="si-pass"
                   type="password"
                   required
+                  className="h-11"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="h-11 w-full" disabled={loading}>
                 {loading ? "Signing in…" : "Sign in"}
               </Button>
             </form>
           </CardContent>
         </Card>
+        {isCarerPortalEnabled() ? (
+          <p className="mt-6 text-center text-sm">
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Back to sign-in options
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );

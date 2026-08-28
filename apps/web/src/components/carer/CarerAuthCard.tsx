@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /** Shared shell for the carer-facing auth screens (login, invite, reset). */
@@ -18,12 +19,12 @@ export function CarerAuthCard({
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-surface-muted px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-sm">
-            IN
-          </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Carer Portal</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Your shifts, availability, and documents.</p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <IntraAuthLogo size="lg" />
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight sm:text-[1.75rem]">Carer Portal</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your shifts, availability, and documents.
+          </p>
         </div>
 
         <Card className="border-border/70 shadow-sm">
@@ -40,9 +41,9 @@ export function CarerAuthCard({
           {footer}
           <Link
             to="/"
-            className="inline-flex min-h-11 items-center gap-1.5 text-muted-foreground hover:text-foreground"
+            className="inline-flex min-h-11 items-center gap-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden />
             Back to sign-in options
           </Link>
         </div>
