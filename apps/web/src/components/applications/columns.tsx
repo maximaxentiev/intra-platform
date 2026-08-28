@@ -75,14 +75,6 @@ const SHARED_BEFORE: AppColumn[] = [
   },
 ];
 
-const QUALIFICATION: AppColumn = {
-  key: "qualification",
-  header: "Qualification",
-  minWidth: 180,
-  sortValue: (r) => toLabel(r.roleSpecific.qualificationStatus),
-  cell: (r) => <Trunc value={toLabel(r.roleSpecific.qualificationStatus)} className="text-sm" />,
-};
-
 const NANNY_ONLY: AppColumn[] = [
   {
     key: "experienceTypes",
@@ -106,13 +98,6 @@ const NANNY_ONLY: AppColumn[] = [
 ];
 
 const SHARED_AFTER: AppColumn[] = [
-  {
-    key: "gtaEligible",
-    header: "GTA Eligible",
-    minWidth: 115,
-    sortValue: (r) => (r.eligibility.gtaEligible ? 1 : 0),
-    cell: (r) => <YesNo value={r.eligibility.gtaEligible} />,
-  },
   {
     key: "covid",
     header: "COVID-19",
@@ -157,7 +142,7 @@ const SHARED_AFTER: AppColumn[] = [
 export function columnsForRole(role: ApplicationRole): AppColumn[] {
   return role === "nanny"
     ? [...SHARED_BEFORE, ...NANNY_ONLY, ...SHARED_AFTER]
-    : [...SHARED_BEFORE, QUALIFICATION, ...SHARED_AFTER];
+    : [...SHARED_BEFORE, ...SHARED_AFTER];
 }
 
 // ---------------------------------------------------------------------------

@@ -69,12 +69,30 @@ describe("applications table columns", () => {
     }
   });
 
-  it("keeps qualification column for ECA/ECE and nanny-specific training columns", () => {
-    expect(columnKeys("eca")).toContain("qualification");
-    expect(columnKeys("ece_rece")).toContain("qualification");
-    expect(columnKeys("nanny")).not.toContain("qualification");
+  it("does not show GTA Eligible or Qualification as list columns", () => {
+    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+      const keys = columnKeys(role);
+      expect(keys).not.toContain("gtaEligible");
+      expect(keys).not.toContain("qualification");
+    }
+  });
+
+  it("keeps nanny-specific training columns and other shared list columns", () => {
+    expect(columnKeys("eca")).toEqual(
+      expect.arrayContaining(["email", "childcareExperience", "covid", "documents"]),
+    );
+    expect(columnKeys("ece_rece")).toEqual(
+      expect.arrayContaining(["email", "childcareExperience", "covid", "documents"]),
+    );
     expect(columnKeys("nanny")).toEqual(
-      expect.arrayContaining(["experienceTypes", "trainingCompleted", "trainingDescription"]),
+      expect.arrayContaining([
+        "experienceTypes",
+        "trainingCompleted",
+        "trainingDescription",
+        "childcareExperience",
+        "covid",
+        "documents",
+      ]),
     );
   });
 });
@@ -124,6 +142,13 @@ describe("application drawer regression", () => {
     expect(applicationDrawer).toContain('label="First aid & CPR"');
     expect(applicationDrawer).toContain('label="Immunizations"');
     expect(applicationDrawer).toContain("ApplicationStatusBadge");
+  });
+
+  it("still exposes qualification and GTA eligibility in the applicant detail drawer", () => {
+    expect(applicationDrawer).toContain('label="GTA eligible"');
+    expect(applicationDrawer).toContain('label="Qualification status"');
+    expect(applicationDrawer).toContain("row.roleSpecific.qualificationStatus");
+    expect(applicationDrawer).toContain("row.eligibility.gtaEligible");
   });
 });
 
