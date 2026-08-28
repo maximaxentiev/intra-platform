@@ -56,6 +56,7 @@ import {
 import { CarerOnboardingDocumentCard } from "@/components/carer/CarerOnboardingDocumentCard";
 import { cn } from "@/lib/utils";
 import { carerDocumentCarerFacingStatus } from "@/lib/carer-documents";
+import type { CarerOnboardingStep2State } from "@/lib/carer-onboarding-save-state";
 
 function emptyDrafts(): Record<StaffDocumentType, CategoryDraft> {
   return emptyCategoryDrafts();
@@ -76,7 +77,7 @@ export function CarerDocumentsForm({
   step2Complete = false,
   onRefresh,
   onStepComplete,
-  onOnboardingSavingChange,
+  onOnboardingStepStateChange,
 }: {
   documents: CarerDocumentsList | undefined;
   isLoading: boolean;
@@ -84,8 +85,8 @@ export function CarerDocumentsForm({
   step2Complete?: boolean;
   onRefresh: () => Promise<unknown>;
   onStepComplete?: () => void;
-  /** Notifies onboarding shell when step-level persistence is in flight. */
-  onOnboardingSavingChange?: (saving: boolean) => void;
+  /** Notifies onboarding shell of Step 2 forward-button state (saving vs requirements). */
+  onOnboardingStepStateChange?: (state: CarerOnboardingStep2State) => void;
 }) {
   const navigate = useNavigate();
   const [savedDrafts, setSavedDrafts] = useState(emptyDrafts);
@@ -97,6 +98,7 @@ export function CarerDocumentsForm({
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [backConfirmOpen, setBackConfirmOpen] = useState(false);
+  const [dateSavePending, setDateSavePending] = useState(false);
   const fileInputs = useRef<Partial<Record<StaffDocumentType, HTMLInputElement | null>>>({});
   const dateSaveTimers = useRef<Partial<Record<StaffDocumentType, ReturnType<typeof setTimeout>>>>({});
 
@@ -110,14 +112,34 @@ export function CarerDocumentsForm({
   }, [documents]);
 
   const isDirty = useMemo(() => documentsDraftDirty(drafts, savedDrafts), [drafts, savedDrafts]);
-  const onboardingStepSaving = mode === "onboarding" && (saving || advancing || isDirty);
-  const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(isDirty);
+  const onboardingStepSaving =
+    mode === "onboarding" && (saving || advancing || dateSavePending);
+  const requirementsComplete =
+    mode === "onboarding" && (documents?.canCompleteStep2 ?? false) && !isDirty;
+  const showRequiredFieldsNote =
+    mode === "onboarding" &&
+    !onboardingStepSaving &&
+    !isDirty &&
+    !(documents?.canCompleteStep2 ?? false);
+  const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(
+    mode === "onboarding" ? false : isDirty,
+  );
 
   useEffect(() => {
     if (mode === "onboarding") {
-      onOnboardingSavingChange?.(onboardingStepSaving);
+      onOnboardingStepStateChange?.({
+        saving: onboardingStepSaving,
+        requirementsComplete,
+        showRequiredFieldsNote,
+      });
     }
-  }, [mode, onboardingStepSaving, onOnboardingSavingChange]);
+  }, [
+    mode,
+    onboardingStepSaving,
+    requirementsComplete,
+    showRequiredFieldsNote,
+    onOnboardingStepStateChange,
+  ]);
 
   const categoriesByType = useMemo(() => {
     const map = new Map<StaffDocumentType, CarerDocumentCategory>();
@@ -166,16 +188,61 @@ export function CarerDocumentsForm({
     setDiscardOpen(false);
   }
 
+  function countDraftFiles(
+    type: StaffDocumentType,
+    draft: CategoryDraft,
+    existingFiles: CarerDocumentCategory["files"],
+  ): number {
+    const retained = existingFiles.filter((f) => draft.retainFileIds.includes(f.id)).length;
+    return retained + draft.newFiles.length;
+  }
+
+  async function clearCategoryImmediate(type: StaffDocumentType): Promise<boolean> {
+    try {
+      await carerDocumentsApi.clearCategory(type);
+      await onRefresh();
+      setCategoryErrors((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      return true;
+    } catch (err) {
+      setCategoryErrors((prev) => ({
+        ...prev,
+        [type]: mapDocumentsApiError(err, "Could not remove this document."),
+      }));
+      return false;
+    }
+  }
+
   async function saveCategoryImmediate(type: StaffDocumentType, nextDrafts = drafts): Promise<boolean> {
     if (!documents) return false;
     const category = categoriesByType.get(type);
-    const validationError = validateCategoryDraft(type, nextDrafts[type], category?.files ?? []);
+    const existingFiles = category?.files ?? [];
+    const draft = nextDrafts[type];
+    const fileCount = countDraftFiles(type, draft, existingFiles);
+
+    if (fileCount === 0) {
+      if (existingFiles.length > 0) {
+        return clearCategoryImmediate(type);
+      }
+      setDrafts((prev) => ({ ...prev, [type]: savedDrafts[type] }));
+      setCategoryErrors((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      return true;
+    }
+
+    const validationError = validateCategoryDraft(type, draft, existingFiles);
     if (validationError) {
       setCategoryErrors((prev) => ({ ...prev, [type]: validationError }));
       return false;
     }
     try {
-      await carerDocumentsApi.saveCategory(type, buildCategorySaveFormData(type, nextDrafts[type]));
+      await carerDocumentsApi.saveCategory(type, buildCategorySaveFormData(type, draft));
       await onRefresh();
       setCategoryErrors((prev) => {
         const next = { ...prev };
@@ -194,23 +261,35 @@ export function CarerDocumentsForm({
 
   function scheduleOnboardingDateSave(type: StaffDocumentType, nextDrafts: Record<StaffDocumentType, CategoryDraft>) {
     if (mode !== "onboarding") return;
+    setDateSavePending(true);
     const existing = dateSaveTimers.current[type];
     if (existing) clearTimeout(existing);
     dateSaveTimers.current[type] = setTimeout(() => {
       delete dateSaveTimers.current[type];
-      void saveCategoryImmediate(type, nextDrafts);
+      setSaving(true);
+      void saveCategoryImmediate(type, nextDrafts).finally(() => {
+        setSaving(false);
+        setDateSavePending(Object.keys(dateSaveTimers.current).length > 0);
+      });
     }, 600);
   }
 
   async function flushPendingOnboardingDateSaves(): Promise<void> {
     if (mode !== "onboarding") return;
     const pendingTypes = Object.keys(dateSaveTimers.current) as StaffDocumentType[];
-    for (const type of pendingTypes) {
-      const timer = dateSaveTimers.current[type];
-      if (!timer) continue;
-      clearTimeout(timer);
-      delete dateSaveTimers.current[type];
-      await saveCategoryImmediate(type, drafts);
+    if (!pendingTypes.length) return;
+    setDateSavePending(false);
+    setSaving(true);
+    try {
+      for (const type of pendingTypes) {
+        const timer = dateSaveTimers.current[type];
+        if (!timer) continue;
+        clearTimeout(timer);
+        delete dateSaveTimers.current[type];
+        await saveCategoryImmediate(type, drafts);
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -281,7 +360,23 @@ export function CarerDocumentsForm({
 
     for (const type of dirtyTypes) {
       const category = categoriesByType.get(type);
-      const validationError = validateCategoryDraft(type, drafts[type], category?.files ?? []);
+      const existingFiles = category?.files ?? [];
+      const draft = drafts[type];
+      const fileCount = countDraftFiles(type, draft, existingFiles);
+
+      if (fileCount === 0) {
+        if (existingFiles.length > 0) {
+          try {
+            await carerDocumentsApi.clearCategory(type);
+          } catch (err) {
+            nextErrors[type] = mapDocumentsApiError(err, "Could not remove this document.");
+            allOk = false;
+          }
+        }
+        continue;
+      }
+
+      const validationError = validateCategoryDraft(type, draft, existingFiles);
       if (validationError) {
         nextErrors[type] = validationError;
         allOk = false;
@@ -289,7 +384,7 @@ export function CarerDocumentsForm({
       }
 
       try {
-        await carerDocumentsApi.saveCategory(type, buildCategorySaveFormData(type, drafts[type]));
+        await carerDocumentsApi.saveCategory(type, buildCategorySaveFormData(type, draft));
       } catch (err) {
         nextErrors[type] = mapDocumentsApiError(err, "Could not save this document.");
         allOk = false;

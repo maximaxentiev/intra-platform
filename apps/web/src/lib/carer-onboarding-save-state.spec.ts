@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { ONBOARDING_SAVING_CHANGES_LABEL } from "./carer-onboarding-save-state";
+import {
+  ONBOARDING_SAVING_CHANGES_LABEL,
+  ONBOARDING_STEP_2_REQUIRED_FIELDS_NOTE,
+} from "./carer-onboarding-save-state";
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -38,7 +41,8 @@ describe("step 1 save-state behavior", () => {
 
   it("removes Discard from onboarding mode", () => {
     expect(form()).toContain("CarerOnboardingForwardButton");
-    expect(form()).not.toMatch(/mode === "onboarding"[\s\S]*Discard/);
+    expect(form()).toMatch(/mode === "onboarding" \? \([\s\S]*CarerOnboardingForwardButton/);
+    expect(form()).toMatch(/mode !== "onboarding"[\s\S]*Discard changes/);
   });
 
   it("tracks debounce, request, and continue saving states", () => {
@@ -56,14 +60,47 @@ describe("step 1 save-state behavior", () => {
 });
 
 describe("step 2 save-state behavior", () => {
-  it("reports step saving state to the shell forward button", () => {
-    const form = readSrc("components/carer/CarerDocumentsForm.tsx");
-    const route = readSrc("routes/carer/onboarding/documents.tsx");
-    expect(form).toContain("onOnboardingSavingChange");
-    expect(form).toContain("onboardingStepSaving");
-    expect(route).toContain("CarerOnboardingForwardButton");
-    expect(route).toContain("onOnboardingSavingChange={setStepSaving}");
-    expect(route).toContain("disabled={stepSaving}");
+  const form = () => readSrc("components/carer/CarerDocumentsForm.tsx");
+  const route = () => readSrc("routes/carer/onboarding/documents.tsx");
+
+  it("reports saving and requirements state separately to the shell", () => {
+    expect(form()).toContain("onOnboardingStepStateChange");
+    expect(form()).toContain("onboardingStepSaving");
+    expect(form()).toContain("requirementsComplete");
+    expect(form()).toContain("showRequiredFieldsNote");
+    expect(form()).toContain("dateSavePending");
+    expect(form()).toMatch(
+      /onboardingStepSaving\s*=[\s\S]*\(saving \|\| advancing \|\| dateSavePending\)/,
+    );
+    expect(route()).toContain("onOnboardingStepStateChange={setStep2State}");
+    expect(route()).toContain("CarerOnboardingForwardButton");
+    expect(route()).toContain("disabled={!step2State.requirementsComplete}");
+    expect(route()).toContain("saving={step2State.saving}");
+  });
+
+  it("uses clearCategory when removing the last saved file in onboarding", () => {
+    expect(form()).toContain("clearCategoryImmediate");
+    expect(form()).toContain("carerDocumentsApi.clearCategory");
+    expect(form()).toContain("countDraftFiles");
+  });
+
+  it("shows required-fields note only when saved but incomplete", () => {
+    expect(ONBOARDING_STEP_2_REQUIRED_FIELDS_NOTE).toBe(
+      "There are still required fields that need attention.",
+    );
+    expect(route()).toContain("ONBOARDING_STEP_2_REQUIRED_FIELDS_NOTE");
+    expect(route()).toContain("step2State.showRequiredFieldsNote");
+    expect(form()).toMatch(/showRequiredFieldsNote[\s\S]*!onboardingStepSaving[\s\S]*!isDirty/);
+  });
+
+  it("derives requirementsComplete from canCompleteStep2 when drafts are synced", () => {
+    expect(form()).toContain("canCompleteStep2");
+    expect(form()).toMatch(/requirementsComplete[\s\S]*canCompleteStep2[\s\S]*!isDirty/);
+  });
+
+  it("disables go back only while saving, not when requirements are incomplete", () => {
+    expect(route()).toContain("disabled={step2State.saving}");
+    expect(route()).toContain("Go back");
   });
 });
 
@@ -75,7 +112,8 @@ describe("step 3 save-state behavior", () => {
     expect(route).toContain("onBusyChange={setAvailabilityBusy}");
     expect(route).toContain("const stepSaving = completing || availabilityBusy");
     expect(route).toContain("if (stepSaving) return");
-    expect(route).toMatch(/Go back[\s\S]*disabled=\{stepSaving\}/);
+    expect(route).toContain("disabled={stepSaving}");
+    expect(route).toContain("Go back");
   });
 });
 
@@ -84,5 +122,20 @@ describe("step 2 continue hardening preserved", () => {
     const form = readSrc("components/carer/CarerDocumentsForm.tsx");
     expect(form).toContain("flushPendingOnboardingDateSaves");
     expect(form).toMatch(/handleNext[\s\S]*flushPendingOnboardingDateSaves[\s\S]*saveDirtyCategories/);
+  });
+});
+
+describe("step 2 optional documents regression", () => {
+  it("uses server canCompleteStep2 which excludes optional qualification documents", () => {
+    const apiLib = readSrc("lib/carer-documents.ts");
+    expect(apiLib).toContain("canCompleteStep2");
+  });
+});
+
+describe("normal documents page regression", () => {
+  it("does not wire onboarding step state on the account documents route", () => {
+    const accountRoute = readSrc("routes/carer/documents.tsx");
+    expect(accountRoute).not.toContain("onOnboardingStepStateChange");
+    expect(accountRoute).not.toContain("ONBOARDING_STEP_2_REQUIRED_FIELDS_NOTE");
   });
 });
