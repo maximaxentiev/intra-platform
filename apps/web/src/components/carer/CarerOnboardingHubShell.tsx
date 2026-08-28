@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { carerAuthApi, carerFullName, type CarerSession } from "@/lib/carer";
 import { CARER_ONBOARDING_HUB_PATH } from "@/lib/carer-onboarding-hub";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
 import { Button } from "@/components/ui/button";
 
 /** Distinct onboarding chrome — separate from the regular Carer portal shell. */
@@ -35,9 +36,7 @@ export function CarerOnboardingHubShell({
       <header className="sticky top-0 z-10 border-b border-border/70 bg-card/95 backdrop-blur">
         <div className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5">
           <Link to={CARER_ONBOARDING_HUB_PATH} className="flex min-w-0 items-center gap-2.5">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-              IN
-            </div>
+            <IntraAuthLogo size="sm" />
             <span className="min-w-0 truncate">
               <span className="block text-sm font-semibold leading-tight">Intra</span>
               <span className="block truncate text-xs text-muted-foreground">

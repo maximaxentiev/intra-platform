@@ -27,10 +27,15 @@ describe("platform login branding", () => {
       "routes/auth/index.tsx",
       "routes/auth/change-password.tsx",
       "components/carer/CarerAuthCard.tsx",
+      "components/AppShell.tsx",
+      "components/carer/CarerShell.tsx",
+      "components/carer/CarerOnboardingStepShell.tsx",
+      "components/carer/CarerOnboardingHubShell.tsx",
+      "components/public/PublicDocumentSharePage.tsx",
     ]) {
       const src = readSrc(rel);
       expect(src).toContain("IntraAuthLogo");
-      expect(src).not.toMatch(/\bIN\b.*font-bold/);
+      expect(src).not.toMatch(/\bIN\b[\s\S]*font-bold/);
     }
   });
 

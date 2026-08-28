@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { carerAuthApi, type CarerSession } from "@/lib/carer";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
 import { Button } from "@/components/ui/button";
 
 type CarerOnboardingStepShellProps = {
@@ -38,9 +39,7 @@ export function CarerOnboardingStepShell({
       <header className="sticky top-0 z-10 border-b border-border/70 bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-              IN
-            </div>
+            <IntraAuthLogo size="nav" />
             <span className="text-sm font-semibold leading-tight">Intra</span>
           </div>
           <Button

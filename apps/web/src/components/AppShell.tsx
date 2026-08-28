@@ -16,6 +16,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
 import { Button } from "@/components/ui/button";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -96,17 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const Brand = (
     <Link to="/dashboard" className="flex items-center gap-2.5 px-1" aria-label="Intra Platform">
-      {/*
-        Branding slot. Replace the placeholder mark below with the official Intra
-        logo asset (import from `@/assets/intra-logo.svg`) once supplied — the
-        surrounding layout does not need to change.
-      */}
-      <div
-        aria-hidden
-        className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-sm"
-      >
-        IN
-      </div>
+      <IntraAuthLogo size="xs" />
       <div className="min-w-0">
         <div className="text-sm font-semibold leading-none text-foreground">Intra Platform</div>
       </div>

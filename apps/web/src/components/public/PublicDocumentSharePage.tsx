@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IntraAuthLogo } from "@/components/auth/IntraAuthLogo";
 import { openPublicStaffDocumentFile } from "@/lib/public-staff-document-content";
 import {
   PUBLIC_SHARE_EMPTY_MESSAGE,
@@ -87,17 +88,7 @@ export function PublicDocumentSharePage({ slug }: { slug: string }) {
     <div className="min-h-dvh bg-muted/30">
       <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-10 sm:px-6 sm:py-14">
         <header className="mb-8 flex flex-col items-center text-center">
-          {/*
-            Branding slot. Replace the placeholder mark below with the official Intra
-            logo asset (import from `@/assets/intra-logo.svg`) once supplied — the
-            surrounding layout does not need to change.
-          */}
-          <div
-            aria-hidden="true"
-            className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-sm font-bold tracking-wide text-primary-foreground shadow-sm"
-          >
-            IN
-          </div>
+          <IntraAuthLogo size="sm" className="h-11 w-11" />
           <p className="mt-3 text-sm font-semibold text-foreground">Intra</p>
         </header>
 
