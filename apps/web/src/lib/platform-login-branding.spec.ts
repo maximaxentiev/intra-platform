@@ -10,9 +10,18 @@ function readSrc(rel: string) {
   return readFileSync(join(webRoot, rel), "utf8");
 }
 
+/** PNG IHDR color type 6 = RGBA (supports transparency). */
+function pngHasAlphaChannel(filePath: string): boolean {
+  const buf = readFileSync(filePath);
+  // IHDR color type byte sits at offset 25 for standard PNG layout.
+  return buf.length > 25 && buf[25] === 6;
+}
+
 describe("platform login branding", () => {
   it("uses the official purple Intra logo asset on auth surfaces", () => {
     expect(INTRA_LOGO_PURPLE_ASSET).toContain("intra-logo-purple");
+    const logoComponent = readSrc("components/auth/IntraAuthLogo.tsx");
+    expect(logoComponent).toContain("bg-transparent");
     for (const rel of [
       "routes/index.tsx",
       "routes/auth/index.tsx",
@@ -23,6 +32,11 @@ describe("platform login branding", () => {
       expect(src).toContain("IntraAuthLogo");
       expect(src).not.toMatch(/\bIN\b.*font-bold/);
     }
+  });
+
+  it("ships the logo PNG with an alpha channel for transparent corners", () => {
+    const assetPath = join(webRoot, "assets/intra-logo-purple.png");
+    expect(pngHasAlphaChannel(assetPath)).toBe(true);
   });
 
   it("shows Welcome to the Intra Platform on the auth landing page", () => {

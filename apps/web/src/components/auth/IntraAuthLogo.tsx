@@ -19,7 +19,7 @@ export function IntraAuthLogo({ className, size = "md" }: IntraAuthLogoProps) {
       alt="Intra"
       width={112}
       height={112}
-      className={cn("object-contain", sizeClass[size], className)}
+      className={cn("bg-transparent object-contain", sizeClass[size], className)}
     />
   );
 }
