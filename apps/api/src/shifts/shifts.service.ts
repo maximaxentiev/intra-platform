@@ -636,6 +636,26 @@ export class ShiftsService {
     return { notifications };
   }
 
+  async assignmentConfirmationRecipientAvailability(id: string, actorUserId: string) {
+    const row = await this.db
+      .select({ assignedStaffId: shifts.assignedStaffId, status: shifts.status })
+      .from(shifts)
+      .where(eq(shifts.id, id));
+    if (!row[0]) throw new NotFoundException('Shift not found.');
+    if (!row[0].assignedStaffId) {
+      throw new NotFoundException('Shift has no assigned staff member.');
+    }
+    if (row[0].status !== 'filled') {
+      throw new NotFoundException('Shift is not in a resendable assigned state.');
+    }
+
+    return this.assignmentConfirmations.resolveRecipientAvailability({
+      shiftId: id,
+      assignedStaffId: row[0].assignedStaffId,
+      actorUserId,
+    });
+  }
+
   async unassign(id: string, actorUserId: string, dto?: UnassignShiftDto): Promise<UnassignShiftResponse> {
     const existing = await this.db
       .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId })
@@ -650,8 +670,6 @@ export class ShiftsService {
     const commRecipients = resolveSelectedRecipients(dto?.communications);
     const sendComms = commRecipients.centre || commRecipients.carer;
 
-    await this.shiftReminders.cancelPendingForShift(id);
-
     const row = await this.db.transaction(async (tx) => {
       const rows = await tx
         .update(shifts)
@@ -659,6 +677,8 @@ export class ShiftsService {
         .where(eq(shifts.id, id))
         .returning();
       if (!rows[0]) throw new NotFoundException('Shift not found.');
+
+      await this.shiftReminders.cancelPendingForShift(id, tx);
 
       await this.platformAudit.record(
         {

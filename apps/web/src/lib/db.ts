@@ -465,6 +465,11 @@ export const shiftsApi = {
     api.post<ShiftResendConfirmationsResponse>(`/shifts/${id}/send-assignment-confirmation`, {
       recipients,
     }),
+  assignmentConfirmationRecipients: (id: string) =>
+    api.get<{
+      centre: { available: boolean; reason?: string };
+      carer: { available: boolean; reason?: string };
+    }>(`/shifts/${id}/assignment-confirmation-recipients`),
   unassign: (id: string, communications?: ShiftCommunicationRecipientsPayload) =>
     api.post<UnassignShiftResponse>(`/shifts/${id}/unassign`, communications ? { communications } : {}),
   changeStatus: (

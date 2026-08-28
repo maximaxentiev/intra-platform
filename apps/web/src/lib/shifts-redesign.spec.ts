@@ -92,10 +92,16 @@ describe("shift detail layout", () => {
     expect(detail).not.toContain('title="Shift status"');
   });
 
-  it("places internal notes and activity log in the secondary rail", () => {
+  it("places internal notes, comments, and activity log in the secondary rail", () => {
     expect(detail).toContain("ShiftInternalNotesCard");
+    expect(detail).toContain("ShiftComments");
     expect(detail).toContain("ShiftActivityLogPanel");
     expect(detail).toContain("bg-surface-muted");
+  });
+
+  it("loads resend recipient availability from the server", () => {
+    expect(detail).toContain("assignmentConfirmationRecipients");
+    expect(detail).toContain("resendAvailabilityQ");
   });
 
   it("wires communication dialogs instead of immediate send/unassign", () => {
@@ -168,8 +174,14 @@ describe("create shift redesign", () => {
 });
 
 describe("internal comments component", () => {
-  it("keeps the existing comment API behaviour", () => {
+  it("uses a separate shift_comments thread distinct from shifts.notes", () => {
     expect(comments).toContain("shiftsApi.addComment(shiftId, trimmed)");
     expect(comments).toContain('queryKey: ["shift-comments", shiftId]');
+    expect(comments).not.toContain("shiftsApi.update");
+    expect(notesCard).toContain("shiftsApi.update(shiftId, { notes })");
+  });
+
+  it("remains available on the shift detail right rail", () => {
+    expect(detail).toContain("<ShiftComments shiftId={id} />");
   });
 });

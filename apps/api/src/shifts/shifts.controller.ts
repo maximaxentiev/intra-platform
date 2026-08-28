@@ -78,6 +78,11 @@ export class ShiftsController {
     return this.shifts.assign(id, dto.staffId, user.userId);
   }
 
+  @Get(':id/assignment-confirmation-recipients')
+  assignmentConfirmationRecipients(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shifts.assignmentConfirmationRecipientAvailability(id, user.userId);
+  }
+
   @Post(':id/send-assignment-confirmation')
   sendAssignmentConfirmation(
     @Param('id') id: string,

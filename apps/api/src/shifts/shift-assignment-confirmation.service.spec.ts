@@ -138,4 +138,19 @@ describe('ShiftAssignmentConfirmationService', () => {
     expect(result.carer.sent).toBe(true);
     expect(transport.sent).toHaveLength(1);
   });
+
+  it('resolveRecipientAvailability marks centre unavailable when document share is unavailable', async () => {
+    vi.mocked(shareLifecycle.buildActiveStaffDocumentShareUrl).mockResolvedValue(null);
+    vi.mocked(shareLifecycle.generateShareLink).mockRejectedValue(new Error('cannot generate'));
+
+    const availability = await service.resolveRecipientAvailability({
+      shiftId: 'shift-1',
+      assignedStaffId: 'staff-1',
+      actorUserId: 'ops-1',
+    });
+
+    expect(availability.centre.available).toBe(false);
+    expect(availability.centre.reason).toContain('document share');
+    expect(availability.carer.available).toBe(true);
+  });
 });

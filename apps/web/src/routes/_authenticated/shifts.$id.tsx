@@ -47,6 +47,7 @@ import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
 import { ShiftInternalNotesCard } from "@/components/shifts/ShiftInternalNotesCard";
 import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel";
+import { ShiftComments } from "@/components/ShiftComments";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
 import {
   formatAssigneeImpactScheduleLine,
@@ -155,6 +156,12 @@ function ShiftDetail() {
     queryFn: () => staffApi.get(shift!.assignedStaffId!),
   });
 
+  const resendAvailabilityQ = useQuery({
+    enabled: !!shift?.assignedStaffId && resendDialogOpen,
+    queryKey: ["shift-resend-availability", id],
+    queryFn: () => shiftsApi.assignmentConfirmationRecipients(id),
+  });
+
   if (!shift) return <DetailLoading />;
 
   const availableList = availableQ.data ?? [];
@@ -212,6 +219,9 @@ function ShiftDetail() {
       ? { available: true as const }
       : { available: false as const, reason: "Assigned Carer has no valid email address." }
     : { available: false as const, reason: "No Carer assigned." };
+
+  const resendCentreAvailability = resendAvailabilityQ.data?.centre ?? centreCommAvailability;
+  const resendCarerAvailability = resendAvailabilityQ.data?.carer ?? carerCommAvailability;
 
   const editCentreContactsQ = useQuery({
     enabled: !!shift && editing && commDialogOpen,
@@ -836,6 +846,7 @@ function ShiftDetail() {
         <div className="space-y-6 lg:col-span-1">
           <div className="space-y-6 rounded-xl bg-surface-muted p-4 lg:p-5">
             <ShiftInternalNotesCard key={shift.notes} shiftId={id} notes={shift.notes ?? ""} />
+            <ShiftComments shiftId={id} />
             <ShiftActivityLogPanel shiftId={id} />
           </div>
         </div>
@@ -886,8 +897,8 @@ function ShiftDetail() {
       <ShiftResendConfirmationDialog
         open={resendDialogOpen}
         onOpenChange={setResendDialogOpen}
-        centreAvailability={centreCommAvailability}
-        carerAvailability={carerCommAvailability}
+        centreAvailability={resendCentreAvailability}
+        carerAvailability={resendCarerAvailability}
         submitting={resendingConfirmations}
         onConfirmSend={(recipients) => void confirmResend(recipients)}
       />

@@ -402,6 +402,93 @@ export class ShiftAssignmentConfirmationService {
     return { attempted: false, sent: false, skippedReason: reason };
   }
 
+  async resolveRecipientAvailability(params: {
+    shiftId: string;
+    assignedStaffId: string;
+    actorUserId: string;
+  }): Promise<{
+    centre: { available: boolean; reason?: string };
+    carer: { available: boolean; reason?: string };
+  }> {
+    const context = await this.loadContext(params.shiftId, params.assignedStaffId);
+    const centre = await this.probeCentreAvailability(context, params.actorUserId);
+    const carer = this.probeCarerAvailability(context);
+    return { centre, carer };
+  }
+
+  private centreAvailabilityReason(skipReason: string): string {
+    switch (skipReason) {
+      case SHIFT_ASSIGNMENT_SKIP_REASON.noCentrePrimaryContact:
+        return 'No centre primary contact email is configured.';
+      case SHIFT_ASSIGNMENT_SKIP_REASON.noCentreEmail:
+        return 'No centre primary contact email is configured.';
+      case SHIFT_ASSIGNMENT_SKIP_REASON.invalidCentreEmail:
+        return 'Centre primary contact email is invalid.';
+      case SHIFT_ASSIGNMENT_SKIP_REASON.documentShareUnavailable:
+        return 'Carer document share is unavailable for centre confirmation.';
+      case SHIFT_ASSIGNMENT_SKIP_REASON.emailNotConfigured:
+        return 'Email delivery is not configured.';
+      default:
+        return 'Centre confirmation is unavailable.';
+    }
+  }
+
+  private async probeCentreAvailability(
+    context: ShiftNotificationContext,
+    actorUserId: string,
+  ): Promise<{ available: boolean; reason?: string }> {
+    const primary = await this.db
+      .select({ email: centreContacts.email })
+      .from(centreContacts)
+      .where(eq(centreContacts.centreId, context.centreId))
+      .orderBy(asc(centreContacts.sortOrder))
+      .limit(1);
+
+    const primaryEmail = primary[0]?.email?.trim() ?? '';
+    if (!primary[0]) {
+      return { available: false, reason: this.centreAvailabilityReason(SHIFT_ASSIGNMENT_SKIP_REASON.noCentrePrimaryContact) };
+    }
+    if (!primaryEmail) {
+      return { available: false, reason: this.centreAvailabilityReason(SHIFT_ASSIGNMENT_SKIP_REASON.noCentreEmail) };
+    }
+    if (!isValidNotificationEmail(primaryEmail)) {
+      return { available: false, reason: this.centreAvailabilityReason(SHIFT_ASSIGNMENT_SKIP_REASON.invalidCentreEmail) };
+    }
+    if (!this.email.isConfigured()) {
+      return { available: false, reason: this.centreAvailabilityReason(SHIFT_ASSIGNMENT_SKIP_REASON.emailNotConfigured) };
+    }
+
+    const documentShareUrl = await this.resolveDocumentShareUrl(context.assignedStaffId, actorUserId);
+    if (!documentShareUrl) {
+      return {
+        available: false,
+        reason: this.centreAvailabilityReason(SHIFT_ASSIGNMENT_SKIP_REASON.documentShareUnavailable),
+      };
+    }
+
+    return { available: true };
+  }
+
+  private probeCarerAvailability(context: ShiftNotificationContext): { available: boolean; reason?: string } {
+    const recipientRaw = context.carerAccountEmail ?? context.carerStaffEmail;
+    const normalizedStaffEmail = normalizeStaffEmail(context.carerStaffEmail);
+    const recipientCandidate = recipientRaw?.trim()
+      ? normalizeNotificationEmail(recipientRaw)
+      : normalizedStaffEmail;
+
+    if (!recipientCandidate) {
+      return { available: false, reason: 'Assigned Carer has no valid email address.' };
+    }
+    if (!isValidNotificationEmail(recipientCandidate)) {
+      return { available: false, reason: 'Assigned Carer has no valid email address.' };
+    }
+    if (!this.email.isConfigured()) {
+      return { available: false, reason: 'Email delivery is not configured.' };
+    }
+
+    return { available: true };
+  }
+
   private platformEnv(): PlatformUrlEnv {
     return {
       APP_PUBLIC_URL: this.config.get<string>('APP_PUBLIC_URL'),
