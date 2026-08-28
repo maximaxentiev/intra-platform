@@ -41,7 +41,7 @@ const OPTIONS = [
   {
     to: "/carer/login" as const,
     icon: UserRound,
-    title: "Carer",
+    title: "Independent Carer",
     description: "View your shifts, availability, and documents.",
   },
 ];

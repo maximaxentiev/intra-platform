@@ -31,12 +31,12 @@ describe("platform login branding", () => {
     expect(landing).not.toContain("Welcome to Intra");
   });
 
-  it("labels the first role option Intra Operations Team and keeps Carer unchanged", () => {
+  it("labels the first role option Intra Operations Team and keeps Independent Carer unchanged", () => {
     const landing = readSrc("routes/index.tsx");
     expect(landing).toContain('title: "Intra Operations Team"');
-    expect(landing).toContain('title: "Carer"');
+    expect(landing).toContain('title: "Independent Carer"');
     expect(landing).not.toContain("Ops Team");
-    expect(landing).not.toContain("Independent Carer");
+    expect(landing).not.toMatch(/title: "Carer"/);
   });
 
   it("keeps role routes attached to each option", () => {
