@@ -95,10 +95,11 @@ describe("carer onboarding step 1", () => {
     expect(form()).not.toContain("Used for sign-in and shift notifications.");
   });
 
-  it("uses Discard and Continue actions without back navigation", () => {
+  it("uses Continue action without Discard or back navigation in onboarding", () => {
     expect(form()).toContain("CarerOnboardingForwardButton");
     expect(form()).toContain("Continue to step 2");
-    expect(form()).not.toMatch(/mode === "onboarding"[\s\S]*Discard/);
+    expect(form()).toMatch(/mode === "onboarding" \? \([\s\S]*CarerOnboardingForwardButton/);
+    expect(form()).toMatch(/mode !== "onboarding"[\s\S]*Discard changes/);
     expect(profile()).not.toContain("CarerOnboardingHomeLink");
     expect(profile()).not.toContain("CarerOnboardingShell");
   });
