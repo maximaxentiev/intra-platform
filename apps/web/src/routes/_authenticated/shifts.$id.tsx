@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { shiftsApi, centresApi, staffApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
+import { shiftsApi, centresApi, staffApi, displayStaff, fmtTime, type AvailableStaff, type ShiftStatus } from "@/lib/db";
 import { ApiError } from "@/lib/api";
 import {
   shiftAssignmentFeedbackMessage,
@@ -54,6 +54,8 @@ import {
 import { shiftUpdateFeedbackMessage } from "@/lib/shift-edit-communications-feedback";
 import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
 import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpactDialog";
+import { ShiftAssignmentConfirmDialog } from "@/components/shifts/ShiftAssignmentConfirmDialog";
+import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
 import {
   formatAssigneeImpactScheduleLine,
   hasScheduleEditChange,
@@ -118,6 +120,8 @@ function ShiftDetail() {
   const [editing, setEditing] = useState(false);
   const [edit, setEdit] = useState<EditVals | null>(null);
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
+  const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
+  const [pendingAssignStaff, setPendingAssignStaff] = useState<AvailableStaff | null>(null);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [commDialogOpen, setCommDialogOpen] = useState(false);
@@ -362,13 +366,13 @@ function ShiftDetail() {
     }
   }
 
-  async function assignStaff(staffId: string, staffName: string) {
-    if (assigningStaffId) return;
+  async function assignStaff(staffId: string, staffLegalName: string): Promise<boolean> {
+    if (assigningStaffId) return false;
     setAssigningStaffId(staffId);
     try {
       const result = await shiftsApi.assign(id, staffId);
       const message = shiftAssignmentFeedbackMessage(
-        staffName,
+        staffLegalName,
         result.assignment,
         result.notifications,
       );
@@ -387,6 +391,7 @@ function ShiftDetail() {
         toast.success(message);
       }
       qc.invalidateQueries();
+      return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         toast.error(err.message);
@@ -394,10 +399,38 @@ function ShiftDetail() {
       } else {
         toast.error(err instanceof Error ? err.message : "Assign failed");
       }
+      return false;
     } finally {
       setAssigningStaffId(null);
     }
   }
+
+  function openAssignConfirm(staff: AvailableStaff) {
+    setPendingAssignStaff(staff);
+    setAssignConfirmOpen(true);
+  }
+
+  function closeAssignConfirm() {
+    setAssignConfirmOpen(false);
+    setPendingAssignStaff(null);
+  }
+
+  async function confirmAssignStaff() {
+    if (!pendingAssignStaff || assigningStaffId) return;
+    const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName);
+    if (success) closeAssignConfirm();
+  }
+
+  const assignConfirmDetails = pendingAssignStaff
+    ? buildShiftAssignmentConfirmDetails({
+        staffLegalName: pendingAssignStaff.legalName,
+        centreName: shift.centreName ?? "Centre",
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        roleNeeded: shift.roleNeeded,
+      })
+    : null;
 
   async function resendConfirmations() {
     if (resendingConfirmations) return;
@@ -608,11 +641,11 @@ function ShiftDetail() {
                         </label>
                         <Button
                           size="sm"
-                          disabled={assigningStaffId === s.id || assigningStaffId != null}
-                          onClick={() => assignStaff(s.id, displayStaff(s))}
+                          disabled={assignConfirmOpen || assigningStaffId != null}
+                          onClick={() => openAssignConfirm(s)}
                           aria-label={`Assign ${displayStaff(s)} to this shift`}
                         >
-                          {assigningStaffId === s.id ? "Assigning…" : "Assign"}
+                          Assign
                         </Button>
                       </div>
                     </li>
@@ -772,6 +805,16 @@ function ShiftDetail() {
       </div>
 
       <ShiftComments shiftId={id} />
+
+      <ShiftAssignmentConfirmDialog
+        open={assignConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) closeAssignConfirm();
+        }}
+        details={assignConfirmDetails}
+        confirming={assigningStaffId != null}
+        onConfirm={() => void confirmAssignStaff()}
+      />
 
       <ShiftAssigneeImpactDialog
         open={assigneeDialogOpen}
