@@ -76,6 +76,7 @@ export function CarerDocumentsForm({
   step2Complete = false,
   onRefresh,
   onStepComplete,
+  onOnboardingSavingChange,
 }: {
   documents: CarerDocumentsList | undefined;
   isLoading: boolean;
@@ -83,6 +84,8 @@ export function CarerDocumentsForm({
   step2Complete?: boolean;
   onRefresh: () => Promise<unknown>;
   onStepComplete?: () => void;
+  /** Notifies onboarding shell when step-level persistence is in flight. */
+  onOnboardingSavingChange?: (saving: boolean) => void;
 }) {
   const navigate = useNavigate();
   const [savedDrafts, setSavedDrafts] = useState(emptyDrafts);
@@ -107,7 +110,14 @@ export function CarerDocumentsForm({
   }, [documents]);
 
   const isDirty = useMemo(() => documentsDraftDirty(drafts, savedDrafts), [drafts, savedDrafts]);
+  const onboardingStepSaving = mode === "onboarding" && (saving || advancing || isDirty);
   const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(isDirty);
+
+  useEffect(() => {
+    if (mode === "onboarding") {
+      onOnboardingSavingChange?.(onboardingStepSaving);
+    }
+  }, [mode, onboardingStepSaving, onOnboardingSavingChange]);
 
   const categoriesByType = useMemo(() => {
     const map = new Map<StaffDocumentType, CarerDocumentCategory>();

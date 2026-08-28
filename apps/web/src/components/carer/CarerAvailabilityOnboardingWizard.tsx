@@ -30,6 +30,7 @@ type CarerAvailabilityOnboardingWizardProps = {
   isFetching?: boolean;
   loadFailed?: boolean;
   onRefresh: () => Promise<unknown>;
+  onBusyChange?: (busy: boolean) => void;
 };
 
 export function CarerAvailabilityOnboardingWizard({
@@ -37,6 +38,7 @@ export function CarerAvailabilityOnboardingWizard({
   isFetching = false,
   loadFailed = false,
   onRefresh,
+  onBusyChange,
 }: CarerAvailabilityOnboardingWizardProps) {
   const queryClient = useQueryClient();
   const today = torontoTodayDateString();
@@ -68,6 +70,10 @@ export function CarerAvailabilityOnboardingWizard({
 
   const busy = mutations.saving || mutations.removing;
   const anchorReady = onboardingState.anchorEstablished;
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">

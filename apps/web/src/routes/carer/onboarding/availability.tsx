@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CarerOnboardingForwardButton } from "@/components/carer/CarerOnboardingForwardButton";
 import {
   CarerOnboardingStepShell,
   ONBOARDING_STEP_3_INSTRUCTIONS,
@@ -37,6 +38,7 @@ function CarerOnboardingAvailabilityPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const [completing, setCompleting] = useState(false);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
 
   const onboardingState = useQuery({
     queryKey: CARER_AVAILABILITY_ONBOARDING_STATE_QUERY_KEY,
@@ -52,8 +54,10 @@ function CarerOnboardingAvailabilityPage() {
   const initError = initFailed
     ? mapAvailabilityApiError(onboardingState.error, "Could not load your onboarding availability.")
     : null;
+  const stepSaving = completing || availabilityBusy;
 
   async function handleCompleteOnboarding() {
+    if (stepSaving) return;
     setCompleting(true);
     try {
       if (!carer.availabilityComplete) {
@@ -92,19 +96,18 @@ function CarerOnboardingAvailabilityPage() {
             type="button"
             variant="outline"
             className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
-            disabled={completing}
+            disabled={stepSaving}
             onClick={() => navigate({ to: "/carer/onboarding/documents" })}
           >
             Go back
           </Button>
-          <Button
-            type="button"
-            className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
-            disabled={completing || onboardingState.isLoading || !state?.anchorEstablished}
+          <CarerOnboardingForwardButton
+            label="Complete onboarding"
+            saving={stepSaving}
+            disabled={onboardingState.isLoading || !state?.anchorEstablished}
             onClick={() => void handleCompleteOnboarding()}
-          >
-            {completing ? "Completing…" : "Complete onboarding"}
-          </Button>
+            className="sm:order-2"
+          />
         </>
       }
     >
@@ -129,6 +132,7 @@ function CarerOnboardingAvailabilityPage() {
           isFetching={onboardingState.isFetching}
           loadFailed={false}
           onRefresh={() => onboardingState.refetch()}
+          onBusyChange={setAvailabilityBusy}
         />
       )}
     </CarerOnboardingStepShell>

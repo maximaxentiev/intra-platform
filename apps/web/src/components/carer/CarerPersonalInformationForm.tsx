@@ -14,7 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CityCombobox, cityValueForSubmit } from "@/components/CityCombobox";
+import { CarerOnboardingForwardButton } from "@/components/carer/CarerOnboardingForwardButton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +50,9 @@ export function CarerPersonalInformationForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [continuing, setContinuing] = useState(false);
+  const [autosavePending, setAutosavePending] = useState(false);
+  const [autosaveFailed, setAutosaveFailed] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [nextConfirmOpen, setNextConfirmOpen] = useState(false);
 
@@ -76,6 +81,7 @@ export function CarerPersonalInformationForm({
     setValues((prev) => ({ ...prev, [key]: v }));
     setSavedAt(null);
     setFormError(null);
+    setAutosaveFailed(false);
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -115,6 +121,7 @@ export function CarerPersonalInformationForm({
       setSaved(nextSaved);
       setValues(nextSaved);
       setFormError(null);
+      setAutosaveFailed(false);
       setSavedAt(
         new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
       );
@@ -136,6 +143,7 @@ export function CarerPersonalInformationForm({
       ? "That email address is already used by another account. Try a different one."
       : raw;
     setSavedAt(null);
+    setAutosaveFailed(true);
     setFormError(message);
     toast.error(message);
   }
@@ -167,14 +175,24 @@ export function CarerPersonalInformationForm({
   }
 
   useEffect(() => {
-    if (mode !== "onboarding" || !isDirty) return;
+    if (mode !== "onboarding" || !isDirty) {
+      setAutosavePending(false);
+      return;
+    }
     const trimmed = trimPersonalProfile(values);
     const errors = validatePersonalProfileFields(trimmed, saved.city);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      setAutosavePending(false);
+      return;
+    }
 
+    setAutosavePending(true);
     clearAutosaveTimer();
     autosaveTimer.current = setTimeout(() => {
-      void persist(false).catch(() => {});
+      setAutosavePending(false);
+      void persist(false).catch((err) => {
+        reportError(err, "Could not save");
+      });
     }, 1200);
 
     return () => {
@@ -183,7 +201,9 @@ export function CarerPersonalInformationForm({
   }, [values, saved.city, isDirty, mode]);
 
   async function handleOnboardingContinue() {
+    if (continuing || loading || autosavePending) return;
     clearAutosaveTimer();
+    setAutosavePending(false);
     const trimmed = trimPersonalProfile(values);
     const errors = validatePersonalProfileFields(trimmed, saved.city);
     if (Object.keys(errors).length) {
@@ -192,11 +212,14 @@ export function CarerPersonalInformationForm({
       toast.error("Complete all required fields before continuing.");
       return;
     }
+    setContinuing(true);
     try {
       await persist(false);
       await completeStep();
     } catch (err) {
       reportError(err, "Could not continue");
+    } finally {
+      setContinuing(false);
     }
   }
 
@@ -237,17 +260,34 @@ export function CarerPersonalInformationForm({
       onStepComplete?.();
       return;
     }
-    setLoading(true);
     try {
       await carerProfileApi.completeStep1();
       allowNavigationOnce();
       onStepComplete?.();
     } catch (err) {
       reportError(err, "Could not continue");
-    } finally {
-      setLoading(false);
+      throw err;
     }
   }
+
+  const trimmedProfile = useMemo(() => trimPersonalProfile(values), [values]);
+  const profileValidationErrors = useMemo(
+    () => validatePersonalProfileFields(trimmedProfile, saved.city),
+    [trimmedProfile, saved.city],
+  );
+  const profileValid = Object.keys(profileValidationErrors).length === 0;
+  const hasUnsavedValidChanges = mode === "onboarding" && isDirty && profileValid;
+  const onboardingSaving =
+    mode === "onboarding" &&
+    (continuing || loading || autosavePending || (hasUnsavedValidChanges && !autosaveFailed));
+  const onboardingCanContinue =
+    mode === "onboarding" &&
+    profileValid &&
+    !isDirty &&
+    !loading &&
+    !continuing &&
+    !autosavePending &&
+    !autosaveFailed;
 
   const errorCount = Object.keys(fieldErrors).length;
 
@@ -263,6 +303,7 @@ export function CarerPersonalInformationForm({
               value={values.legalFirstName}
               error={fieldErrors.legalFirstName}
               onChange={(v) => setField("legalFirstName", v)}
+              inputClassName="bg-surface"
             />
             <Field
               id="legalLastName"
@@ -271,6 +312,7 @@ export function CarerPersonalInformationForm({
               value={values.legalLastName}
               error={fieldErrors.legalLastName}
               onChange={(v) => setField("legalLastName", v)}
+              inputClassName="bg-surface"
             />
             <Field
               id="email"
@@ -281,6 +323,7 @@ export function CarerPersonalInformationForm({
               value={values.email}
               error={fieldErrors.email}
               onChange={(v) => setField("email", v)}
+              inputClassName="bg-surface"
             />
             <Field
               id="phone"
@@ -291,6 +334,7 @@ export function CarerPersonalInformationForm({
               value={values.phone}
               error={fieldErrors.phone}
               onChange={(v) => setField("phone", v)}
+              inputClassName="bg-surface"
             />
             <Field
               id="address"
@@ -300,6 +344,7 @@ export function CarerPersonalInformationForm({
               value={values.address}
               error={fieldErrors.address}
               onChange={(v) => setField("address", v)}
+              inputClassName="bg-surface"
             />
             <CityCombobox
               id="city"
@@ -405,31 +450,17 @@ export function CarerPersonalInformationForm({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-center">
+        <div className="flex justify-center pt-2">
           {mode === "onboarding" ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
-                disabled={loading || !isDirty}
-                onClick={handleDiscardRequest}
-              >
-                Discard
-              </Button>
-              <Button
-                type="button"
-                className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
-                disabled={loading}
-                onClick={() => void handleNext()}
-              >
-                {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-                Continue to step 2
-              </Button>
-            </>
+            <CarerOnboardingForwardButton
+              label="Continue to step 2"
+              saving={onboardingSaving}
+              disabled={!onboardingCanContinue}
+              onClick={() => void handleNext()}
+            />
           ) : null}
           {mode !== "onboarding" ? (
-            <>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
           <Button
             type="submit"
             variant={mode === "profile" ? "default" : "outline"}
@@ -448,7 +479,7 @@ export function CarerPersonalInformationForm({
           >
             Discard changes
           </Button>
-            </>
+            </div>
           ) : null}
         </div>
       </form>
@@ -532,6 +563,7 @@ function Field({
   inputMode,
   hint,
   className,
+  inputClassName,
 }: {
   id: string;
   label: string;
@@ -543,6 +575,7 @@ function Field({
   inputMode?: "email" | "tel" | "text";
   hint?: string;
   className?: string;
+  inputClassName?: string;
 }) {
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
@@ -562,7 +595,7 @@ function Field({
         type={type}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        className="h-11 min-w-0 truncate"
+        className={cn("h-11 min-w-0 truncate", inputClassName)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-required="true"

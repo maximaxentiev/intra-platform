@@ -37,15 +37,13 @@ describe("step 1 autosave race guards", () => {
     expect(form).toContain("validatePersonalProfileFields");
     expect(form).toContain("persistGeneration");
     expect(form).toContain("generation !== persistGeneration.current");
-    expect(form).toContain("invalidateInFlightPersist");
     expect(form).toContain("clearAutosaveTimer");
   });
 
-  it("flushes autosave before continue and invalidates on discard", () => {
+  it("flushes autosave before continue", () => {
     const form = readSrc("components/carer/CarerPersonalInformationForm.tsx");
     expect(form).toContain("async function handleOnboardingContinue");
     expect(form).toMatch(/handleOnboardingContinue[\s\S]*clearAutosaveTimer/);
-    expect(form).toMatch(/confirmDiscard[\s\S]*invalidateInFlightPersist[\s\S]*clearAutosaveTimer/);
     expect(form).toMatch(/await persist\(false\)[\s\S]*await completeStep\(\)/);
   });
 });

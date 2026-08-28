@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CarerOnboardingForwardButton } from "@/components/carer/CarerOnboardingForwardButton";
 import {
   CarerOnboardingStepShell,
   ONBOARDING_STEP_2_INSTRUCTIONS,
@@ -23,6 +25,7 @@ function CarerOnboardingDocumentsPage() {
   const { carer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
+  const [stepSaving, setStepSaving] = useState(false);
 
   const documents = useQuery({
     queryKey: ["carer-documents"],
@@ -46,17 +49,18 @@ function CarerOnboardingDocumentsPage() {
             type="button"
             variant="outline"
             className="h-12 min-w-[10rem] px-6 text-base font-medium sm:order-1"
+            disabled={stepSaving}
             onClick={() => navigate({ to: "/carer/onboarding/profile" })}
           >
             Go back
           </Button>
-          <Button
+          <CarerOnboardingForwardButton
             type="submit"
             form="carer-onboarding-documents-form"
-            className="h-12 min-w-[12rem] px-6 text-base font-semibold sm:order-2"
-          >
-            Continue to final step
-          </Button>
+            label="Continue to final step"
+            saving={stepSaving}
+            className="sm:order-2"
+          />
         </>
       }
     >
@@ -67,6 +71,7 @@ function CarerOnboardingDocumentsPage() {
         step2Complete={carer.documentsComplete}
         onRefresh={() => documents.refetch()}
         onStepComplete={() => void handleStepComplete()}
+        onOnboardingSavingChange={setStepSaving}
       />
     </CarerOnboardingStepShell>
   );

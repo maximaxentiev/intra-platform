@@ -96,8 +96,9 @@ describe("carer onboarding step 1", () => {
   });
 
   it("uses Discard and Continue actions without back navigation", () => {
+    expect(form()).toContain("CarerOnboardingForwardButton");
     expect(form()).toContain("Continue to step 2");
-    expect(form()).toContain("Discard");
+    expect(form()).not.toMatch(/mode === "onboarding"[\s\S]*Discard/);
     expect(profile()).not.toContain("CarerOnboardingHomeLink");
     expect(profile()).not.toContain("CarerOnboardingShell");
   });
