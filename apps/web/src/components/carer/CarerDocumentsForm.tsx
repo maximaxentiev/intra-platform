@@ -187,8 +187,21 @@ export function CarerDocumentsForm({
     const existing = dateSaveTimers.current[type];
     if (existing) clearTimeout(existing);
     dateSaveTimers.current[type] = setTimeout(() => {
+      delete dateSaveTimers.current[type];
       void saveCategoryImmediate(type, nextDrafts);
     }, 600);
+  }
+
+  async function flushPendingOnboardingDateSaves(): Promise<void> {
+    if (mode !== "onboarding") return;
+    const pendingTypes = Object.keys(dateSaveTimers.current) as StaffDocumentType[];
+    for (const type of pendingTypes) {
+      const timer = dateSaveTimers.current[type];
+      if (!timer) continue;
+      clearTimeout(timer);
+      delete dateSaveTimers.current[type];
+      await saveCategoryImmediate(type, drafts);
+    }
   }
 
   async function handleOnboardingFilesSelected(type: StaffDocumentType, fileList: FileList | null) {
@@ -297,6 +310,9 @@ export function CarerDocumentsForm({
     setFormError(null);
     setAdvancing(true);
     try {
+      if (mode === "onboarding") {
+        await flushPendingOnboardingDateSaves();
+      }
       const saved = await saveDirtyCategories();
       if (!saved) return;
 

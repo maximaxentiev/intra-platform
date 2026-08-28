@@ -59,6 +59,18 @@ export function CarerPersonalInformationForm({
   const isDirty = useMemo(() => personalProfileDirty(values, saved), [values, saved]);
   const { blocker, allowNavigationOnce } = useUnsavedChangesGuard(mode === "onboarding" ? false : isDirty);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistGeneration = useRef(0);
+
+  function clearAutosaveTimer() {
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+    }
+  }
+
+  function invalidateInFlightPersist() {
+    persistGeneration.current += 1;
+  }
 
   function setField<K extends keyof PersonalProfileFields>(key: K, v: string) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -85,9 +97,13 @@ export function CarerPersonalInformationForm({
     if (!city) {
       throw new Error("Fix the highlighted fields.");
     }
+    const generation = ++persistGeneration.current;
     setLoading(true);
     try {
       const result = await carerProfileApi.save({ ...trimmed, city });
+      if (generation !== persistGeneration.current) {
+        return result;
+      }
       const nextSaved: PersonalProfileFields = {
         legalFirstName: result.legalFirstName,
         legalLastName: result.legalLastName,
@@ -142,6 +158,8 @@ export function CarerPersonalInformationForm({
   }
 
   function confirmDiscard() {
+    invalidateInFlightPersist();
+    clearAutosaveTimer();
     setValues(saved);
     setFieldErrors({});
     setFormError(null);
@@ -154,17 +172,18 @@ export function CarerPersonalInformationForm({
     const errors = validatePersonalProfileFields(trimmed, saved.city);
     if (Object.keys(errors).length > 0) return;
 
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    clearAutosaveTimer();
     autosaveTimer.current = setTimeout(() => {
       void persist(false).catch(() => {});
     }, 1200);
 
     return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      clearAutosaveTimer();
     };
   }, [values, saved.city, isDirty, mode]);
 
   async function handleOnboardingContinue() {
+    clearAutosaveTimer();
     const trimmed = trimPersonalProfile(values);
     const errors = validatePersonalProfileFields(trimmed, saved.city);
     if (Object.keys(errors).length) {
