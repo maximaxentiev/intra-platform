@@ -388,6 +388,9 @@ export function CentreUsageFilters({
         rules={rules}
         onRulesChange={onRulesChange}
         onClearRules={onClearRules}
+        onReset={onReset}
+        onApply={onApply}
+        applyDisabled={Boolean(validationError)}
       />
 
       {validationError ? (
@@ -395,15 +398,6 @@ export function CentreUsageFilters({
           {validationError}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
-        <Button variant="ghost" size="sm" type="button" onClick={onReset}>
-          Reset
-        </Button>
-        <Button size="sm" type="button" onClick={onApply} disabled={Boolean(validationError)}>
-          Apply
-        </Button>
-      </div>
     </div>
   );
 }

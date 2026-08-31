@@ -48,6 +48,7 @@ export interface CentreUsageRow {
   fillRatePercent: ReportFillRatePercent;
   totalScheduledMinutes: number;
   completedScheduledMinutes: number;
+  cancelledScheduledMinutes: number;
 }
 
 export interface CentreUsageSummary {
@@ -60,6 +61,7 @@ export interface CentreUsageSummary {
   fillRatePercent: ReportFillRatePercent;
   totalScheduledMinutes: number;
   totalCompletedScheduledMinutes: number;
+  cancelledScheduledMinutes: number;
 }
 
 export interface CentreUsageResponse {
@@ -110,7 +112,10 @@ export interface CentreUsageShiftsResponse {
   hasMore: boolean;
 }
 
-export const REPORT_SCHEDULED_HOURS_LABEL = "Scheduled Hours on Completed Shifts";
+export const REPORT_TOTAL_HOURS_LABEL = "Total Hours";
+export const REPORT_COMPLETED_HOURS_LABEL = "Completed Hours";
+/** Staff Usage — scheduled hours on completed shifts only. */
+export const REPORT_SCHEDULED_HOURS_LABEL = "Completed Hours";
 export const REPORT_SCHEDULED_HOURS_ON_FILLED_SHIFTS_LABEL =
   "Scheduled Hours on Filled Shifts";
 

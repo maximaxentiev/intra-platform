@@ -229,7 +229,6 @@ export function CentreUsageShiftDetail({
             Shift Detail
           </h2>
           <p className="text-sm text-muted-foreground">
-            Review shifts for the selected Centres and reporting period.
           </p>
         </div>
         <ReportExportButton

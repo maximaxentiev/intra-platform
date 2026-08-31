@@ -18,6 +18,16 @@ import {
 } from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
 
+const UPCOMING_PREVIEW_LIMIT = 6;
+
+type AvailabilityEntry = {
+  id: string;
+  staffId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+};
+
 function isDayPast(dayDate: Date): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -38,6 +48,99 @@ function isRangePast(dayDate: Date, endTime: string): boolean {
   const end = new Date(dayDate);
   end.setHours(h, m, 0, 0);
   return end <= new Date();
+}
+
+function sortEntries(entries: AvailabilityEntry[], weekStart: Date) {
+  return [...entries].sort((a, b) => {
+    const dayA = addDays(weekStart, a.dayOfWeek).getTime();
+    const dayB = addDays(weekStart, b.dayOfWeek).getTime();
+    if (dayA !== dayB) return dayA - dayB;
+    return a.startTime.localeCompare(b.startTime);
+  });
+}
+
+function AvailabilityChip({
+  entry,
+  weekStart,
+}: {
+  entry: AvailabilityEntry;
+  weekStart: Date;
+}) {
+  const dayDate = addDays(weekStart, entry.dayOfWeek);
+  const past = isRangePast(dayDate, entry.endTime);
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border tabular-nums ${
+        past
+          ? "bg-muted text-muted-foreground border-border"
+          : "bg-info-soft text-foreground border-info/25"
+      }`}
+    >
+      <span className="font-semibold uppercase tracking-wide">{DAY_FULL[entry.dayOfWeek].slice(0, 3)}</span>
+      <span className="opacity-80">·</span>
+      {fmtTime(entry.startTime)} – {fmtTime(entry.endTime)}
+    </span>
+  );
+}
+
+function StaffAvailabilitySection({
+  staffName,
+  staffId,
+  entries,
+  weekStart,
+}: {
+  staffName: string;
+  staffId: string;
+  entries: AvailabilityEntry[];
+  weekStart: Date;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const sorted = sortEntries(entries, weekStart);
+  const upcoming = sorted.filter((entry) => !isRangePast(addDays(weekStart, entry.dayOfWeek), entry.endTime));
+  const initialVisible = upcoming.slice(0, UPCOMING_PREVIEW_LIMIT);
+  const hasMoreThanPreview = sorted.length > initialVisible.length;
+  const visible = expanded ? sorted : initialVisible;
+
+  return (
+    <li className="p-3 sm:p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
+        <Link
+          to="/staff/$id"
+          params={{ id: staffId }}
+          className="w-full shrink-0 text-sm font-medium text-foreground hover:text-primary lg:w-40 xl:w-48"
+        >
+          {staffName}
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          {entries.length === 0 ? (
+            <span className="text-xs text-muted-foreground italic">No availability set</span>
+          ) : (
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((entry) => (
+                <AvailabilityChip key={entry.id} entry={entry} weekStart={weekStart} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {hasMoreThanPreview ? (
+          <div className="flex justify-end lg:w-28 lg:shrink-0 lg:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? "Show less" : "View more"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </li>
+  );
 }
 
 export const Route = createFileRoute("/_authenticated/availability")({
@@ -132,10 +235,7 @@ function AvailabilityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Team availability"
-        subtitle="See who is available across the whole team. Set individual availability from each staff profile."
-      />
+      <PageHeader title="Team availability" />
 
       <Card className="border-border/70 shadow-xs">
         <CardHeader className="pb-4 border-b border-border/70">
@@ -194,38 +294,13 @@ function AvailabilityPage() {
             )}
             <ul className="divide-y divide-border">
               {pagedRows.map(({ staff, entries }) => (
-                <li key={staff.id} className="p-3 sm:p-4 flex items-start gap-4 transition-colors hover:bg-muted/30">
-                  <Link
-                    to="/staff/$id"
-                    params={{ id: staff.id }}
-                    className="w-40 sm:w-48 shrink-0 text-sm font-medium text-foreground hover:text-primary truncate"
-                  >
-                    {displayStaff(staff)}
-                  </Link>
-                  <div className="flex-1 flex flex-wrap gap-1.5">
-                    {entries.length === 0 && (
-                      <span className="text-xs text-muted-foreground italic">No availability set</span>
-                    )}
-                    {entries.sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime)).map((a) => {
-                      const dayDate = addDays(weekStart, a.dayOfWeek);
-                      const past = isRangePast(dayDate, a.endTime);
-                      return (
-                        <span
-                          key={a.id}
-                          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border tabular-nums ${
-                            past
-                              ? "bg-muted text-muted-foreground border-border"
-                              : "bg-info-soft text-foreground border-info/25"
-                          }`}
-                        >
-                          <span className="font-semibold uppercase tracking-wide">{DAY_FULL[a.dayOfWeek].slice(0, 3)}</span>
-                          <span className="opacity-80">·</span>
-                          {fmtTime(a.startTime)} – {fmtTime(a.endTime)}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </li>
+                <StaffAvailabilitySection
+                  key={staff.id}
+                  staffId={staff.id}
+                  staffName={displayStaff(staff)}
+                  entries={entries}
+                  weekStart={weekStart}
+                />
               ))}
             </ul>
           </div>
@@ -281,4 +356,3 @@ function AvailabilityPage() {
     </div>
   );
 }
-

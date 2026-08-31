@@ -23,7 +23,8 @@ import { paginateReportRows, parseComparisonReportPagination } from './report-co
 import { resolveReportDateRange } from './report-date.util';
 import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
-import { computeFillRatePercent } from './report-percentage.util';
+import { computeCentreReportFillRatePercent } from './report-percentage.util';
+import { combineCentreReportFilledMetric } from './report-centre-metrics.util';
 import { formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
 import {
   formatReportShiftStatusLabel,
@@ -379,6 +380,7 @@ export class ReportsShiftService {
         cancelled: sql<number>`count(${shifts.id}) filter (where ${shifts.status} = 'cancelled')::int`,
         totalScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}), 0)::int`,
         completedScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}) filter (where ${shifts.status} = 'completed'), 0)::int`,
+        cancelledScheduledMinutes: sql<number>`coalesce(sum(${durationMinutes}) filter (where ${shifts.status} = 'cancelled'), 0)::int`,
       })
       .from(centres)
       .leftJoin(shifts, shiftJoin)
@@ -387,9 +389,11 @@ export class ReportsShiftService {
       .orderBy(desc(sql`count(${shifts.id})`), asc(centres.name));
 
     return rawRows.map((row) => {
-      const filled = normalizeReportCount(row.filled);
+      const filledStatusCount = normalizeReportCount(row.filled);
       const completed = normalizeReportCount(row.completed);
       const pending = normalizeReportCount(row.pending);
+      const cancelled = normalizeReportCount(row.cancelled);
+      const filled = combineCentreReportFilledMetric(filledStatusCount, completed);
 
       return {
         centreId: row.centreId,
@@ -398,10 +402,15 @@ export class ReportsShiftService {
         pending,
         filled,
         completed,
-        cancelled: normalizeReportCount(row.cancelled),
-        fillRatePercent: computeFillRatePercent(filled, completed, pending),
+        cancelled,
+        fillRatePercent: computeCentreReportFillRatePercent(
+          filledStatusCount,
+          completed,
+          cancelled,
+        ),
         totalScheduledMinutes: normalizeReportScheduledMinutes(row.totalScheduledMinutes),
         completedScheduledMinutes: normalizeReportScheduledMinutes(row.completedScheduledMinutes),
+        cancelledScheduledMinutes: normalizeReportScheduledMinutes(row.cancelledScheduledMinutes),
       };
     });
   }

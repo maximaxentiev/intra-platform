@@ -17,7 +17,6 @@ import {
   createEnumRule,
   createNumericRule,
   ENUM_OPERATOR_LABELS,
-  groupedMetricOptions,
   NUMERIC_OPERATOR_LABELS,
   type EnumReportFilterRule,
   type MetricFieldDef,
@@ -49,7 +48,10 @@ export function ReportAddFilterButton({
   onAdd,
 }: ReportAddFilterButtonProps) {
   const [open, setOpen] = useState(false);
-  const groups = groupedMetricOptions(metrics, activeFields);
+  const available = useMemo(
+    () => metrics.filter((metric) => !activeFields.has(metric.field)),
+    [metrics, activeFields],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -66,32 +68,25 @@ export function ReportAddFilterButton({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2" align="start">
-        {groups.length === 0 ? (
+        {available.length === 0 ? (
           <p className="px-2 py-3 text-sm text-muted-foreground">All filters are already active.</p>
         ) : (
-          groups.map(([group, items]) => (
-            <div key={group} className="py-1">
-              <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {group}
-              </p>
-              <ul>
-                {items.map((metric) => (
-                  <li key={metric.field}>
-                    <button
-                      type="button"
-                      className="w-full rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
-                      onClick={() => {
-                        onAdd(metric.field);
-                        setOpen(false);
-                      }}
-                    >
-                      {metric.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+          <ul>
+            {available.map((metric) => (
+              <li key={metric.field}>
+                <button
+                  type="button"
+                  className="w-full rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+                  onClick={() => {
+                    onAdd(metric.field);
+                    setOpen(false);
+                  }}
+                >
+                  {metric.label}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </PopoverContent>
     </Popover>
@@ -313,15 +308,17 @@ function EnumRuleRow({
   );
 }
 
-export function ReportFilterRuleBuilder({
+export function ReportActiveFilterRules({
   idPrefix,
   metrics,
   rules,
   onRulesChange,
-  onClearRules,
-}: ReportFilterRuleBuilderProps) {
-  const activeFields = useMemo(() => new Set(rules.map((rule) => rule.field)), [rules]);
-
+}: {
+  idPrefix: string;
+  metrics: MetricFieldDef[];
+  rules: ReportFilterRule[];
+  onRulesChange: (rules: ReportFilterRule[]) => void;
+}) {
   function updateRule(index: number, nextRule: ReportFilterRule) {
     const next = [...rules];
     next[index] = nextRule;
@@ -331,6 +328,56 @@ export function ReportFilterRuleBuilder({
   function removeRule(index: number) {
     onRulesChange(rules.filter((_, ruleIndex) => ruleIndex !== index));
   }
+
+  if (rules.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {rules.map((rule, index) => {
+        const metric = metrics.find((item) => item.field === rule.field);
+        if (!metric) return null;
+        if (rule.kind === "enum") {
+          return (
+            <EnumRuleRow
+              key={rule.field}
+              idPrefix={idPrefix}
+              rule={rule}
+              metric={metric}
+              onChange={(next) => updateRule(index, next)}
+              onRemove={() => removeRule(index)}
+            />
+          );
+        }
+        return (
+          <NumericRuleRow
+            key={rule.field}
+            idPrefix={idPrefix}
+            rule={rule}
+            metric={metric}
+            onChange={(next) => updateRule(index, next)}
+            onRemove={() => removeRule(index)}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+export function ReportFilterRuleBuilder({
+  idPrefix,
+  metrics,
+  rules,
+  onRulesChange,
+  onClearRules,
+  onReset,
+  onApply,
+  applyDisabled,
+}: ReportFilterRuleBuilderProps & {
+  onReset?: () => void;
+  onApply?: () => void;
+  applyDisabled?: boolean;
+}) {
+  const activeFields = useMemo(() => new Set(rules.map((rule) => rule.field)), [rules]);
 
   function addRule(field: string) {
     const metric = metrics.find((item) => item.field === field);
@@ -342,50 +389,38 @@ export function ReportFilterRuleBuilder({
 
   return (
     <div className={cn("space-y-3 border-t border-border/70 pt-3")}>
-      <div className="flex flex-wrap items-center gap-2">
-        <ReportAddFilterButton
-          idPrefix={idPrefix}
-          metrics={metrics}
-          activeFields={activeFields}
-          onAdd={addRule}
-        />
-        {rules.length > 0 && onClearRules ? (
-          <Button type="button" variant="ghost" size="sm" className="h-9" onClick={onClearRules}>
-            Clear filters
-          </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ReportAddFilterButton
+            idPrefix={idPrefix}
+            metrics={metrics}
+            activeFields={activeFields}
+            onAdd={addRule}
+          />
+          {rules.length > 0 && onClearRules ? (
+            <Button type="button" variant="ghost" size="sm" className="h-9" onClick={onClearRules}>
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
+        {onReset && onApply ? (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" type="button" onClick={onReset}>
+              Reset
+            </Button>
+            <Button size="sm" type="button" onClick={onApply} disabled={applyDisabled}>
+              Apply
+            </Button>
+          </div>
         ) : null}
       </div>
 
-      {rules.length > 0 ? (
-        <div className="space-y-2">
-          {rules.map((rule, index) => {
-            const metric = metrics.find((item) => item.field === rule.field);
-            if (!metric) return null;
-            if (rule.kind === "enum") {
-              return (
-                <EnumRuleRow
-                  key={rule.field}
-                  idPrefix={idPrefix}
-                  rule={rule}
-                  metric={metric}
-                  onChange={(next) => updateRule(index, next)}
-                  onRemove={() => removeRule(index)}
-                />
-              );
-            }
-            return (
-              <NumericRuleRow
-                key={rule.field}
-                idPrefix={idPrefix}
-                rule={rule}
-                metric={metric}
-                onChange={(next) => updateRule(index, next)}
-                onRemove={() => removeRule(index)}
-              />
-            );
-          })}
-        </div>
-      ) : null}
+      <ReportActiveFilterRules
+        idPrefix={idPrefix}
+        metrics={metrics}
+        rules={rules}
+        onRulesChange={onRulesChange}
+      />
     </div>
   );
 }

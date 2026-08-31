@@ -842,7 +842,7 @@ function ShiftDetail() {
         </div>
 
         <div className="space-y-6 lg:col-span-1">
-          <div className="space-y-6 rounded-xl bg-surface-muted p-4 lg:p-5">
+          <div className="space-y-6 rounded-xl bg-surface-brand-dusk p-4 text-info-foreground lg:p-5 [&_.text-muted-foreground]:text-info-foreground/75">
             <ShiftComments shiftId={id} />
             <ShiftActivityLogPanel shiftId={id} />
           </div>

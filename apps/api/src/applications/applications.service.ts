@@ -51,6 +51,7 @@ function listItem(row: typeof applications.$inferSelect) {
     phone: row.phone,
     submittedAt: row.submittedAt,
     hiredStaffId: row.hiredStaffId,
+    reviewedAt: row.reviewedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -114,6 +115,8 @@ function buildDetail(row: typeof applications.$inferSelect, docs: typeof applica
       rejectedAt: row.rejectedAt,
       rejectedByUserId: row.rejectedByUserId,
       rejectionEmailSentAt: row.rejectionEmailSentAt,
+      reviewedAt: row.reviewedAt,
+      reviewedByUserId: row.reviewedByUserId,
     },
     documents: docs.map(documentSummary),
     createdAt: row.createdAt,
@@ -206,6 +209,27 @@ export class ApplicationsService {
     }
 
     return { ...detail, hiring: null };
+  }
+
+  async markReviewed(id: string, actorUserId: string) {
+    const rows = await this.db.select().from(applications).where(eq(applications.id, id));
+    const row = rows[0];
+    if (!row) throw new NotFoundException('Application not found.');
+    if (row.reviewedAt) {
+      return listItem(row);
+    }
+
+    const [updated] = await this.db
+      .update(applications)
+      .set({
+        reviewedAt: sql`now()`,
+        reviewedByUserId: actorUserId,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(applications.id, id))
+      .returning();
+
+    return listItem(updated);
   }
 
   async listActivity(applicationId: string) {

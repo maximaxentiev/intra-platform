@@ -21,7 +21,8 @@ type ReportPaginationProps = {
   emptyLabel?: string;
   ariaLabel?: string;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: ReportComparisonPageSize) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  pageSizeOptions?: readonly number[];
   className?: string;
 };
 
@@ -35,6 +36,7 @@ export function ReportPagination({
   ariaLabel = "Report pagination",
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = REPORT_COMPARISON_PAGE_SIZE_OPTIONS,
   className = "",
 }: ReportPaginationProps) {
   const rangeLabel = reportPaginationRangeLabel({
@@ -60,13 +62,13 @@ export function ReportPagination({
             <span className="text-sm text-muted-foreground">Rows</span>
             <Select
               value={String(pageSize)}
-              onValueChange={(value) => onPageSizeChange(Number(value) as ReportComparisonPageSize)}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
             >
               <SelectTrigger className="h-9 w-[4.5rem]" aria-label="Rows per page">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {REPORT_COMPARISON_PAGE_SIZE_OPTIONS.map((size) => (
+                {pageSizeOptions.map((size) => (
                   <SelectItem key={size} value={String(size)}>
                     {size}
                   </SelectItem>

@@ -9,11 +9,15 @@ export function ReportMetricCard({
   value,
   loading,
   tone = "default",
+  plainLabel = false,
+  supportingText,
 }: {
   label: string;
   value: string | number;
   loading?: boolean;
-  tone?: "default" | "primary" | "warning" | "success" | "muted";
+  plainLabel?: boolean;
+  supportingText?: string;
+  tone?: "default" | "primary" | "warning" | "success" | "muted" | "info" | "destructive";
 }) {
   return (
     <MetricTile
@@ -21,7 +25,15 @@ export function ReportMetricCard({
       label={label}
       value={value}
       loading={loading}
-      tone={tone === "default" ? "neutral" : tone}
+      plainLabel={plainLabel}
+      supportingText={supportingText}
+      tone={
+        tone === "default"
+          ? "neutral"
+          : tone === "destructive"
+            ? "destructive"
+            : tone
+      }
     />
   );
 }

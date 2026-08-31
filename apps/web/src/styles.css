@@ -65,6 +65,7 @@
 
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-brand-dusk: var(--surface-brand-dusk);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -95,6 +96,7 @@
   --background: oklch(0.962 0.016 84);     /* Intra warm beige page background */
   --surface: oklch(1 0 0);
   --surface-muted: oklch(0.975 0.010 84);
+  --surface-brand-dusk: #585691;
   --foreground: oklch(0.22 0.012 285);
 
 

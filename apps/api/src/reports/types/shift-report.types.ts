@@ -46,6 +46,7 @@ export interface CentreUsageRow {
   fillRatePercent: ReportFillRatePercent;
   totalScheduledMinutes: number;
   completedScheduledMinutes: number;
+  cancelledScheduledMinutes: number;
 }
 
 export interface CentreUsageSummary {
@@ -58,6 +59,7 @@ export interface CentreUsageSummary {
   fillRatePercent: ReportFillRatePercent;
   totalScheduledMinutes: number;
   totalCompletedScheduledMinutes: number;
+  cancelledScheduledMinutes: number;
 }
 
 export interface CentreUsageResponse {

@@ -20,17 +20,6 @@ export const Route = createFileRoute("/_authenticated/shifts/new")({
   component: NewShift,
 });
 
-function FieldGroup({ legend, children }: { legend: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {legend}
-      </legend>
-      {children}
-    </fieldset>
-  );
-}
-
 function NewShift() {
   const navigate = useNavigate();
   const [values, setValues] = useState({
@@ -78,14 +67,12 @@ function NewShift() {
 
       <SectionCard id="create-shift">
         <form onSubmit={submit} className="space-y-6">
-          <FieldGroup legend="Where">
-            <div className="space-y-2">
-              <Label>Centre *</Label>
-              <SearchableCentreSelect value={values.centreId} onChange={(v) => set("centreId", v)} />
-            </div>
-          </FieldGroup>
+          <div className="space-y-2">
+            <Label>Centre *</Label>
+            <SearchableCentreSelect value={values.centreId} onChange={(v) => set("centreId", v)} />
+          </div>
 
-          <FieldGroup legend="When">
+          <div className="border-t border-border/70 pt-6">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="d">Date *</Label>
@@ -100,9 +87,9 @@ function NewShift() {
                 <Input id="et" type="time" required value={values.endTime} onChange={(e) => set("endTime", e.target.value)} />
               </div>
             </div>
-          </FieldGroup>
+          </div>
 
-          <FieldGroup legend="Requirements">
+          <div className="border-t border-border/70 pt-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Role required *</Label>
@@ -143,7 +130,7 @@ function NewShift() {
                 </Select>
               </div>
             </div>
-          </FieldGroup>
+          </div>
 
           <Button type="submit" disabled={saving}>{saving ? "Creating..." : "Create shift"}</Button>
         </form>

@@ -49,7 +49,7 @@ export function OverallComplianceBadge({
   className?: string;
 }) {
   const map = {
-    needs_attention: STATUS_TONES.issue_flagged,
+    needs_attention: STATUS_TONES.pending_review,
     expiring_soon: STATUS_TONES.expiring_soon,
     compliant: STATUS_TONES.approved,
   } as const;
@@ -57,10 +57,10 @@ export function OverallComplianceBadge({
   const Icon = tone.icon;
   const label =
     status === "needs_attention"
-      ? "Needs Attention"
+      ? "Pending Review"
       : status === "expiring_soon"
         ? "Expiring Soon"
-        : "Compliant";
+        : "Approved";
 
   return (
     <span className={cn(pillBase, tone.cls, className)} title={label}>

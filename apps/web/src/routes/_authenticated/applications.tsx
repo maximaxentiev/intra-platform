@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ApplicationActionButtons } from "@/components/applications/ApplicationActions";
+import { ApplicationReviewedButton } from "@/components/applications/ApplicationReviewedButton";
 import { ApplicationDrawer } from "@/components/applications/ApplicationDrawer";
 import { useDocumentViewer } from "@/components/applications/documents";
 import {
@@ -51,13 +51,7 @@ import {
   fullName,
   type ApplicationRole,
   type ApplicationRow,
-  type ApplicationStatus,
 } from "@/lib/applications";
-import {
-  ACTION_RESULT_STATUS,
-  defaultApplicationActionHandler,
-  type ApplicationAction,
-} from "@/lib/application-actions";
 
 export const Route = createFileRoute("/_authenticated/applications")({
   component: ApplicationsPage,
@@ -78,8 +72,7 @@ function ApplicationsPage() {
   const [page, setPage] = useState(0);
   const [hidden, setHidden] = useState<Record<string, string[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ id: string; action: ApplicationAction } | null>(null);
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, ApplicationStatus>>({});
+  const [reviewPendingId, setReviewPendingId] = useState<string | null>(null);
   const docs = useDocumentViewer();
 
   const listQuery = useQuery({
@@ -105,12 +98,12 @@ function ApplicationsPage() {
         if (!detail || !item) return null;
         return {
           ...detail,
-          status: statusOverrides[detail.id] ?? detail.status,
           submittedAt: item.submittedAt ?? detail.metadata.submittedAt,
+          reviewedAt: item.reviewedAt ?? detail.workflow.reviewedAt,
         } as ApplicationRow;
       })
       .filter((r): r is ApplicationRow => r !== null);
-  }, [detailQueries, listQuery.data, statusOverrides]);
+  }, [detailQueries, listQuery.data]);
 
   const detailsLoading = detailQueries.some((q) => q.isLoading);
   const loading = listQuery.isLoading || (rows.length === 0 && detailsLoading);
@@ -156,13 +149,20 @@ function ApplicationsPage() {
     );
   }
 
-  async function runAction(id: string, action: ApplicationAction) {
-    setPending({ id, action });
+  async function markReviewed(id: string) {
+    setReviewPendingId(id);
     try {
-      const res = await defaultApplicationActionHandler({ id, action });
-      setStatusOverrides((prev) => ({ ...prev, [res.id]: res.status ?? ACTION_RESULT_STATUS[action] }));
+      await applicationsApi.review(id);
+      await listQuery.refetch();
+      await Promise.all(
+        detailQueries.map((query, index) => {
+          const item = listQuery.data?.[index];
+          if (item?.id === id) return query.refetch();
+          return Promise.resolve();
+        }),
+      );
     } finally {
-      setPending(null);
+      setReviewPendingId(null);
     }
   }
 
@@ -400,26 +400,27 @@ function ApplicationsPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") setOpenId(r.id);
                     }}
-                    className="group cursor-pointer outline-none focus-visible:bg-muted/60"
+                    className={`group cursor-pointer outline-none focus-visible:bg-muted/60 ${
+                      r.reviewedAt ? "bg-success-soft/50 hover:bg-success-soft/70" : ""
+                    }`}
                   >
-                    <td className="sticky left-0 z-20 border-b border-r border-border bg-card px-3 py-2 group-hover:bg-muted">
+                    <td className={`sticky left-0 z-20 border-b border-r border-border px-3 py-2 group-hover:bg-muted ${r.reviewedAt ? "bg-success-soft/50" : "bg-card"}`}>
                       <div className="max-w-[15rem] truncate font-medium">{fullName(r)}</div>
                     </td>
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className="border-b border-border bg-card px-3 py-2 group-hover:bg-muted"
+                        className={`border-b border-border px-3 py-2 group-hover:bg-muted ${r.reviewedAt ? "bg-success-soft/50" : "bg-card"}`}
                         style={{ maxWidth: Math.max(c.minWidth, 240) }}
                       >
                         {c.cell(r, { openDoc: docs.open, openRow: setOpenId })}
                       </td>
                     ))}
-                    <td className="sticky right-0 z-30 isolate border-b border-l border-border bg-card px-3 py-2 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)] group-hover:bg-muted">
-                      <ApplicationActionButtons
-                        status={r.status}
-                        applicantName={fullName(r)}
-                        pendingAction={pending?.id === r.id ? pending.action : null}
-                        onConfirm={(action) => runAction(r.id, action)}
+                    <td className={`sticky right-0 z-30 isolate border-b border-l border-border px-3 py-2 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)] group-hover:bg-muted ${r.reviewedAt ? "bg-success-soft/50" : "bg-card"}`}>
+                      <ApplicationReviewedButton
+                        reviewed={Boolean(r.reviewedAt)}
+                        pending={reviewPendingId === r.id}
+                        onReview={() => void markReviewed(r.id)}
                       />
                     </td>
                   </tr>

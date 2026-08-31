@@ -45,6 +45,8 @@ import {
 import {
   REPORT_COMPARISON_DEFAULT_PAGE_SIZE,
   resolveReportComparisonPageSize,
+  STAFF_USAGE_SHIFT_DETAIL_PAGE_SIZE_OPTIONS,
+  resolveStaffUsageShiftDetailPageSize,
   type ReportComparisonPageSize,
 } from "@/lib/report-pagination-labels";
 import {
@@ -118,6 +120,7 @@ function StaffUsageReport() {
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [drillDownPage, setDrillDownPage] = useState(1);
+  const [drillDownPageSize, setDrillDownPageSize] = useState(10);
 
   const staffQ = useQuery({
     queryKey: ["staff-list"],
@@ -185,13 +188,14 @@ function StaffUsageReport() {
       applied.dateFrom,
       applied.dateTo,
       drillDownPage,
+      drillDownPageSize,
     ],
     queryFn: () =>
       reportsApi.staffUsageShifts(selectedStaffId!, {
         dateFrom: applied.dateFrom,
         dateTo: applied.dateTo,
         page: drillDownPage,
-        pageSize: 50,
+        pageSize: drillDownPageSize,
       }),
   });
 
@@ -221,6 +225,7 @@ function StaffUsageReport() {
 
   function viewStaffDetails(staffId: string) {
     setDrillDownPage(1);
+    setDrillDownPageSize(10);
     navigate({
       search: {
         dateFrom: applied.dateFrom,
@@ -514,33 +519,19 @@ function StaffUsageReport() {
                   ))}
                 </div>
 
-                {drillDownQ.data.totalCount > drillDownQ.data.pageSize && (
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-muted-foreground">
-                      Page {drillDownQ.data.page} · {drillDownQ.data.totalCount} completed shifts
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={drillDownPage <= 1}
-                        onClick={() => setDrillDownPage((page) => Math.max(1, page - 1))}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!drillDownQ.data.hasMore}
-                        onClick={() => setDrillDownPage((page) => page + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <ReportPagination
+                  page={drillDownQ.data.page}
+                  pageSize={resolveStaffUsageShiftDetailPageSize(drillDownQ.data.pageSize)}
+                  totalCount={drillDownQ.data.totalCount}
+                  hasMore={drillDownQ.data.hasMore}
+                  entityLabel="shifts"
+                  pageSizeOptions={STAFF_USAGE_SHIFT_DETAIL_PAGE_SIZE_OPTIONS}
+                  onPageChange={setDrillDownPage}
+                  onPageSizeChange={(size) => {
+                    setDrillDownPageSize(size);
+                    setDrillDownPage(1);
+                  }}
+                />
               </>
             )}
           </CardContent>

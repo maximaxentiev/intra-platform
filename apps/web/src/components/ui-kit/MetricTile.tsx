@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export type MetricTone = "neutral" | "primary" | "warning" | "success" | "info" | "muted";
+export type MetricTone = "neutral" | "primary" | "warning" | "success" | "info" | "muted" | "destructive";
 
 export const METRIC_TONE_CLASSES: Record<MetricTone, string> = {
   neutral: "bg-muted text-muted-foreground",
@@ -13,6 +13,7 @@ export const METRIC_TONE_CLASSES: Record<MetricTone, string> = {
   warning: "bg-warning-soft text-warning",
   success: "bg-success-soft text-success",
   info: "bg-info-soft text-info",
+  destructive: "bg-destructive/10 text-destructive",
 };
 
 /**
@@ -29,6 +30,7 @@ export function MetricTile({
   tone = "neutral",
   layout = "tile",
   loading,
+  plainLabel = false,
   to,
   search,
   params,
@@ -41,6 +43,7 @@ export function MetricTile({
   tone?: MetricTone;
   layout?: "tile" | "card";
   loading?: boolean;
+  plainLabel?: boolean;
   to?: string;
   search?: Record<string, unknown>;
   params?: Record<string, string>;
@@ -49,14 +52,18 @@ export function MetricTile({
   const body =
     layout === "card" ? (
       <div className="p-4">
-        <div
-          className={cn(
-            "inline-flex rounded-lg px-2 py-1 text-xs font-medium",
-            tone === "neutral" ? "bg-muted text-foreground" : METRIC_TONE_CLASSES[tone],
-          )}
-        >
-          {label}
-        </div>
+        {plainLabel ? (
+          <p className="text-sm font-medium text-foreground">{label}</p>
+        ) : (
+          <div
+            className={cn(
+              "inline-flex rounded-lg px-2 py-1 text-xs font-medium",
+              tone === "neutral" ? "bg-muted text-foreground" : METRIC_TONE_CLASSES[tone],
+            )}
+          >
+            {label}
+          </div>
+        )}
         {loading ? (
           <Skeleton className="mt-3 h-9 w-20" />
         ) : (

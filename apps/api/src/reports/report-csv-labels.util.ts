@@ -11,9 +11,9 @@ export const DOCUMENT_REPORT_STATUS_CSV_LABELS: Record<DocumentReportStatus, str
 };
 
 export const DOCUMENT_OVERALL_CSV_LABELS: Record<DocumentOverallComplianceStatus, string> = {
-  compliant: 'Compliant',
+  compliant: 'Approved',
   expiring_soon: 'Expiring Soon',
-  needs_attention: 'Needs Attention',
+  needs_attention: 'Pending Review',
 };
 
 export function documentStatusCsvLabel(

@@ -10,7 +10,11 @@ import {
   assertMinutesRangeValid,
   parseOptionalHoursToMinutes,
 } from './report-hours-filter.util';
-import { computeFillRatePercent } from './report-percentage.util';
+import {
+  computeCentreReportFillRateFromCombined,
+  computeCentreReportFillRatePercent,
+} from './report-percentage.util';
+import { combineCentreReportFilledMetric } from './report-centre-metrics.util';
 
 export interface CentreShiftMetricFilters {
   totalShifts?: IntegerRangeFilter;
@@ -40,6 +44,7 @@ export interface CentreMetricsBaseRow {
 export interface CentreMetricsFullRow extends CentreMetricsBaseRow {
   totalScheduledMinutes: number;
   completedScheduledMinutes: number;
+  cancelledScheduledMinutes: number;
 }
 
 export function resolveCentreShiftMetricFilters(input: {
@@ -159,7 +164,7 @@ export function buildShiftFulfillmentSummaryFromRows(rows: CentreMetricsBaseRow[
 
   return {
     ...totals,
-    fillRatePercent: computeFillRatePercent(totals.filled, totals.completed, totals.pending),
+    fillRatePercent: computeCentreReportFillRateFromCombined(totals.filled, totals.cancelled),
   };
 }
 
@@ -175,6 +180,8 @@ export function buildCentreUsageSummaryFromRows(rows: CentreMetricsFullRow[]) {
       totalScheduledMinutes: acc.totalScheduledMinutes + row.totalScheduledMinutes,
       totalCompletedScheduledMinutes:
         acc.totalCompletedScheduledMinutes + row.completedScheduledMinutes,
+      totalCancelledScheduledMinutes:
+        acc.totalCancelledScheduledMinutes + row.cancelledScheduledMinutes,
     }),
     {
       totalCentres: 0,
@@ -185,12 +192,14 @@ export function buildCentreUsageSummaryFromRows(rows: CentreMetricsFullRow[]) {
       cancelled: 0,
       totalScheduledMinutes: 0,
       totalCompletedScheduledMinutes: 0,
+      totalCancelledScheduledMinutes: 0,
     },
   );
 
   return {
     ...totals,
-    fillRatePercent: computeFillRatePercent(totals.filled, totals.completed, totals.pending),
+    cancelledScheduledMinutes: totals.totalCancelledScheduledMinutes,
+    fillRatePercent: computeCentreReportFillRateFromCombined(totals.filled, totals.cancelled),
   };
 }
 
@@ -219,5 +228,6 @@ export function toCentreUsageRow(row: CentreMetricsFullRow) {
     fillRatePercent: row.fillRatePercent,
     totalScheduledMinutes: row.totalScheduledMinutes,
     completedScheduledMinutes: row.completedScheduledMinutes,
+    cancelledScheduledMinutes: row.cancelledScheduledMinutes,
   };
 }

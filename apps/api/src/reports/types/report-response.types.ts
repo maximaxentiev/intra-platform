@@ -43,4 +43,7 @@ export interface StaffUsageScheduledSummary {
 /** Document report labels — Phase 9E. COVID optional display handled in UI layer. */
 export const REPORT_OPTIONAL_DOCUMENT_TYPE_LABEL = 'Optional — Not Submitted';
 
-export const REPORT_SCHEDULED_HOURS_LABEL = 'Scheduled Hours on Completed Shifts';
+export const REPORT_TOTAL_HOURS_LABEL = 'Total Hours';
+export const REPORT_COMPLETED_HOURS_LABEL = 'Completed Hours';
+/** @deprecated Use REPORT_COMPLETED_HOURS_LABEL */
+export const REPORT_SCHEDULED_HOURS_LABEL = 'Completed Hours';

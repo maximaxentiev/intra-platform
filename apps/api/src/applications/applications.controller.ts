@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -59,5 +59,10 @@ export class ApplicationsController {
   @Get(':id')
   get(@Param('id') id: string) {
     return this.applications.get(id);
+  }
+
+  @Post(':id/review')
+  review(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.applications.markReviewed(id, user.userId);
   }
 }

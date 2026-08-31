@@ -25,9 +25,9 @@ export const DOCUMENT_REPORT_STATUS_LABELS: Record<DocumentReportStatus, string>
 };
 
 export const DOCUMENT_OVERALL_STATUS_LABELS: Record<DocumentOverallComplianceStatus, string> = {
-  needs_attention: "Needs Attention",
+  needs_attention: "Pending Review",
   expiring_soon: "Expiring Soon",
-  compliant: "Compliant",
+  compliant: "Approved",
 };
 
 export const DOCUMENT_TYPE_FILTER_OPTIONS = [

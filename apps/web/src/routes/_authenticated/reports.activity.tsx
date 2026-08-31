@@ -12,7 +12,6 @@ import {
   ActivityLogPaginationSkeleton,
   ActivityLogRowSkeleton,
 } from "@/components/reports/ActivityLogPagination";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ACTIVITY_LOG_DEFAULT_PAGE_SIZE,
@@ -170,8 +169,6 @@ function ActivityLogReport() {
 
   // Reflect the currently selected Start/End filters directly, rather than the
   // server-echoed range, so this can never disagree with the applied filters.
-  const rangeLabel = `${formatOpsDateToronto(applied.dateFrom)} – ${formatOpsDateToronto(applied.dateTo)}`;
-
   const paginationProps = reportQ.data
     ? {
         page: reportQ.data.page,
@@ -216,13 +213,6 @@ function ActivityLogReport() {
         }
       />
 
-      <Alert className="border-border/70 bg-muted/20">
-        <AlertDescription>
-          Activity history is based on events recorded by the platform. Some actions performed before
-          expanded audit tracking was introduced may not appear here.
-        </AlertDescription>
-      </Alert>
-
       <ActivityLogFilters
         dateFrom={dateFrom}
         dateTo={dateTo}
@@ -247,8 +237,6 @@ function ActivityLogReport() {
         onApply={applyFilters}
         onReset={resetFilters}
       />
-
-      {rangeLabel ? <p className="text-sm text-muted-foreground">Date range: {rangeLabel}</p> : null}
 
       {reportQ.isLoading ? (
         <div className="space-y-4">

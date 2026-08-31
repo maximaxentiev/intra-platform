@@ -85,7 +85,7 @@ describe("shift detail layout", () => {
     expect(detail).not.toContain("shifts.notes");
     expect(detail).toContain("<ShiftComments shiftId={id} />");
     expect(detail).toContain("ShiftActivityLogPanel");
-    expect(detail).toContain("bg-surface-muted");
+    expect(detail).toContain("bg-surface-brand-dusk");
     expect(detail.indexOf("<ShiftComments shiftId={id} />")).toBeLessThan(
       detail.indexOf("<ShiftActivityLogPanel shiftId={id} />"),
     );
@@ -138,10 +138,12 @@ describe("create shift redesign", () => {
     expect(create).toContain('{saving ? "Creating..." : "Create shift"}');
   });
 
-  it("groups fields as Where / When / Requirements", () => {
-    for (const legend of ["Where", "When", "Requirements"]) {
-      expect(create).toContain(`legend="${legend}"`);
-    }
+  it("omits Where / When / Requirements category headings from the create form", () => {
+    expect(create).not.toContain('legend="Where"');
+    expect(create).not.toContain('legend="When"');
+    expect(create).not.toContain('legend="Requirements"');
+    expect(create).toContain("Centre *");
+    expect(create).toContain("Role required *");
   });
 });
 

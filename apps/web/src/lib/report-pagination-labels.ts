@@ -1,3 +1,20 @@
+export const STAFF_USAGE_SHIFT_DETAIL_DEFAULT_PAGE_SIZE = 10;
+
+export const STAFF_USAGE_SHIFT_DETAIL_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+export type StaffUsageShiftDetailPageSize =
+  (typeof STAFF_USAGE_SHIFT_DETAIL_PAGE_SIZE_OPTIONS)[number];
+
+export function resolveStaffUsageShiftDetailPageSize(value?: number): StaffUsageShiftDetailPageSize {
+  if (
+    value !== undefined &&
+    (STAFF_USAGE_SHIFT_DETAIL_PAGE_SIZE_OPTIONS as readonly number[]).includes(value)
+  ) {
+    return value as StaffUsageShiftDetailPageSize;
+  }
+  return STAFF_USAGE_SHIFT_DETAIL_DEFAULT_PAGE_SIZE;
+}
+
 export const REPORT_COMPARISON_DEFAULT_PAGE_SIZE = 10;
 
 export const REPORT_COMPARISON_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;

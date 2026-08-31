@@ -78,8 +78,9 @@ export class ReportsExportService {
       'Filled',
       'Completed',
       'Cancelled',
-      'Scheduled Hours',
-      'Scheduled Hours on Completed Shifts',
+      'Total Hours',
+      'Completed Hours',
+      'Cancelled Hours',
     ];
     const body = rows.map((row) => [
       csvTextCell(row.centreName),
@@ -91,6 +92,7 @@ export class ReportsExportService {
       csvNumberCell(row.cancelled),
       csvNumberCell(minutesToCsvHours(row.totalScheduledMinutes)),
       csvNumberCell(minutesToCsvHours(row.completedScheduledMinutes)),
+      csvNumberCell(minutesToCsvHours(row.cancelledScheduledMinutes)),
     ]);
     return {
       content: buildCsvContent(headers, body),

@@ -51,6 +51,7 @@ export interface ApplicationListItem {
   phone: string;
   submittedAt: string;
   hiredStaffId: string | null;
+  reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -102,6 +103,7 @@ export interface ApplicationDetail {
     hiredStaffId: string | null;
     rejectedAt: string | null;
     rejectionEmailSentAt: string | null;
+    reviewedAt: string | null;
   };
   documents: ApplicationDocument[];
   createdAt: string;
@@ -111,6 +113,7 @@ export interface ApplicationDetail {
 /** A list row enriched with its detail record (used by the table). */
 export interface ApplicationRow extends ApplicationDetail {
   submittedAt: string;
+  reviewedAt: string | null;
 }
 
 export interface ApplicationsPage {
@@ -126,6 +129,8 @@ export const applicationsApi = {
   get: (id: string) => api.get<ApplicationDetail>(`/applications/${id}`),
   activity: (id: string) => api.get<ApplicationActivityEvent[]>(`/applications/${id}/activity`),
   documents: (id: string) => api.get<ApplicationDocument[]>(`/applications/${id}/documents`),
+  review: (id: string) =>
+    api.post<ApplicationListItem>(`/applications/${id}/review`, {}),
 };
 
 /** Fetch every application for a role (list endpoint is paginated at 100). */

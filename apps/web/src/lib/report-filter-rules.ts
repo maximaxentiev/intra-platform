@@ -66,7 +66,7 @@ export const CENTRE_USAGE_METRICS: MetricFieldDef[] = [
   ...SHIFT_METRIC_BASE,
   {
     field: "scheduledHours",
-    label: "Scheduled Hours",
+    label: "Total Hours",
     group: "Hours",
     kind: "hours",
     minKey: "scheduledHoursMin",
@@ -74,7 +74,7 @@ export const CENTRE_USAGE_METRICS: MetricFieldDef[] = [
   },
   {
     field: "completedScheduledHours",
-    label: "Scheduled Hours on Completed Shifts",
+    label: "Completed Hours",
     group: "Hours",
     kind: "hours",
     minKey: "completedScheduledHoursMin",

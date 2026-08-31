@@ -17,12 +17,12 @@ export function StaffUsageSummaryCards({
 }) {
   return (
     <ReportMetricGrid className="sm:grid-cols-2 xl:grid-cols-3">
-      <ReportMetricCard label="Staff Shown" value={summary?.totalStaff ?? 0} loading={loading} />
+      <ReportMetricCard label="Staff Shown" value={summary?.totalStaff ?? 0} loading={loading} plainLabel />
       <ReportMetricCard
         label="Completed Shifts"
         value={summary?.completedShifts ?? 0}
         loading={loading}
-        tone="primary"
+        plainLabel
       />
       <ReportMetricCard
         label={REPORT_SCHEDULED_HOURS_LABEL}
@@ -30,12 +30,14 @@ export function StaffUsageSummaryCards({
           ready ? formatReportDurationMinutes(summary!.completedScheduledMinutes) : "—"
         }
         loading={loading}
+        plainLabel
       />
-      <ReportMetricCard label="Filled Shifts" value={summary?.filledShifts ?? 0} loading={loading} />
+      <ReportMetricCard label="Filled Shifts" value={summary?.filledShifts ?? 0} loading={loading} plainLabel />
       <ReportMetricCard
         label={REPORT_SCHEDULED_HOURS_ON_FILLED_SHIFTS_LABEL}
         value={ready ? formatReportDurationMinutes(summary!.filledScheduledMinutes) : "—"}
         loading={loading}
+        plainLabel
       />
     </ReportMetricGrid>
   );
@@ -45,7 +47,7 @@ export function StaffUsageSummarySkeleton() {
   return (
     <ReportMetricGrid className="sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 5 }).map((_, index) => (
-        <ReportMetricCard key={index} label="Loading" value="—" loading />
+        <ReportMetricCard key={index} label="Loading" value="—" loading plainLabel />
       ))}
     </ReportMetricGrid>
   );

@@ -35,10 +35,10 @@ describe("ops reports UI source", () => {
     expect(landing).not.toContain("Applications");
   });
 
-  it("uses scheduled hours labels and forbids actual/worked hours wording", () => {
+  it("uses total and completed hours labels and forbids actual/worked hours wording", () => {
     const summaryCards = readSrc("components/reports/CentreUsageSummaryCards.tsx");
-    expect(summaryCards).toContain("Scheduled Hours");
-    expect(summaryCards).toContain("REPORT_SCHEDULED_HOURS_LABEL");
+    expect(summaryCards).toContain("REPORT_TOTAL_HOURS_LABEL");
+    expect(summaryCards).toContain("REPORT_COMPLETED_HOURS_LABEL");
     const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
     expect(centreUsage).not.toMatch(/Actual Hours|Hours Worked|Verified Hours|Payroll Hours/i);
   });
@@ -207,7 +207,7 @@ describe("ops reports UI source", () => {
     expect(filters).not.toContain("ReportFilterRuleBuilder");
   });
 
-  it("activity log page includes coverage notice, compact rows, and dual pagination", () => {
+  it("activity log page includes compact rows and dual pagination without disclaimer copy", () => {
     const page = readSrc("routes/_authenticated/reports.activity.tsx");
     const list = readSrc("components/reports/ActivityLogList.tsx");
     const pagination = readSrc("components/reports/ActivityLogPagination.tsx");
@@ -215,7 +215,8 @@ describe("ops reports UI source", () => {
     const labels = readSrc("lib/activity-log-labels.ts");
     const filters = readSrc("components/reports/ActivityLogFilters.tsx");
 
-    expect(page).toContain("Activity history is based on events recorded by the platform");
+    expect(page).not.toContain("Activity history is based on events recorded by the platform");
+    expect(page).not.toContain("Date range:");
     expect(page).toContain("defaultActivityLogSearch");
     expect(page).toContain("ACTIVITY_LOG_DEFAULT_PAGE_SIZE");
     expect(page).toContain("ActivityLogPagination");

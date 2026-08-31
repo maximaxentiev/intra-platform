@@ -536,6 +536,10 @@ export const applications = pgTable(
       onDelete: 'set null',
     }),
     rejectionEmailSentAt: timestamp('rejection_email_sent_at', { withTimezone: true }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedByUserId: uuid('reviewed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     payloadSnapshot: jsonb('payload_snapshot').$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
