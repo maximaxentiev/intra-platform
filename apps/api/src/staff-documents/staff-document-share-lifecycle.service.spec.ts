@@ -46,12 +46,13 @@ type StaffRow = ReturnType<typeof baseStaffRow>;
 
 function createHarness(
   initialRow: StaffRow = baseStaffRow(),
-  options?: { slugCollisions?: Set<string>; useRealAudit?: boolean },
+  options?: { slugCollisions?: Set<string>; useRealAudit?: boolean; allowShareGeneration?: boolean },
 ) {
   let row: StaffRow = { ...initialRow };
   const audit = vi.fn();
   const slugCollisions = options?.slugCollisions ?? new Set<string>();
   const useRealAudit = options?.useRealAudit ?? false;
+  const allowShareGeneration = options?.allowShareGeneration ?? true;
 
   const shareService = createShareService();
   const config = {
@@ -133,6 +134,13 @@ function createHarness(
     : ({ record: audit } as never);
 
   const service = new StaffDocumentShareLifecycleService(db, shareService, auditService, config);
+
+  if (allowShareGeneration) {
+    vi.spyOn(service, 'assessDocumentShareReadiness').mockResolvedValue({
+      ready: true,
+      mode: 'generatable',
+    });
+  }
 
   return {
     service,

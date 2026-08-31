@@ -274,6 +274,10 @@ export class ReportsActivityService {
     `;
   }
 
+  async loadDisplayNamesForRows(rows: ActivityLogRawRow[]) {
+    return this.loadDisplayNames(rows);
+  }
+
   private async loadDisplayNames(rows: ActivityLogRawRow[]) {
     const staffIds = [...new Set(rows.map((row) => row.staff_id).filter(Boolean))] as string[];
     const centreIds = [...new Set(rows.map((row) => row.centre_id).filter(Boolean))] as string[];

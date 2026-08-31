@@ -30,6 +30,10 @@ import {
   resolveStaffDocumentShareTokenState,
 } from './staff-document-share-state.util';
 import { StaffDocumentShareService } from './staff-document-share.service';
+import {
+  assessStaffDocumentShareReadiness,
+  type StaffDocumentShareReadinessAssessment,
+} from './staff-document-share-readiness.util';
 import { buildStaffDocumentShareUrl } from './staff-document-share-url.util';
 
 type StaffShareRow = typeof staff.$inferSelect;
@@ -48,42 +52,81 @@ export class StaffDocumentShareLifecycleService {
     return mapStaffDocumentShareStatus(row);
   }
 
-  async generateShareLink(staffId: string, actorUserId: string): Promise<StaffDocumentShareUrlDto> {
-    return this.db.transaction(async (tx) => {
-      const row = await this.lockStaffRow(tx, staffId);
-      const state = resolveStaffDocumentShareTokenState(this.shareFields(row));
+  async generateShareLink(
+    staffId: string,
+    actorUserId: string,
+    executor?: DbExecutor,
+  ): Promise<StaffDocumentShareUrlDto> {
+    if (executor) {
+      return this.generateShareLinkInExecutor(executor, staffId, actorUserId);
+    }
+    return this.db.transaction(async (tx) => this.generateShareLinkInExecutor(tx, staffId, actorUserId));
+  }
 
-      if (state === 'active') {
-        throw new ConflictException(
-          'An active share link already exists. Use Copy Link or Rotate instead of Generate.',
-        );
+  /**
+   * Non-mutating readiness probe for Centre document-share emails.
+   * Does not expose tokens or URLs.
+   */
+  async assessDocumentShareReadiness(staffId: string): Promise<StaffDocumentShareReadinessAssessment> {
+    let row: StaffShareRow;
+    try {
+      row = await this.requireStaffRow(staffId);
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        return { ready: false, reason: 'Assigned Carer was not found.' };
       }
+      throw err;
+    }
 
-      const createdAt = nextShareTokenRotationCreatedAt(row.documentShareTokenCreatedAt);
-      const generated = this.share.generateShareTokenState(staffId, createdAt);
-      const slug = await this.resolveSlugForIssuance(tx, row);
-      const updated = await this.persistActiveShareState(tx, staffId, {
-        slug,
-        persist: this.share.buildPersistValuesForGeneration(staffId, createdAt).persist,
-        generated,
-      });
+    const hasActiveShare =
+      isStaffDocumentShareTokenActive(this.shareFields(row)) && Boolean(row.documentSlug);
 
-      await this.audit.record(
-        {
-          staffId,
-          actorUserId,
-          eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkGenerated,
-          detail: {
-            action: 'share_link_generated',
-            slug: updated.documentSlug,
-            createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
-          },
-        },
-        tx,
+    return assessStaffDocumentShareReadiness(this.db, staffId, hasActiveShare);
+  }
+
+  private async generateShareLinkInExecutor(
+    tx: DbExecutor,
+    staffId: string,
+    actorUserId: string,
+  ): Promise<StaffDocumentShareUrlDto> {
+    const row = await this.lockStaffRow(tx, staffId);
+    const state = resolveStaffDocumentShareTokenState(this.shareFields(row));
+
+    if (state === 'active') {
+      throw new ConflictException(
+        'An active share link already exists. Use Copy Link or Rotate instead of Generate.',
       );
+    }
 
-      return this.toShareUrlDto(staffId, updated, generated.token);
+    const readiness = await this.assessDocumentShareReadiness(staffId);
+    if (!readiness.ready) {
+      throw new ConflictException(readiness.reason);
+    }
+
+    const createdAt = nextShareTokenRotationCreatedAt(row.documentShareTokenCreatedAt);
+    const generated = this.share.generateShareTokenState(staffId, createdAt);
+    const slug = await this.resolveSlugForIssuance(tx, row);
+    const updated = await this.persistActiveShareState(tx, staffId, {
+      slug,
+      persist: this.share.buildPersistValuesForGeneration(staffId, createdAt).persist,
+      generated,
     });
+
+    await this.audit.record(
+      {
+        staffId,
+        actorUserId,
+        eventType: STAFF_PORTAL_AUDIT_EVENTS.shareLinkGenerated,
+        detail: {
+          action: 'share_link_generated',
+          slug: updated.documentSlug,
+          createdAt: updated.documentShareTokenCreatedAt?.toISOString(),
+        },
+      },
+      tx,
+    );
+
+    return this.toShareUrlDto(staffId, updated, generated.token);
   }
 
   async copyShareLink(staffId: string): Promise<StaffDocumentShareUrlDto> {

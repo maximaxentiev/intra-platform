@@ -93,6 +93,28 @@ export class ScheduledCommunicationsService {
       return row;
     }
 
+    if (row.status === 'sent') {
+      return row;
+    }
+
+    if (row.status === 'failed' || row.status === 'cancelled') {
+      const rows = await executor
+        .update(scheduledCommunications)
+        .set({
+          status: 'scheduled',
+          scheduledFor: input.scheduledFor,
+          recipientEntityId: input.recipientEntityId ?? null,
+          cancelledAt: null,
+          lastErrorCode: null,
+          lastErrorReason: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(scheduledCommunications.id, row.id))
+        .returning();
+
+      return rows[0] ?? row;
+    }
+
     if (row.status === 'scheduled' || row.status === 'processing') {
       const sameSchedule =
         Math.abs(row.scheduledFor.getTime() - input.scheduledFor.getTime()) <=

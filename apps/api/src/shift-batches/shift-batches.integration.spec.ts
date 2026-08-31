@@ -82,6 +82,7 @@ describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
       createMockShiftBatchProgressCommunicationService(),
       createMockShiftBatchCompletionReadinessService(),
       createMockShiftBatchCompletionService(),
+      { getBatchActivity: vi.fn() } as never,
     );
 
     await db.delete(shifts).where(inArray(shifts.centreId, [FIXTURE.centreA, FIXTURE.centreB]));

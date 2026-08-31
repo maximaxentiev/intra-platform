@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
@@ -54,6 +54,19 @@ export class ShiftBatchesController {
   @Get(':id/completion-readiness')
   getCompletionReadiness(@Param('id') id: string) {
     return this.shiftBatches.getCompletionReadiness(id);
+  }
+
+  @Get(':id/activity')
+  getBatchActivity(
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.shiftBatches.getBatchActivity(
+      id,
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined,
+    );
   }
 
   @Post(':id/complete')

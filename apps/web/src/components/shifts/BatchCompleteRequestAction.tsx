@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ApiError } from "@/lib/api";
 import type { BatchCompletionReadiness } from "@/lib/db";
 import { shiftBatchesApi } from "@/lib/db";
 
@@ -24,6 +25,9 @@ export function BatchCompleteRequestAction({
 }) {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [conflictBlockers, setConflictBlockers] = useState<
+    BatchCompletionReadiness["blockers"] | null
+  >(null);
 
   const readinessQ = useQuery({
     queryKey: ["shift-batch-completion-readiness", batchId],
@@ -36,11 +40,21 @@ export function BatchCompleteRequestAction({
     onSuccess: () => {
       toast.success("Batch Request completed.");
       setDialogOpen(false);
+      setConflictBlockers(null);
       void qc.invalidateQueries({ queryKey: ["shift-batch", batchId] });
       void qc.invalidateQueries({ queryKey: ["shift-batch-completion-readiness", batchId] });
+      void qc.invalidateQueries({ queryKey: ["shift-batch-activity", batchId] });
       void qc.invalidateQueries({ queryKey: ["shifts-feed"] });
     },
     onError: (err: Error) => {
+      if (err instanceof ApiError && err.status === 409) {
+        const blockers = parseConflictBlockers(err);
+        if (blockers.length > 0) {
+          setConflictBlockers(blockers);
+        }
+        void readinessQ.refetch();
+        return;
+      }
       toast.error(err.message || "Could not complete Batch Request.");
       void readinessQ.refetch();
     },
@@ -51,6 +65,7 @@ export function BatchCompleteRequestAction({
   const readiness = readinessQ.data;
   const ready = readiness?.ready ?? false;
   const blockerSummary = summarizeBlockers(readiness);
+  const dialogBlockers = conflictBlockers ?? (ready ? null : readiness?.blockers ?? null);
 
   return (
     <div className="space-y-2">
@@ -58,7 +73,10 @@ export function BatchCompleteRequestAction({
         type="button"
         className="bg-primary text-primary-foreground hover:bg-primary/90"
         disabled={!ready || completeM.isPending}
-        onClick={() => setDialogOpen(true)}
+        onClick={() => {
+          setConflictBlockers(null);
+          setDialogOpen(true);
+        }}
       >
         Complete Request
       </Button>
@@ -68,7 +86,13 @@ export function BatchCompleteRequestAction({
         <p className="text-sm text-muted-foreground">Checking readiness…</p>
       ) : null}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setConflictBlockers(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Complete Batch Request</DialogTitle>
@@ -82,13 +106,25 @@ export function BatchCompleteRequestAction({
             {(readiness?.activeShiftCount ?? 0) === 1 ? "" : "s"} will be included in the final
             confirmation.
           </p>
+          {dialogBlockers && dialogBlockers.length > 0 ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <p className="font-medium">This Batch Request is no longer ready:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {dialogBlockers.slice(0, 4).map((blocker) => (
+                  <li key={`${blocker.code}-${blocker.shiftId ?? blocker.message}`}>
+                    {blocker.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={!ready || completeM.isPending}
+              disabled={!ready || completeM.isPending || Boolean(dialogBlockers?.length)}
               onClick={() => completeM.mutate()}
             >
               {completeM.isPending ? "Completing…" : "Complete Request"}
@@ -97,6 +133,15 @@ export function BatchCompleteRequestAction({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function parseConflictBlockers(err: ApiError): BatchCompletionReadiness["blockers"] {
+  const raw = err.details?.blockers;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (item): item is BatchCompletionReadiness["blockers"][number] =>
+      Boolean(item && typeof item === "object" && "message" in item),
   );
 }
 

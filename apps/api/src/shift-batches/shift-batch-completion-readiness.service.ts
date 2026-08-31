@@ -89,8 +89,10 @@ export class ShiftBatchCompletionReadinessService {
         continue;
       }
 
-      const shareUrl = await this.shareLifecycle.buildActiveStaffDocumentShareUrl(child.assignedStaffId);
-      if (!shareUrl) {
+      const shareAssessment = await this.shareLifecycle.assessDocumentShareReadiness(
+        child.assignedStaffId,
+      );
+      if (!shareAssessment.ready) {
         const carerName = resolveBatchFinalCarerLegalName({
           legalName: child.assignedLegalName,
           legalFirstName: child.assignedLegalFirstName,
@@ -106,7 +108,7 @@ export class ShiftBatchCompletionReadinessService {
           endTime: String(child.endTime),
           carerName,
           carerStaffId: child.assignedStaffId,
-          message: `Document share unavailable for ${carerName} — ${String(child.shiftDate)}, ${fmtTimeLabel(child.startTime)}–${fmtTimeLabel(child.endTime)}.`,
+          message: `Document share unavailable for ${carerName} — ${String(child.shiftDate)}, ${fmtTimeLabel(child.startTime)}–${fmtTimeLabel(child.endTime)}. ${shareAssessment.reason}`,
         });
       }
     }

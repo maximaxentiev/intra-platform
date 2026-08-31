@@ -176,6 +176,27 @@ describe.runIf(POSTGRES_READY)('ScheduledCommunicationsService', () => {
     });
     expect(row.status).toBe('scheduled');
   });
+
+  it('ensureScheduled reactivates failed rows for immediate retry', async () => {
+    const key = `test:failed-retry:${Date.now()}`;
+    const input = {
+      idempotencyKey: key,
+      communicationType: 'test_ping' as const,
+      entityType: 'test' as const,
+      entityId: '77777777-7777-4777-8777-777777777777',
+      recipientType: 'test' as const,
+      scheduledFor: new Date(),
+    };
+
+    const row = await scheduled.schedule(input);
+    await scheduled.markFailed(row.id, 'delivery_failed', 'Provider timeout');
+
+    const reactivated = await scheduled.ensureScheduled(input);
+    expect(reactivated.id).toBe(row.id);
+    expect(reactivated.status).toBe('scheduled');
+    expect(reactivated.lastErrorCode).toBeNull();
+    expect(reactivated.lastErrorReason).toBeNull();
+  });
 });
 
 describe.runIf(!POSTGRES_READY)('ScheduledCommunicationsService', () => {

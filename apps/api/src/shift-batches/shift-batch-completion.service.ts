@@ -90,7 +90,15 @@ export class ShiftBatchCompletionService {
       const activeStaffIds = validation.activeStaffIds;
 
       for (const staffId of activeStaffIds) {
-        await this.ensureDocumentShareUrl(staffId, actorUserId);
+        await this.ensureDocumentShareUrl(tx, staffId, actorUserId);
+      }
+
+      const primary = await this.resolvePrimaryContact(batch.centreId);
+      if (!primary.ok) {
+        throw new ConflictException({
+          message: 'Centre primary contact is no longer valid.',
+          blockers: [{ code: 'missing_primary_contact', message: primary.reason }],
+        });
       }
 
       await this.automated.cancelByIdempotencyKeys(
@@ -135,7 +143,7 @@ export class ShiftBatchCompletionService {
           metadata: {
             batchId: batch.id,
             activeShiftCount: validation.activeShiftCount,
-            recipientEmail: readiness.primaryContactEmail,
+            recipientEmail: primary.email,
             scheduledCommunicationId: scheduled.id,
           },
         },
@@ -150,7 +158,7 @@ export class ShiftBatchCompletionService {
           entityId: batch.id,
           metadata: {
             batchId: batch.id,
-            recipientEmail: readiness.primaryContactEmail,
+            recipientEmail: primary.email,
             scheduledCommunicationId: scheduled.id,
           },
         },
@@ -186,13 +194,20 @@ export class ShiftBatchCompletionService {
 
     const idempotencyKey = buildBatchConfirmationFinalIdempotencyKey(batchId);
     const existing = await this.db
-      .select()
+      .select({
+        id: scheduledCommunications.id,
+        status: scheduledCommunications.status,
+      })
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.idempotencyKey, idempotencyKey))
       .limit(1);
 
-    if (existing[0]?.status === 'sent') {
-      return { scheduled: false };
+    const existingRow = existing[0];
+    if (existingRow?.status === 'sent') {
+      return { scheduled: false, reason: 'already_sent' as const };
+    }
+    if (existingRow?.status === 'processing') {
+      return { scheduled: false, reason: 'in_progress' as const };
     }
 
     const primary = await this.resolvePrimaryContact(batch.centreId);
@@ -213,6 +228,10 @@ export class ShiftBatchCompletionService {
       this.db,
     );
 
+    if (row.status === 'sent') {
+      return { scheduled: false, reason: 'already_sent' as const };
+    }
+
     await this.platformAudit.record({
       action: PLATFORM_AUDIT_ACTIONS.batchFinalConfirmationScheduled,
       actorType: 'ops_user',
@@ -227,8 +246,11 @@ export class ShiftBatchCompletionService {
       },
     });
 
-    await this.automated.enqueueScheduledCommunication(row.id);
-    return { scheduled: true };
+    if (row.status !== 'processing') {
+      await this.automated.enqueueScheduledCommunication(row.id);
+    }
+
+    return { scheduled: true, scheduledCommunicationId: row.id };
   }
 
   async resolveFinalConfirmationStatus(batchId: string): Promise<BatchFinalConfirmationStatusDto> {
@@ -280,17 +302,35 @@ export class ShiftBatchCompletionService {
     };
   }
 
-  private async ensureDocumentShareUrl(staffId: string, actorUserId: string) {
+  private async ensureDocumentShareUrl(
+    executor: DbExecutor,
+    staffId: string,
+    actorUserId: string,
+  ) {
     const existing = await this.shareLifecycle.buildActiveStaffDocumentShareUrl(staffId);
     if (existing) return existing;
 
-    try {
-      const generated = await this.shareLifecycle.generateShareLink(staffId, actorUserId);
-      return generated.shareUrl;
-    } catch {
+    const assessment = await this.shareLifecycle.assessDocumentShareReadiness(staffId);
+    if (!assessment.ready) {
       throw new ConflictException({
         message: 'Document share unavailable for one or more assigned Carers.',
         code: 'document_share_unavailable',
+        reason: assessment.reason,
+      });
+    }
+
+    try {
+      const generated = await this.shareLifecycle.generateShareLink(staffId, actorUserId, executor);
+      return generated.shareUrl;
+    } catch (err) {
+      const reason =
+        err instanceof ConflictException && typeof err.message === 'string'
+          ? err.message
+          : 'Document share could not be generated.';
+      throw new ConflictException({
+        message: 'Document share unavailable for one or more assigned Carers.',
+        code: 'document_share_unavailable',
+        reason,
       });
     }
   }

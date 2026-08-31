@@ -587,6 +587,17 @@ export type BatchFinalConfirmationStatus =
   | { state: "sent"; sentAt: string }
   | { state: "failed"; reason: string; canRetry: true };
 
+import type { ActivityLogItem } from "./reports-types";
+
+export type BatchActivityResponse = {
+  batchId: string;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  hasMore: boolean;
+  items: ActivityLogItem[];
+};
+
 export type BatchCompletionReadiness = {
   ready: boolean;
   primaryContactEmail: string | null;
@@ -641,6 +652,8 @@ export const shiftBatchesApi = {
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/final-confirmation/retry`),
   retryProgressEmail: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/progress-email/retry`),
+  getBatchActivity: (id: string, page = 1, pageSize = 10) =>
+    api.get<BatchActivityResponse>(`/shift-batches/${id}/activity`, { page, pageSize }),
   createWithShifts: (payload: { centreId: string; shifts: CreateBatchChildShiftInput[] }) =>
     api.post<{ batch: { id: string }; created: { id: string; shiftDate: string }[] }>(
       "/shift-batches/with-shifts",

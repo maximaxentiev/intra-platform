@@ -160,6 +160,44 @@ function buildCopy(
         : 'Assigned Staff removed after schedule change',
     };
   }
+  if (action === 'batch_request_created') {
+    return {
+      title: 'Batch Request created',
+      description: centreLabel(ctx),
+    };
+  }
+  if (action === 'batch_final_confirmation_scheduled') {
+    const recipientEmail =
+      typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
+    const isRetry = ctx.metadata?.source === 'retry';
+    return {
+      title: isRetry ? 'Final Centre confirmation retried' : 'Final Centre confirmation scheduled',
+      description: recipientEmail
+        ? `${isRetry ? 'Retry scheduled' : 'Scheduled'} to ${recipientEmail}`
+        : centreLabel(ctx),
+    };
+  }
+  if (action === 'communication_skipped' || action === 'communication_cancelled') {
+    const commType =
+      typeof ctx.metadata?.communicationType === 'string'
+        ? ctx.metadata.communicationType
+        : 'communication';
+    const skipReason =
+      typeof ctx.metadata?.skipReason === 'string' ? ctx.metadata.skipReason : null;
+
+    if (commType === 'batch_progress_70') {
+      return {
+        title: 'Centre progress update skipped',
+        description: skipReason ?? 'Progress update no longer applies.',
+      };
+    }
+    if (commType === 'batch_confirmation_final') {
+      return {
+        title: 'Final Centre confirmation skipped',
+        description: skipReason ?? centreLabel(ctx),
+      };
+    }
+  }
   if (action === 'batch_progress_email_scheduled') {
     const recipientEmail =
       typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
@@ -182,16 +220,6 @@ function buildCopy(
     return {
       title: 'Batch Request completed',
       description: centreLabel(ctx),
-    };
-  }
-  if (action === 'batch_final_confirmation_scheduled') {
-    const recipientEmail =
-      typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
-    return {
-      title: 'Final Centre confirmation scheduled',
-      description: recipientEmail
-        ? `Scheduled to ${recipientEmail}`
-        : centreLabel(ctx),
     };
   }
   if (action === 'communication_sent' || action === 'communication_failed') {

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { BatchActivityLogPanel } from "@/components/shifts/BatchActivityLogPanel";
 import { BatchCompleteRequestAction } from "@/components/shifts/BatchCompleteRequestAction";
 import { BatchFinalConfirmationStatus } from "@/components/shifts/BatchFinalConfirmationStatus";
 import { BatchProgressEmailStatus } from "@/components/shifts/BatchProgressEmailStatus";
@@ -125,6 +126,8 @@ function BatchWorkspace() {
           </Link>
         </p>
       ) : null}
+
+      <BatchActivityLogPanel batchId={workspace.id} />
     </div>
   );
 }

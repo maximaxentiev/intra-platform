@@ -23,6 +23,7 @@ import { lockOpenShiftBatch } from './shift-batch-centre.util';
 import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-communication.service';
 import { ShiftBatchCompletionReadinessService } from './shift-batch-completion-readiness.service';
 import { ShiftBatchCompletionService } from './shift-batch-completion.service';
+import { ShiftBatchActivityService } from './shift-batch-activity.service';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -34,6 +35,7 @@ export class ShiftBatchesService {
     private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
     private readonly batchCompletionReadiness: ShiftBatchCompletionReadinessService,
     private readonly batchCompletion: ShiftBatchCompletionService,
+    private readonly batchActivity: ShiftBatchActivityService,
   ) {}
 
   async createWithShifts(
@@ -251,6 +253,10 @@ export class ShiftBatchesService {
 
   async retryProgressEmail(batchId: string, actorUserId: string) {
     return this.batchProgressCommunications.retryProgressEmail(batchId, actorUserId);
+  }
+
+  async getBatchActivity(batchId: string, page?: number, pageSize?: number) {
+    return this.batchActivity.getBatchActivity(batchId, page, pageSize);
   }
 
   private validateBulkPayload(rows: CreateBatchChildShiftDto[]) {
