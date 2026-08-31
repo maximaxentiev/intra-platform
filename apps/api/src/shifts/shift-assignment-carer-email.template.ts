@@ -14,6 +14,7 @@ export function buildShiftAssignmentCarerEmailContent(params: {
   centreAddress: string;
   centreCity: string;
   centreNotes: string;
+  shiftConfirmationNotes: string;
   roleNeeded: string | null;
   shiftDate: string;
   startTime: string;
@@ -26,11 +27,16 @@ export function buildShiftAssignmentCarerEmailContent(params: {
   const timeLabel = formatShiftAssignmentTimeRange(params.startTime, params.endTime);
   const subject = `Shift confirmation — ${params.centreName} — ${dateLabel}`;
 
-  const notesTrimmed = params.centreNotes.trim();
-  const notesText =
-    notesTrimmed.length > 0
-      ? ['', 'Rules, Policies, and Other Notes:', notesTrimmed]
+  const centreRulesTrimmed = params.centreNotes.trim();
+  const centreRulesText =
+    centreRulesTrimmed.length > 0
+      ? ['', 'Rules, Policies, and Other Notes:', centreRulesTrimmed]
       : [];
+
+  const shiftNotesTrimmed = params.shiftConfirmationNotes.trim();
+  const shiftNotesText =
+    shiftNotesTrimmed.length > 0 ? ['', 'Shift Notes:', shiftNotesTrimmed] : [];
+
   const roleText =
     params.roleNeeded != null ? [`Role: ${params.roleNeeded}`] : [];
 
@@ -51,7 +57,8 @@ export function buildShiftAssignmentCarerEmailContent(params: {
     'Address:',
     ...addressBlock,
     ...roleText,
-    ...notesText,
+    ...centreRulesText,
+    ...shiftNotesText,
     ...(portalUrl ? ['', 'View shift details:', portalUrl] : []),
   ].join('\n');
 
@@ -60,9 +67,14 @@ export function buildShiftAssignmentCarerEmailContent(params: {
       ? `<tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Role:</strong> ${escapeShiftAssignmentEmailHtml(params.roleNeeded)}</td></tr>`
       : '';
 
-  const notesHtml =
-    notesTrimmed.length > 0
-      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Rules, Policies, and Other Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(notesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
+  const centreRulesHtml =
+    centreRulesTrimmed.length > 0
+      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Rules, Policies, and Other Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(centreRulesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
+      : '';
+
+  const shiftNotesHtml =
+    shiftNotesTrimmed.length > 0
+      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Shift Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(shiftNotesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
       : '';
 
   const portalHtml = portalUrl
@@ -85,7 +97,8 @@ export function buildShiftAssignmentCarerEmailContent(params: {
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Time:</strong> ${escapeShiftAssignmentEmailHtml(timeLabel)}</td></tr>
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Address:</strong><br/>${addressHtml}</td></tr>
         ${roleHtml}
-        ${notesHtml}
+        ${centreRulesHtml}
+        ${shiftNotesHtml}
         ${portalHtml}`);
 
   return { subject, html, text };
@@ -99,4 +112,15 @@ export function carerAssignmentEmailContainsNoSensitiveInternals(content: {
   const blob = `${content.subject}\n${content.text}`.toLowerCase();
   const forbidden = ['cancellation', 'hourly', 'billing', 'staffpoint', '/documents/'];
   return forbidden.every((term) => !blob.includes(term));
+}
+
+/** Guard: legacy internal shifts.notes must never appear in external carer email. */
+export function carerAssignmentEmailExcludesLegacyInternalNotes(content: {
+  html: string;
+  text: string;
+  legacyInternalNote: string;
+}) {
+  if (!content.legacyInternalNote.trim()) return true;
+  const blob = `${content.html}\n${content.text}`;
+  return !blob.includes(content.legacyInternalNote);
 }

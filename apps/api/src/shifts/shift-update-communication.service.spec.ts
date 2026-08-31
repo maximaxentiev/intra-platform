@@ -5,6 +5,7 @@ import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constan
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ShiftUpdateCommunicationService } from './shift-update-communication.service';
 import type { ShiftCommunicationChange } from './shift-update-changes.util';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
 
 const changes: ShiftCommunicationChange[] = [
   {
@@ -59,6 +60,17 @@ function bothRecipientsSelections() {
   };
 }
 
+function createMockCommunicationPolicy() {
+  return {
+    resolveForShift: vi.fn().mockResolvedValue({
+      batchId: null,
+      batchRequestCompleted: false,
+      centreCommunicationDeferred: false,
+      centreDeferReason: null,
+    }),
+  } as unknown as ShiftCommunicationPolicyService;
+}
+
 describe('ShiftUpdateCommunicationService audit metadata', () => {
   let email: EmailService;
   let values: ReturnType<typeof vi.fn>;
@@ -75,7 +87,12 @@ describe('ShiftUpdateCommunicationService audit metadata', () => {
       insert: vi.fn().mockReturnValue({ values }),
     } as never);
 
-    service = new ShiftUpdateCommunicationService(mockDb(), email, platformAudit);
+    service = new ShiftUpdateCommunicationService(
+      mockDb(),
+      email,
+      platformAudit,
+      createMockCommunicationPolicy(),
+    );
   });
 
   it('records centre communication audit with deliveryMessageId', async () => {
@@ -112,6 +129,7 @@ describe('ShiftUpdateCommunicationService audit metadata', () => {
       new PlatformAuditService({
         insert: vi.fn().mockReturnValue({ values: carerValues }),
       } as never),
+      createMockCommunicationPolicy(),
     );
 
     const result = await carerService.sendCommunications({
@@ -147,6 +165,7 @@ describe('ShiftUpdateCommunicationService audit metadata', () => {
       new PlatformAuditService({
         insert: vi.fn().mockReturnValue({ values: failedValues }),
       } as never),
+      createMockCommunicationPolicy(),
     );
 
     const result = await failedService.sendCommunications({
@@ -228,7 +247,12 @@ describe('ShiftUpdateCommunicationService audit metadata', () => {
       }
     });
 
-    const isolatedService = new ShiftUpdateCommunicationService(mockDb(), email, platformAudit);
+    const isolatedService = new ShiftUpdateCommunicationService(
+      mockDb(),
+      email,
+      platformAudit,
+      createMockCommunicationPolicy(),
+    );
 
     const result = await isolatedService.sendCommunications({
       shiftId: 'shift-1',

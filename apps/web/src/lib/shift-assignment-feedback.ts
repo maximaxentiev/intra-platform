@@ -3,6 +3,15 @@ import type {
   ShiftAssignmentOutcome,
 } from "@/lib/db";
 
+const DEFERRED_BATCH_REASON = "deferred_batch_confirmation";
+
+function centreWasDeferred(notifications: ShiftAssignmentNotificationsResult): boolean {
+  return (
+    notifications.centre.deferred === true ||
+    notifications.centre.skippedReason === DEFERRED_BATCH_REASON
+  );
+}
+
 export function shiftAssignmentFeedbackMessage(
   staffName: string,
   assignment: ShiftAssignmentOutcome,
@@ -18,13 +27,27 @@ export function shiftAssignmentFeedbackMessage(
 
   const centre = notifications.centre;
   const carer = notifications.carer;
+  const centreDeferred = centreWasDeferred(notifications);
 
   const centreMissing =
     centre.skippedReason === "no_centre_primary_contact" ||
     centre.skippedReason === "no_centre_email";
-  const centreFailed = centre.attempted && !centre.sent;
+  const centreFailed = centre.attempted && !centre.sent && !centreDeferred;
   const carerFailed = carer.attempted && !carer.sent;
-  const carerSkipped = carer.skippedReason === "no_carer_email" || carer.skippedReason === "invalid_carer_email";
+  const carerSkipped =
+    carer.skippedReason === "no_carer_email" || carer.skippedReason === "invalid_carer_email";
+
+  if (centreDeferred && carer.sent) {
+    return `${staffName} assigned. Carer confirmation sent. Centre confirmation is managed through this Batch Request.`;
+  }
+
+  if (centreDeferred && !carer.sent && !carerFailed && !carerSkipped) {
+    return `${staffName} assigned. Centre confirmation is managed through this Batch Request.`;
+  }
+
+  if (centreDeferred && (carerFailed || carerSkipped)) {
+    return `${staffName} assigned. Centre confirmation is managed through this Batch Request. The carer confirmation email could not be sent.`;
+  }
 
   if (centreMissing) {
     if (carer.sent) {
@@ -61,6 +84,11 @@ export function shiftResendFeedbackMessage(
   const carerSent = notifications.carer.sent;
   const centreAttempted = notifications.centre.attempted;
   const carerAttempted = notifications.carer.attempted;
+  const centreDeferred = centreWasDeferred(notifications);
+
+  if (centreDeferred && carerSent) {
+    return "Carer confirmation email sent. Centre confirmation is managed through this Batch Request.";
+  }
 
   if (centreSent && carerSent) {
     return "Confirmation emails sent.";
@@ -72,7 +100,7 @@ export function shiftResendFeedbackMessage(
     return "Carer confirmation email sent.";
   }
   if (
-    (centreAttempted && !centreSent) ||
+    (centreAttempted && !centreSent && !centreDeferred) ||
     (carerAttempted && !carerSent)
   ) {
     return "Some confirmation emails could not be sent.";
@@ -90,6 +118,16 @@ export function shiftUnassignFeedbackMessage(
   const carerSent = notifications.carer?.sent;
   const centreAttempted = notifications.centre?.attempted;
   const carerAttempted = notifications.carer?.attempted;
+  const centreDeferred = notifications.centre
+    ? centreWasDeferred({
+        centre: notifications.centre,
+        carer: notifications.carer ?? { attempted: false, sent: false },
+      })
+    : false;
+
+  if (centreDeferred && carerSent) {
+    return "Carer unassigned. Carer notified. Centre communication is managed through this Batch Request.";
+  }
 
   if (centreSent && carerSent) {
     return "Carer unassigned. Communication sent.";
@@ -101,7 +139,7 @@ export function shiftUnassignFeedbackMessage(
     return "Carer unassigned. Carer notified.";
   }
   if (
-    (centreAttempted && !centreSent) ||
+    (centreAttempted && !centreSent && !centreDeferred) ||
     (carerAttempted && !carerSent)
   ) {
     return "Carer unassigned. Some communication could not be sent.";

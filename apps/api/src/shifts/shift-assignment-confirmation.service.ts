@@ -31,6 +31,12 @@ import {
   sanitizeNotificationFailure,
 } from './shift-assignment-notification.util';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+import {
+  BATCH_CENTRE_DEFER_MESSAGE,
+  applyCentreBatchDeferral,
+  centreDeferredRecipientResult,
+} from './shift-communication-policy.util';
 
 type ConfirmationTrigger = 'assign' | 'resend';
 
@@ -46,6 +52,7 @@ type ShiftNotificationContext = {
   centreAddress: string;
   centreCity: string;
   centreNotes: string;
+  shiftConfirmationNotes: string;
   carerLegalName: string;
   carerStaffEmail: string;
   carerAccountEmail: string | null;
@@ -62,6 +69,7 @@ export class ShiftAssignmentConfirmationService {
     private readonly config: ConfigService,
     private readonly notifications: ShiftAssignmentNotificationsService,
     private readonly shareLifecycle: StaffDocumentShareLifecycleService,
+    private readonly communicationPolicy: ShiftCommunicationPolicyService,
   ) {}
 
   async sendAssignmentConfirmations(params: {
@@ -73,12 +81,16 @@ export class ShiftAssignmentConfirmationService {
   }): Promise<ShiftAssignmentNotificationsResult> {
     const sendCentre = params.recipients?.centre ?? true;
     const sendCarer = params.recipients?.carer ?? true;
+    const policy = await this.communicationPolicy.resolveForShift(params.shiftId);
     const context = await this.loadContext(params.shiftId, params.assignedStaffId);
     const platformEnv = this.platformEnv();
 
-    const centre = sendCentre
-      ? await this.processCentreConfirmation(context, params, platformEnv)
-      : { attempted: false, sent: false };
+    const centre =
+      sendCentre && policy.centreCommunicationDeferred
+        ? centreDeferredRecipientResult()
+        : sendCentre
+          ? await this.processCentreConfirmation(context, params, platformEnv)
+          : { attempted: false, sent: false };
     const carer = sendCarer
       ? await this.processCarerConfirmation(context, params, platformEnv)
       : { attempted: false, sent: false };
@@ -103,6 +115,7 @@ export class ShiftAssignmentConfirmationService {
         centreAddress: centres.address,
         centreCity: centres.city,
         centreNotes: centres.notes,
+        shiftConfirmationNotes: shifts.shiftConfirmationNotes,
         legalName: staff.legalName,
         legalFirstName: staff.legalFirstName,
         legalLastName: staff.legalLastName,
@@ -147,6 +160,7 @@ export class ShiftAssignmentConfirmationService {
       centreAddress: row.centreAddress,
       centreCity: row.centreCity,
       centreNotes: row.centreNotes,
+      shiftConfirmationNotes: row.shiftConfirmationNotes?.trim() ?? '',
       carerLegalName: getStaffLegalFullName({
         legalFirstName: row.legalFirstName,
         legalLastName: row.legalLastName,
@@ -220,6 +234,7 @@ export class ShiftAssignmentConfirmationService {
       shiftDate: context.shiftDate,
       startTime: context.startTime,
       endTime: context.endTime,
+      shiftConfirmationNotes: context.shiftConfirmationNotes,
       documentShareUrl,
     });
 
@@ -308,6 +323,7 @@ export class ShiftAssignmentConfirmationService {
       centreAddress: context.centreAddress,
       centreCity: context.centreCity,
       centreNotes: context.centreNotes,
+      shiftConfirmationNotes: context.shiftConfirmationNotes,
       roleNeeded: context.roleNeeded,
       shiftDate: context.shiftDate,
       startTime: context.startTime,
@@ -407,11 +423,13 @@ export class ShiftAssignmentConfirmationService {
     assignedStaffId: string;
     actorUserId: string;
   }): Promise<{
-    centre: { available: boolean; reason?: string };
+    centre: { available: boolean; reason?: string; unavailableCode?: string };
     carer: { available: boolean; reason?: string };
   }> {
+    const policy = await this.communicationPolicy.resolveForShift(params.shiftId);
     const context = await this.loadContext(params.shiftId, params.assignedStaffId);
-    const centre = await this.probeCentreAvailability(context, params.actorUserId);
+    const centreProbe = await this.probeCentreAvailability(context, params.actorUserId);
+    const centre = applyCentreBatchDeferral(centreProbe, policy);
     const carer = this.probeCarerAvailability(context);
     return { centre, carer };
   }
@@ -428,6 +446,8 @@ export class ShiftAssignmentConfirmationService {
         return 'Carer document share is unavailable for centre confirmation.';
       case SHIFT_ASSIGNMENT_SKIP_REASON.emailNotConfigured:
         return 'Email delivery is not configured.';
+      case SHIFT_ASSIGNMENT_SKIP_REASON.deferredBatchConfirmation:
+        return BATCH_CENTRE_DEFER_MESSAGE;
       default:
         return 'Centre confirmation is unavailable.';
     }

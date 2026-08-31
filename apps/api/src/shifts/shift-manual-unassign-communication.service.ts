@@ -17,6 +17,8 @@ import {
 import { normalizeShiftRoleNeeded } from './shift-assignment-display.util';
 import { buildShiftManualUnassignCarerEmailContent } from './shift-manual-unassign-carer-email.template';
 import { buildShiftManualUnassignCentreEmailContent } from './shift-manual-unassign-centre-email.template';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+import { centreDeferredRecipientResult } from './shift-communication-policy.util';
 
 @Injectable()
 export class ShiftManualUnassignCommunicationService {
@@ -26,6 +28,7 @@ export class ShiftManualUnassignCommunicationService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly email: EmailService,
     private readonly platformAudit: PlatformAuditService,
+    private readonly communicationPolicy: ShiftCommunicationPolicyService,
   ) {}
 
   async sendCommunications(params: {
@@ -36,10 +39,13 @@ export class ShiftManualUnassignCommunicationService {
     recipients: { centre: boolean; carer: boolean };
   }): Promise<{ centre: ShiftAssignmentRecipientResult | null; carer: ShiftAssignmentRecipientResult | null }> {
     const context = await this.loadContext(params.shiftId, params.previousStaffId);
+    const policy = await this.communicationPolicy.resolveForShift(params.shiftId);
 
     let centre: ShiftAssignmentRecipientResult | null = null;
     if (params.recipients.centre) {
-      centre = await this.sendCentreEmail({ ...params, context });
+      centre = policy.centreCommunicationDeferred
+        ? centreDeferredRecipientResult()
+        : await this.sendCentreEmail({ ...params, context });
     }
 
     let carer: ShiftAssignmentRecipientResult | null = null;

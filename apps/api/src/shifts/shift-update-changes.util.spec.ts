@@ -12,6 +12,7 @@ const BASE = {
   startTime: '08:00:00',
   endTime: '16:00:00',
   roleNeeded: 'ECE',
+  shiftConfirmationNotes: '',
 };
 
 function snap(overrides: Partial<typeof BASE> = {}) {
@@ -72,6 +73,28 @@ describe('detectShiftCommunicationChanges', () => {
   it('returns no changes when patch reverts to original', () => {
     const before = snap({ shiftDate: '2026-08-28' });
     const after = applyShiftUpdatePatch(before, { shiftDate: '2026-08-28' });
+    expect(detectShiftCommunicationChanges(before, after)).toEqual([]);
+  });
+
+  it('detects shift notes only', () => {
+    const after = applyShiftUpdatePatch(snap(), { confirmationNotes: 'Bring indoor shoes.' });
+    const changes = detectShiftCommunicationChanges(snap(), after);
+    expect(changes.map((c) => c.field)).toEqual(['shiftNotes']);
+    expect(changes[0]?.label).toBe('Shift Notes');
+  });
+
+  it('detects blank to text and text to blank shift notes', () => {
+    const withNotes = snap({ shiftConfirmationNotes: 'Existing note' });
+    const cleared = applyShiftUpdatePatch(withNotes, { confirmationNotes: '' });
+    expect(detectShiftCommunicationChanges(withNotes, cleared)[0]?.field).toBe('shiftNotes');
+
+    const added = applyShiftUpdatePatch(snap(), { confirmationNotes: 'New note' });
+    expect(detectShiftCommunicationChanges(snap(), added)[0]?.afterValue).toBe('New note');
+  });
+
+  it('does not detect shift notes when unchanged', () => {
+    const before = snap({ shiftConfirmationNotes: 'Same note' });
+    const after = applyShiftUpdatePatch(before, { confirmationNotes: 'Same note' });
     expect(detectShiftCommunicationChanges(before, after)).toEqual([]);
   });
 

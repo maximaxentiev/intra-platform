@@ -1,11 +1,14 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  escapeShiftAssignmentEmailHtml,
+} from './shift-assignment-notification.util';
+import {
   formatShiftAssignmentDateLabel,
   formatShiftAssignmentTimeRange,
   normalizeShiftRoleNeeded,
 } from './shift-assignment-display.util';
 
-export type ShiftCommunicationField = 'date' | 'time' | 'role';
+export type ShiftCommunicationField = 'date' | 'time' | 'role' | 'shiftNotes';
 
 export type ShiftCommunicationChange = {
   field: ShiftCommunicationField;
@@ -21,6 +24,7 @@ export type ShiftCommunicationSnapshot = {
   startTime: string;
   endTime: string;
   roleNeeded: string;
+  confirmationNotes: string;
 };
 
 export function normalizeShiftCommunicationSnapshot(row: {
@@ -28,12 +32,14 @@ export function normalizeShiftCommunicationSnapshot(row: {
   startTime: string;
   endTime: string;
   roleNeeded: string | null;
+  shiftConfirmationNotes?: string | null;
 }): ShiftCommunicationSnapshot {
   return {
     shiftDate: String(row.shiftDate),
     startTime: String(row.startTime),
     endTime: String(row.endTime),
     roleNeeded: row.roleNeeded ?? '',
+    confirmationNotes: row.shiftConfirmationNotes?.trim() ?? '',
   };
 }
 
@@ -46,6 +52,7 @@ export function applyShiftUpdatePatch(
     startTime: patch.startTime ?? before.startTime,
     endTime: patch.endTime ?? before.endTime,
     roleNeeded: patch.roleNeeded ?? before.roleNeeded,
+    confirmationNotes: patch.confirmationNotes ?? before.confirmationNotes,
   };
 }
 
@@ -90,6 +97,19 @@ export function detectShiftCommunicationChanges(
     });
   }
 
+  const beforeNotes = before.confirmationNotes.trim();
+  const afterNotes = after.confirmationNotes.trim();
+  if (beforeNotes !== afterNotes) {
+    changes.push({
+      field: 'shiftNotes',
+      label: 'Shift Notes',
+      beforeDisplay: beforeNotes || '—',
+      afterDisplay: afterNotes || '—',
+      beforeValue: beforeNotes,
+      afterValue: afterNotes,
+    });
+  }
+
   return changes;
 }
 
@@ -99,6 +119,42 @@ export function hasShiftCommunicationChanges(changes: readonly ShiftCommunicatio
 
 export function formatShiftChangeArrow(change: ShiftCommunicationChange): string {
   return `${change.beforeDisplay} → ${change.afterDisplay}`;
+}
+
+export function formatShiftNotesChangeText(change: ShiftCommunicationChange): string {
+  const before = change.beforeValue.trim();
+  const after = change.afterValue.trim();
+  if (!before && after) {
+    return `Shift Notes were added:\n${after}`;
+  }
+  if (before && !after) {
+    return 'Shift Notes were removed.';
+  }
+  return `Shift Notes were updated:\n${after}`;
+}
+
+export function formatShiftNotesChangeHtml(change: ShiftCommunicationChange): string {
+  const text = formatShiftNotesChangeText(change);
+  return escapeShiftAssignmentEmailHtml(text).replace(/\n/g, '<br/>');
+}
+
+export function formatChangeForUpdateEmail(change: ShiftCommunicationChange): {
+  textLine: string;
+  htmlBlock: string;
+} {
+  if (change.field === 'shiftNotes') {
+    const textLine = formatShiftNotesChangeText(change);
+    return {
+      textLine,
+      htmlBlock: `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>${escapeShiftAssignmentEmailHtml(change.label)}</strong><br/>${formatShiftNotesChangeHtml(change)}</td></tr>`,
+    };
+  }
+
+  const arrow = formatShiftChangeArrow(change);
+  return {
+    textLine: `${change.label}\n${arrow}`,
+    htmlBlock: `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>${escapeShiftAssignmentEmailHtml(change.label)}</strong><br/>${escapeShiftAssignmentEmailHtml(arrow)}</td></tr>`,
+  };
 }
 
 export type ShiftUpdateCommunicationInclude = Partial<Record<ShiftCommunicationField, boolean>>;
@@ -148,7 +204,7 @@ function assertOnlyChangedFieldsIncluded(
   changedFields: Set<ShiftCommunicationField>,
 ) {
   if (!include) return;
-  for (const field of ['date', 'time', 'role'] as const) {
+  for (const field of ['date', 'time', 'role', 'shiftNotes'] as const) {
     if (include[field] && !changedFields.has(field)) {
       throw new BadRequestException(
         `Communication cannot include ${field} because it did not change.`,
@@ -162,7 +218,7 @@ function resolveIncludedFields(
   changedFields: Set<ShiftCommunicationField>,
 ): ShiftCommunicationField[] {
   const selected: ShiftCommunicationField[] = [];
-  for (const field of ['date', 'time', 'role'] as const) {
+  for (const field of ['date', 'time', 'role', 'shiftNotes'] as const) {
     if (!changedFields.has(field)) continue;
     if (include?.[field]) selected.push(field);
   }

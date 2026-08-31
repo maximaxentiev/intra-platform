@@ -137,6 +137,8 @@ export interface Shift {
   id: string;
   centreId: string;
   batchId?: string | null;
+  batchRequestCompletedAt?: string | null;
+  centreCommunicationDeferred?: boolean;
   shiftDate: string;
   startTime: string;
   endTime: string;
@@ -187,6 +189,7 @@ export type ShiftAssignmentRecipientResult = {
   attempted: boolean;
   sent: boolean;
   skippedReason?: string;
+  deferred?: boolean;
 };
 
 export type ShiftAssignmentNotificationsResult = {
@@ -228,8 +231,8 @@ export type ShiftUpdateCommunicationsResult = {
 } | null;
 
 export type ShiftUpdateCommunicationsPayload = {
-  centre?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean } };
-  carer?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean } };
+  centre?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean; shiftNotes?: boolean } };
+  carer?: { send: boolean; include: { date?: boolean; time?: boolean; role?: boolean; shiftNotes?: boolean } };
 };
 
 export type ShiftAssignmentResolution = "unassign" | "availability_override";
@@ -529,7 +532,7 @@ export const shiftsApi = {
     }),
   assignmentConfirmationRecipients: (id: string) =>
     api.get<{
-      centre: { available: boolean; reason?: string };
+      centre: { available: boolean; reason?: string; unavailableCode?: string };
       carer: { available: boolean; reason?: string };
     }>(`/shifts/${id}/assignment-confirmation-recipients`),
   unassign: (id: string, communications?: ShiftCommunicationRecipientsPayload) =>

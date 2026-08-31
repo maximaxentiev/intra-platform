@@ -16,6 +16,10 @@ export class ShiftUpdateCommunicationIncludeDto {
   @IsOptional()
   @IsBoolean()
   role?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  shiftNotes?: boolean;
 }
 
 export class ShiftUpdateRecipientCommunicationDto {

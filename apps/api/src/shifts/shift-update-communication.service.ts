@@ -18,6 +18,8 @@ import { buildShiftUpdateCarerEmailContent } from './shift-update-carer-email.te
 import { buildShiftUpdateCentreEmailContent } from './shift-update-centre-email.template';
 import { buildShiftUpdateUnassignCarerEmailContent } from './shift-update-unassign-carer-email.template';
 import { buildShiftUpdateUnassignCentreEmailContent } from './shift-update-unassign-centre-email.template';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+import { centreDeferredRecipientResult } from './shift-communication-policy.util';
 import type {
   ShiftCommunicationChange,
   ShiftCommunicationField,
@@ -32,6 +34,7 @@ export class ShiftUpdateCommunicationService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly email: EmailService,
     private readonly platformAudit: PlatformAuditService,
+    private readonly communicationPolicy: ShiftCommunicationPolicyService,
   ) {}
 
   async sendCommunications(params: {
@@ -48,22 +51,27 @@ export class ShiftUpdateCommunicationService {
       ? params.previousAssignedStaffId ?? null
       : params.assignedStaffId;
     const context = await this.loadContext(params.shiftId, params.centreId, carerContextStaffId);
+    const policy = await this.communicationPolicy.resolveForShift(params.shiftId);
 
     let centre: ShiftAssignmentRecipientResult | null = null;
     if (params.selections.centre) {
-      try {
-        centre = await this.sendCentreEmail({
-          ...params,
-          context,
-          include: params.selections.centre.include,
-          assignmentUnassigned: params.assignmentUnassigned === true,
-        });
-      } catch (err) {
-        this.logger.error(
-          `Centre shift update communication processing failed shiftId=${params.shiftId}`,
-          err instanceof Error ? err.stack : err,
-        );
-        centre = { attempted: true, sent: false };
+      if (policy.centreCommunicationDeferred) {
+        centre = centreDeferredRecipientResult();
+      } else {
+        try {
+          centre = await this.sendCentreEmail({
+            ...params,
+            context,
+            include: params.selections.centre.include,
+            assignmentUnassigned: params.assignmentUnassigned === true,
+          });
+        } catch (err) {
+          this.logger.error(
+            `Centre shift update communication processing failed shiftId=${params.shiftId}`,
+            err instanceof Error ? err.stack : err,
+          );
+          centre = { attempted: true, sent: false };
+        }
       }
     }
 

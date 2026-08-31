@@ -7,6 +7,7 @@ import { RecordingEmailTransport } from '../email/email.transport';
 import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-document-share-lifecycle.service';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
 
 function configService() {
   return {
@@ -44,6 +45,7 @@ describe('ShiftAssignmentConfirmationService', () => {
       centreAddress: '123 Main Street',
       centreCity: 'Toronto',
       centreNotes: 'Use rear entrance.',
+      shiftConfirmationNotes: '',
       legalName: 'Jane Legal',
       legalFirstName: 'Jaspreet',
       legalLastName: 'Singh',
@@ -95,12 +97,22 @@ describe('ShiftAssignmentConfirmationService', () => {
       }),
     } as unknown as ShiftAssignmentNotificationsService;
 
+    const communicationPolicy = {
+      resolveForShift: vi.fn().mockResolvedValue({
+        batchId: null,
+        batchRequestCompleted: false,
+        centreCommunicationDeferred: false,
+        centreDeferReason: null,
+      }),
+    } as unknown as ShiftCommunicationPolicyService;
+
     service = new ShiftAssignmentConfirmationService(
       db as never,
       email,
       configService(),
       notifications,
       shareLifecycle,
+      communicationPolicy,
     );
   });
 
@@ -152,5 +164,88 @@ describe('ShiftAssignmentConfirmationService', () => {
     expect(availability.centre.available).toBe(false);
     expect(availability.centre.reason).toContain('document share');
     expect(availability.carer.available).toBe(true);
+  });
+
+  it('defers centre confirmation for open batch child without attempting centre email', async () => {
+    const communicationPolicy = {
+      resolveForShift: vi.fn().mockResolvedValue({
+        batchId: 'batch-1',
+        batchRequestCompleted: false,
+        centreCommunicationDeferred: true,
+        centreDeferReason: 'deferred_batch_confirmation',
+      }),
+    } as unknown as ShiftCommunicationPolicyService;
+
+    service = new ShiftAssignmentConfirmationService(
+      {
+        select: vi.fn().mockImplementation(() => ({
+          from: vi.fn().mockImplementation((table: unknown) => {
+            if (table === centreContacts) {
+              return {
+                where: vi.fn().mockReturnValue({
+                  orderBy: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockResolvedValue([{ email: 'centre@example.test' }]),
+                  }),
+                }),
+              };
+            }
+            return {
+              innerJoin: vi.fn().mockReturnValue({
+                innerJoin: vi.fn().mockReturnValue({
+                  leftJoin: vi.fn().mockReturnValue({
+                    where: vi.fn().mockResolvedValue([
+                      {
+                        shiftId: 'shift-1',
+                        assignedStaffId: 'staff-1',
+                        shiftDate: '2026-08-25',
+                        startTime: '08:30:00',
+                        endTime: '16:30:00',
+                        roleNeeded: 'ECE',
+                        centreId: 'centre-1',
+                        centreName: 'ABC Centre',
+                        centreAddress: '123 Main Street',
+                        centreCity: 'Toronto',
+                        centreNotes: '',
+                        shiftConfirmationNotes: '',
+                        legalName: 'Jane Legal',
+                        legalFirstName: 'Jaspreet',
+                        legalLastName: 'Singh',
+                        displayName: 'Jane Doe',
+                        useDisplayName: true,
+                        staffEmail: 'carer@example.test',
+                        accountEmail: 'carer@example.test',
+                        accountStatus: 'active',
+                        onboardingCompletedAt: new Date(),
+                        passwordHash: 'hash',
+                      },
+                    ]),
+                  }),
+                }),
+              }),
+            };
+          }),
+        })),
+      } as never,
+      email,
+      configService(),
+      {
+        record: vi.fn(),
+      } as unknown as ShiftAssignmentNotificationsService,
+      shareLifecycle,
+      communicationPolicy,
+    );
+
+    const result = await service.sendAssignmentConfirmations({
+      shiftId: 'shift-1',
+      assignedStaffId: 'staff-1',
+      actorUserId: 'ops-1',
+      trigger: 'assign',
+    });
+
+    expect(result.centre.deferred).toBe(true);
+    expect(result.centre.skippedReason).toBe('deferred_batch_confirmation');
+    expect(result.centre.attempted).toBe(false);
+    expect(result.carer.sent).toBe(true);
+    expect(transport.sent.filter((m) => m.to === 'centre@example.test')).toHaveLength(0);
   });
 });

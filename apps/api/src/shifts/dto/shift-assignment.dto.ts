@@ -2,6 +2,8 @@ export type ShiftAssignmentRecipientResult = {
   attempted: boolean;
   sent: boolean;
   skippedReason?: string;
+  /** Centre communication intentionally deferred (open Batch Request). Not a failure. */
+  deferred?: boolean;
 };
 
 export type ShiftAssignmentNotificationsResult = {

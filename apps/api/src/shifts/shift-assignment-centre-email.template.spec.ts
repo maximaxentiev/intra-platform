@@ -12,6 +12,7 @@ describe('buildShiftAssignmentCentreEmailContent', () => {
     shiftDate: '2026-08-25',
     startTime: '08:30:00',
     endTime: '16:30:00',
+    shiftConfirmationNotes: '',
     documentShareUrl: 'https://platform.example/documents/jane-doe#token',
   };
 

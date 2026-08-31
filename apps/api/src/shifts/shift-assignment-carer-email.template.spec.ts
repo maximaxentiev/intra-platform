@@ -10,6 +10,7 @@ describe('buildShiftAssignmentCarerEmailContent', () => {
     centreAddress: '123 Main Street',
     centreCity: 'Toronto',
     centreNotes: 'Park in the rear lot.',
+    shiftConfirmationNotes: 'Bring indoor shoes.',
     roleNeeded: 'ECE' as string | null,
     shiftDate: '2026-08-25',
     startTime: '08:30:00',
@@ -28,6 +29,8 @@ describe('buildShiftAssignmentCarerEmailContent', () => {
     expect(content.text).toContain('Role: ECE');
     expect(content.text).toContain('Rules, Policies, and Other Notes:');
     expect(content.text).toContain('Park in the rear lot.');
+    expect(content.text).toContain('Shift Notes:');
+    expect(content.text).toContain('Bring indoor shoes.');
     expect(content.text).toContain('/carer/shifts/shift-1');
   });
 
@@ -35,9 +38,11 @@ describe('buildShiftAssignmentCarerEmailContent', () => {
     const content = buildShiftAssignmentCarerEmailContent({
       ...base,
       centreNotes: '',
+      shiftConfirmationNotes: '',
       roleNeeded: null,
     });
     expect(content.text).not.toContain('Rules, Policies, and Other Notes:');
+    expect(content.text).not.toContain('Shift Notes:');
     expect(content.text).not.toContain('Role:');
   });
 

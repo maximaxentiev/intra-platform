@@ -39,6 +39,7 @@ import {
   type ShiftUpdateCommunicationsPayload,
 } from "@/lib/shift-edit-communications";
 import { shiftUpdateFeedbackMessage } from "@/lib/shift-edit-communications-feedback";
+import { applyBatchCentreDeferral, isOpenBatchChild } from "@/lib/shift-communication-batch";
 import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
 import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpactDialog";
 import { ShiftAssignmentConfirmDialog } from "@/components/shifts/ShiftAssignmentConfirmDialog";
@@ -197,25 +198,32 @@ function ShiftDetail() {
       startTime: shift.startTime,
       endTime: shift.endTime,
       roleNeeded: shift.roleNeeded,
+      confirmationNotes: shift.confirmationNotes ?? "",
     },
     {
       shiftDate: editVals.shiftDate,
       startTime: `${editVals.startTime}:00`,
       endTime: `${editVals.endTime}:00`,
       roleNeeded: editVals.roleNeeded,
+      confirmationNotes: editVals.confirmationNotes,
     },
   );
 
+  const batchCentreDeferred = isOpenBatchChild(shift);
+
   const primaryCentreEmail = [...(centreContactsQ.data ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
-  const centreCommAvailability = primaryCentreEmail && isValidCommunicationEmail(primaryCentreEmail)
-    ? { available: true as const }
-    : {
-        available: false as const,
-        reason: primaryCentreEmail
-          ? "Centre primary contact email is invalid."
-          : "No centre primary contact email is configured.",
-      };
+  const centreCommAvailability = applyBatchCentreDeferral(
+    primaryCentreEmail && isValidCommunicationEmail(primaryCentreEmail)
+      ? { available: true as const }
+      : {
+          available: false as const,
+          reason: primaryCentreEmail
+            ? "Centre primary contact email is invalid."
+            : "No centre primary contact email is configured.",
+        },
+    batchCentreDeferred,
+  );
 
   const carerEmail = assignedStaffQ.data
     ? resolveCarerCommunicationEmail(assignedStaffQ.data)
@@ -231,14 +239,17 @@ function ShiftDetail() {
 
   const editPrimaryCentreEmail = [...(editCentreContactsQ.data ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
-  const centreAvailability = editPrimaryCentreEmail && isValidCommunicationEmail(editPrimaryCentreEmail)
-    ? { available: true as const }
-    : {
-        available: false as const,
-        reason: editPrimaryCentreEmail
-          ? "Centre primary contact email is invalid."
-          : "No centre primary contact email is configured.",
-      };
+  const centreAvailability = applyBatchCentreDeferral(
+    editPrimaryCentreEmail && isValidCommunicationEmail(editPrimaryCentreEmail)
+      ? { available: true as const }
+      : {
+          available: false as const,
+          reason: editPrimaryCentreEmail
+            ? "Centre primary contact email is invalid."
+            : "No centre primary contact email is configured.",
+        },
+    batchCentreDeferred,
+  );
 
   const editCarerEmail = assignedStaffQ.data
     ? resolveCarerCommunicationEmail(assignedStaffQ.data)
@@ -295,7 +306,9 @@ function ShiftDetail() {
       const message = shiftUpdateFeedbackMessage(result.communications);
       const partialFailure =
         result.communications &&
-        ((result.communications.centre?.attempted && !result.communications.centre.sent) ||
+        ((result.communications.centre?.attempted &&
+          !result.communications.centre.sent &&
+          !result.communications.centre.deferred) ||
           (result.communications.carer?.attempted && !result.communications.carer?.sent));
       if (partialFailure) {
         toast.warning(message);
@@ -554,6 +567,12 @@ function ShiftDetail() {
             >
               Back to Batch
             </Link>
+            {batchCentreDeferred ? (
+              <>
+                {" "}
+                Centre confirmations are managed through the Batch Request until it is completed.
+              </>
+            ) : null}
           </p>
         </div>
       ) : null}

@@ -11,6 +11,7 @@ import { aliasedTable, and, desc, eq, gte, inArray, lte, sql, type SQL } from 'd
 import { DRIZZLE, type Database, type DbExecutor } from '../db/drizzle.module';
 import {
   centres,
+  shiftBatches,
   shiftComments,
   shiftContacted,
   shifts,
@@ -89,6 +90,7 @@ import {
   lockOpenShiftBatch,
 } from '../shift-batches/shift-batch-centre.util';
 import { normalizeShiftConfirmationNotes } from './shift-confirmation-notes.util';
+import { resolveShiftCommunicationPolicyFromRow } from './shift-communication-policy.util';
 
 export type CreateShiftOptions = {
   tx?: DbExecutor;
@@ -163,6 +165,7 @@ export class ShiftsService {
         notes: shifts.notes,
         confirmationNotes: shifts.shiftConfirmationNotes,
         batchId: shifts.batchId,
+        batchRequestCompletedAt: shiftBatches.requestCompletedAt,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
         cancellationReason: shifts.cancellationReason,
@@ -175,9 +178,17 @@ export class ShiftsService {
       .from(shifts)
       .leftJoin(centres, eq(centres.id, shifts.centreId))
       .leftJoin(assignee, eq(assignee.id, shifts.assignedStaffId))
+      .leftJoin(shiftBatches, eq(shifts.batchId, shiftBatches.id))
       .where(eq(shifts.id, id));
     if (!rows[0]) throw new NotFoundException('Shift not found.');
-    return rows[0];
+    const policy = resolveShiftCommunicationPolicyFromRow({
+      batchId: rows[0].batchId,
+      requestCompletedAt: rows[0].batchRequestCompletedAt,
+    });
+    return {
+      ...rows[0],
+      centreCommunicationDeferred: policy.centreCommunicationDeferred,
+    };
   }
 
   async create(dto: UpsertShiftDto, actorUserId: string, options?: CreateShiftOptions) {
@@ -307,11 +318,16 @@ export class ShiftsService {
     assertShiftRoleUpdateAllowed(before.roleNeeded, dto.roleNeeded);
 
     const beforeSnapshot = normalizeShiftCommunicationSnapshot(before);
+    const normalizedConfirmationNotes =
+      dto.confirmationNotes !== undefined
+        ? (normalizeShiftConfirmationNotes(dto.confirmationNotes) ?? '')
+        : undefined;
     const afterSnapshot = applyShiftUpdatePatch(beforeSnapshot, {
       shiftDate: dto.shiftDate,
       startTime: dto.startTime,
       endTime: dto.endTime,
       roleNeeded: dto.roleNeeded,
+      confirmationNotes: normalizedConfirmationNotes,
     });
 
     if (dto.startTime !== undefined || dto.endTime !== undefined) {
@@ -844,8 +860,11 @@ export class ShiftsService {
           status: shifts.status,
           assignedStaffId: shifts.assignedStaffId,
           centreId: shifts.centreId,
+          batchId: shifts.batchId,
+          requestCompletedAt: shiftBatches.requestCompletedAt,
         })
         .from(shifts)
+        .leftJoin(shiftBatches, eq(shifts.batchId, shiftBatches.id))
         .where(eq(shifts.id, id))
         .for('update');
 
@@ -890,14 +909,23 @@ export class ShiftsService {
 
       await this.shiftReminders.cancelPendingForShift(id, tx);
 
-      if (commRecipients.centre || (commRecipients.carer && cancelled.assignedStaffId)) {
+      const batchPolicy = resolveShiftCommunicationPolicyFromRow({
+        batchId: locked[0].batchId,
+        requestCompletedAt: locked[0].requestCompletedAt,
+      });
+      const effectiveRecipients = {
+        centre: commRecipients.centre && !batchPolicy.centreCommunicationDeferred,
+        carer: commRecipients.carer && !!cancelled.assignedStaffId,
+      };
+
+      if (effectiveRecipients.centre || effectiveRecipients.carer) {
         scheduledCancellationIds = await this.shiftCancellations.scheduleCancellation(
           {
             shiftId: id,
             assignedStaffId: cancelled.assignedStaffId,
             centreId: cancelled.centreId,
             scheduledFor: cancelled.updatedAt,
-            recipients: commRecipients,
+            recipients: effectiveRecipients,
           },
           tx,
         );

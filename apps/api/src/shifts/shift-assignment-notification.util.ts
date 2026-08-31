@@ -10,6 +10,7 @@ export const SHIFT_ASSIGNMENT_SKIP_REASON = {
   invalidCarerEmail: 'invalid_carer_email',
   documentShareUnavailable: 'document_share_unavailable',
   emailNotConfigured: 'email_not_configured',
+  deferredBatchConfirmation: 'deferred_batch_confirmation',
 } as const;
 
 export type ShiftAssignmentSkipReason =

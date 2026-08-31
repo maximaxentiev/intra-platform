@@ -1,13 +1,14 @@
 import { normalizeShiftRole } from "@intra/shared";
 import { formatShiftRoleLabel } from "@/lib/shift-role-ui";
 
-export type ShiftCommunicationField = "date" | "time" | "role";
+export type ShiftCommunicationField = "date" | "time" | "role" | "shiftNotes";
 
 export type ShiftCommunicationSnapshot = {
   shiftDate: string;
   startTime: string;
   endTime: string;
   roleNeeded: string;
+  confirmationNotes: string;
 };
 
 export type ShiftCommunicationChange = {
@@ -74,6 +75,17 @@ export function detectShiftEditCommunicationChanges(
       label: "Role required",
       beforeDisplay: formatShiftRoleLabel(beforeRole),
       afterDisplay: formatShiftRoleLabel(afterRole),
+    });
+  }
+
+  const beforeNotes = (before.confirmationNotes ?? '').trim();
+  const afterNotes = (after.confirmationNotes ?? '').trim();
+  if (beforeNotes !== afterNotes) {
+    changes.push({
+      field: "shiftNotes",
+      label: "Shift Notes",
+      beforeDisplay: beforeNotes || "—",
+      afterDisplay: afterNotes || "—",
     });
   }
 

@@ -45,4 +45,27 @@ describe('shift assignment feedback messages', () => {
       }),
     ).toBe('Some confirmation emails could not be sent.');
   });
+
+  it('explains batch-deferred centre on assignment', () => {
+    expect(
+      shiftAssignmentFeedbackMessage(
+        'Jane Doe',
+        { changed: true, alreadyAssigned: false },
+        {
+          centre: { attempted: false, sent: false, deferred: true, skippedReason: 'deferred_batch_confirmation' },
+          carer: { attempted: true, sent: true },
+        },
+      ),
+    ).toContain('Carer confirmation sent');
+    expect(
+      shiftAssignmentFeedbackMessage(
+        'Jane Doe',
+        { changed: true, alreadyAssigned: false },
+        {
+          centre: { attempted: false, sent: false, deferred: true, skippedReason: 'deferred_batch_confirmation' },
+          carer: { attempted: true, sent: true },
+        },
+      ),
+    ).toContain('Batch Request');
+  });
 });
