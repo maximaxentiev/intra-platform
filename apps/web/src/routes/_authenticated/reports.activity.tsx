@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink } from "@/components/ui-kit";
 import { ActivityLogFilters } from "@/components/reports/ActivityLogFilters";
+import { ReportSectionDivider } from "@/components/reports/ReportSectionDivider";
 import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ActivityLogEmptyState, ActivityLogList } from "@/components/reports/ActivityLogList";
 import {
@@ -237,6 +238,8 @@ function ActivityLogReport() {
         onApply={applyFilters}
         onReset={resetFilters}
       />
+
+      <ReportSectionDivider />
 
       {reportQ.isLoading ? (
         <div className="space-y-4">

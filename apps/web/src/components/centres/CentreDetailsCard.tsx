@@ -41,6 +41,7 @@ export function CentreDetailsCard({
 
   return (
     <SectionCard
+      title="Centre Details"
       action={
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
           <Pencil className="h-4 w-4" aria-hidden /> Edit details

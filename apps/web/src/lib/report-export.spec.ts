@@ -102,6 +102,7 @@ describe("report export UI wiring", () => {
   it("document compliance filters remain unchanged aside from export", () => {
     const filters = readSrc("components/reports/DocumentComplianceFilters.tsx");
     expect(filters).not.toContain("ReportExportButton");
-    expect(filters).toContain("ReportMoreFiltersSection");
+    expect(filters).toContain("More filters");
+    expect(filters).toContain("justify-between");
   });
 });

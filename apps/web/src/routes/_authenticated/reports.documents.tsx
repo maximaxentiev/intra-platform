@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink } from "@/components/ui-kit";
 import { DocumentComplianceFilters } from "@/components/reports/DocumentComplianceFilters";
+import { ReportSectionDivider } from "@/components/reports/ReportSectionDivider";
 import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ReportPagination } from "@/components/reports/ReportPagination";
 import {
@@ -401,6 +402,8 @@ function DocumentComplianceReport() {
         onClearAdvanced={hasAdvancedFilters ? clearAdvancedFilters : undefined}
       />
 
+      <ReportSectionDivider />
+
       {reportQ.isError && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="p-4 text-sm text-destructive">
@@ -414,6 +417,8 @@ function DocumentComplianceReport() {
       ) : (
         <DocumentComplianceSummaryCards summary={summary} loading={false} ready={reportReady} />
       )}
+
+      <ReportSectionDivider />
 
       {filteredOutSingleStaff && (
         <Card className="border-dashed">

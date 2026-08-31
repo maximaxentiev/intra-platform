@@ -179,7 +179,8 @@ describe("ops reports UI source", () => {
     const summaryCards = readSrc("components/reports/DocumentComplianceSummaryCards.tsx");
     expect(filters).toContain("ReportStaffMultiSelect");
     expect(filters).toContain("Overall Compliance");
-    expect(filters).toContain("ReportMoreFiltersSection");
+    expect(filters).toContain("More filters");
+    expect(filters).toContain("justify-between");
     expect(filters).toContain("VSC Renewal Due");
     expect(filters).toContain("First Aid Expiry");
     expect(filters).toContain("Upcoming Reminder");
@@ -259,6 +260,48 @@ describe("ops reports UI source", () => {
       expect(source).toContain("ReportExportButton");
       expect(source).toContain("reportExportPaths");
     }
+  });
+
+  it("uses shared section dividers between major report areas", () => {
+    const divider = readSrc("components/reports/ReportSectionDivider.tsx");
+    expect(divider).toContain("border-border/70");
+    expect(divider).toContain("py-8");
+
+    const centreUsage = readSrc("routes/_authenticated/reports.centre-usage.tsx");
+    expect(centreUsage).toContain("ReportSectionDivider");
+    expect(centreUsage.indexOf("CentreUsageFilters")).toBeLessThan(
+      centreUsage.indexOf("ReportSectionDivider"),
+    );
+    expect(centreUsage.indexOf("CentreUsageSummaryCards")).toBeLessThan(
+      centreUsage.lastIndexOf("ReportSectionDivider"),
+    );
+
+    const staffUsage = readSrc("routes/_authenticated/reports.staff-usage.tsx");
+    expect(staffUsage).toContain("ReportSectionDivider");
+    expect(staffUsage.indexOf("StaffUsageFilters")).toBeLessThan(
+      staffUsage.indexOf("ReportSectionDivider"),
+    );
+
+    const documents = readSrc("routes/_authenticated/reports.documents.tsx");
+    expect(documents).toContain("ReportSectionDivider");
+    expect(documents.indexOf("DocumentComplianceFilters")).toBeLessThan(
+      documents.indexOf("ReportSectionDivider"),
+    );
+
+    const activity = readSrc("routes/_authenticated/reports.activity.tsx");
+    expect(activity).toContain("ReportSectionDivider");
+    expect(activity.indexOf("ActivityLogFilters")).toBeLessThan(
+      activity.indexOf("ReportSectionDivider"),
+    );
+  });
+
+  it("places document compliance Reset and Apply on the More filters toolbar row", () => {
+    const filters = readSrc("components/reports/DocumentComplianceFilters.tsx");
+    expect(filters).toContain("More filters");
+    expect(filters).toContain("justify-between");
+    expect(filters).toMatch(/More filters[\s\S]*Reset[\s\S]*Apply/);
+    expect(filters).not.toMatch(/ReportMoreFiltersSection/);
+    expect((filters.match(/border-t border-border\/70 pt-3/g) ?? []).length).toBe(1);
   });
 });
 

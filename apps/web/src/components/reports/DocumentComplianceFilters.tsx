@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { type Staff } from "@/lib/db";
 import {
@@ -15,7 +16,6 @@ import {
   ReportCheckboxFilterGroup,
   ReportDateRangeFields,
   ReportFilterSectionHeading,
-  ReportMoreFiltersSection,
 } from "@/components/reports/ReportFilterPrimitives";
 import { ReportStaffMultiSelect } from "@/components/reports/StaffUsageFilters";
 import {
@@ -178,8 +178,35 @@ export function DocumentComplianceFilters({
         </div>
       </div>
 
-      <ReportMoreFiltersSection open={moreOpen} onOpenChange={setMoreOpen}>
-        <ReportFilterSectionHeading>Staff</ReportFilterSectionHeading>
+      <div className="space-y-3 border-t border-border/70 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((open) => !open)}
+          >
+            {moreOpen ? "Hide filters" : "More filters"}
+            {moreOpen ? (
+              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" type="button" onClick={onReset}>
+              Reset
+            </Button>
+            <Button size="sm" type="button" onClick={onApply} disabled={Boolean(dateValidationError)}>
+              Apply
+            </Button>
+          </div>
+        </div>
+
+        {moreOpen ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <ReportFilterSectionHeading>Staff</ReportFilterSectionHeading>
 
         <ReportCheckboxFilterGroup
           legend="Staff Role"
@@ -279,7 +306,9 @@ export function DocumentComplianceFilters({
             </SelectContent>
           </Select>
         </fieldset>
-      </ReportMoreFiltersSection>
+          </div>
+        ) : null}
+      </div>
 
       {dateValidationError ? (
         <p className="text-sm text-destructive" role="alert">
@@ -288,15 +317,6 @@ export function DocumentComplianceFilters({
       ) : null}
 
       <ReportActiveFilterChips chips={activeFilterChips} onClearAdvanced={onClearAdvanced} />
-
-      <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 pt-3">
-        <Button variant="ghost" size="sm" type="button" onClick={onReset}>
-          Reset
-        </Button>
-        <Button size="sm" type="button" onClick={onApply} disabled={Boolean(dateValidationError)}>
-          Apply
-        </Button>
-      </div>
     </div>
   );
 }

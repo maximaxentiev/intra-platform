@@ -46,10 +46,19 @@ describe("centre detail redesign", () => {
   });
 
   it("uses read-first details and delete overflow", () => {
+    expect(detailsCard).toContain('title="Centre Details"');
+    expect(contacts).toContain('title="Contacts"');
     expect(detailsCard).toContain("CentreForm");
     expect(detailsCard).toContain("setEditing(false)");
     expect(detail).toContain('aria-label="More centre actions"');
     expect(detail).toContain("ConfirmDestructiveDialog");
+  });
+
+  it("uses matching bold section titles for Centre Details and Contacts", () => {
+    expect(detailsCard).toMatch(/title="Centre Details"[\s\S]*SectionCard/);
+    expect(contacts).toMatch(/title="Contacts"[\s\S]*SectionCard/);
+    expect(detailsCard).not.toContain("Update the centre record.");
+    expect(detailsCard).not.toContain('legend="Centre identity"');
   });
 });
 

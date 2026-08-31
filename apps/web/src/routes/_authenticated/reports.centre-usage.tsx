@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { BackLink } from "@/components/ui-kit";
 import { CentreUsageFilters } from "@/components/reports/CentreUsageFilters";
 import { CentreUsageShiftDetail } from "@/components/reports/CentreUsageShiftDetail";
+import { ReportSectionDivider } from "@/components/reports/ReportSectionDivider";
 import {
   CentreUsageSummaryCards,
   CentreUsageSummarySkeleton,
@@ -303,6 +304,8 @@ function CentreUsageReport() {
         onReset={resetFilters}
       />
 
+      <ReportSectionDivider />
+
       {reportQ.isError && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="p-4 text-sm text-destructive">
@@ -326,6 +329,8 @@ function CentreUsageReport() {
           ) : (
             <CentreUsageSummaryCards summary={summary} loading={false} ready={reportReady} />
           )}
+
+          <ReportSectionDivider />
 
           {reportQ.isLoading && showComparison && (
             <div className="space-y-2">
@@ -450,8 +455,10 @@ function CentreUsageReport() {
             </>
           )}
 
-          {showShiftDetail && (
-            <CentreUsageShiftDetail
+          {showShiftDetail ? (
+            <>
+              <ReportSectionDivider />
+              <CentreUsageShiftDetail
               dateFrom={applied.dateFrom}
               dateTo={applied.dateTo}
               centreIds={applied.selection.centreIds}
@@ -463,7 +470,8 @@ function CentreUsageReport() {
               staffMembers={staffQ.data ?? []}
               onDetailChange={updateShiftDetail}
             />
-          )}
+            </>
+          ) : null}
         </>
       )}
     </div>

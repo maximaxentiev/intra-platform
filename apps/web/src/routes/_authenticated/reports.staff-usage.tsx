@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink } from "@/components/ui-kit";
 import { StaffUsageFilters } from "@/components/reports/StaffUsageFilters";
+import { ReportSectionDivider } from "@/components/reports/ReportSectionDivider";
 import {
   StaffUsageSummaryCards,
   StaffUsageSummarySkeleton,
@@ -294,6 +295,8 @@ function StaffUsageReport() {
         onReset={resetFilters}
       />
 
+      <ReportSectionDivider />
+
       {reportQ.isError && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="p-4 text-sm text-destructive">
@@ -307,6 +310,8 @@ function StaffUsageReport() {
       ) : (
         <StaffUsageSummaryCards summary={summary} loading={false} ready={reportReady} />
       )}
+
+      <ReportSectionDivider />
 
       {noUsageInPeriod && (
         <Card className="border-dashed">
@@ -441,7 +446,9 @@ function StaffUsageReport() {
       )}
 
       {singleStaffSelected && selectedStaffId && (
-        <Card className="border-border/70 shadow-xs">
+        <>
+          <ReportSectionDivider />
+          <Card className="border-border/70 shadow-xs">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Completed Shifts</CardTitle>
           </CardHeader>
@@ -536,6 +543,7 @@ function StaffUsageReport() {
             )}
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   );
