@@ -5,11 +5,15 @@ import { join } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { ApplicationReviewedButton } from "@/components/applications/ApplicationReviewedButton";
 import type { ApplicationRow } from "@/lib/applications";
 
-vi.mock("@/components/applications/ApplicationActions", () => ({
-  ApplicationActionButtons: () => null,
+vi.mock("@/components/ui/sheet", () => ({
+  Sheet: ({ children }: { children: ReactNode }) => (
+    <div data-testid="application-drawer">{children}</div>
+  ),
+  SheetContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/applications/documents", () => ({
@@ -141,26 +145,30 @@ describe("applications list rendering", () => {
     expect(html).toContain("Reviewed");
   });
 
-  it("opens the detail drawer without the removed pending action state", async () => {
+  it("opens the detail drawer without ReferenceError and without workflow action buttons", async () => {
     const { ApplicationDrawer } = await import("@/components/applications/ApplicationDrawer");
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
 
-    expect(() =>
-      renderToString(
+    let html = "";
+    expect(() => {
+      html = renderToString(
         <QueryClientProvider client={queryClient}>
           <ApplicationDrawer
             row={pendingRow}
             open
             onOpenChange={() => {}}
-            pendingAction={null}
-            onAction={() => {}}
             onOpenDoc={() => {}}
           />
         </QueryClientProvider>,
-      ),
-    ).not.toThrow();
+      );
+    }).not.toThrow();
+
+    expect(html).toContain("Jane Applicant");
+    expect(html).toContain("Applicant");
+    expect(html).not.toMatch(/>\s*Interview\s*</);
+    expect(html).not.toMatch(/>\s*Hire\s*</);
   });
 });
 
@@ -169,9 +177,20 @@ describe("applications page regression guard", () => {
     const page = readApplicationsPage();
     expect(page).not.toMatch(/\bpending\?\.id\b/);
     expect(page).not.toContain("runAction");
-    expect(page).toContain("pendingAction={null}");
+    expect(page).not.toContain("onAction={() => {}}");
+    expect(page).not.toContain("pendingAction=");
     expect(page).toContain("ApplicationReviewedButton");
     expect(page).not.toContain("ApplicationActionButtons");
+  });
+
+  it("does not wire workflow actions into the detail drawer", () => {
+    const drawer = readFileSync(
+      join(process.cwd(), "src/components/applications/ApplicationDrawer.tsx"),
+      "utf8",
+    );
+    expect(drawer).not.toContain("ApplicationActionButtons");
+    expect(drawer).not.toContain("onAction");
+    expect(drawer).not.toContain("pendingAction");
   });
 });
 

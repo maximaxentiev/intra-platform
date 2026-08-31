@@ -11,7 +11,6 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ApplicationActionButtons } from "@/components/applications/ApplicationActions";
 import { ApplicationStatusBadge, Chips, Dash, FieldRow, YesNo } from "@/components/applications/primitives";
 import { DocumentCard } from "@/components/applications/documents";
 import {
@@ -26,7 +25,6 @@ import {
   type ApplicationDocument,
   type ApplicationRow,
 } from "@/lib/applications";
-import type { ApplicationAction } from "@/lib/application-actions";
 import { cn } from "@/lib/utils";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -124,15 +122,11 @@ export function ApplicationDrawer({
   row,
   open,
   onOpenChange,
-  pendingAction,
-  onAction,
   onOpenDoc,
 }: {
   row: ApplicationRow | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  pendingAction: ApplicationAction | null;
-  onAction: (id: string, action: ApplicationAction) => void;
   onOpenDoc: (doc: ApplicationDocument) => void;
 }) {
   const { data: events, isLoading: activityLoading } = useQuery({
@@ -169,13 +163,6 @@ export function ApplicationDrawer({
               <span>Submitted {fmtDate(row.submittedAt)}</span>
             </div>
           </div>
-          <ApplicationActionButtons
-            status={row.status}
-            applicantName={name}
-            pendingAction={pendingAction}
-            onConfirm={(action) => onAction(row.id, action)}
-            size="md"
-          />
         </header>
 
         <ScrollArea className="flex-1">

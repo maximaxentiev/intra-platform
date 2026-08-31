@@ -466,8 +466,6 @@ function ApplicationsPage() {
         row={openRow}
         open={openId !== null}
         onOpenChange={(v) => !v && setOpenId(null)}
-        pendingAction={null}
-        onAction={() => {}}
         onOpenDoc={docs.open}
       />
       {docs.viewer}
