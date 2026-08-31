@@ -30,6 +30,7 @@ import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -223,7 +224,9 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
       new PlatformAuditService(db),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await db.delete(users).where(eq(users.id, OPS_USER_ID));
     await db.insert(users).values({

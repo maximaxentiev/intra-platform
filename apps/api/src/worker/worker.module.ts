@@ -46,6 +46,10 @@ export async function bootstrapWorker(): Promise<{
   registerShiftReminderProcessors(registry, config);
   registerShiftCancellationProcessors(registry, config);
   registerDocumentExpiryProcessors(registry, config);
+  const { registerBatchProgress70Processor } = await import(
+    '../shift-batches/shift-batch-progress.processor'
+  );
+  registerBatchProgress70Processor(registry, config);
 
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(

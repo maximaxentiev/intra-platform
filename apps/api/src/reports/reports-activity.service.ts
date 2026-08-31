@@ -145,6 +145,7 @@ export class ReportsActivityService {
           p.occurred_at,
           CASE
             WHEN p.action IN ('shift_update_communication_sent', 'shift_update_communication_failed') THEN 'communications'
+            WHEN p.action IN ('batch_progress_email_scheduled', 'batch_progress_email_blocked') THEN 'communications'
             WHEN p.action LIKE 'shift_%' THEN 'shifts'
             WHEN p.action LIKE 'centre_%' THEN 'centres'
             WHEN p.action LIKE 'user_%' THEN 'users'
@@ -229,13 +230,18 @@ export class ReportsActivityService {
             WHEN sc.entity_type = 'staff_document' THEN ds.staff_id
             ELSE NULL
           END AS staff_id,
-          CASE WHEN sc.entity_type = 'shift' THEN s.centre_id ELSE NULL END AS centre_id,
+          CASE
+            WHEN sc.entity_type = 'shift' THEN s.centre_id
+            WHEN sc.entity_type = 'shift_batch' THEN sb.centre_id
+            ELSE NULL
+          END AS centre_id,
           CASE WHEN sc.entity_type = 'shift' THEN sc.entity_id ELSE NULL END AS shift_id,
           NULL::uuid AS target_user_id,
           jsonb_build_object('communicationType', sc.communication_type) AS metadata
         FROM communication_deliveries d
         INNER JOIN scheduled_communications sc ON sc.id = d.scheduled_communication_id
         LEFT JOIN shifts s ON sc.entity_type = 'shift' AND sc.entity_id = s.id
+        LEFT JOIN shift_batches sb ON sc.entity_type = 'shift_batch' AND sc.entity_id = sb.id
         LEFT JOIN staff_document_submissions sub ON sc.entity_type = 'staff_document' AND sc.entity_id = sub.id
         LEFT JOIN staff_document_sets ds ON sub.document_set_id = ds.id
         WHERE COALESCE(d.sent_at, d.attempted_at) >= ${fromInstant}

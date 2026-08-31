@@ -7,6 +7,7 @@ import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 function mockPlatformAudit() {
@@ -67,6 +68,8 @@ function createService(existingRoleNeeded: string) {
     mockPlatformAudit(),
     createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
+      
+    createMockShiftBatchProgressCommunicationService(),
   );
 
   return { service, returning };

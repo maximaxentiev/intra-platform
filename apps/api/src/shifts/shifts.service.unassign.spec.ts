@@ -7,6 +7,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 function mockPlatformAudit() {
@@ -62,6 +63,7 @@ describe('ShiftsService.unassign', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
       manualUnassignCommunications,
+      createMockShiftBatchProgressCommunicationService(),
     );
   });
 
@@ -122,6 +124,7 @@ describe('ShiftsService.unassign', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
       manualUnassignCommunications,
+      createMockShiftBatchProgressCommunicationService(),
     );
 
     await expect(rejected.unassign('shift-1', 'ops-1')).rejects.toBeInstanceOf(BadRequestException);
@@ -146,6 +149,7 @@ describe('ShiftsService.unassign', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
       manualUnassignCommunications,
+      createMockShiftBatchProgressCommunicationService(),
     );
 
     await expect(rejected.unassign('shift-1', 'ops-1')).rejects.toBeInstanceOf(NotFoundException);

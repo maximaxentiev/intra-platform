@@ -91,6 +91,7 @@ import {
 } from '../shift-batches/shift-batch-centre.util';
 import { normalizeShiftConfirmationNotes } from './shift-confirmation-notes.util';
 import { resolveShiftCommunicationPolicyFromRow } from './shift-communication-policy.util';
+import { ShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-communication.service';
 
 export type CreateShiftOptions = {
   tx?: DbExecutor;
@@ -110,6 +111,7 @@ export class ShiftsService {
     private readonly platformAudit: PlatformAuditService,
     private readonly shiftUpdateCommunications: ShiftUpdateCommunicationService,
     private readonly manualUnassignCommunications: ShiftManualUnassignCommunicationService,
+    private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -520,6 +522,10 @@ export class ShiftsService {
         ? { action: 'availability_override', previousStaffId: previousAssignedStaffId }
         : { action: 'unchanged' };
 
+    if (shouldUnassign && before.batchId) {
+      await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(before.batchId);
+    }
+
     return { ...row, communications, assignmentImpact };
   }
 
@@ -673,6 +679,7 @@ export class ShiftsService {
       trigger: 'assign',
     });
     await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
+    await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(shift.batchId);
     return {
       shift,
       assignment: { changed: true, alreadyAssigned: false },
@@ -785,6 +792,8 @@ export class ShiftsService {
         recipients: commRecipients,
       });
     }
+
+    await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(row.batchId);
 
     return { shift: row, notifications };
   }
@@ -937,6 +946,8 @@ export class ShiftsService {
     if (scheduledCancellationIds.length > 0) {
       await this.shiftCancellations.enqueueScheduledIds(scheduledCancellationIds);
     }
+
+    await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(row.batchId);
 
     return row;
   }

@@ -20,6 +20,7 @@ import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftCancellationService } from './shift-cancellation-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -65,6 +66,8 @@ function buildService(db: NodePgDatabase<typeof schema>, platformAudit?: Platfor
     platformAudit ?? new PlatformAuditService(db),
     createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
+      
+    createMockShiftBatchProgressCommunicationService(),
   );
 }
 

@@ -70,10 +70,9 @@ describe("Batch Shift Requests Phase C2", () => {
     expect(assignDialog).toContain("Centre confirmation will be sent through the Batch Request");
   });
 
-  it("does not add Complete Request or 70% progress email", () => {
+  it("does not add Complete Request", () => {
     expect(batchWorkspace).not.toContain("Complete Request");
-    expect(batchWorkspace).not.toContain("70%");
-    expect(expanded).not.toContain("progress_email_sent_at");
+    expect(expanded).not.toContain("requestCompletedAt mutation");
   });
 
   it("keeps one expanded child model with visual highlight", () => {

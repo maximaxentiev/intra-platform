@@ -24,6 +24,7 @@ import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 import {
   availability,
@@ -127,7 +128,9 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       new PlatformAuditService(db),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
     await db.delete(shifts).where(eq(shifts.centreId, CENTRE_ID));

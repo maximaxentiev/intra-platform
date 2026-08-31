@@ -160,6 +160,24 @@ function buildCopy(
         : 'Assigned Staff removed after schedule change',
     };
   }
+  if (action === 'batch_progress_email_scheduled') {
+    const recipientEmail =
+      typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
+    return {
+      title: 'Centre progress update scheduled',
+      description: recipientEmail
+        ? `Scheduled to ${recipientEmail}`
+        : centreLabel(ctx),
+    };
+  }
+  if (action === 'batch_progress_email_blocked') {
+    const reason =
+      typeof ctx.metadata?.failureReason === 'string' ? ctx.metadata.failureReason : null;
+    return {
+      title: 'Centre progress update could not be sent',
+      description: reason ?? centreLabel(ctx),
+    };
+  }
   if (action === 'communication_sent' || action === 'communication_failed') {
     const commType =
       typeof ctx.metadata?.communicationType === 'string'
@@ -171,6 +189,15 @@ function buildCopy(
       return {
         title: `Cancellation confirmation ${verb}`,
         description: cancellationConfirmationDescription(commType, ctx, verb),
+      };
+    }
+
+    if (commType === 'batch_progress_70') {
+      return {
+        title: `Centre progress update ${verb}`,
+        description: ctx.centreName
+          ? `Progress update ${verb} to ${ctx.centreName}`
+          : `Centre progress update ${verb}`,
       };
     }
 

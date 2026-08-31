@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PlatformAuditModule } from '../platform-audit/platform-audit.module';
+import { ShiftBatchProgressModule } from '../shift-batches/shift-batch-progress.module';
 import { StaffDocumentsModule } from '../staff-documents/staff-documents.module';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
@@ -14,7 +15,7 @@ import { ShiftsService } from './shifts.service';
 import { ShiftsFeedService } from './shifts-feed.service';
 
 @Module({
-  imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule],
+  imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule, ShiftBatchProgressModule],
   controllers: [ShiftsController],
   providers: [
     ShiftsService,

@@ -572,12 +572,22 @@ export type ShiftBatchChildSummary = {
   assignedUseDisplayName: boolean | null;
 };
 
+export type BatchProgressEmailStatus =
+  | { state: "none" }
+  | { state: "scheduled"; scheduledAt: string }
+  | { state: "sending" }
+  | { state: "sent"; sentAt: string }
+  | { state: "failed"; reason: string; canRetry: true }
+  | { state: "blocked"; reason: string; canRetry: true };
+
 export type ShiftBatchWorkspace = {
   id: string;
   centreId: string;
   centreName: string;
   requestCompletedAt: string | null;
   requestCompletedByUserId: string | null;
+  progressEmailScheduledAt: string | null;
+  progressEmailStatus: BatchProgressEmailStatus;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -596,6 +606,8 @@ export type CreateBatchChildShiftInput = {
 
 export const shiftBatchesApi = {
   getWorkspace: (id: string) => api.get<ShiftBatchWorkspace>(`/shift-batches/${id}`),
+  retryProgressEmail: (id: string) =>
+    api.post<{ scheduled: boolean }>(`/shift-batches/${id}/progress-email/retry`),
   createWithShifts: (payload: { centreId: string; shifts: CreateBatchChildShiftInput[] }) =>
     api.post<{ batch: { id: string }; created: { id: string; shiftDate: string }[] }>(
       "/shift-batches/with-shifts",

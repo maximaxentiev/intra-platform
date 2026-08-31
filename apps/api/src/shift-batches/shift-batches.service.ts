@@ -20,6 +20,7 @@ import type {
   ShiftBatchWorkspaceDto,
 } from './dto/shift-batches.dto';
 import { lockOpenShiftBatch } from './shift-batch-centre.util';
+import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-communication.service';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -28,6 +29,7 @@ export class ShiftBatchesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly shifts: ShiftsService,
+    private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
   ) {}
 
   async createWithShifts(
@@ -118,6 +120,7 @@ export class ShiftBatchesService {
         centreName: centres.name,
         requestCompletedAt: shiftBatches.requestCompletedAt,
         requestCompletedByUserId: shiftBatches.requestCompletedByUserId,
+        progressEmailScheduledAt: shiftBatches.progressEmailScheduledAt,
         createdByUserId: shiftBatches.createdByUserId,
         createdAt: shiftBatches.createdAt,
         updatedAt: shiftBatches.updatedAt,
@@ -149,12 +152,17 @@ export class ShiftBatchesService {
       .where(eq(shifts.batchId, id))
       .orderBy(asc(shifts.shiftDate), asc(shifts.startTime));
 
+    const progressEmailStatus =
+      await this.batchProgressCommunications.resolveProgressEmailStatus(id);
+
     return {
       id: batch.id,
       centreId: batch.centreId,
       centreName: batch.centreName,
       requestCompletedAt: batch.requestCompletedAt?.toISOString() ?? null,
       requestCompletedByUserId: batch.requestCompletedByUserId,
+      progressEmailScheduledAt: batch.progressEmailScheduledAt?.toISOString() ?? null,
+      progressEmailStatus,
       createdByUserId: batch.createdByUserId,
       createdAt: batch.createdAt.toISOString(),
       updatedAt: batch.updatedAt.toISOString(),
@@ -176,10 +184,12 @@ export class ShiftBatchesService {
   }
 
   async addChild(batchId: string, dto: CreateBatchChildShiftDto, actorUserId: string) {
-    return this.db.transaction(async (tx) => {
+    const created = await this.db.transaction(async (tx) => {
       const batch = await lockOpenShiftBatch(tx, batchId);
       return this.createChildInTransaction(tx, batch.centreId, batchId, dto, actorUserId);
     });
+    await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(batchId);
+    return created;
   }
 
   async bulkAddChildren(
@@ -189,21 +199,21 @@ export class ShiftBatchesService {
   ): Promise<BulkCreateBatchChildShiftsResultDto> {
     this.validateBulkPayload(dto.shifts);
 
-    return this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const batch = await lockOpenShiftBatch(tx, batchId);
       const created: { id: string; shiftDate: string }[] = [];
 
       for (let index = 0; index < dto.shifts.length; index++) {
         try {
           const row = dto.shifts[index]!;
-          const result = await this.createChildInTransaction(
+          const child = await this.createChildInTransaction(
             tx,
             batch.centreId,
             batchId,
             row,
             actorUserId,
           );
-          created.push({ id: result.id, shiftDate: row.shiftDate });
+          created.push({ id: child.id, shiftDate: row.shiftDate });
         } catch (err) {
           throw new BadRequestException({
             message: 'Bulk shift creation failed.',
@@ -215,6 +225,13 @@ export class ShiftBatchesService {
 
       return { created };
     });
+
+    await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(batchId);
+    return result;
+  }
+
+  async retryProgressEmail(batchId: string, actorUserId: string) {
+    return this.batchProgressCommunications.retryProgressEmail(batchId, actorUserId);
   }
 
   private validateBulkPayload(rows: CreateBatchChildShiftDto[]) {

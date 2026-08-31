@@ -60,5 +60,6 @@ export function communicationTypeLabel(type: string): string {
   if (type === 'shift_reminder_2h') return '2-hour shift reminder';
   if (type === 'shift_cancellation_centre') return 'Shift cancellation (centre)';
   if (type === 'shift_cancellation_carer') return 'Shift cancellation (carer)';
+  if (type === 'batch_progress_70') return 'Centre progress update';
   return type.replace(/_/g, ' ');
 }

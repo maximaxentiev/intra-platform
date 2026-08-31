@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { BatchProgressEmailStatus } from "@/components/shifts/BatchProgressEmailStatus";
 import { BatchWorkspaceChildCard } from "@/components/shifts/BatchWorkspaceChildCard";
 import { DetailLoading } from "@/components/DetailLoading";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,6 +68,10 @@ function BatchWorkspace() {
               {progress.cancelledCount > 0 ? ` · ${progress.cancelledCount} cancelled` : ""}
             </p>
             <p className="text-sm text-muted-foreground">{progress.percentage}% progress</p>
+            <BatchProgressEmailStatus
+              batchId={workspace.id}
+              status={workspace.progressEmailStatus}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             {workspace.shifts.length} shift{workspace.shifts.length === 1 ? "" : "s"} total

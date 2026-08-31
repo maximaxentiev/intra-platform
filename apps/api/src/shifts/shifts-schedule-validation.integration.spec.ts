@@ -13,6 +13,7 @@ import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -56,7 +57,9 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService schedule validation integration'
       new PlatformAuditService(db),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await db.delete(centres).where(eq(centres.id, FIXTURE.centre));
     await db.delete(users).where(eq(users.id, FIXTURE.opsUser));

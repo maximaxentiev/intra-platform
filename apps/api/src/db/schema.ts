@@ -308,6 +308,7 @@ export const shiftBatches = pgTable(
     requestCompletedByUserId: uuid('request_completed_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    progressEmailScheduledAt: timestamp('progress_email_scheduled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

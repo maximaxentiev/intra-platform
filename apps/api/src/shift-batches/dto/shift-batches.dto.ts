@@ -73,12 +73,22 @@ export type ShiftBatchChildSummaryDto = {
   assignedUseDisplayName: boolean | null;
 };
 
+export type BatchProgressEmailStatusDto =
+  | { state: 'none' }
+  | { state: 'scheduled'; scheduledAt: string }
+  | { state: 'sending' }
+  | { state: 'sent'; sentAt: string }
+  | { state: 'failed'; reason: string; canRetry: true }
+  | { state: 'blocked'; reason: string; canRetry: true };
+
 export type ShiftBatchWorkspaceDto = {
   id: string;
   centreId: string;
   centreName: string;
   requestCompletedAt: string | null;
   requestCompletedByUserId: string | null;
+  progressEmailScheduledAt: string | null;
+  progressEmailStatus: BatchProgressEmailStatusDto;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;

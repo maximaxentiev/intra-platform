@@ -13,6 +13,7 @@ export type CommunicationType =
   | 'document_expiry_3mo'
   | 'document_expiry_2mo'
   | 'document_expiry_1mo'
+  | 'batch_progress_70'
   | 'test_ping';
 
 export type ScheduledCommunicationStatus =
@@ -24,7 +25,7 @@ export type ScheduledCommunicationStatus =
 
 export type CommunicationDeliveryStatus = 'sent' | 'failed' | 'skipped';
 
-export type CommunicationEntityType = 'shift' | 'staff_document' | 'test';
+export type CommunicationEntityType = 'shift' | 'shift_batch' | 'staff_document' | 'test';
 
 export type CommunicationRecipientType = 'centre' | 'carer' | 'staff' | 'test';
 
@@ -62,6 +63,7 @@ export const COMMUNICATION_TYPE_VALUES: readonly CommunicationType[] = [
   'document_expiry_3mo',
   'document_expiry_2mo',
   'document_expiry_1mo',
+  'batch_progress_70',
   'test_ping',
 ] as const;
 

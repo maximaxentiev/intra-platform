@@ -11,6 +11,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
 import { ShiftsService } from './shifts.service';
@@ -48,6 +49,8 @@ function buildShiftsService(db: NodePgDatabase<typeof schema>) {
     new PlatformAuditService(db),
     createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
+      
+    createMockShiftBatchProgressCommunicationService(),
   );
 }
 

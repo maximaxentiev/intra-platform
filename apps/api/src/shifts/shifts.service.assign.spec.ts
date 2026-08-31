@@ -7,6 +7,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 
 function mockPlatformAudit() {
@@ -70,7 +71,9 @@ describe('ShiftsService.assign idempotency', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -114,7 +117,9 @@ describe('ShiftsService.assign idempotency', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -146,7 +151,9 @@ describe('ShiftsService.assign idempotency', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -186,7 +193,9 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await expect(
       service.sendAssignmentConfirmation('shift-1', 'ops-1', { recipients: { centre: true } }),
@@ -210,7 +219,9 @@ describe('ShiftsService.availableStaff', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     const rows = await service.availableStaff('shift-1');
     expect(rows).toHaveLength(1);

@@ -50,4 +50,9 @@ export class ShiftBatchesController {
   ) {
     return this.shiftBatches.bulkAddChildren(id, dto, user.userId);
   }
+
+  @Post(':id/progress-email/retry')
+  retryProgressEmail(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shiftBatches.retryProgressEmail(id, user.userId);
+  }
 }

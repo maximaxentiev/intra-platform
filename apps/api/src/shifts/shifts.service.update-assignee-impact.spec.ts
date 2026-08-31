@@ -7,6 +7,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
+import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import { ShiftsService } from './shifts.service';
 import type { ShiftUpdateCommunicationService } from './shift-update-communication.service';
 import type { ShiftReminderService } from './shift-reminder.service';
@@ -75,6 +76,8 @@ function createUpdateService(input: {
     platformAudit,
     shiftUpdateCommunications,
     createMockShiftManualUnassignCommunicationService(),
+      
+    createMockShiftBatchProgressCommunicationService(),
   );
 
   return { service, returning, shiftUpdateCommunications, shiftMatching, shiftReminders, platformAudit, tx };
@@ -285,7 +288,9 @@ describe('ShiftsService update assignee impact', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     const preview = await service.previewUpdate('shift-1', { shiftDate: '2026-08-29' });
     expect(preview.requiresAssignmentResolution).toBe(true);
@@ -322,7 +327,9 @@ describe('ShiftsService update assignee impact', () => {
       mockPlatformAudit(),
       createMockShiftUpdateCommunicationService(),
     createMockShiftManualUnassignCommunicationService(),
-    );
+      
+    createMockShiftBatchProgressCommunicationService(),
+  );
 
     await expect(
       service.update('shift-1', { shiftDate: '2026-08-29', assignmentResolution: 'unassign' }, 'ops-1'),
