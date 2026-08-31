@@ -494,6 +494,52 @@ export const shiftsApi = {
     api.post<ShiftComment>(`/shifts/${id}/comments`, { body }),
 };
 
+export type ShiftBatchChildSummary = {
+  id: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded: string;
+  addedToStaffpoint: boolean;
+  status: ShiftStatus;
+  confirmationNotes: string | null;
+  assignedStaffId: string | null;
+  assignedLegalName: string | null;
+  assignedDisplayName: string | null;
+  assignedUseDisplayName: boolean | null;
+};
+
+export type ShiftBatchWorkspace = {
+  id: string;
+  centreId: string;
+  centreName: string;
+  requestCompletedAt: string | null;
+  requestCompletedByUserId: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shifts: ShiftBatchChildSummary[];
+};
+
+export type CreateBatchChildShiftInput = {
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded?: string;
+  addedToStaffpoint?: boolean;
+  confirmationNotes?: string;
+  internalComment?: string;
+};
+
+export const shiftBatchesApi = {
+  getWorkspace: (id: string) => api.get<ShiftBatchWorkspace>(`/shift-batches/${id}`),
+  createWithShifts: (payload: { centreId: string; shifts: CreateBatchChildShiftInput[] }) =>
+    api.post<{ batch: { id: string }; created: { id: string; shiftDate: string }[] }>(
+      "/shift-batches/with-shifts",
+      payload,
+    ),
+};
+
 export const dashboardApi = {
   summary: (weekStart: string, weekEnd: string, dayOfWeek: number) =>
     api.get<{

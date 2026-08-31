@@ -31,8 +31,7 @@ describe("shift cancellation reason", () => {
 describe("shifts list redesign", () => {
   it("keeps the page header and dominant create action", () => {
     expect(list).toContain('title="Shifts"');
-    expect(list).toContain('<Link to="/shifts/new">');
-    expect(list).toContain("Create shift");
+    expect(list).toContain("CreateShiftActions");
   });
 
   it("orders desktop columns Centre, Date, Time, Role, Assigned to, Staffpoint, Filled", () => {
@@ -83,6 +82,8 @@ describe("shift detail layout", () => {
   it("keeps comments and activity log in the secondary rail without internal notes", () => {
     expect(detail).not.toContain("ShiftInternalNotesCard");
     expect(detail).not.toContain("shifts.notes");
+    expect(detail).toContain("Shift Notes");
+    expect(detail).toContain("confirmationNotes");
     expect(detail).toContain("<ShiftComments shiftId={id} />");
     expect(detail).toContain("ShiftActivityLogPanel");
     expect(detail).toContain("bg-surface-brand-dusk");
@@ -146,8 +147,9 @@ describe("shift activity log panel", () => {
 });
 
 describe("create shift redesign", () => {
-  it("omits notes from the create form and payload", () => {
-    expect(create).not.toContain('legend="Internal"');
+  it("uses Shift Notes backed by confirmationNotes instead of legacy notes", () => {
+    expect(create).toContain("ShiftNotesField");
+    expect(create).toContain("confirmationNotes");
     expect(create).not.toContain('htmlFor="notes"');
     expect(create).not.toContain("notes:");
     expect(create).toContain('{saving ? "Creating..." : "Create shift"}');

@@ -47,6 +47,7 @@ import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
 import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel";
 import { ShiftComments } from "@/components/ShiftComments";
+import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
 import {
   formatAssigneeImpactScheduleLine,
@@ -68,6 +69,7 @@ type EditVals = {
   endTime: string;
   roleNeeded: string;
   addedToStaffpoint: boolean;
+  confirmationNotes: string;
 };
 
 function FieldGroup({ legend, children }: { legend: string; children: React.ReactNode }) {
@@ -130,6 +132,7 @@ function ShiftDetail() {
         endTime: shift.endTime.slice(0, 5),
         roleNeeded: shift.roleNeeded,
         addedToStaffpoint: !!shift.addedToStaffpoint,
+        confirmationNotes: shift.confirmationNotes ?? "",
       }
     : {
         centreId: "",
@@ -138,6 +141,7 @@ function ShiftDetail() {
         endTime: "",
         roleNeeded: "",
         addedToStaffpoint: false,
+        confirmationNotes: "",
       });
 
   const centreContactsQ = useQuery({
@@ -184,6 +188,7 @@ function ShiftDetail() {
     endTime: shift.endTime.slice(0, 5),
     roleNeeded: shift.roleNeeded,
     addedToStaffpoint: !!shift.addedToStaffpoint,
+    confirmationNotes: shift.confirmationNotes ?? "",
   };
 
   const communicationChanges = detectShiftEditCommunicationChanges(
@@ -255,6 +260,7 @@ function ShiftDetail() {
       endTime: editVals.endTime + ":00",
       roleNeeded: editVals.roleNeeded,
       addedToStaffpoint: editVals.addedToStaffpoint,
+      confirmationNotes: editVals.confirmationNotes.trim() || null,
       ...(communications ? { communications } : {}),
       ...(assignmentResolution ? { assignmentResolution } : {}),
     };
@@ -536,6 +542,21 @@ function ShiftDetail() {
   return (
     <div className="space-y-6">
       <BackLink to="/shifts" label="Back to Shifts" />
+      {shift.batchId ? (
+        <div className="rounded-lg border border-primary/15 bg-primary/[0.04] px-4 py-3 text-sm text-foreground">
+          <p className="font-medium">Part of Batch Request</p>
+          <p className="mt-1 text-muted-foreground">
+            This shift belongs to a batch workspace.{" "}
+            <Link
+              to="/shifts/batches/$id"
+              params={{ id: shift.batchId }}
+              className="font-medium text-foreground underline underline-offset-2"
+            >
+              Back to Batch
+            </Link>
+          </p>
+        </div>
+      ) : null}
       <PageHeader
         title={shift.centreName ?? "Shift"}
         actions={
@@ -595,24 +616,34 @@ function ShiftDetail() {
             }
           >
             {!editing ? (
-              <PropertyList
-                items={[
-                  { label: "Centre", value: shift.centreName },
-                  { label: "Date", value: shift.shiftDate },
-                  { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
-                  { label: "Role", value: formatShiftRoleLabel(shift.roleNeeded) },
-                  { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
-                  ...(status === "cancelled" && shift.cancellationReason
-                    ? [
-                        {
-                          label: "Cancellation reason",
-                          value: shift.cancellationReason,
-                          className: "sm:col-span-2",
-                        },
-                      ]
-                    : []),
-                ]}
-              />
+              <>
+                <PropertyList
+                  items={[
+                    { label: "Centre", value: shift.centreName },
+                    { label: "Date", value: shift.shiftDate },
+                    { label: "Time", value: `${fmtTime(shift.startTime)} – ${fmtTime(shift.endTime)}` },
+                    { label: "Role", value: formatShiftRoleLabel(shift.roleNeeded) },
+                    { label: "Staffpoint", value: shift.addedToStaffpoint ? "Added" : "Not added" },
+                    ...(status === "cancelled" && shift.cancellationReason
+                      ? [
+                          {
+                            label: "Cancellation reason",
+                            value: shift.cancellationReason,
+                            className: "sm:col-span-2",
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+                <div className="mt-5 border-t border-border/70 pt-5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Shift Notes
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                    {shift.confirmationNotes?.trim() || "—"}
+                  </p>
+                </div>
+              </>
             ) : (
               <div className="space-y-5">
                 <FieldGroup legend="Where">
@@ -668,6 +699,11 @@ function ShiftDetail() {
                     </div>
                   </div>
                 </FieldGroup>
+                <ShiftNotesField
+                  id="edit-shift-notes"
+                  value={editVals.confirmationNotes}
+                  onChange={(v) => setEdit({ ...editVals, confirmationNotes: v })}
+                />
                 <Button onClick={saveEdits} disabled={savingEdits || previewingAssignee}>
                   Save changes
                 </Button>

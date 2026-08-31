@@ -11,6 +11,7 @@ import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink, SectionCard } from "@/components/ui-kit";
 import { Info } from "lucide-react";
+import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import { NEW_SHIFT_ROLE_OPTIONS } from "@/lib/shift-role-ui";
 
 const STAFFPOINT_HELP =
@@ -29,6 +30,7 @@ function NewShift() {
     endTime: "16:00",
     roleNeeded: "",
     addedToStaffpoint: false,
+    confirmationNotes: "",
   });
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof typeof values>(k: K, v: (typeof values)[K]) =>
@@ -47,6 +49,7 @@ function NewShift() {
         endTime: values.endTime + ":00",
         roleNeeded: values.roleNeeded,
         addedToStaffpoint: !!values.addedToStaffpoint,
+        confirmationNotes: values.confirmationNotes.trim() || undefined,
       });
       toast.success("Shift created");
       navigate({ to: "/shifts/$id", params: { id: created.id } });
@@ -130,6 +133,14 @@ function NewShift() {
                 </Select>
               </div>
             </div>
+          </div>
+
+          <div className="border-t border-border/70 pt-6">
+            <ShiftNotesField
+              id="shift-notes"
+              value={values.confirmationNotes}
+              onChange={(v) => set("confirmationNotes", v)}
+            />
           </div>
 
           <Button type="submit" disabled={saving}>{saving ? "Creating..." : "Create shift"}</Button>

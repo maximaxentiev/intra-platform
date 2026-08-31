@@ -106,6 +106,38 @@ describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
     expect(batch.requestCompletedAt).toBeNull();
   });
 
+  it('atomically creates a batch with child shifts in one transaction', async () => {
+    const result = await batchesService.createWithShifts(
+      {
+        centreId: FIXTURE.centreA,
+        shifts: [
+          {
+            shiftDate: '2026-09-05',
+            startTime: '08:00:00',
+            endTime: '16:00:00',
+            roleNeeded: 'ECE',
+            confirmationNotes: 'Batch atomic note',
+            internalComment: 'Atomic internal',
+          },
+          {
+            shiftDate: '2026-09-06',
+            startTime: '09:00:00',
+            endTime: '17:00:00',
+            roleNeeded: 'ECA',
+          },
+        ],
+      },
+      FIXTURE.opsUser,
+    );
+    batchIds.push(result.batch.id);
+    shiftIds.push(...result.created.map((row) => row.id));
+
+    expect(result.created).toHaveLength(2);
+    const workspace = await batchesService.getWorkspace(result.batch.id);
+    expect(workspace.shifts).toHaveLength(2);
+    expect(workspace.shifts[0]?.confirmationNotes).toBe('Batch atomic note');
+  });
+
   it('adds a child shift forced to batch centre with confirmation notes', async () => {
     const batch = await batchesService.create({ centreId: FIXTURE.centreA }, FIXTURE.opsUser);
     batchIds.push(batch.id);

@@ -14,6 +14,8 @@ import type {
   BulkCreateBatchChildShiftsDto,
   BulkCreateBatchChildShiftsResultDto,
   CreateBatchChildShiftDto,
+  CreateBatchWithShiftsDto,
+  CreateBatchWithShiftsResultDto,
   CreateShiftBatchDto,
   ShiftBatchWorkspaceDto,
 } from './dto/shift-batches.dto';
@@ -27,6 +29,62 @@ export class ShiftBatchesService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly shifts: ShiftsService,
   ) {}
+
+  async createWithShifts(
+    dto: CreateBatchWithShiftsDto,
+    actorUserId: string,
+  ): Promise<CreateBatchWithShiftsResultDto> {
+    this.validateBulkPayload(dto.shifts);
+    await this.assertCentreExists(dto.centreId);
+
+    return this.db.transaction(async (tx) => {
+      const batchRows = await tx
+        .insert(shiftBatches)
+        .values({
+          centreId: dto.centreId,
+          createdByUserId: actorUserId,
+        })
+        .returning({
+          id: shiftBatches.id,
+          centreId: shiftBatches.centreId,
+          createdByUserId: shiftBatches.createdByUserId,
+          requestCompletedAt: shiftBatches.requestCompletedAt,
+          requestCompletedByUserId: shiftBatches.requestCompletedByUserId,
+          createdAt: shiftBatches.createdAt,
+          updatedAt: shiftBatches.updatedAt,
+        });
+
+      const batch = batchRows[0];
+      if (!batch) throw new BadRequestException('Batch could not be created.');
+
+      const created: { id: string; shiftDate: string }[] = [];
+
+      for (let index = 0; index < dto.shifts.length; index++) {
+        try {
+          const row = dto.shifts[index]!;
+          const result = await this.createChildInTransaction(
+            tx,
+            batch.centreId,
+            batch.id,
+            row,
+            actorUserId,
+          );
+          created.push({ id: result.id, shiftDate: row.shiftDate });
+        } catch (err) {
+          throw new BadRequestException({
+            message: 'Bulk shift creation failed.',
+            index,
+            detail: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      return {
+        batch: this.mapBatchRecord(batch),
+        created,
+      };
+    });
+  }
 
   async create(dto: CreateShiftBatchDto, actorUserId: string) {
     await this.assertCentreExists(dto.centreId);

@@ -33,7 +33,8 @@ import {
   type ShiftFilterState,
 } from "@/lib/shifts-list-ui";
 import { ReportCentreMultiSelect } from "@/components/reports/CentreUsageFilters";
-import { AlertCircle, CalendarClock, ChevronRight, Info, Plus, SlidersHorizontal } from "lucide-react";
+import { CreateShiftActions } from "@/components/shifts/CreateShiftActions";
+import { AlertCircle, CalendarClock, ChevronRight, Info, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -228,11 +229,7 @@ function ShiftsIndex() {
     <div className="space-y-6">
       <PageHeader
         title="Shifts"
-        actions={
-          <Button asChild>
-            <Link to="/shifts/new"><Plus className="h-4 w-4 mr-1.5" /> Create shift</Link>
-          </Button>
-        }
+        actions={<CreateShiftActions />}
       />
 
       {/* Desktop filters */}
@@ -483,11 +480,7 @@ function ShiftsEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => 
       icon={CalendarClock}
       title="No shifts yet"
       description="Create the first shift to start staffing."
-      action={
-        <Button asChild size="sm">
-          <Link to="/shifts/new">Create shift</Link>
-        </Button>
-      }
+      action={<CreateShiftActions size="sm" />}
       className="text-left"
     />
   );

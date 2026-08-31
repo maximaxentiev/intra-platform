@@ -48,4 +48,12 @@ describe('Batch Shift Requests Phase A regressions', () => {
     expect(util).toContain('assertBatchCentreImmutable');
     expect(util).toContain('Batch centre cannot be changed once child shifts exist');
   });
+
+  it('exposes atomic batch-with-shifts creation endpoint', () => {
+    const controller = read('shift-batches/shift-batches.controller.ts');
+    const service = read('shift-batches/shift-batches.service.ts');
+    expect(controller).toContain("@Post('with-shifts')");
+    expect(controller).toContain('createWithShifts');
+    expect(service).toContain('async createWithShifts');
+  });
 });

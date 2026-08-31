@@ -5,6 +5,7 @@ import type { SessionPayload } from '../auth/session.service';
 import {
   BulkCreateBatchChildShiftsDto,
   CreateBatchChildShiftDto,
+  CreateBatchWithShiftsDto,
   CreateShiftBatchDto,
 } from './dto/shift-batches.dto';
 import { ShiftBatchesService } from './shift-batches.service';
@@ -17,6 +18,14 @@ export class ShiftBatchesController {
   @Post()
   create(@Body() dto: CreateShiftBatchDto, @CurrentUser() user: SessionPayload) {
     return this.shiftBatches.create(dto, user.userId);
+  }
+
+  @Post('with-shifts')
+  createWithShifts(
+    @Body() dto: CreateBatchWithShiftsDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shiftBatches.createWithShifts(dto, user.userId);
   }
 
   @Get(':id')

@@ -88,3 +88,27 @@ export type ShiftBatchWorkspaceDto = {
 export type BulkCreateBatchChildShiftsResultDto = {
   created: { id: string; shiftDate: string }[];
 };
+
+export class CreateBatchWithShiftsDto {
+  @IsUUID('4')
+  centreId!: string;
+
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CreateBatchChildShiftDto)
+  shifts!: CreateBatchChildShiftDto[];
+}
+
+export type CreateBatchWithShiftsResultDto = {
+  batch: {
+    id: string;
+    centreId: string;
+    createdByUserId: string | null;
+    requestCompletedAt: string | null;
+    requestCompletedByUserId: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  created: { id: string; shiftDate: string }[];
+};
