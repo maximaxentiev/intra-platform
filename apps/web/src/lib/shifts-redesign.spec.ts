@@ -86,9 +86,18 @@ describe("shift detail layout", () => {
     expect(detail).toContain("<ShiftComments shiftId={id} />");
     expect(detail).toContain("ShiftActivityLogPanel");
     expect(detail).toContain("bg-surface-brand-dusk");
+    expect(detail).not.toContain("text-info-foreground");
     expect(detail.indexOf("<ShiftComments shiftId={id} />")).toBeLessThan(
       detail.indexOf("<ShiftActivityLogPanel shiftId={id} />"),
     );
+  });
+
+  it("declares edit centre contacts query before the loading early return", () => {
+    const earlyReturn = detail.indexOf("if (!shift) return <DetailLoading />");
+    const editContactsQuery = detail.indexOf('queryKey: ["centre-contacts", editValsForQueries.centreId]');
+    expect(earlyReturn).toBeGreaterThan(-1);
+    expect(editContactsQuery).toBeGreaterThan(-1);
+    expect(editContactsQuery).toBeLessThan(earlyReturn);
   });
 
   it("uses a desktop grid row for available staff", () => {
@@ -128,6 +137,12 @@ describe("shift activity log panel", () => {
     expect(activityPanel).toContain("shiftId");
     expect(activityPanel).toContain("PAGE_SIZE = 10");
   });
+
+  it("uses the vertical shift activity feed instead of the reports table", () => {
+    expect(activityPanel).toContain("ShiftActivityFeed");
+    expect(activityPanel).not.toContain("ActivityLogList");
+    expect(activityPanel).toContain("min-w-0");
+  });
 });
 
 describe("create shift redesign", () => {
@@ -154,5 +169,11 @@ describe("internal comments component", () => {
     expect(comments).not.toContain("shiftsApi.update");
     expect(comments).toContain('title="Internal comments"');
     expect(comments).not.toContain("Notes and updates visible only to Ops.");
+  });
+
+  it("uses readable foreground tokens inside the white card", () => {
+    expect(comments).toContain('className="text-foreground"');
+    expect(comments).toContain("placeholder:text-muted-foreground");
+    expect(comments).toContain("text-muted-foreground");
   });
 });

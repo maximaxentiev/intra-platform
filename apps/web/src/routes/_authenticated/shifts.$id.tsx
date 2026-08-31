@@ -158,6 +158,12 @@ function ShiftDetail() {
     queryFn: () => shiftsApi.assignmentConfirmationRecipients(id),
   });
 
+  const editCentreContactsQ = useQuery({
+    enabled: !!shift && editing && commDialogOpen,
+    queryKey: ["centre-contacts", editValsForQueries.centreId],
+    queryFn: () => centresApi.contacts(editValsForQueries.centreId),
+  });
+
   if (!shift) return <DetailLoading />;
 
   const availableList = availableQ.data ?? [];
@@ -217,12 +223,6 @@ function ShiftDetail() {
 
   const resendCentreAvailability = resendAvailabilityQ.data?.centre ?? centreCommAvailability;
   const resendCarerAvailability = resendAvailabilityQ.data?.carer ?? carerCommAvailability;
-
-  const editCentreContactsQ = useQuery({
-    enabled: !!shift && editing && commDialogOpen,
-    queryKey: ["centre-contacts", editValsForQueries.centreId],
-    queryFn: () => centresApi.contacts(editValsForQueries.centreId),
-  });
 
   const editPrimaryCentreEmail = [...(editCentreContactsQ.data ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)[0]?.email;
@@ -842,7 +842,7 @@ function ShiftDetail() {
         </div>
 
         <div className="space-y-6 lg:col-span-1">
-          <div className="space-y-6 rounded-xl bg-surface-brand-dusk p-4 text-info-foreground lg:p-5 [&_.text-muted-foreground]:text-info-foreground/75">
+          <div className="space-y-6 rounded-xl bg-surface-brand-dusk p-4 lg:p-5">
             <ShiftComments shiftId={id} />
             <ShiftActivityLogPanel shiftId={id} />
           </div>

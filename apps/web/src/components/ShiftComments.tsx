@@ -51,8 +51,9 @@ export function ShiftComments({ shiftId }: { shiftId: string }) {
     <SectionCard
       id="shift-comments"
       title="Internal comments"
+      className="text-foreground"
     >
-      <div className="space-y-3">
+      <div className="space-y-3 text-foreground">
         {!composing && body.trim() === "" ? (
           <button
             type="button"
@@ -68,6 +69,7 @@ export function ShiftComments({ shiftId }: { shiftId: string }) {
               autoFocus
               aria-label="Internal comment"
               placeholder="Add a comment about this shift..."
+              className="text-foreground placeholder:text-muted-foreground"
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />

@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityLogList } from "@/components/reports/ActivityLogList";
 import {
   ActivityLogPaginationSkeleton,
   ActivityLogRowSkeleton,
 } from "@/components/reports/ActivityLogPagination";
+import { ShiftActivityFeed } from "@/components/shifts/ShiftActivityFeed";
 import { Button } from "@/components/ui/button";
 import { EmptyState, SectionCard } from "@/components/ui-kit";
 import { reportsApi } from "@/lib/reports-api";
@@ -34,7 +34,7 @@ export function ShiftActivityLogPanel({ shiftId }: Props) {
   const hasMore = data?.hasMore ?? false;
 
   return (
-    <SectionCard id="shift-activity-log" title="Activity log">
+    <SectionCard id="shift-activity-log" title="Activity log" className="min-w-0 text-foreground">
       {activityQ.isLoading ? (
         <div className="space-y-3">
           <ActivityLogRowSkeleton count={PAGE_SIZE} />
@@ -53,10 +53,10 @@ export function ShiftActivityLogPanel({ shiftId }: Props) {
           className="text-left"
         />
       ) : (
-        <div className="space-y-3">
-          <ActivityLogList items={items} />
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <p className="text-sm text-muted-foreground">
+        <div className="min-w-0 space-y-3">
+          <ShiftActivityFeed items={items} />
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <p className="min-w-0 text-sm text-muted-foreground">
               {totalCount === 0
                 ? "0 activities"
                 : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, totalCount)} of ${totalCount}`}
