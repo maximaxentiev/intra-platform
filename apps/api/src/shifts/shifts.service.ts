@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { getStaffLegalFullName } from '@intra/shared';
 import { aliasedTable, and, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
-import { DRIZZLE, type Database } from '../db/drizzle.module';
+import { DRIZZLE, type Database, type DbExecutor } from '../db/drizzle.module';
 import {
   centres,
   shiftComments,
@@ -84,6 +84,16 @@ import {
   hasScheduleChange,
   requiresAssigneeRevalidation,
 } from './shift-update-assignee-impact.util';
+import {
+  assertShiftCentreMatchesBatch,
+  lockOpenShiftBatch,
+} from '../shift-batches/shift-batch-centre.util';
+import { normalizeShiftConfirmationNotes } from './shift-confirmation-notes.util';
+
+export type CreateShiftOptions = {
+  tx?: DbExecutor;
+  batchId?: string;
+};
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -123,6 +133,8 @@ export class ShiftsService {
         endTime: shifts.endTime,
         roleNeeded: shifts.roleNeeded,
         notes: shifts.notes,
+        confirmationNotes: shifts.shiftConfirmationNotes,
+        batchId: shifts.batchId,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
         cancellationReason: shifts.cancellationReason,
@@ -149,6 +161,8 @@ export class ShiftsService {
         endTime: shifts.endTime,
         roleNeeded: shifts.roleNeeded,
         notes: shifts.notes,
+        confirmationNotes: shifts.shiftConfirmationNotes,
+        batchId: shifts.batchId,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
         cancellationReason: shifts.cancellationReason,
@@ -166,23 +180,39 @@ export class ShiftsService {
     return rows[0];
   }
 
-  async create(dto: UpsertShiftDto, actorUserId: string) {
+  async create(dto: UpsertShiftDto, actorUserId: string, options?: CreateShiftOptions) {
     assertActiveShiftRoleForCreate(dto.roleNeeded);
     assertSameDayShiftSchedule(dto.startTime, dto.endTime);
 
-    return this.db.transaction(async (tx) => {
+    const run = async (tx: DbExecutor) => {
+      const batchId = options?.batchId ?? null;
+      if (batchId) {
+        const batch = await lockOpenShiftBatch(tx, batchId);
+        assertShiftCentreMatchesBatch(dto.centreId, batch.centreId);
+      }
+
+      const confirmationNotes = normalizeShiftConfirmationNotes(dto.confirmationNotes);
+
       const rows = await tx
         .insert(shifts)
         .values({
           centreId: dto.centreId,
+          batchId,
           shiftDate: dto.shiftDate,
           startTime: dto.startTime,
           endTime: dto.endTime,
           roleNeeded: dto.roleNeeded ?? '',
           notes: dto.notes ?? '',
+          shiftConfirmationNotes: confirmationNotes,
           addedToStaffpoint: dto.addedToStaffpoint ?? false,
         })
-        .returning({ id: shifts.id, centreId: shifts.centreId, shiftDate: shifts.shiftDate, startTime: shifts.startTime, endTime: shifts.endTime });
+        .returning({
+          id: shifts.id,
+          centreId: shifts.centreId,
+          shiftDate: shifts.shiftDate,
+          startTime: shifts.startTime,
+          endTime: shifts.endTime,
+        });
 
       const created = rows[0]!;
       await this.platformAudit.record(
@@ -197,13 +227,32 @@ export class ShiftsService {
             shiftDate: String(created.shiftDate),
             startTime: String(created.startTime),
             endTime: String(created.endTime),
+            ...(batchId ? { batchId } : {}),
           },
         },
         tx,
       );
 
       return { id: created.id };
-    });
+    };
+
+    if (options?.tx) return run(options.tx);
+    return this.db.transaction(run);
+  }
+
+  async insertInitialComment(
+    tx: DbExecutor,
+    shiftId: string,
+    authorId: string,
+    body: string | undefined,
+  ) {
+    const trimmed = body?.trim() ?? '';
+    if (!trimmed) return null;
+    const rows = await tx
+      .insert(shiftComments)
+      .values({ shiftId, authorId, body: trimmed })
+      .returning();
+    return rows[0] ?? null;
   }
 
   async previewUpdate(id: string, dto: PreviewUpdateShiftDto): Promise<ShiftUpdatePreviewResponse> {
@@ -311,6 +360,12 @@ export class ShiftsService {
       });
     }
 
+    if (dto.centreId !== undefined && dto.centreId !== before.centreId) {
+      if (before.batchId) {
+        throw new BadRequestException('Cannot change centre for a shift that belongs to a batch.');
+      }
+    }
+
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of [
       'shiftDate',
@@ -322,6 +377,9 @@ export class ShiftsService {
       'addedToStaffpoint',
     ] as const) {
       if (dto[key] !== undefined) patch[key] = dto[key];
+    }
+    if (dto.confirmationNotes !== undefined) {
+      patch.shiftConfirmationNotes = normalizeShiftConfirmationNotes(dto.confirmationNotes);
     }
 
     if (shouldUnassign) {
@@ -456,8 +514,10 @@ export class ShiftsService {
         startTime: shifts.startTime,
         endTime: shifts.endTime,
         centreId: shifts.centreId,
+        batchId: shifts.batchId,
         roleNeeded: shifts.roleNeeded,
         notes: shifts.notes,
+        shiftConfirmationNotes: shifts.shiftConfirmationNotes,
         addedToStaffpoint: shifts.addedToStaffpoint,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,

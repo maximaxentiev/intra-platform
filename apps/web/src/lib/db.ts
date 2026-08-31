@@ -136,11 +136,13 @@ export interface Availability {
 export interface Shift {
   id: string;
   centreId: string;
+  batchId?: string | null;
   shiftDate: string;
   startTime: string;
   endTime: string;
   roleNeeded: string;
   notes: string;
+  confirmationNotes?: string | null;
   status: ShiftStatus;
   assignedStaffId: string | null;
   cancellationReason: string;

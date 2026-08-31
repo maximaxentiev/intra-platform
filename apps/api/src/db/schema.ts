@@ -290,6 +290,29 @@ export const staffAvailabilityUnavailableDays = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Shift batches — container for multi-shift Centre requests (Phase A foundation)
+// ---------------------------------------------------------------------------
+export const shiftBatches = pgTable(
+  'shift_batches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    centreId: uuid('centre_id')
+      .notNull()
+      .references(() => centres.id, { onDelete: 'restrict' }),
+    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    requestCompletedAt: timestamp('request_completed_at', { withTimezone: true }),
+    requestCompletedByUserId: uuid('request_completed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('shift_batches_centre_idx').on(t.centreId)],
+);
+
+// ---------------------------------------------------------------------------
 // Shifts
 // ---------------------------------------------------------------------------
 export const shifts = pgTable(
@@ -299,11 +322,13 @@ export const shifts = pgTable(
     centreId: uuid('centre_id')
       .notNull()
       .references(() => centres.id, { onDelete: 'restrict' }),
+    batchId: uuid('batch_id').references(() => shiftBatches.id, { onDelete: 'restrict' }),
     shiftDate: date('shift_date').notNull(),
     startTime: time('start_time').notNull(),
     endTime: time('end_time').notNull(),
     roleNeeded: text('role_needed').notNull().default(''),
     notes: text('notes').notNull().default(''),
+    shiftConfirmationNotes: text('shift_confirmation_notes'),
     status: shiftStatus('status').notNull().default('pending'),
     assignedStaffId: uuid('assigned_staff_id').references(() => staff.id, { onDelete: 'set null' }),
     cancellationReason: text('cancellation_reason').notNull().default(''),
@@ -315,6 +340,7 @@ export const shifts = pgTable(
     index('shifts_date_idx').on(t.shiftDate),
     index('shifts_centre_idx').on(t.centreId),
     index('shifts_assigned_idx').on(t.assignedStaffId),
+    index('shifts_batch_idx').on(t.batchId),
   ],
 );
 
@@ -727,6 +753,7 @@ export type Staff = typeof staff.$inferSelect;
 export type Availability = typeof availability.$inferSelect;
 export type StaffAvailabilityUnavailableDay = typeof staffAvailabilityUnavailableDays.$inferSelect;
 export type Shift = typeof shifts.$inferSelect;
+export type ShiftBatch = typeof shiftBatches.$inferSelect;
 export type ShiftComment = typeof shiftComments.$inferSelect;
 export type Application = typeof applications.$inferSelect;
 export type ApplicationDocument = typeof applicationDocuments.$inferSelect;

@@ -44,6 +44,11 @@ export class UpsertShiftDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  confirmationNotes?: string;
+
+  @IsOptional()
   @IsBoolean()
   addedToStaffpoint?: boolean;
 }
@@ -73,6 +78,11 @@ export class UpdateShiftDto {
   @IsString()
   @MaxLength(5000)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  confirmationNotes?: string;
 
   @IsOptional()
   @IsBoolean()

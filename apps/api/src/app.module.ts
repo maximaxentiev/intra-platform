@@ -15,6 +15,7 @@ import { StaffModule } from './staff/staff.module';
 import { CentresModule } from './centres/centres.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { ShiftsModule } from './shifts/shifts.module';
+import { ShiftBatchesModule } from './shift-batches/shift-batches.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { EmailModule } from './email/email.module';
@@ -42,6 +43,7 @@ import { ReportsModule } from './reports/reports.module';
     CentresModule,
     AvailabilityModule,
     ShiftsModule,
+    ShiftBatchesModule,
     DashboardModule,
     ApplicationsModule,
     StaffDocumentsModule,

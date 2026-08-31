@@ -1,0 +1,90 @@
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export class CreateShiftBatchDto {
+  @IsUUID('4')
+  centreId!: string;
+}
+
+export class CreateBatchChildShiftDto {
+  @Matches(DATE)
+  shiftDate!: string;
+
+  @Matches(TIME)
+  startTime!: string;
+
+  @Matches(TIME)
+  endTime!: string;
+
+  @IsOptional()
+  @IsIn(['ECA', 'ECE', 'RECE', ''])
+  roleNeeded?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  addedToStaffpoint?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  confirmationNotes?: string;
+
+  /** Optional initial Ops-only internal comment — not external Shift Notes. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  internalComment?: string;
+}
+
+export class BulkCreateBatchChildShiftsDto {
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CreateBatchChildShiftDto)
+  shifts!: CreateBatchChildShiftDto[];
+}
+
+export type ShiftBatchChildSummaryDto = {
+  id: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded: string;
+  addedToStaffpoint: boolean;
+  status: string;
+  confirmationNotes: string | null;
+  assignedStaffId: string | null;
+  assignedLegalName: string | null;
+  assignedDisplayName: string | null;
+  assignedUseDisplayName: boolean | null;
+};
+
+export type ShiftBatchWorkspaceDto = {
+  id: string;
+  centreId: string;
+  centreName: string;
+  requestCompletedAt: string | null;
+  requestCompletedByUserId: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shifts: ShiftBatchChildSummaryDto[];
+};
+
+export type BulkCreateBatchChildShiftsResultDto = {
+  created: { id: string; shiftDate: string }[];
+};

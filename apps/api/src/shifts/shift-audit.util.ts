@@ -12,6 +12,7 @@ export const SHIFT_AUDIT_FIELDS = [
   'centreId',
   'roleNeeded',
   'notes',
+  'confirmationNotes',
   'addedToStaffpoint',
 ] as const;
 
@@ -24,6 +25,7 @@ export function shiftAuditSnapshot(row: {
   centreId: string;
   roleNeeded: string | null;
   notes: string | null;
+  shiftConfirmationNotes?: string | null;
   addedToStaffpoint: boolean | null;
 }): ShiftAuditSnapshot {
   return {
@@ -33,6 +35,7 @@ export function shiftAuditSnapshot(row: {
     centreId: row.centreId,
     roleNeeded: row.roleNeeded ?? '',
     notes: row.notes ?? '',
+    confirmationNotes: row.shiftConfirmationNotes ?? null,
     addedToStaffpoint: row.addedToStaffpoint ?? false,
   };
 }
