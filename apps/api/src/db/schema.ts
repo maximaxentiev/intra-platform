@@ -13,7 +13,9 @@ import {
   time,
   timestamp,
   uuid,
+  unique,
   uniqueIndex,
+  foreignKey,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -309,7 +311,10 @@ export const shiftBatches = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('shift_batches_centre_idx').on(t.centreId)],
+  (t) => [
+    index('shift_batches_centre_idx').on(t.centreId),
+    unique('shift_batches_id_centre_unique').on(t.id, t.centreId),
+  ],
 );
 
 // ---------------------------------------------------------------------------
@@ -341,6 +346,11 @@ export const shifts = pgTable(
     index('shifts_centre_idx').on(t.centreId),
     index('shifts_assigned_idx').on(t.assignedStaffId),
     index('shifts_batch_idx').on(t.batchId),
+    foreignKey({
+      columns: [t.batchId, t.centreId],
+      foreignColumns: [shiftBatches.id, shiftBatches.centreId],
+      name: 'shifts_batch_centre_fk',
+    }).onDelete('restrict'),
   ],
 );
 

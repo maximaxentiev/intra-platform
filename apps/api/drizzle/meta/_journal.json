@@ -169,6 +169,13 @@
       "when": 1788400000000,
       "tag": "0023_shift_batches",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788500000000,
+      "tag": "0024_shift_batch_centre_invariant",
+      "breakpoints": true
     }
   ]
 }

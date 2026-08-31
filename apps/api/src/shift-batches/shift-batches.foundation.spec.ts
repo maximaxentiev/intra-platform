@@ -28,4 +28,24 @@ describe('Batch Shift Requests Phase A regressions', () => {
     const batches = read('shift-batches/shift-batches.service.ts');
     expect(batches).not.toMatch(/delete\(shifts\)/);
   });
+
+  it('models composite batch centre invariant in Drizzle schema', () => {
+    const schema = read('db/schema.ts');
+    expect(schema).toContain("unique('shift_batches_id_centre_unique')");
+    expect(schema).toContain("name: 'shifts_batch_centre_fk'");
+    expect(schema).toContain('foreignColumns: [shiftBatches.id, shiftBatches.centreId]');
+  });
+
+  it('retains service-level batch centre guards for defense in depth', () => {
+    const shiftsService = read('shifts/shifts.service.ts');
+    expect(shiftsService).toContain('lockOpenShiftBatch');
+    expect(shiftsService).toContain('assertShiftCentreMatchesBatch');
+    expect(shiftsService).toContain('Cannot change centre for a shift that belongs to a batch');
+  });
+
+  it('documents batch centre immutability helper for future update endpoints', () => {
+    const util = read('shift-batches/shift-batch-centre.util.ts');
+    expect(util).toContain('assertBatchCentreImmutable');
+    expect(util).toContain('Batch centre cannot be changed once child shifts exist');
+  });
 });

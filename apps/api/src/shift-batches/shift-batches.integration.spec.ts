@@ -182,7 +182,44 @@ describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('leaves individual shifts with null batch_id', async () => {
+  it('rejects mismatched centre at database level via composite FK', async () => {
+    const batch = await batchesService.create({ centreId: FIXTURE.centreA }, FIXTURE.opsUser);
+    batchIds.push(batch.id);
+
+    await expect(
+      db.insert(shifts).values({
+        centreId: FIXTURE.centreB,
+        batchId: batch.id,
+        shiftDate: '2026-09-20',
+        startTime: '08:00:00',
+        endTime: '16:00:00',
+        roleNeeded: 'ECA',
+      }),
+    ).rejects.toMatchObject({ code: '23503' });
+  });
+
+  it('rejects centre change on a batch child at the service layer', async () => {
+    const batch = await batchesService.create({ centreId: FIXTURE.centreA }, FIXTURE.opsUser);
+    batchIds.push(batch.id);
+
+    const child = await batchesService.addChild(
+      batch.id,
+      {
+        shiftDate: '2026-09-21',
+        startTime: '08:00:00',
+        endTime: '16:00:00',
+        roleNeeded: 'ECA',
+      },
+      FIXTURE.opsUser,
+    );
+    shiftIds.push(child.id);
+
+    await expect(
+      shiftsService.update(child.id, { centreId: FIXTURE.centreB }, FIXTURE.opsUser),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts individual shifts with null batch_id', async () => {
     const created = await shiftsService.create(
       {
         centreId: FIXTURE.centreA,
