@@ -4,7 +4,6 @@ import { shiftsApi, toDateStr } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -40,7 +39,6 @@ function NewShift() {
     startTime: "08:00",
     endTime: "16:00",
     roleNeeded: "",
-    notes: "",
     addedToStaffpoint: false,
   });
   const [saving, setSaving] = useState(false);
@@ -59,7 +57,6 @@ function NewShift() {
         startTime: values.startTime + ":00",
         endTime: values.endTime + ":00",
         roleNeeded: values.roleNeeded,
-        notes: values.notes,
         addedToStaffpoint: !!values.addedToStaffpoint,
       });
       toast.success("Shift created");
@@ -145,13 +142,6 @@ function NewShift() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </FieldGroup>
-
-          <FieldGroup legend="Internal">
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" rows={3} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
             </div>
           </FieldGroup>
 

@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { MoreHorizontal, Star, Trash2, UserCheck } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck } from "lucide-react";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
@@ -45,7 +45,6 @@ import { ShiftAssignmentConfirmDialog } from "@/components/shifts/ShiftAssignmen
 import { ShiftResendConfirmationDialog } from "@/components/shifts/ShiftResendConfirmationDialog";
 import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
-import { ShiftInternalNotesCard } from "@/components/shifts/ShiftInternalNotesCard";
 import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel";
 import { ShiftComments } from "@/components/ShiftComments";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
@@ -68,7 +67,6 @@ type EditVals = {
   startTime: string;
   endTime: string;
   roleNeeded: string;
-  notes: string;
   addedToStaffpoint: boolean;
 };
 
@@ -131,7 +129,6 @@ function ShiftDetail() {
         startTime: shift.startTime.slice(0, 5),
         endTime: shift.endTime.slice(0, 5),
         roleNeeded: shift.roleNeeded,
-        notes: shift.notes,
         addedToStaffpoint: !!shift.addedToStaffpoint,
       }
     : {
@@ -140,7 +137,6 @@ function ShiftDetail() {
         startTime: "",
         endTime: "",
         roleNeeded: "",
-        notes: "",
         addedToStaffpoint: false,
       });
 
@@ -181,7 +177,6 @@ function ShiftDetail() {
     startTime: shift.startTime.slice(0, 5),
     endTime: shift.endTime.slice(0, 5),
     roleNeeded: shift.roleNeeded,
-    notes: shift.notes,
     addedToStaffpoint: !!shift.addedToStaffpoint,
   };
 
@@ -259,7 +254,6 @@ function ShiftDetail() {
       startTime: editVals.startTime + ":00",
       endTime: editVals.endTime + ":00",
       roleNeeded: editVals.roleNeeded,
-      notes: editVals.notes,
       addedToStaffpoint: editVals.addedToStaffpoint,
       ...(communications ? { communications } : {}),
       ...(assignmentResolution ? { assignmentResolution } : {}),
@@ -681,33 +675,8 @@ function ShiftDetail() {
             )}
           </SectionCard>
 
-          <SectionCard
-            id="assignment"
-            title={assignedName ? "Assignment" : "Available staff"}
-            description={
-              assignedName
-                ? undefined
-                : "Eligible based on availability, conflicts, centre restrictions and compliance."
-            }
-            padded={false}
-          >
-            <div className="border-b border-border/70 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </p>
-                  <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
-                </div>
-                {status === "cancelled" && shift.cancellationReason && (
-                  <p className="text-[13px] text-muted-foreground">
-                    <span className="font-medium text-foreground">Reason:</span> {shift.cancellationReason}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {assignedName && (
+          {assignedName && (
+            <SectionCard id="assignment" title="Assignment" padded={false}>
               <div className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-success-soft/60 px-4 py-3">
                 <UserCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
                 <div className="min-w-0">
@@ -741,10 +710,19 @@ function ShiftDetail() {
                   )}
                 </div>
               </div>
-            )}
+            </SectionCard>
+          )}
 
-            {!isHistorical && status !== "cancelled" && (
-              <div className="border-b border-border/70 px-4 py-3">
+          <SectionCard
+            id="available-staff"
+            title={
+              <span className="flex flex-wrap items-center gap-2">
+                Available staff
+                <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
+              </span>
+            }
+            action={
+              !isHistorical && status !== "cancelled" ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -754,6 +732,15 @@ function ShiftDetail() {
                 >
                   Cancel shift
                 </Button>
+              ) : undefined
+            }
+            padded={false}
+          >
+            {status === "cancelled" && shift.cancellationReason && (
+              <div className="border-b border-border/70 px-4 py-2.5">
+                <p className="text-[13px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Reason:</span> {shift.cancellationReason}
+                </p>
               </div>
             )}
 
@@ -784,68 +771,78 @@ function ShiftDetail() {
                 />
               </div>
             ) : (
-              <>
-                {assignedName && (
-                  <p className="px-4 pt-3 text-[13px] text-muted-foreground">
-                    Other eligible staff. Eligible staff are filtered automatically using availability,
-                    scheduling conflicts, centre restrictions, account status, role, and document compliance.
-                  </p>
-                )}
-                <ul className="divide-y divide-border/60">
-                  {otherCandidates.map((s, index) => {
-                    const previous = index > 0 ? otherCandidates[index - 1] : undefined;
-                    const showPriorityBoundary = isAvailableStaffPriorityBoundary(previous, s);
+              <ul className="divide-y divide-border/60">
+                {otherCandidates.map((s, index) => {
+                  const previous = index > 0 ? otherCandidates[index - 1] : undefined;
+                  const showPriorityBoundary = isAvailableStaffPriorityBoundary(previous, s);
+                  const staffName = displayStaff(s);
 
-                    return (
+                  return (
                     <li
                       key={s.id}
-                      className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 transition-colors hover:bg-muted/40 motion-reduce:transition-none${showPriorityBoundary ? " border-t border-border/80 pt-3.5" : ""}`}
+                      className={`transition-colors hover:bg-muted/40 motion-reduce:transition-none${showPriorityBoundary ? " border-t border-border/80" : ""}`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">{displayStaff(s)}</p>
-                        <p className="text-[13px] text-muted-foreground">
+                      <div className="hidden items-center gap-4 px-4 py-2.5 md:grid md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]">
+                        <p className="truncate text-sm font-medium text-foreground">{staffName}</p>
+                        <p className="min-w-0 text-[13px] text-muted-foreground">
                           {formatAvailableStaffPriorityLine(s)}
                         </p>
-                        <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                          <span>{s.role || "No role"}</span>
-                          {s.isTop && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-foreground">
-                              <Star className="h-3 w-3 fill-warning text-warning" aria-hidden />
-                              Top staff
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
+                        <p className="text-[13px] text-muted-foreground">{s.role || "No role"}</p>
                         <label className="flex cursor-pointer select-none items-center gap-2 text-[13px]">
                           <Checkbox
                             checked={s.contacted}
                             onCheckedChange={() => toggleContacted(s.id, s.contacted)}
-                            aria-label={`Mark ${displayStaff(s)} as contacted`}
+                            aria-label={`Mark ${staffName} as contacted`}
                           />
                           Contacted
                         </label>
                         <Button
                           size="sm"
+                          className="justify-self-end"
                           disabled={assignConfirmOpen || assigningStaffId != null}
                           onClick={() => openAssignConfirm(s)}
-                          aria-label={`Assign ${displayStaff(s)} to this shift`}
+                          aria-label={`Assign ${staffName} to this shift`}
+                        >
+                          Assign
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3 px-4 py-3 md:hidden">
+                        <p className="text-sm font-medium text-foreground">{staffName}</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {formatAvailableStaffPriorityLine(s)}
+                        </p>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-[13px] text-muted-foreground">{s.role || "No role"}</p>
+                          <label className="flex cursor-pointer select-none items-center gap-2 text-[13px]">
+                            <Checkbox
+                              checked={s.contacted}
+                              onCheckedChange={() => toggleContacted(s.id, s.contacted)}
+                              aria-label={`Mark ${staffName} as contacted`}
+                            />
+                            Contacted
+                          </label>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          disabled={assignConfirmOpen || assigningStaffId != null}
+                          onClick={() => openAssignConfirm(s)}
+                          aria-label={`Assign ${staffName} to this shift`}
                         >
                           Assign
                         </Button>
                       </div>
                     </li>
-                    );
-                  })}
-                </ul>
-              </>
+                  );
+                })}
+              </ul>
             )}
           </SectionCard>
         </div>
 
         <div className="space-y-6 lg:col-span-1">
           <div className="space-y-6 rounded-xl bg-surface-muted p-4 lg:p-5">
-            <ShiftInternalNotesCard key={shift.notes} shiftId={id} notes={shift.notes ?? ""} />
             <ShiftComments shiftId={id} />
             <ShiftActivityLogPanel shiftId={id} />
           </div>

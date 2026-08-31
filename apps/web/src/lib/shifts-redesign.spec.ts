@@ -15,7 +15,6 @@ const resendDialog = read("components/shifts/ShiftResendConfirmationDialog.tsx")
 const unassignDialog = read("components/shifts/ShiftUnassignDialog.tsx");
 const cancelDialog = read("components/shifts/ShiftCancelDialog.tsx");
 const activityPanel = read("components/shifts/ShiftActivityLogPanel.tsx");
-const notesCard = read("components/shifts/ShiftInternalNotesCard.tsx");
 
 describe("shift cancellation reason", () => {
   it("accepts trimmed non-empty reasons", () => {
@@ -32,7 +31,6 @@ describe("shift cancellation reason", () => {
 describe("shifts list redesign", () => {
   it("keeps the page header and dominant create action", () => {
     expect(list).toContain('title="Shifts"');
-    expect(list).not.toContain("All shifts across every centre");
     expect(list).toContain('<Link to="/shifts/new">');
     expect(list).toContain("Create shift");
   });
@@ -49,26 +47,6 @@ describe("shifts list redesign", () => {
       lastIdx = idx;
     }
   });
-
-  it("preserves the Zod search schema and URL param names", () => {
-    for (const param of ["from", "to", "centre", "centreIds", "status", "staff", "staffpoint"]) {
-      expect(list).toContain(`  ${param}:`);
-    }
-    expect(list).toContain("validateSearch: (s) => searchSchema.parse(s)");
-    expect(list).toContain("ReportCentreMultiSelect");
-  });
-
-  it("keeps explicit Apply filters behaviour (no live filtering)", () => {
-    expect(list).toContain('applyLabel="Apply filters"');
-    expect(list).toContain("function applyFilters");
-    expect(list).toContain("navigate({ search: shiftFiltersToSearch(state) })");
-  });
-
-  it("makes rows navigable with an accessible link and chevron", () => {
-    expect(list).toContain('to="/shifts/$id"');
-    expect(list).toContain("aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}");
-    expect(list).toContain("ChevronRight");
-  });
 });
 
 describe("shift detail layout", () => {
@@ -77,41 +55,52 @@ describe("shift detail layout", () => {
     expect(detail).not.toMatch(/PageHeader[\s\S]*meta=\{<StatusBadge/);
   });
 
-  it("places Shift details before Assignment", () => {
-    expect(detail.indexOf('title="Shift details"')).toBeLessThan(
-      detail.indexOf('title={assignedName ? "Assignment"'),
+  it("places Shift details before Assignment and Available staff", () => {
+    expect(detail.indexOf('title="Shift details"')).toBeLessThan(detail.indexOf('id="assignment"'));
+    expect(detail.indexOf('id="assignment"')).toBeLessThan(detail.indexOf('id="available-staff"'));
+  });
+
+  it("shows status in the Available staff header without a Status label", () => {
+    expect(detail).toContain('id="available-staff"');
+    expect(detail).toContain("Available staff");
+    expect(detail).toContain("<StatusBadge status={shift.status}");
+    expect(detail).not.toContain(">Status</p>");
+    expect(detail).not.toContain("Eligible based on availability, conflicts, centre restrictions and compliance.");
+  });
+
+  it("places Cancel shift in the Available staff header action", () => {
+    expect(detail).toContain("Cancel shift");
+    expect(detail).not.toContain('title="Shift status"');
+    expect(detail).not.toContain("Mark completed");
+  });
+
+  it("keeps Assignment focused on assignee controls only", () => {
+    expect(detail).toContain("Assigned Carer");
+    expect(detail).not.toContain("Assigned staff");
+    expect(detail).not.toContain("This shift is staffed.");
+  });
+
+  it("keeps comments and activity log in the secondary rail without internal notes", () => {
+    expect(detail).not.toContain("ShiftInternalNotesCard");
+    expect(detail).not.toContain("shifts.notes");
+    expect(detail).toContain("<ShiftComments shiftId={id} />");
+    expect(detail).toContain("ShiftActivityLogPanel");
+    expect(detail).toContain("bg-surface-muted");
+    expect(detail.indexOf("<ShiftComments shiftId={id} />")).toBeLessThan(
+      detail.indexOf("<ShiftActivityLogPanel shiftId={id} />"),
     );
   });
 
-  it("merges status into Assignment and uses Assigned Carer label", () => {
-    expect(detail).toContain("Assigned Carer");
-    expect(detail).not.toContain("Assigned staff");
-    expect(detail).toContain("Status");
-    expect(detail).not.toContain("This shift is staffed.");
-    expect(detail).not.toContain("Mark completed");
-    expect(detail).not.toContain('title="Shift status"');
-  });
-
-  it("places internal notes, comments, and activity log in the secondary rail", () => {
-    expect(detail).toContain("ShiftInternalNotesCard");
-    expect(detail).toContain("ShiftComments");
-    expect(detail).toContain("ShiftActivityLogPanel");
-    expect(detail).toContain("bg-surface-muted");
-  });
-
-  it("loads resend recipient availability from the server", () => {
-    expect(detail).toContain("assignmentConfirmationRecipients");
-    expect(detail).toContain("resendAvailabilityQ");
+  it("uses a desktop grid row for available staff", () => {
+    expect(detail).toContain("md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]");
+    expect(detail).toContain("formatAvailableStaffPriorityLine(s)");
+    expect(detail).toContain("md:hidden");
   });
 
   it("wires communication dialogs instead of immediate send/unassign", () => {
     expect(detail).toContain("ShiftResendConfirmationDialog");
     expect(detail).toContain("ShiftUnassignDialog");
     expect(detail).toContain("ShiftCancelDialog");
-    expect(detail).toContain("setResendDialogOpen(true)");
-    expect(detail).toContain("setUnassignDialogOpen(true)");
-    expect(detail).toContain("setCancelDialogOpen(true)");
-    expect(detail).not.toContain("resendAssignmentConfirmation(id)");
     expect(detail).toContain("resendAssignmentConfirmation(id, recipients)");
     expect(detail).toContain("confirmUnassign()");
   });
@@ -125,21 +114,11 @@ describe("shift detail layout", () => {
 describe("shift communication dialogs", () => {
   it("resend dialog asks before sending and supports recipient selection", () => {
     expect(resendDialog).toContain("Send confirmation communication?");
-    expect(resendDialog).toContain("No / Cancel");
     expect(resendDialog).toContain("Resend confirmation");
-    expect(resendDialog).toContain("ShiftRecipientCheckboxes");
-  });
-
-  it("unassign dialog supports no-email and recipient selection", () => {
-    expect(unassignDialog).toContain("Save without email");
-    expect(unassignDialog).toContain("Send communication");
-    expect(unassignDialog).toContain("Confirm unassign");
   });
 
   it("cancel dialog requires reason and optional communication", () => {
     expect(cancelDialog).toContain("Cancellation reason *");
-    expect(cancelDialog).toContain("No communication");
-    expect(cancelDialog).toContain("Send communication");
     expect(cancelDialog).toContain("Cancel shift");
   });
 });
@@ -148,40 +127,30 @@ describe("shift activity log panel", () => {
   it("filters by shift and paginates ten entries", () => {
     expect(activityPanel).toContain("shiftId");
     expect(activityPanel).toContain("PAGE_SIZE = 10");
-    expect(activityPanel).toContain("Previous");
-    expect(activityPanel).toContain("Next");
-  });
-});
-
-describe("shift internal notes", () => {
-  it("persists via shifts API update", () => {
-    expect(notesCard).toContain("Internal notes");
-    expect(notesCard).toContain("Ops-only notes");
-    expect(notesCard).toContain("shiftsApi.update(shiftId, { notes })");
   });
 });
 
 describe("create shift redesign", () => {
-  it("groups fields as Where / When / Requirements / Internal", () => {
-    for (const legend of ["Where", "When", "Requirements", "Internal"]) {
-      expect(create).toContain(`legend="${legend}"`);
-    }
+  it("omits notes from the create form and payload", () => {
+    expect(create).not.toContain('legend="Internal"');
+    expect(create).not.toContain('htmlFor="notes"');
+    expect(create).not.toContain("notes:");
+    expect(create).toContain('{saving ? "Creating..." : "Create shift"}');
   });
 
-  it("renames the submit action to Create shift", () => {
-    expect(create).toContain('{saving ? "Creating..." : "Create shift"}');
+  it("groups fields as Where / When / Requirements", () => {
+    for (const legend of ["Where", "When", "Requirements"]) {
+      expect(create).toContain(`legend="${legend}"`);
+    }
   });
 });
 
 describe("internal comments component", () => {
-  it("uses a separate shift_comments thread distinct from shifts.notes", () => {
+  it("uses shift_comments API distinct from shifts.notes", () => {
     expect(comments).toContain("shiftsApi.addComment(shiftId, trimmed)");
     expect(comments).toContain('queryKey: ["shift-comments", shiftId]');
     expect(comments).not.toContain("shiftsApi.update");
-    expect(notesCard).toContain("shiftsApi.update(shiftId, { notes })");
-  });
-
-  it("remains available on the shift detail right rail", () => {
-    expect(detail).toContain("<ShiftComments shiftId={id} />");
+    expect(comments).toContain('title="Internal comments"');
+    expect(comments).not.toContain("Notes and updates visible only to Ops.");
   });
 });

@@ -32,12 +32,11 @@ describe('ops shift smart matching UI', () => {
     expect(page).toContain('availableQ.data ?? []');
   });
 
-  it('shows smart matching helper and empty state copy', () => {
+  it("uses a desktop grid for available staff rows", () => {
     const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
-    expect(page).toContain('Eligible staff are filtered automatically');
-    expect(page).toContain('No eligible staff found for this shift.');
-    expect(page).toContain('document compliance are considered automatically');
+    expect(page).toContain('md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]');
     expect(page).toContain('formatAvailableStaffPriorityLine');
+    expect(page).not.toContain('Eligible based on availability, conflicts, centre restrictions and compliance.');
   });
 
   it('invalidates available staff query after assign eligibility conflict', () => {

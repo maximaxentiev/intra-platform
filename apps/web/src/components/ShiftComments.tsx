@@ -51,7 +51,6 @@ export function ShiftComments({ shiftId }: { shiftId: string }) {
     <SectionCard
       id="shift-comments"
       title="Internal comments"
-      description="Notes and updates visible only to Ops."
     >
       <div className="space-y-3">
         {!composing && body.trim() === "" ? (
