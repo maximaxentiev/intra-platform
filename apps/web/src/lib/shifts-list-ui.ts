@@ -145,7 +145,10 @@ export function clearShiftFilterChip(
 }
 
 /** Maps filter state onto the existing URL search schema (undefined = absent). */
-export function shiftFiltersToSearch(state: ShiftFilterState) {
+export function shiftFiltersToSearch(
+  state: ShiftFilterState,
+  pagination?: { page?: number; pageSize?: number },
+) {
   return {
     from: state.from || undefined,
     to: state.to || undefined,
@@ -153,6 +156,9 @@ export function shiftFiltersToSearch(state: ShiftFilterState) {
     status: state.status === "all" ? undefined : state.status,
     staff: state.staffId === "all" ? undefined : state.staffId,
     staffpoint: state.staffpoint === "all" ? undefined : state.staffpoint,
+    page: pagination?.page && pagination.page > 1 ? pagination.page : undefined,
+    pageSize:
+      pagination?.pageSize && pagination.pageSize !== 25 ? pagination.pageSize : undefined,
   };
 }
 
@@ -172,6 +178,11 @@ export function shiftCentreSelectionToApiQuery(state: ShiftFilterState) {
   return centreSelectionToApiQuery(state.centres);
 }
 
+export function feedResultCountLabel(count: number): string {
+  return `${count} item${count === 1 ? "" : "s"}`;
+}
+
+/** @deprecated Use feedResultCountLabel for grouped feed pages. */
 export function shiftResultCountLabel(count: number): string {
   return `${count} shift${count === 1 ? "" : "s"}`;
 }

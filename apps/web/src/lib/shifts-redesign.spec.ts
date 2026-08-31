@@ -8,6 +8,7 @@ const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel: string) => readFileSync(join(webRoot, rel), "utf8");
 
 const list = read("routes/_authenticated/shifts.index.tsx");
+const feedList = read("components/shifts/ShiftsFeedList.tsx");
 const detail = read("routes/_authenticated/shifts.$id.tsx");
 const create = read("routes/_authenticated/shifts.new.tsx");
 const comments = read("components/ShiftComments.tsx");
@@ -35,9 +36,9 @@ describe("shifts list redesign", () => {
   });
 
   it("orders desktop columns Centre, Date, Time, Role, Assigned to, Staffpoint, Filled", () => {
-    const headerStart = list.indexOf("<TableHeader");
-    const headerEnd = list.indexOf("</TableHeader>", headerStart);
-    const headerBlock = list.slice(headerStart, headerEnd);
+    const headerStart = feedList.indexOf("<TableHeader");
+    const headerEnd = feedList.indexOf("</TableHeader>", headerStart);
+    const headerBlock = feedList.slice(headerStart, headerEnd);
     const columns = ["Centre", "Date", "Time", "Role", "Assigned to", "Staffpoint", "Filled"];
     let lastIdx = -1;
     for (const col of columns) {

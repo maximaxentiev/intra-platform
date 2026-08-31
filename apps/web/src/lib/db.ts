@@ -432,6 +432,55 @@ export const availabilityApi = {
   remove: (id: string) => api.del<{ ok: true }>(`/availability/${id}`),
 };
 
+export type ShiftFeedShiftSummary = {
+  id: string;
+  centreId: string;
+  centreName: string | null;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded: string;
+  addedToStaffpoint: boolean;
+  status: ShiftStatus;
+  assignedStaffId: string | null;
+  assignedLegalName: string | null;
+  assignedDisplayName: string | null;
+  assignedUseDisplayName: boolean | null;
+};
+
+export type ShiftFeedBatchItem = {
+  type: "batch";
+  batch: {
+    id: string;
+    centreId: string;
+    centreName: string;
+    requestCompletedAt: string | null;
+    dateRange: string | null;
+    displayState: "open" | "ready" | "completed";
+  };
+  matchingChildren: ShiftFeedShiftSummary[];
+  totalChildCount: number;
+  activeChildCount: number;
+  fulfilledChildCount: number;
+  cancelledChildCount: number;
+  matchingChildCount: number;
+};
+
+export type ShiftFeedShiftItem = {
+  type: "shift";
+  shift: ShiftFeedShiftSummary;
+};
+
+export type ShiftFeedItem = ShiftFeedShiftItem | ShiftFeedBatchItem;
+
+export type ShiftFeedResponse = {
+  items: ShiftFeedItem[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
 export const shiftsApi = {
   list: (q: {
     centreId?: string;
@@ -441,6 +490,17 @@ export const shiftsApi = {
     from?: string;
     to?: string;
   }) => api.get<Shift[]>("/shifts", q),
+  feed: (q: {
+    centreId?: string;
+    centreIds?: string[];
+    staffId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    staffpoint?: "yes" | "no";
+    page?: number;
+    pageSize?: number;
+  }) => api.get<ShiftFeedResponse>("/shifts/feed", q),
   get: (id: string) => api.get<Shift>(`/shifts/${id}`),
   create: (values: Partial<Shift>) => api.post<{ id: string }>("/shifts", values),
   update: (

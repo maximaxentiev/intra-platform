@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
@@ -24,15 +14,25 @@ import {
 } from './dto/shifts.dto';
 import { ResendConfirmationDto, UnassignShiftDto } from './dto/shift-communication-recipients.dto';
 import { ShiftsService } from './shifts.service';
+import { ShiftsFeedService } from './shifts-feed.service';
+import { ShiftFeedQuery } from './dto/shifts-feed.dto';
 
 @ApiTags('shifts')
 @Controller('shifts')
 export class ShiftsController {
-  constructor(private readonly shifts: ShiftsService) {}
+  constructor(
+    private readonly shifts: ShiftsService,
+    private readonly shiftsFeed: ShiftsFeedService,
+  ) {}
 
   @Get()
   list(@Query() q: ListShiftsQuery) {
     return this.shifts.list(q);
+  }
+
+  @Get('feed')
+  feed(@Query() q: ShiftFeedQuery) {
+    return this.shiftsFeed.feed(q);
   }
 
   @Post()

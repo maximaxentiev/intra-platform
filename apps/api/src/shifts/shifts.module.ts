@@ -10,12 +10,14 @@ import { ShiftCommunicationsModule } from './shift-communications.module';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsCron } from './shifts.cron';
 import { ShiftsService } from './shifts.service';
+import { ShiftsFeedService } from './shifts-feed.service';
 
 @Module({
   imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule],
   controllers: [ShiftsController],
   providers: [
     ShiftsService,
+    ShiftsFeedService,
     ShiftsCron,
     ShiftMatchingService,
     ShiftAssignmentConfirmationService,

@@ -1,40 +1,38 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { centresApi, staffApi, shiftsApi, displayStaff, fmtTime, type ShiftStatus } from "@/lib/db";
+import { centresApi, staffApi, shiftsApi, displayStaff, type ShiftStatus } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/PageHeader";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ReportPagination } from "@/components/reports/ReportPagination";
 import {
   EmptyState,
   FilterChipBar,
   FilterPanel,
-  ListLoading,
-  dataTable,
-  DataTableEmptyRow,
-  DataTableLoadingRows,
 } from "@/components/ui-kit";
+import { CreateShiftActions } from "@/components/shifts/CreateShiftActions";
+import { ShiftsFeedList } from "@/components/shifts/ShiftsFeedList";
 import {
   EMPTY_SHIFT_FILTERS,
   buildShiftFilterChips,
   clearShiftFilterChip,
+  feedResultCountLabel,
   hasActiveShiftFilters,
-  shiftAssigneeLabel,
   shiftCentreSelectionFromSearch,
   shiftCentreSelectionToApiQuery,
   shiftFiltersToSearch,
-  shiftResultCountLabel,
   type ShiftFilterState,
 } from "@/lib/shifts-list-ui";
+import {
+  SHIFT_FEED_PAGE_SIZE_OPTIONS,
+  resolveShiftFeedPageSize,
+} from "@/lib/shifts-feed-ui";
 import { ReportCentreMultiSelect } from "@/components/reports/CentreUsageFilters";
-import { CreateShiftActions } from "@/components/shifts/CreateShiftActions";
-import { AlertCircle, CalendarClock, ChevronRight, Info, SlidersHorizontal } from "lucide-react";
+import { AlertCircle, CalendarClock, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -45,6 +43,8 @@ const searchSchema = z.object({
   status: z.enum(["pending", "filled", "cancelled", "completed"]).optional(),
   staff: z.string().optional(),
   staffpoint: z.enum(["yes", "no"]).optional(),
+  page: z.coerce.number().optional(),
+  pageSize: z.coerce.number().optional(),
 });
 
 type ShiftSearch = z.infer<typeof searchSchema>;
@@ -65,18 +65,17 @@ export const Route = createFileRoute("/_authenticated/shifts/")({
   component: ShiftsIndex,
 });
 
-const STAFFPOINT_HELP =
-  "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
-
 function ShiftsIndex() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  // Draft filter state — applied explicitly, never live-filtered.
   const [draft, setDraft] = useState<ShiftFilterState>(() => shiftFiltersFromSearch(search));
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [expandedBatchIds, setExpandedBatchIds] = useState<Set<string>>(() => new Set());
 
   const applied = shiftFiltersFromSearch(search);
+  const page = search.page && search.page > 0 ? search.page : 1;
+  const pageSize = resolveShiftFeedPageSize(search.pageSize);
 
   const set = <K extends keyof ShiftFilterState>(key: K, value: ShiftFilterState[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -90,9 +89,9 @@ function ShiftsIndex() {
     queryFn: () => staffApi.list(),
   });
 
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+  const feedQ = useQuery({
     queryKey: [
-      "shifts-list",
+      "shifts-feed",
       applied.from,
       applied.to,
       applied.centres.mode,
@@ -100,22 +99,24 @@ function ShiftsIndex() {
       applied.status,
       applied.staffId,
       applied.staffpoint,
+      page,
+      pageSize,
     ],
-    queryFn: async () => {
-      const rows = await shiftsApi.list({
+    queryFn: () =>
+      shiftsApi.feed({
         from: applied.from || undefined,
         to: applied.to || undefined,
         ...shiftCentreSelectionToApiQuery(applied),
         status: applied.status === "all" ? undefined : applied.status,
         staffId: applied.staffId === "all" ? undefined : applied.staffId,
-      });
-      if (applied.staffpoint === "yes") return rows.filter((r) => r.addedToStaffpoint);
-      if (applied.staffpoint === "no") return rows.filter((r) => !r.addedToStaffpoint);
-      return rows;
-    },
+        staffpoint: applied.staffpoint === "all" ? undefined : applied.staffpoint,
+        page,
+        pageSize,
+      }),
   });
 
-  const rows = data ?? [];
+  const feed = feedQ.data;
+  const items = feed?.items ?? [];
   const hasAppliedFilters = hasActiveShiftFilters(applied);
   const hasDraftFilters = hasActiveShiftFilters(draft);
 
@@ -132,12 +133,12 @@ function ShiftsIndex() {
     onRemove: () => {
       const next = clearShiftFilterChip(applied, chip.id);
       setDraft(next);
-      navigate({ search: shiftFiltersToSearch(next) });
+      navigate({ search: shiftFiltersToSearch(next, { page: 1, pageSize }) });
     },
   }));
 
   function applyFilters(state: ShiftFilterState = draft) {
-    navigate({ search: shiftFiltersToSearch(state) });
+    navigate({ search: shiftFiltersToSearch(state, { page: 1, pageSize }) });
     setMobileFiltersOpen(false);
   }
 
@@ -147,11 +148,20 @@ function ShiftsIndex() {
     setMobileFiltersOpen(false);
   }
 
-  const resultContext = isLoading
+  function toggleBatch(batchId: string) {
+    setExpandedBatchIds((current) => {
+      const next = new Set(current);
+      if (next.has(batchId)) next.delete(batchId);
+      else next.add(batchId);
+      return next;
+    });
+  }
+
+  const resultContext = feedQ.isLoading
     ? "Loading…"
-    : isError
+    : feedQ.isError
       ? "Results unavailable"
-      : shiftResultCountLabel(rows.length);
+      : feedResultCountLabel(feed?.totalItems ?? 0);
 
   const primaryFilters = (
     <>
@@ -225,14 +235,14 @@ function ShiftsIndex() {
     </>
   );
 
+  const emptyState = (
+    <ShiftsEmpty filtered={hasAppliedFilters} onClear={clearFilters} />
+  );
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Shifts"
-        actions={<CreateShiftActions />}
-      />
+      <PageHeader title="Shifts" actions={<CreateShiftActions />} />
 
-      {/* Desktop filters */}
       <div className="hidden md:block">
         <FilterPanel
           advanced={secondaryFilters}
@@ -249,7 +259,6 @@ function ShiftsIndex() {
         </FilterPanel>
       </div>
 
-      {/* Mobile filters */}
       <div className="space-y-1.5 md:hidden">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[13px] text-muted-foreground" aria-live="polite">{resultContext}</p>
@@ -284,7 +293,7 @@ function ShiftsIndex() {
         {chips.length > 0 && <FilterChipBar chips={chips} onClearAll={clearFilters} />}
       </div>
 
-      {isError ? (
+      {feedQ.isError ? (
         <div
           role="alert"
           className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-card px-4 py-3.5 shadow-xs"
@@ -296,167 +305,46 @@ function ShiftsIndex() {
               This is a loading problem, not an empty result. Try again.
             </p>
           </div>
-          <Button size="sm" variant="outline" className="ml-auto" onClick={() => void refetch()} disabled={isFetching}>
-            {isFetching ? "Retrying…" : "Retry"}
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => void feedQ.refetch()} disabled={feedQ.isFetching}>
+            {feedQ.isFetching ? "Retrying…" : "Retry"}
           </Button>
         </div>
       ) : (
         <>
-          {/* Mobile: structured shift cards */}
-          <div className="md:hidden">
-            {isLoading ? (
-              <ListLoading rows={4} label="Loading shifts" />
-            ) : rows.length === 0 ? (
-              <ShiftsEmpty filtered={hasAppliedFilters} onClear={clearFilters} />
-            ) : (
-              <ul className="space-y-2">
-                {rows.map((s) => {
-                  const assignedName = assignedNameOf(s);
-                  const assignee = shiftAssigneeLabel(assignedName, s.status as ShiftStatus);
-                  const quiet = s.status === "completed" || s.status === "cancelled";
-                  return (
-                    <li key={s.id}>
-                      <Link
-                        to="/shifts/$id"
-                        params={{ id: s.id }}
-                        aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}
-                        className={`flex items-start gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-3 shadow-xs transition-colors hover:bg-muted/50 active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${quiet ? "opacity-75" : ""}`}
-                      >
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium tabular-nums">{s.shiftDate}</span>
-                            <StatusBadge status={s.status}>{s.status}</StatusBadge>
-                          </div>
-                          <div className="truncate text-sm text-foreground">{s.centreName}</div>
-                          <div className="text-[13px] tabular-nums text-muted-foreground">
-                            {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
-                            {s.roleNeeded ? ` · ${s.roleNeeded}` : ""}
-                            {s.addedToStaffpoint ? " · Staffpoint" : ""}
-                          </div>
-                          <div
-                            className={
-                              assignee.needsStaff
-                                ? "text-[13px] font-medium text-foreground"
-                                : "text-[13px] text-muted-foreground"
-                            }
-                          >
-                            {assignee.text}
-                          </div>
-                        </div>
-                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <ShiftsFeedList
+            items={items}
+            isLoading={feedQ.isLoading}
+            expandedBatchIds={expandedBatchIds}
+            onToggleBatch={toggleBatch}
+            emptyState={emptyState}
+          />
 
-          {/* Desktop: table */}
-          <div className={`hidden md:block ${dataTable.shell}`}>
-            <div className={dataTable.scroll}>
-              <Table>
-                <TableHeader className={dataTable.header}>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className={dataTable.headerCell}>Centre</TableHead>
-                    <TableHead className={dataTable.headerCell}>Date</TableHead>
-                    <TableHead className={dataTable.headerCell}>Time</TableHead>
-                    <TableHead className={dataTable.headerCell}>Role</TableHead>
-                    <TableHead className={dataTable.headerCell}>Assigned to</TableHead>
-                    <TableHead className={dataTable.headerCell}>
-                      <span className="inline-flex items-center gap-1">
-                        Staffpoint
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              aria-label={`About Staffpoint. ${STAFFPOINT_HELP}`}
-                              className="grid h-4 w-4 place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              <Info className="h-3.5 w-3.5" aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-64">{STAFFPOINT_HELP}</TooltipContent>
-                        </Tooltip>
-                      </span>
-                    </TableHead>
-                    <TableHead className={dataTable.headerCell}>Filled</TableHead>
-                    <TableHead className={dataTable.headerCell}><span className="sr-only">Open</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading && <DataTableLoadingRows rows={6} columns={8} />}
-                  {!isLoading && rows.length === 0 && (
-                    <DataTableEmptyRow columns={8}>
-                      <ShiftsEmpty filtered={hasAppliedFilters} onClear={clearFilters} />
-                    </DataTableEmptyRow>
-                  )}
-                  {!isLoading && rows.map((s) => {
-                    const assignedName = assignedNameOf(s);
-                    const assignee = shiftAssigneeLabel(assignedName, s.status as ShiftStatus);
-                    const quiet = s.status === "completed" || s.status === "cancelled";
-                    return (
-                      <TableRow
-                        key={s.id}
-                        className={`relative ${dataTable.row} ${dataTable.rowInteractive} ${quiet ? "opacity-75" : ""}`}
-                      >
-                        <TableCell className={`${dataTable.cell} max-w-[220px] truncate font-medium`}>
-                          <Link
-                            to="/shifts/$id"
-                            params={{ id: s.id }}
-                            aria-label={`Open shift at ${s.centreName} on ${s.shiftDate}`}
-                            className="after:absolute after:inset-0 focus-visible:outline-none"
-                          >
-                            {s.centreName}
-                          </Link>
-                        </TableCell>
-                        <TableCell className={`${dataTable.cell} tabular-nums`}>{s.shiftDate}</TableCell>
-                        <TableCell className={`${dataTable.cell} ${dataTable.cellMuted} tabular-nums`}>
-                          {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
-                        </TableCell>
-                        <TableCell className={dataTable.cell}>
-                          {s.roleNeeded || <span className={dataTable.cellMuted}>—</span>}
-                        </TableCell>
-                        <TableCell className={dataTable.cell}>
-                          <span className={assignee.needsStaff ? "font-medium text-foreground" : assignedName ? "" : "text-muted-foreground"}>
-                            {assignee.text}
-                          </span>
-                        </TableCell>
-                        <TableCell className={`${dataTable.cell} ${dataTable.cellMuted}`}>
-                          {s.addedToStaffpoint ? "Yes" : "No"}
-                        </TableCell>
-                        <TableCell className={`${dataTable.cell} ${dataTable.cellStatus}`}>
-                          <StatusBadge status={s.status}>{s.status}</StatusBadge>
-                        </TableCell>
-                        <TableCell className={`${dataTable.cell} ${dataTable.cellActions}`}>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          {!feedQ.isLoading && (feed?.totalItems ?? 0) > 0 ? (
+            <ReportPagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={feed?.totalItems ?? 0}
+              hasMore={page < (feed?.totalPages ?? 0)}
+              entityLabel="items"
+              ariaLabel="Shifts feed pagination"
+              pageSizeOptions={SHIFT_FEED_PAGE_SIZE_OPTIONS}
+              onPageChange={(nextPage) =>
+                navigate({ search: shiftFiltersToSearch(applied, { page: nextPage, pageSize }) })
+              }
+              onPageSizeChange={(nextPageSize) =>
+                navigate({
+                  search: shiftFiltersToSearch(applied, {
+                    page: 1,
+                    pageSize: resolveShiftFeedPageSize(nextPageSize),
+                  }),
+                })
+              }
+            />
+          ) : null}
         </>
       )}
     </div>
   );
-}
-
-function assignedNameOf(s: {
-  assignedStaffId?: string | null;
-  assignedLegalName?: string | null;
-  assignedDisplayName?: string | null;
-  assignedUseDisplayName?: boolean | null;
-}) {
-  return s.assignedStaffId && s.assignedLegalName
-    ? displayStaff({
-        legalName: s.assignedLegalName,
-        displayName: s.assignedDisplayName ?? "",
-        useDisplayName: s.assignedUseDisplayName ?? false,
-      })
-    : null;
 }
 
 function ShiftsEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => void }) {
@@ -464,7 +352,7 @@ function ShiftsEmpty({ filtered, onClear }: { filtered: boolean; onClear: () => 
     return (
       <EmptyState
         icon={CalendarClock}
-        title="No shifts match these filters"
+        title="No shifts or batch requests match these filters"
         description="Try a wider date range or a different centre."
         action={
           <Button variant="outline" size="sm" onClick={onClear}>
