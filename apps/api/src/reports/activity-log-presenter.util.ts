@@ -178,6 +178,22 @@ function buildCopy(
       description: reason ?? centreLabel(ctx),
     };
   }
+  if (action === 'batch_request_completed') {
+    return {
+      title: 'Batch Request completed',
+      description: centreLabel(ctx),
+    };
+  }
+  if (action === 'batch_final_confirmation_scheduled') {
+    const recipientEmail =
+      typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
+    return {
+      title: 'Final Centre confirmation scheduled',
+      description: recipientEmail
+        ? `Scheduled to ${recipientEmail}`
+        : centreLabel(ctx),
+    };
+  }
   if (action === 'communication_sent' || action === 'communication_failed') {
     const commType =
       typeof ctx.metadata?.communicationType === 'string'
@@ -198,6 +214,15 @@ function buildCopy(
         description: ctx.centreName
           ? `Progress update ${verb} to ${ctx.centreName}`
           : `Centre progress update ${verb}`,
+      };
+    }
+
+    if (commType === 'batch_confirmation_final') {
+      return {
+        title: `Final Centre confirmation ${verb}`,
+        description: ctx.centreName
+          ? `Final confirmation ${verb} to ${ctx.centreName}`
+          : `Final Centre confirmation ${verb}`,
       };
     }
 

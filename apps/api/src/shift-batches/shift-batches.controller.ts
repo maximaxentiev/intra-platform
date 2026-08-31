@@ -51,6 +51,21 @@ export class ShiftBatchesController {
     return this.shiftBatches.bulkAddChildren(id, dto, user.userId);
   }
 
+  @Get(':id/completion-readiness')
+  getCompletionReadiness(@Param('id') id: string) {
+    return this.shiftBatches.getCompletionReadiness(id);
+  }
+
+  @Post(':id/complete')
+  completeRequest(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shiftBatches.completeRequest(id, user.userId);
+  }
+
+  @Post(':id/final-confirmation/retry')
+  retryFinalConfirmation(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shiftBatches.retryFinalConfirmation(id, user.userId);
+  }
+
   @Post(':id/progress-email/retry')
   retryProgressEmail(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
     return this.shiftBatches.retryProgressEmail(id, user.userId);

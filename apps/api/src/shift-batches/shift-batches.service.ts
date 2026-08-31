@@ -21,6 +21,8 @@ import type {
 } from './dto/shift-batches.dto';
 import { lockOpenShiftBatch } from './shift-batch-centre.util';
 import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-communication.service';
+import { ShiftBatchCompletionReadinessService } from './shift-batch-completion-readiness.service';
+import { ShiftBatchCompletionService } from './shift-batch-completion.service';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -30,6 +32,8 @@ export class ShiftBatchesService {
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly shifts: ShiftsService,
     private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
+    private readonly batchCompletionReadiness: ShiftBatchCompletionReadinessService,
+    private readonly batchCompletion: ShiftBatchCompletionService,
   ) {}
 
   async createWithShifts(
@@ -154,6 +158,8 @@ export class ShiftBatchesService {
 
     const progressEmailStatus =
       await this.batchProgressCommunications.resolveProgressEmailStatus(id);
+    const finalConfirmationStatus =
+      await this.batchCompletion.resolveFinalConfirmationStatus(id);
 
     return {
       id: batch.id,
@@ -163,6 +169,7 @@ export class ShiftBatchesService {
       requestCompletedByUserId: batch.requestCompletedByUserId,
       progressEmailScheduledAt: batch.progressEmailScheduledAt?.toISOString() ?? null,
       progressEmailStatus,
+      finalConfirmationStatus,
       createdByUserId: batch.createdByUserId,
       createdAt: batch.createdAt.toISOString(),
       updatedAt: batch.updatedAt.toISOString(),
@@ -228,6 +235,18 @@ export class ShiftBatchesService {
 
     await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(batchId);
     return result;
+  }
+
+  async getCompletionReadiness(batchId: string) {
+    return this.batchCompletionReadiness.getReadiness(batchId);
+  }
+
+  async completeRequest(batchId: string, actorUserId: string) {
+    return this.batchCompletion.complete(batchId, actorUserId);
+  }
+
+  async retryFinalConfirmation(batchId: string, actorUserId: string) {
+    return this.batchCompletion.retryFinalConfirmation(batchId, actorUserId);
   }
 
   async retryProgressEmail(batchId: string, actorUserId: string) {

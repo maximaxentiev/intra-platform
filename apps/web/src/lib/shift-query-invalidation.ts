@@ -10,6 +10,7 @@ export function invalidateShiftOperationalQueries(
   void qc.invalidateQueries({ queryKey: ["shift-comments", shiftId] });
   if (batchId) {
     void qc.invalidateQueries({ queryKey: ["shift-batch", batchId] });
+    void qc.invalidateQueries({ queryKey: ["shift-batch-completion-readiness", batchId] });
   }
   void qc.invalidateQueries({ queryKey: ["shifts-feed"] });
 }

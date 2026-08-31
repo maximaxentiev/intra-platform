@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { BatchCompleteRequestAction } from "@/components/shifts/BatchCompleteRequestAction";
+import { BatchFinalConfirmationStatus } from "@/components/shifts/BatchFinalConfirmationStatus";
 import { BatchProgressEmailStatus } from "@/components/shifts/BatchProgressEmailStatus";
 import { BatchWorkspaceChildCard } from "@/components/shifts/BatchWorkspaceChildCard";
 import { DetailLoading } from "@/components/DetailLoading";
@@ -55,6 +57,14 @@ function BatchWorkspace() {
         }
       />
 
+      {displayState !== "completed" ? (
+        <BatchCompleteRequestAction
+          batchId={workspace.id}
+          displayReady={displayState === "ready"}
+          requestCompletedAt={workspace.requestCompletedAt}
+        />
+      ) : null}
+
       <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
@@ -71,7 +81,18 @@ function BatchWorkspace() {
             <BatchProgressEmailStatus
               batchId={workspace.id}
               status={workspace.progressEmailStatus}
+              requestCompletedAt={workspace.requestCompletedAt}
             />
+            <BatchFinalConfirmationStatus
+              batchId={workspace.id}
+              status={workspace.finalConfirmationStatus}
+              requestCompletedAt={workspace.requestCompletedAt}
+            />
+            {workspace.requestCompletedAt ? (
+              <p className="text-sm text-muted-foreground">
+                Completed {new Date(workspace.requestCompletedAt).toLocaleString()}
+              </p>
+            ) : null}
           </div>
           <p className="text-sm text-muted-foreground">
             {workspace.shifts.length} shift{workspace.shifts.length === 1 ? "" : "s"} total

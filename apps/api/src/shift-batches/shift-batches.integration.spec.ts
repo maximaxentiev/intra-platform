@@ -13,8 +13,10 @@ import { createMockShiftReminderService } from '../shifts/shift-reminder-test.ut
 import { createMockShiftUpdateCommunicationService } from '../shifts/shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from '../shifts/shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
-import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-communication.service';
-import { AutomatedCommunicationsService } from '../automated-communications/automated-communications.service';
+import {
+  createMockShiftBatchCompletionReadinessService,
+  createMockShiftBatchCompletionService,
+} from './shift-batch-completion-test.util';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
 import { ShiftsService } from '../shifts/shifts.service';
@@ -74,15 +76,13 @@ describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
     db = drizzle(pool, { schema });
     await ensurePlatformAuditTable(pool);
     shiftsService = buildShiftsService(db);
-    const batchProgress = new ShiftBatchProgressCommunicationService(
+    batchesService = new ShiftBatchesService(
       db,
-      {
-        schedule: vi.fn(),
-        enqueueScheduledCommunication: vi.fn(),
-      } as unknown as AutomatedCommunicationsService,
-      new PlatformAuditService(db),
+      shiftsService,
+      createMockShiftBatchProgressCommunicationService(),
+      createMockShiftBatchCompletionReadinessService(),
+      createMockShiftBatchCompletionService(),
     );
-    batchesService = new ShiftBatchesService(db, shiftsService, batchProgress);
 
     await db.delete(shifts).where(inArray(shifts.centreId, [FIXTURE.centreA, FIXTURE.centreB]));
     await db.delete(shiftBatches).where(inArray(shiftBatches.centreId, [FIXTURE.centreA, FIXTURE.centreB]));

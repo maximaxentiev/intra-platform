@@ -81,6 +81,30 @@ export type BatchProgressEmailStatusDto =
   | { state: 'failed'; reason: string; canRetry: true }
   | { state: 'blocked'; reason: string; canRetry: true };
 
+export type BatchFinalConfirmationStatusDto =
+  | { state: 'none' }
+  | { state: 'scheduled'; scheduledAt: string }
+  | { state: 'sending' }
+  | { state: 'sent'; sentAt: string }
+  | { state: 'failed'; reason: string; canRetry: true };
+
+export type BatchCompletionReadinessDto = {
+  ready: boolean;
+  primaryContactEmail: string | null;
+  activeShiftCount: number;
+  fulfilledShiftCount: number;
+  blockers: Array<{
+    code: string;
+    message: string;
+    shiftId?: string;
+    shiftDate?: string;
+    startTime?: string;
+    endTime?: string;
+    carerName?: string | null;
+    carerStaffId?: string | null;
+  }>;
+};
+
 export type ShiftBatchWorkspaceDto = {
   id: string;
   centreId: string;
@@ -89,6 +113,7 @@ export type ShiftBatchWorkspaceDto = {
   requestCompletedByUserId: string | null;
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatusDto;
+  finalConfirmationStatus: BatchFinalConfirmationStatusDto;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;

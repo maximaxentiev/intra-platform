@@ -580,6 +580,30 @@ export type BatchProgressEmailStatus =
   | { state: "failed"; reason: string; canRetry: true }
   | { state: "blocked"; reason: string; canRetry: true };
 
+export type BatchFinalConfirmationStatus =
+  | { state: "none" }
+  | { state: "scheduled"; scheduledAt: string }
+  | { state: "sending" }
+  | { state: "sent"; sentAt: string }
+  | { state: "failed"; reason: string; canRetry: true };
+
+export type BatchCompletionReadiness = {
+  ready: boolean;
+  primaryContactEmail: string | null;
+  activeShiftCount: number;
+  fulfilledShiftCount: number;
+  blockers: Array<{
+    code: string;
+    message: string;
+    shiftId?: string;
+    shiftDate?: string;
+    startTime?: string;
+    endTime?: string;
+    carerName?: string | null;
+    carerStaffId?: string | null;
+  }>;
+};
+
 export type ShiftBatchWorkspace = {
   id: string;
   centreId: string;
@@ -588,6 +612,7 @@ export type ShiftBatchWorkspace = {
   requestCompletedByUserId: string | null;
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatus;
+  finalConfirmationStatus: BatchFinalConfirmationStatus;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -606,6 +631,14 @@ export type CreateBatchChildShiftInput = {
 
 export const shiftBatchesApi = {
   getWorkspace: (id: string) => api.get<ShiftBatchWorkspace>(`/shift-batches/${id}`),
+  getCompletionReadiness: (id: string) =>
+    api.get<BatchCompletionReadiness>(`/shift-batches/${id}/completion-readiness`),
+  completeRequest: (id: string) =>
+    api.post<{ completed: boolean; scheduledCommunicationId: string | null }>(
+      `/shift-batches/${id}/complete`,
+    ),
+  retryFinalConfirmation: (id: string) =>
+    api.post<{ scheduled: boolean }>(`/shift-batches/${id}/final-confirmation/retry`),
   retryProgressEmail: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/progress-email/retry`),
   createWithShifts: (payload: { centreId: string; shifts: CreateBatchChildShiftInput[] }) =>

@@ -7,9 +7,11 @@ import { shiftBatchesApi } from "@/lib/db";
 export function BatchProgressEmailStatus({
   batchId,
   status,
+  requestCompletedAt,
 }: {
   batchId: string;
   status: BatchProgressEmailStatus;
+  requestCompletedAt?: string | null;
 }) {
   const qc = useQueryClient();
   const retryM = useMutation({
@@ -23,7 +25,7 @@ export function BatchProgressEmailStatus({
     },
   });
 
-  if (status.state === "none") return null;
+  if (status.state === "none" || requestCompletedAt) return null;
 
   if (status.state === "scheduled") {
     return (

@@ -63,7 +63,13 @@ export class BatchProgress70CommunicationProcessor implements CommunicationProce
 
     const batch = batchRows[0];
     if (!batch) return { kind: 'stale' };
-    if (batch.requestCompletedAt) return { kind: 'stale' };
+    if (batch.requestCompletedAt) {
+      return {
+        kind: 'skipped',
+        code: 'batch_completed_superseded',
+        reason: 'Batch request was completed; progress update no longer applies.',
+      };
+    }
     if (context.recipientEntityId && context.recipientEntityId !== batch.centreId) {
       return { kind: 'stale' };
     }

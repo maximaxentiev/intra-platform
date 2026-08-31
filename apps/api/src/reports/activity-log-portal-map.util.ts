@@ -61,5 +61,6 @@ export function communicationTypeLabel(type: string): string {
   if (type === 'shift_cancellation_centre') return 'Shift cancellation (centre)';
   if (type === 'shift_cancellation_carer') return 'Shift cancellation (carer)';
   if (type === 'batch_progress_70') return 'Centre progress update';
+  if (type === 'batch_confirmation_final') return 'Final Batch confirmation';
   return type.replace(/_/g, ' ');
 }
