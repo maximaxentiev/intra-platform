@@ -16,6 +16,7 @@ const resendDialog = read("components/shifts/ShiftResendConfirmationDialog.tsx")
 const unassignDialog = read("components/shifts/ShiftUnassignDialog.tsx");
 const cancelDialog = read("components/shifts/ShiftCancelDialog.tsx");
 const activityPanel = read("components/shifts/ShiftActivityLogPanel.tsx");
+const availableStaffList = read("components/shifts/ShiftAvailableStaffList.tsx");
 
 describe("shift cancellation reason", () => {
   it("accepts trimmed non-empty reasons", () => {
@@ -103,9 +104,10 @@ describe("shift detail layout", () => {
   });
 
   it("uses a desktop grid row for available staff", () => {
-    expect(detail).toContain("md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]");
-    expect(detail).toContain("formatAvailableStaffPriorityLine(s)");
-    expect(detail).toContain("md:hidden");
+    expect(detail).toContain("ShiftAvailableStaffList");
+    expect(availableStaffList).toContain("md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]");
+    expect(availableStaffList).toContain("formatAvailableStaffPriorityLine(s)");
+    expect(availableStaffList).toContain("md:hidden");
   });
 
   it("wires communication dialogs instead of immediate send/unassign", () => {

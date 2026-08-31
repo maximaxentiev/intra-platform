@@ -191,5 +191,6 @@ export function batchChildAssigneeLabel(shift: ShiftBatchChildSummary): string |
 }
 
 export function canInlineEditBatchChild(status: ShiftStatus, assignedStaffId: string | null): boolean {
-  return status === "pending" && !assignedStaffId;
+  void assignedStaffId;
+  return status === "pending" || status === "filled";
 }

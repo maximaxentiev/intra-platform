@@ -80,6 +80,9 @@ function BatchWorkspace() {
             key={shift.id}
             shift={shift}
             index={index}
+            batchId={workspace.id}
+            requestCompletedAt={workspace.requestCompletedAt}
+            centreName={workspace.centreName}
             expanded={expandedShiftId === shift.id}
             onToggle={() =>
               setExpandedShiftId((current) => (current === shift.id ? null : shift.id))

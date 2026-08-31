@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { MoreHorizontal, Trash2, UserCheck } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { DetailLoading } from "@/components/DetailLoading";
@@ -28,9 +27,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink, ConfirmDestructiveDialog, EmptyState, PropertyList, SectionCard } from "@/components/ui-kit";
 import { formatShiftRoleLabel, shiftRoleEditOptions } from "@/lib/shift-role-ui";
 import {
-  formatAvailableStaffPriorityLine,
-  isAvailableStaffPriorityBoundary,
-} from "@/lib/shift-matching-priority-ui";
+  ShiftAssignedCarerBar,
+  ShiftAvailableStaffList,
+} from "@/components/shifts/ShiftAvailableStaffList";
 import {
   detectShiftEditCommunicationChanges,
   hasShiftEditCommunicationChanges,
@@ -489,7 +488,9 @@ function ShiftDetail() {
       const result = await shiftsApi.resendAssignmentConfirmation(id, recipients);
       const message = shiftResendFeedbackMessage(result.notifications);
       const partialFailure =
-        (result.notifications.centre.attempted && !result.notifications.centre.sent) ||
+        (result.notifications.centre.attempted &&
+          !result.notifications.centre.sent &&
+          !result.notifications.centre.deferred) ||
         (result.notifications.carer.attempted && !result.notifications.carer.sent);
       if (partialFailure) {
         toast.warning(message);
@@ -512,8 +513,10 @@ function ShiftDetail() {
       const message = shiftUnassignFeedbackMessage(result.notifications);
       const partialFailure =
         result.notifications &&
-        ((result.notifications.centre?.attempted && !result.notifications.centre.sent) ||
-          (result.notifications.carer?.attempted && !result.notifications.carer.sent));
+        ((result.notifications.centre?.attempted &&
+          !result.notifications.centre.sent &&
+          !result.notifications.centre.deferred) ||
+          (result.notifications.carer?.attempted && !result.notifications.carer?.sent));
       if (partialFailure) {
         toast.warning(message);
       } else {
@@ -550,7 +553,6 @@ function ShiftDetail() {
 
   const status = shift.status as ShiftStatus;
   const isHistorical = status === "completed" || status === "cancelled";
-  const otherCandidates = availableList.filter((s) => s.id !== shift.assignedStaffId);
 
   return (
     <div className="space-y-6">
@@ -732,39 +734,13 @@ function ShiftDetail() {
 
           {assignedName && (
             <SectionCard id="assignment" title="Assignment" padded={false}>
-              <div className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-success-soft/60 px-4 py-3">
-                <UserCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Assigned Carer
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">{assignedName}</p>
-                </div>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  {status === "filled" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={resendingConfirmations}
-                      onClick={() => setResendDialogOpen(true)}
-                    >
-                      Resend confirmation
-                    </Button>
-                  )}
-                  {!isHistorical && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={unassigning}
-                      onClick={() => setUnassignDialogOpen(true)}
-                    >
-                      Unassign
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <ShiftAssignedCarerBar
+                assignedName={assignedName}
+                resendDisabled={resendingConfirmations || status !== "filled"}
+                unassignDisabled={unassigning || isHistorical}
+                onResend={() => setResendDialogOpen(true)}
+                onUnassign={() => setUnassignDialogOpen(true)}
+              />
             </SectionCard>
           )}
 
@@ -806,92 +782,15 @@ function ShiftDetail() {
                   description="This shift closed without an assignment."
                 />
               </div>
-            ) : otherCandidates.length === 0 ? (
-              <div className="px-4 py-3.5">
-                <EmptyState
-                  title={assignedName ? "No other eligible staff" : "No eligible staff found for this shift."}
-                  description={
-                    assignedName
-                      ? "Nobody else currently satisfies all assignment requirements."
-                      : "Availability, scheduling conflicts, centre restrictions, account status, role, and document compliance are considered automatically."
-                  }
-                  action={
-                    !assignedName ? (
-                      <Button asChild variant="outline" size="sm">
-                        <Link to="/availability">Team availability</Link>
-                      </Button>
-                    ) : undefined
-                  }
-                  className="text-left"
-                />
-              </div>
             ) : (
-              <ul className="divide-y divide-border/60">
-                {otherCandidates.map((s, index) => {
-                  const previous = index > 0 ? otherCandidates[index - 1] : undefined;
-                  const showPriorityBoundary = isAvailableStaffPriorityBoundary(previous, s);
-                  const staffName = displayStaff(s);
-
-                  return (
-                    <li
-                      key={s.id}
-                      className={`transition-colors hover:bg-muted/40 motion-reduce:transition-none${showPriorityBoundary ? " border-t border-border/80" : ""}`}
-                    >
-                      <div className="hidden items-center gap-4 px-4 py-2.5 md:grid md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]">
-                        <p className="truncate text-sm font-medium text-foreground">{staffName}</p>
-                        <p className="min-w-0 text-[13px] text-muted-foreground">
-                          {formatAvailableStaffPriorityLine(s)}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground">{s.role || "No role"}</p>
-                        <label className="flex cursor-pointer select-none items-center gap-2 text-[13px]">
-                          <Checkbox
-                            checked={s.contacted}
-                            onCheckedChange={() => toggleContacted(s.id, s.contacted)}
-                            aria-label={`Mark ${staffName} as contacted`}
-                          />
-                          Contacted
-                        </label>
-                        <Button
-                          size="sm"
-                          className="justify-self-end"
-                          disabled={assignConfirmOpen || assigningStaffId != null}
-                          onClick={() => openAssignConfirm(s)}
-                          aria-label={`Assign ${staffName} to this shift`}
-                        >
-                          Assign
-                        </Button>
-                      </div>
-
-                      <div className="space-y-3 px-4 py-3 md:hidden">
-                        <p className="text-sm font-medium text-foreground">{staffName}</p>
-                        <p className="text-[13px] text-muted-foreground">
-                          {formatAvailableStaffPriorityLine(s)}
-                        </p>
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-[13px] text-muted-foreground">{s.role || "No role"}</p>
-                          <label className="flex cursor-pointer select-none items-center gap-2 text-[13px]">
-                            <Checkbox
-                              checked={s.contacted}
-                              onCheckedChange={() => toggleContacted(s.id, s.contacted)}
-                              aria-label={`Mark ${staffName} as contacted`}
-                            />
-                            Contacted
-                          </label>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="w-full sm:w-auto"
-                          disabled={assignConfirmOpen || assigningStaffId != null}
-                          onClick={() => openAssignConfirm(s)}
-                          aria-label={`Assign ${staffName} to this shift`}
-                        >
-                          Assign
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <ShiftAvailableStaffList
+                candidates={availableList}
+                assignedStaffId={shift.assignedStaffId}
+                assignedName={assignedName}
+                assignDisabled={assignConfirmOpen || assigningStaffId != null}
+                onToggleContacted={toggleContacted}
+                onAssign={openAssignConfirm}
+              />
             )}
           </SectionCard>
         </div>
@@ -911,6 +810,7 @@ function ShiftDetail() {
         }}
         details={assignConfirmDetails}
         confirming={assigningStaffId != null}
+        batchCentreDeferred={batchCentreDeferred}
         onConfirm={() => void confirmAssignStaff()}
       />
 

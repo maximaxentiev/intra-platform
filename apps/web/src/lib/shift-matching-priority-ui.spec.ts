@@ -59,7 +59,9 @@ describe("shift matching priority UI helpers", () => {
 describe("shift detail available staff priority presentation", () => {
   it("renders the priority line beneath each staff member", () => {
     const page = readFileSync(join(webRoot, "routes/_authenticated/shifts.$id.tsx"), "utf8");
-    expect(page).toContain("formatAvailableStaffPriorityLine");
-    expect(page).toContain("isAvailableStaffPriorityBoundary");
+    const list = readFileSync(join(webRoot, "components/shifts/ShiftAvailableStaffList.tsx"), "utf8");
+    expect(page).toContain("ShiftAvailableStaffList");
+    expect(list).toContain("formatAvailableStaffPriorityLine");
+    expect(list).toContain("isAvailableStaffPriorityBoundary");
   });
 });

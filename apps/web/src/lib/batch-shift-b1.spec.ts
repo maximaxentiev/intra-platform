@@ -149,7 +149,6 @@ describe("Batch Shift Requests Phase B1 UI", () => {
   const batchWorkspace = read("routes/_authenticated/shifts.batches.$id.tsx");
   const childCard = read("components/shifts/BatchWorkspaceChildCard.tsx");
   const createActions = read("components/shifts/CreateShiftActions.tsx");
-  const assignment = read("../../api/src/shifts/shift-assignment-confirmation.service.ts");
 
   it("offers individual and batch create choices without making batch the default", () => {
     expect(createActions).toContain('to="/shifts/new"');
@@ -180,18 +179,16 @@ describe("Batch Shift Requests Phase B1 UI", () => {
     expect(batchCreate).not.toContain("Complete Request");
   });
 
-  it("loads workspace from one batch request and lazy-loads comments on expand", () => {
+  it("loads workspace from one batch request and lazy-loads operational data on expand", () => {
     expect(batchWorkspace).toContain('queryKey: ["shift-batch", id]');
     expect(batchWorkspace).not.toContain("availableStaff");
     expect(batchWorkspace).not.toContain("ShiftActivityLogPanel");
-    expect(childCard).toContain("<ShiftComments shiftId={shift.id} />");
-    expect(childCard).toContain("canInlineEditBatchChild");
-    expect(childCard).not.toContain("availableStaff");
-    expect(childCard).not.toContain("Resend confirmation");
+    expect(childCard).toContain("BatchWorkspaceExpandedChild");
+    expect(childCard).not.toContain("ShiftComments");
+    expect(read("components/shifts/BatchWorkspaceExpandedChild.tsx")).toContain("ShiftResendConfirmationDialog");
   });
 
   it("does not add premature batch communication behavior", () => {
-    expect(assignment).not.toContain("batchId");
     expect(batchWorkspace).not.toContain("Complete Request");
     expect(batchWorkspace).not.toContain("70%");
     expect(batchCreate).not.toContain("send-assignment-confirmation");

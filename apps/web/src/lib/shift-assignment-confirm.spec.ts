@@ -53,9 +53,10 @@ describe("ops shift assignment confirmation UI", () => {
   it("uses structured assign response and resend endpoint", () => {
     const db = readSrc("lib/db.ts");
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
+    const staffList = readSrc("components/shifts/ShiftAvailableStaffList.tsx");
     expect(db).toContain("ShiftAssignResponse");
     expect(page).toContain("shiftAssignmentFeedbackMessage");
-    expect(page).toContain("Resend confirmation");
+    expect(staffList).toContain("Resend confirmation");
     expect(page).toContain("assigningStaffId");
   });
 
@@ -68,8 +69,8 @@ describe("ops shift assignment confirmation UI", () => {
     expect(dialog).toContain("Date");
     expect(dialog).toContain("Time");
     expect(dialog).toContain("Role required");
-    expect(dialog).toContain("existing assignment");
-    expect(dialog).toContain("confirmation communications");
+    expect(dialog).toContain("batchCentreDeferred");
+    expect(dialog).toContain("Centre confirmation will be sent through the Batch Request");
   });
 
   it("keeps dialog open on failure and closes only after successful assign", () => {
@@ -94,7 +95,7 @@ describe("ops shift assignment confirmation UI", () => {
 
   it("does not call assign API from Assign button directly", () => {
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
-    expect(page).toContain("onClick={() => openAssignConfirm(s)}");
+    expect(page).toContain("onAssign={openAssignConfirm}");
     expect(page).not.toMatch(/onClick=\{\(\) => assignStaff\(/);
     expect(page).not.toMatch(/onClick=\{\(\) => void assignStaff\(/);
   });
@@ -113,7 +114,9 @@ describe("ops shift assignment confirmation UI", () => {
 
   it("keeps matching priority display unchanged in staff list", () => {
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
-    expect(page).toContain("formatAvailableStaffPriorityLine(s)");
-    expect(page).toContain("isAvailableStaffPriorityBoundary");
+    const list = readSrc("components/shifts/ShiftAvailableStaffList.tsx");
+    expect(page).toContain("ShiftAvailableStaffList");
+    expect(list).toContain("formatAvailableStaffPriorityLine(s)");
+    expect(list).toContain("isAvailableStaffPriorityBoundary");
   });
 });

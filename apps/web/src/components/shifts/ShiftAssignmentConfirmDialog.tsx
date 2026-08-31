@@ -16,6 +16,8 @@ type Props = {
   details: ShiftAssignmentConfirmDetails | null;
   confirming: boolean;
   onConfirm: () => void;
+  /** When Centre confirmation is deferred to an open Batch Request. */
+  batchCentreDeferred?: boolean;
 };
 
 export function ShiftAssignmentConfirmDialog({
@@ -24,6 +26,7 @@ export function ShiftAssignmentConfirmDialog({
   details,
   confirming,
   onConfirm,
+  batchCentreDeferred = false,
 }: Props) {
   return (
     <Dialog
@@ -36,8 +39,17 @@ export function ShiftAssignmentConfirmDialog({
         <DialogHeader>
           <DialogTitle>Confirm Staff assignment</DialogTitle>
           <DialogDescription>
-            Confirming will assign this Staff member to the Shift and send the existing assignment
-            confirmation communications.
+            {batchCentreDeferred ? (
+              <>
+                Confirming will assign this Staff member to the Shift. The Carer will receive a
+                confirmation. Centre confirmation will be sent through the Batch Request.
+              </>
+            ) : (
+              <>
+                Confirming will assign this Staff member to the Shift and send the existing
+                assignment confirmation communications.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 

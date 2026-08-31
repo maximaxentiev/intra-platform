@@ -17,10 +17,11 @@ describe('ops shift assignment confirmation UI', () => {
   it('uses structured assign response and resend endpoint', () => {
     const db = readFileSync(join(webRoot, 'lib/db.ts'), 'utf8');
     const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
+    const staffList = readFileSync(join(webRoot, 'components/shifts/ShiftAvailableStaffList.tsx'), 'utf8');
     expect(db).toContain('ShiftAssignResponse');
     expect(db).toContain('send-assignment-confirmation');
     expect(page).toContain('shiftAssignmentFeedbackMessage');
-    expect(page).toContain('Resend confirmation');
+    expect(staffList).toContain('Resend confirmation');
     expect(page).toContain('assigningStaffId');
   });
 });
@@ -34,8 +35,10 @@ describe('ops shift smart matching UI', () => {
 
   it("uses a desktop grid for available staff rows", () => {
     const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
-    expect(page).toContain('md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]');
-    expect(page).toContain('formatAvailableStaffPriorityLine');
+    const list = readFileSync(join(webRoot, 'components/shifts/ShiftAvailableStaffList.tsx'), 'utf8');
+    expect(page).toContain('ShiftAvailableStaffList');
+    expect(list).toContain('md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]');
+    expect(list).toContain('formatAvailableStaffPriorityLine');
     expect(page).not.toContain('Eligible based on availability, conflicts, centre restrictions and compliance.');
   });
 

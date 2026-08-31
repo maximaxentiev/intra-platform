@@ -6,13 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { SectionCard } from "@/components/ui-kit";
 import { toast } from "sonner";
 
-export function ShiftComments({ shiftId }: { shiftId: string }) {
+export function ShiftComments({ shiftId, enabled = true }: { shiftId: string; enabled?: boolean }) {
   const qc = useQueryClient();
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [composing, setComposing] = useState(false);
 
   const { data: comments } = useQuery({
+    enabled: enabled && Boolean(shiftId),
     queryKey: ["shift-comments", shiftId],
     queryFn: () => shiftsApi.comments(shiftId),
   });
