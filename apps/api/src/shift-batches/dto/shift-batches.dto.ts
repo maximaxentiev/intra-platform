@@ -111,6 +111,15 @@ export type ShiftBatchWorkspaceDto = {
   centreName: string;
   requestCompletedAt: string | null;
   requestCompletedByUserId: string | null;
+  confirmationRevision: number;
+  pendingChangeRevision: number;
+  lastConfirmationScheduledAt: string | null;
+  confirmationUiState:
+    | 'open'
+    | 'ready'
+    | 'completed'
+    | 'updates_required'
+    | 'ready_to_send_updates';
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatusDto;
   finalConfirmationStatus: BatchFinalConfirmationStatusDto;

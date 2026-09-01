@@ -627,6 +627,15 @@ export type ShiftBatchWorkspace = {
   centreName: string;
   requestCompletedAt: string | null;
   requestCompletedByUserId: string | null;
+  confirmationRevision: number;
+  pendingChangeRevision: number;
+  lastConfirmationScheduledAt: string | null;
+  confirmationUiState:
+    | "open"
+    | "ready"
+    | "completed"
+    | "updates_required"
+    | "ready_to_send_updates";
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatus;
   finalConfirmationStatus: BatchFinalConfirmationStatus;
@@ -634,6 +643,24 @@ export type ShiftBatchWorkspace = {
   createdAt: string;
   updatedAt: string;
   shifts: ShiftBatchChildSummary[];
+};
+
+export type BatchUpdateReadiness = {
+  ready: boolean;
+  stale: boolean;
+  confirmationRevision: number;
+  pendingChangeRevision: number;
+  primaryContactEmail: string | null;
+  activeShiftCount: number;
+  fulfilledShiftCount: number;
+  detectedChanges: Array<{
+    id: string;
+    shiftId: string;
+    shiftLabel: string;
+    summary: string;
+    defaultSelected: boolean;
+  }>;
+  blockers: Array<{ code: string; message: string }>;
 };
 
 export type CreateBatchChildShiftInput = {
@@ -658,6 +685,15 @@ export const shiftBatchesApi = {
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/final-confirmation/retry`),
   retryProgressEmail: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/progress-email/retry`),
+  getUpdateReadiness: (id: string) =>
+    api.get<BatchUpdateReadiness>(`/shift-batches/${id}/update-readiness`),
+  sendUpdatesConfirmation: (id: string, selectedChangeIds: string[]) =>
+    api.post<{ scheduled: boolean; scheduledCommunicationId: string | null }>(
+      `/shift-batches/${id}/send-updates-confirmation`,
+      { selectedChangeIds },
+    ),
+  retryUpdateConfirmation: (id: string) =>
+    api.post<{ scheduled: boolean }>(`/shift-batches/${id}/update-confirmation/retry`),
   getBatchActivity: (id: string, page = 1, pageSize = 10) =>
     api.get<BatchActivityResponse>(`/shift-batches/${id}/activity`, { page, pageSize }),
   createWithShifts: (payload: { centreId: string; shifts: CreateBatchChildShiftInput[] }) =>

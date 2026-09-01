@@ -21,7 +21,7 @@ const STAFFPOINT_HELP =
   "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
 
 const draftFieldClass =
-  "border-primary/15 bg-primary-soft text-foreground focus-visible:border-primary/30 focus-visible:ring-primary/20";
+  "border-border/70 bg-white text-foreground focus-visible:border-primary/30 focus-visible:ring-primary/20";
 
 export function BatchDraftShiftRow({
   index,
@@ -87,7 +87,7 @@ export function BatchDraftShiftRow({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start">
         <div className="space-y-1.5">
           <Label htmlFor={`batch-date-${row.key}`}>Date *</Label>
           <Input
@@ -174,12 +174,12 @@ export function BatchDraftShiftRow({
           </Select>
         </div>
 
-        <div className="space-y-1.5 md:space-y-0">
-          <Label className="sr-only md:not-sr-only md:mb-1.5 md:block md:opacity-0">Notes</Label>
+        <div className="flex h-9 flex-col justify-end space-y-1.5">
+          <Label className="leading-none">Notes</Label>
           <Button
             type="button"
             variant="outline"
-            className={cn("h-9 w-full border-primary/15 bg-primary-soft md:w-auto", draftFieldClass)}
+            className={cn("h-9 w-full border-border/70 bg-white md:w-auto", draftFieldClass)}
             aria-expanded={row.detailsOpen}
             onClick={() => set("detailsOpen", !row.detailsOpen)}
           >

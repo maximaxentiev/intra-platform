@@ -69,7 +69,7 @@ export function buildBatchConfirmationFinalEmailContent(params: {
   return { subject, html, text };
 }
 
-function renderAssignmentBlockHtml(
+export function renderAssignmentBlockHtml(
   shift: BatchFinalConfirmationShiftBlock,
   shiftNumber: number,
   withSeparator: boolean,

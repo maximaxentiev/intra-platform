@@ -16,6 +16,7 @@ export class ShiftCommunicationPolicyService {
       .select({
         batchId: shifts.batchId,
         requestCompletedAt: shiftBatches.requestCompletedAt,
+        pendingChangeRevision: shiftBatches.pendingChangeRevision,
       })
       .from(shifts)
       .leftJoin(shiftBatches, eq(shifts.batchId, shiftBatches.id))
@@ -28,6 +29,7 @@ export class ShiftCommunicationPolicyService {
     return resolveShiftCommunicationPolicyFromRow({
       batchId: row.batchId,
       requestCompletedAt: row.requestCompletedAt,
+      pendingChangeRevision: row.pendingChangeRevision ?? 0,
     });
   }
 }

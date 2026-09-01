@@ -5,8 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionCard } from "@/components/ui-kit";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-export function ShiftComments({ shiftId, enabled = true }: { shiftId: string; enabled?: boolean }) {
+export function ShiftComments({
+  shiftId,
+  enabled = true,
+  inputClassName,
+}: {
+  shiftId: string;
+  enabled?: boolean;
+  inputClassName?: string;
+}) {
   const qc = useQueryClient();
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -70,7 +79,10 @@ export function ShiftComments({ shiftId, enabled = true }: { shiftId: string; en
               autoFocus
               aria-label="Internal comment"
               placeholder="Add a comment about this shift..."
-              className="text-foreground placeholder:text-muted-foreground"
+              className={cn(
+                "bg-white text-foreground placeholder:text-muted-foreground",
+                inputClassName,
+              )}
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />

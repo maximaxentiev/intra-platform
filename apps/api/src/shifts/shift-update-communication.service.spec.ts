@@ -20,7 +20,16 @@ const changes: ShiftCommunicationChange[] = [
 
 function mockDb() {
   const centreContacts = [{ email: 'centre@example.test' }];
-  const centreRows = [{ name: 'Sunshine Centre' }];
+  const centreRows = [{ name: 'Sunshine Centre', notes: '' }];
+  const shiftRows = [
+    {
+      shiftDate: '2026-08-29',
+      startTime: '09:00:00',
+      endTime: '17:00:00',
+      roleNeeded: 'ECE',
+      shiftConfirmationNotes: '',
+    },
+  ];
   const staffRows = [
     {
       legalName: 'Jane Doe',
@@ -42,7 +51,7 @@ function mockDb() {
     return c;
   }
 
-  const responses = [centreRows, staffRows, centreContacts];
+  const responses = [centreRows, shiftRows, staffRows, centreContacts];
   let index = 0;
 
   return {
@@ -65,6 +74,7 @@ function createMockCommunicationPolicy() {
     resolveForShift: vi.fn().mockResolvedValue({
       batchId: null,
       batchRequestCompleted: false,
+      batchConfirmationStale: false,
       centreCommunicationDeferred: false,
       centreDeferReason: null,
     }),

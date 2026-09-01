@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,6 +8,7 @@ import { dataTable, DataTableEmptyRow, DataTableLoadingRows } from "@/components
 import {
   batchFeedStateLabel,
   formatBatchFeedDateLabel,
+  formatBatchFeedProgressLabel,
 } from "@/lib/shifts-feed-ui";
 import { displayStaff, fmtTime, type ShiftFeedItem, type ShiftFeedShiftSummary, type ShiftStatus } from "@/lib/db";
 import { shiftAssigneeLabel } from "@/lib/shifts-list-ui";
@@ -191,7 +192,20 @@ function BatchDesktopRows({
 
   return (
     <>
-      <TableRow className="border-primary/15 bg-primary/[0.04] hover:bg-primary/[0.06]">
+      <TableRow
+        className="cursor-pointer border-primary/15 bg-primary/[0.04] hover:bg-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        tabIndex={0}
+        role="button"
+        aria-expanded={expanded}
+        aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
+        onClick={onToggle}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggle();
+          }
+        }}
+      >
         <TableCell className={`${dataTable.cell} max-w-[220px] py-5 font-semibold`}>
           {item.batch.centreName}
         </TableCell>
@@ -203,28 +217,14 @@ function BatchDesktopRows({
             Batch Request
           </span>
         </TableCell>
-        <TableCell className={`${dataTable.cell} py-5`} colSpan={3}>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={batchStatus}>{batchFeedStateLabel(item.batch.displayState)}</StatusBadge>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-expanded={expanded}
-              aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
-              onClick={onToggle}
-            >
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-            </Button>
-          </div>
+        <TableCell className={`${dataTable.cell} py-5 text-muted-foreground`} colSpan={3}>
+          {formatBatchFeedProgressLabel(item)}
         </TableCell>
-        <TableCell className={`${dataTable.cell} py-5`} />
+        <TableCell className={`${dataTable.cell} ${dataTable.cellStatus} py-5`}>
+          <StatusBadge status={batchStatus}>{batchFeedStateLabel(item.batch.displayState)}</StatusBadge>
+        </TableCell>
         <TableCell className={`${dataTable.cell} ${dataTable.cellActions} py-5`}>
-          <Button asChild size="sm" className="relative z-10">
+          <Button asChild size="sm" className="relative z-10" onClick={(event) => event.stopPropagation()}>
             <Link to="/shifts/batches/$id" params={{ id: item.batch.id }}>
               Open batch
             </Link>
@@ -305,7 +305,20 @@ function BatchMobileCard({
 
   return (
     <li className="rounded-xl border border-primary/15 bg-primary/[0.04] shadow-xs">
-      <div className="flex flex-col gap-3 px-3.5 py-4">
+      <div
+        className="flex cursor-pointer flex-col gap-3 px-3.5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
+        onClick={onToggle}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggle();
+          }
+        }}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-base font-semibold text-foreground">{item.batch.centreName}</span>
           <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
@@ -316,19 +329,17 @@ function BatchMobileCard({
           <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-2 py-0.5 text-xs font-medium">
             Batch Request
           </span>
-          <StatusBadge status={batchStatus}>{batchFeedStateLabel(item.batch.displayState)}</StatusBadge>
+          <span className="text-sm text-muted-foreground">
+            {formatBatchFeedProgressLabel(item)}
+          </span>
+          <StatusBadge status={batchStatus} className="ml-auto">
+            {batchFeedStateLabel(item.batch.displayState)}
+          </StatusBadge>
           <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-expanded={expanded}
-            aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
-            onClick={onToggle}
+            asChild
+            size="sm"
+            onClick={(event) => event.stopPropagation()}
           >
-            <ChevronDown className={`h-4 w-4 ${expanded ? "rotate-180" : ""}`} aria-hidden />
-          </Button>
-          <Button asChild size="sm" className="ml-auto">
             <Link to="/shifts/batches/$id" params={{ id: item.batch.id }}>Open batch</Link>
           </Button>
         </div>

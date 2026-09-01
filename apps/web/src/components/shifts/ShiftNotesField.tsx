@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SHIFT_NOTES_MAX_LENGTH } from "@/lib/batch-shift-ui";
+import { cn } from "@/lib/utils";
 
 export const SHIFT_NOTES_HELPER =
   "Optional notes specific to this Shift. These will be included in Shift confirmation communications.";
@@ -12,6 +13,7 @@ export function ShiftNotesField({
   disabled,
   error,
   compact,
+  inputClassName,
 }: {
   id?: string;
   value: string;
@@ -19,6 +21,7 @@ export function ShiftNotesField({
   disabled?: boolean;
   error?: string;
   compact?: boolean;
+  inputClassName?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -33,7 +36,7 @@ export function ShiftNotesField({
         maxLength={SHIFT_NOTES_MAX_LENGTH}
         rows={compact ? 2 : 3}
         placeholder="Optional"
-        className="resize-y min-h-[4.5rem]"
+        className={cn("min-h-[4.5rem] resize-y", inputClassName)}
         onChange={(e) => onChange(e.target.value)}
       />
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

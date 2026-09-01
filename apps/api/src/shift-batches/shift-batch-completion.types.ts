@@ -1,16 +1,44 @@
 export const BATCH_CONFIRMATION_FINAL_COMMUNICATION_TYPE = 'batch_confirmation_final' as const;
+export const BATCH_CONFIRMATION_UPDATE_COMMUNICATION_TYPE = 'batch_confirmation_update' as const;
 
+const LEGACY_FINAL_PREFIX = 'batch_confirmation_final:';
+const REVISION_PREFIX = 'batch_confirmation:';
+const REVISION_SUFFIX = ':revision:';
+
+/** Initial final confirmation (revision 1). */
 export function buildBatchConfirmationFinalIdempotencyKey(batchId: string): string {
-  return `batch_confirmation_final:${batchId}`;
+  return buildBatchConfirmationRevisionIdempotencyKey(batchId, 1);
+}
+
+/** Any confirmation revision (initial or update). */
+export function buildBatchConfirmationRevisionIdempotencyKey(
+  batchId: string,
+  revision: number,
+): string {
+  return `${REVISION_PREFIX}${batchId}${REVISION_SUFFIX}${revision}`;
 }
 
 export function parseBatchConfirmationFinalIdempotencyKey(
   idempotencyKey: string,
-): { batchId: string } | null {
-  const prefix = 'batch_confirmation_final:';
-  if (!idempotencyKey.startsWith(prefix)) return null;
-  const batchId = idempotencyKey.slice(prefix.length);
-  return batchId ? { batchId } : null;
+): { batchId: string; revision: number } | null {
+  if (idempotencyKey.startsWith(LEGACY_FINAL_PREFIX)) {
+    const batchId = idempotencyKey.slice(LEGACY_FINAL_PREFIX.length);
+    return batchId ? { batchId, revision: 1 } : null;
+  }
+
+  if (!idempotencyKey.startsWith(REVISION_PREFIX) || !idempotencyKey.includes(REVISION_SUFFIX)) {
+    return null;
+  }
+
+  const suffixIndex = idempotencyKey.lastIndexOf(REVISION_SUFFIX);
+  if (suffixIndex <= REVISION_PREFIX.length) return null;
+
+  const batchId = idempotencyKey.slice(REVISION_PREFIX.length, suffixIndex);
+  const revisionRaw = idempotencyKey.slice(suffixIndex + REVISION_SUFFIX.length);
+  const revision = Number(revisionRaw);
+  if (!batchId || !Number.isInteger(revision) || revision < 1) return null;
+
+  return { batchId, revision };
 }
 
 export type BatchCompletionShiftBlocker = {
@@ -27,6 +55,8 @@ export type BatchCompletionShiftBlocker = {
 export type BatchCompletionBlocker =
   | { code: 'batch_already_completed'; message: string }
   | { code: 'no_active_shifts'; message: string }
+  | { code: 'batch_not_stale'; message: string }
+  | { code: 'batch_not_confirmed'; message: string }
   | BatchCompletionShiftBlocker
   | { code: 'missing_primary_contact'; message: string };
 
@@ -44,3 +74,23 @@ export type BatchFinalConfirmationStatusDto =
   | { state: 'sending' }
   | { state: 'sent'; sentAt: string }
   | { state: 'failed'; reason: string; canRetry: true };
+
+export type BatchUpdateChangeItem = {
+  id: string;
+  shiftId: string;
+  shiftLabel: string;
+  summary: string;
+  defaultSelected: boolean;
+};
+
+export type BatchUpdateReadinessDto = {
+  ready: boolean;
+  stale: boolean;
+  confirmationRevision: number;
+  pendingChangeRevision: number;
+  primaryContactEmail: string | null;
+  activeShiftCount: number;
+  fulfilledShiftCount: number;
+  detectedChanges: BatchUpdateChangeItem[];
+  blockers: BatchCompletionBlocker[];
+};

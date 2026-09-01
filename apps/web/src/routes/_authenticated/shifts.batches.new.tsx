@@ -11,11 +11,13 @@ import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
 import { ApiError } from "@/lib/api";
 import {
   batchDraftRowHasContent,
+  batchDraftToIndividualPrefill,
   createEmptyBatchDraftShift,
   duplicateBatchDraftShift,
   formatBatchTimeForApi,
   parseBulkCreateError,
   validateBatchDraftRows,
+  writeIndividualShiftCreatePrefill,
   type BatchDraftFieldErrors,
   type BatchDraftShift,
 } from "@/lib/batch-shift-ui";
@@ -82,7 +84,15 @@ function NewBatchRequest() {
   }
 
   function removeRow(index: number) {
-    setRows((prev) => prev.filter((_, i) => i !== index));
+    const nextRows = rows.filter((_, i) => i !== index);
+    if (nextRows.length === 1 && centreId) {
+      const remaining = nextRows[0]!;
+      writeIndividualShiftCreatePrefill(batchDraftToIndividualPrefill(centreId, remaining));
+      toast.message("One shift remains — opening individual shift creation with your values.");
+      navigate({ to: "/shifts/new" });
+      return;
+    }
+    setRows(nextRows);
     setRowErrors((prev) => prev.filter((_, i) => i !== index));
   }
 
@@ -155,15 +165,6 @@ function NewBatchRequest() {
         </SectionCard>
 
         <SectionCard id="batch-shifts" title="Shift drafts">
-          <div className="hidden md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-3 md:px-3 md:pb-2 md:text-xs md:font-medium md:uppercase md:tracking-wide md:text-muted-foreground sticky top-0 z-10 bg-card">
-            <span>Date</span>
-            <span>Start</span>
-            <span>End</span>
-            <span>Role</span>
-            <span>Staffpoint</span>
-            <span className="text-right">More</span>
-          </div>
-
           <div className="space-y-3">
             {rows.map((row, index) => (
               <BatchDraftShiftRow

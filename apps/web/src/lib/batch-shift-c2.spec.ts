@@ -51,7 +51,7 @@ describe("Batch Shift Requests Phase C2", () => {
     expect(childCard).toContain("BatchWorkspaceExpandedChild");
     expect(expanded).toContain('queryKey: ["shift-available", shiftId]');
     expect(expanded).toContain("enabled: loadMatching");
-    expect(expanded).toContain("<ShiftComments shiftId={shiftId} enabled />");
+    expect(expanded).toContain("ShiftComments shiftId={shiftId}");
   });
 
   it("reuses operational dialogs and C1 batch deferral", () => {

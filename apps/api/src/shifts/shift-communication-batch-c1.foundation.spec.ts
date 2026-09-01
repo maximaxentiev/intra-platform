@@ -14,7 +14,7 @@ import {
 
 describe('Batch C1 foundation guards', () => {
   it('uses canonical defer reason and copy constants', () => {
-    expect(SHIFT_COMMUNICATION_DEFER_REASON.openBatchCentreDeferred).toBe(
+    expect(SHIFT_COMMUNICATION_DEFER_REASON.batchCentreConsolidated).toBe(
       'deferred_batch_confirmation',
     );
     expect(BATCH_CENTRE_DEFER_MESSAGE).toBe(

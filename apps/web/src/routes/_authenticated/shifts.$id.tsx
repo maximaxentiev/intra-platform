@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { shiftsApi, centresApi, staffApi, displayStaff, fmtTime, type AvailableStaff, type ShiftStatus } from "@/lib/db";
 import { ApiError } from "@/lib/api";
 import {
@@ -122,6 +122,8 @@ function ShiftDetail() {
   const [assigneePreview, setAssigneePreview] = useState<ShiftUpdatePreviewResponse | null>(null);
   const [pendingAssignmentResolution, setPendingAssignmentResolution] =
     useState<ShiftAssignmentResolution | null>(null);
+  const assignmentResolutionRef = useRef<ShiftAssignmentResolution | null>(null);
+  const skipAssigneeResetRef = useRef(false);
   const [previewingAssignee, setPreviewingAssignee] = useState(false);
   const [savingEdits, setSavingEdits] = useState(false);
 
@@ -282,14 +284,27 @@ function ShiftDetail() {
     setAssigneeImpact(null);
     setAssigneePreview(null);
     setPendingAssignmentResolution(null);
+    assignmentResolutionRef.current = null;
+  }
+
+  function chooseAssignmentResolution(resolution: ShiftAssignmentResolution) {
+    assignmentResolutionRef.current = resolution;
+    setPendingAssignmentResolution(resolution);
+    skipAssigneeResetRef.current = true;
+    setAssigneeDialogOpen(false);
+    proceedAfterAssigneeCheck(resolution);
   }
 
   function proceedAfterAssigneeCheck(resolution?: ShiftAssignmentResolution) {
     const effectiveResolution = resolution ?? pendingAssignmentResolution ?? undefined;
     const unassigning = effectiveResolution === "unassign";
-    if (hasShiftEditCommunicationChanges(communicationChanges) || unassigning) {
+    const hasCarer = Boolean(shift.assignedStaffId);
+    if (hasCarer && (hasShiftEditCommunicationChanges(communicationChanges) || unassigning)) {
       setCommDialogOpen(true);
       return;
+    }
+    if (!hasCarer && hasShiftEditCommunicationChanges(communicationChanges)) {
+      if (!window.confirm("Save these changes?")) return;
     }
     void performSave(undefined, effectiveResolution);
   }
@@ -299,7 +314,8 @@ function ShiftDetail() {
     assignmentResolution?: ShiftAssignmentResolution,
   ) {
     if (savingEdits) return;
-    const resolution = assignmentResolution ?? pendingAssignmentResolution ?? undefined;
+    const resolution =
+      assignmentResolution ?? assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined;
     setSavingEdits(true);
     try {
       const result = await shiftsApi.update(id, buildUpdatePayload(communications, resolution));
@@ -380,15 +396,11 @@ function ShiftDetail() {
   }
 
   function handleAssigneeUnassign() {
-    setPendingAssignmentResolution("unassign");
-    setAssigneeDialogOpen(false);
-    proceedAfterAssigneeCheck("unassign");
+    chooseAssignmentResolution("unassign");
   }
 
   function handleAssigneeOverride() {
-    setPendingAssignmentResolution("availability_override");
-    setAssigneeDialogOpen(false);
-    proceedAfterAssigneeCheck("availability_override");
+    chooseAssignmentResolution("availability_override");
   }
 
   function handleAssigneeGoBack() {
@@ -830,7 +842,13 @@ function ShiftDetail() {
       <ShiftAssigneeImpactDialog
         open={assigneeDialogOpen}
         onOpenChange={(open) => {
-          if (!open) handleAssigneeGoBack();
+          if (!open) {
+            if (skipAssigneeResetRef.current) {
+              skipAssigneeResetRef.current = false;
+              return;
+            }
+            handleAssigneeGoBack();
+          }
         }}
         impact={
           assigneeImpact ?? {
@@ -853,10 +871,19 @@ function ShiftDetail() {
         changes={communicationChanges}
         centreAvailability={centreAvailability}
         carerAvailability={carerAvailability}
-        assignmentUnassigned={pendingAssignmentResolution === "unassign"}
+        assignmentUnassigned={
+          (assignmentResolutionRef.current ?? pendingAssignmentResolution) === "unassign"
+        }
         saving={savingEdits}
-        onSaveWithoutEmail={() => void performSave()}
-        onSaveWithCommunications={(communications) => void performSave(communications)}
+        onSaveWithoutEmail={() =>
+          void performSave(undefined, assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined)
+        }
+        onSaveWithCommunications={(communications) =>
+          void performSave(
+            communications,
+            assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined,
+          )
+        }
       />
 
       <ShiftResendConfirmationDialog

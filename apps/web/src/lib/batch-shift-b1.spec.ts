@@ -153,8 +153,8 @@ describe("Batch Shift Requests Phase B1 UI", () => {
   it("offers individual and batch create choices without making batch the default", () => {
     expect(createActions).toContain('to="/shifts/new"');
     expect(createActions).toContain('to="/shifts/batches/new"');
-    expect(createActions).toContain("Create Individual Shift");
-    expect(createActions).toContain("Create Batch Request");
+    expect(createActions).toContain("Create Shift");
+    expect(createActions).toContain("Create Batch");
     expect(list).toContain("CreateShiftActions");
   });
 

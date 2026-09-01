@@ -92,6 +92,10 @@ import {
 import { normalizeShiftConfirmationNotes } from './shift-confirmation-notes.util';
 import { resolveShiftCommunicationPolicyFromRow } from './shift-communication-policy.util';
 import { ShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-communication.service';
+import {
+  ShiftBatchStalenessService,
+  type BatchMaterialChangeKind,
+} from '../shift-batches/shift-batch-staleness.service';
 
 export type CreateShiftOptions = {
   tx?: DbExecutor;
@@ -112,6 +116,7 @@ export class ShiftsService {
     private readonly shiftUpdateCommunications: ShiftUpdateCommunicationService,
     private readonly manualUnassignCommunications: ShiftManualUnassignCommunicationService,
     private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
+    private readonly batchStaleness: ShiftBatchStalenessService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -168,6 +173,7 @@ export class ShiftsService {
         confirmationNotes: shifts.shiftConfirmationNotes,
         batchId: shifts.batchId,
         batchRequestCompletedAt: shiftBatches.requestCompletedAt,
+        batchPendingChangeRevision: shiftBatches.pendingChangeRevision,
         status: shifts.status,
         assignedStaffId: shifts.assignedStaffId,
         cancellationReason: shifts.cancellationReason,
@@ -186,6 +192,7 @@ export class ShiftsService {
     const policy = resolveShiftCommunicationPolicyFromRow({
       batchId: rows[0].batchId,
       requestCompletedAt: rows[0].batchRequestCompletedAt,
+      pendingChangeRevision: rows[0].batchPendingChangeRevision ?? 0,
     });
     return {
       ...rows[0],
@@ -526,7 +533,23 @@ export class ShiftsService {
       await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(before.batchId);
     }
 
+    if (before.batchId && (communicationChanges.length > 0 || shouldUnassign)) {
+      await this.batchStaleness.recordMaterialChange(
+        before.batchId,
+        shouldUnassign ? 'unassign' : this.materialChangeKindFromUpdates(communicationChanges),
+      );
+    }
+
     return { ...row, communications, assignmentImpact };
+  }
+
+  private materialChangeKindFromUpdates(
+    changes: ReturnType<typeof detectShiftCommunicationChanges>,
+  ): BatchMaterialChangeKind {
+    if (changes.some((change) => change.field === 'role')) return 'role';
+    if (changes.some((change) => change.field === 'shiftNotes')) return 'shift_notes';
+    if (changes.some((change) => change.field === 'date')) return 'schedule';
+    return 'schedule';
   }
 
   private async loadShiftUpdateBefore(id: string) {
@@ -705,6 +728,13 @@ export class ShiftsService {
 
     await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
     await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(shift.batchId);
+    if (shift.batchId) {
+      await this.batchStaleness.recordMaterialChange(shift.batchId, 'assignment', {
+        shiftId: id,
+        previousStaffId: previousStaffId ?? undefined,
+        newStaffId: staffId,
+      });
+    }
     return {
       shift,
       assignment: { changed: true, alreadyAssigned: false },
@@ -820,6 +850,9 @@ export class ShiftsService {
     }
 
     await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(row.batchId);
+    if (row.batchId) {
+      await this.batchStaleness.recordMaterialChange(row.batchId, 'unassign', { shiftId: id });
+    }
 
     return { shift: row, notifications };
   }
@@ -974,6 +1007,9 @@ export class ShiftsService {
     }
 
     await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(row.batchId);
+    if (row.batchId) {
+      await this.batchStaleness.recordMaterialChange(row.batchId, 'cancellation', { shiftId: id });
+    }
 
     return row;
   }

@@ -163,7 +163,7 @@ describe("create shift redesign", () => {
     expect(create).not.toContain('legend="When"');
     expect(create).not.toContain('legend="Requirements"');
     expect(create).toContain("Centre *");
-    expect(create).toContain("Role required *");
+    expect(create).toContain("Role *");
   });
 });
 

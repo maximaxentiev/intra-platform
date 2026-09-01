@@ -23,7 +23,10 @@ import { lockOpenShiftBatch } from './shift-batch-centre.util';
 import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-communication.service';
 import { ShiftBatchCompletionReadinessService } from './shift-batch-completion-readiness.service';
 import { ShiftBatchCompletionService } from './shift-batch-completion.service';
+import { ShiftBatchUpdateConfirmationService } from './shift-batch-update-confirmation.service';
 import { ShiftBatchActivityService } from './shift-batch-activity.service';
+import { deriveBatchConfirmationUiState } from './shift-batch-confirmation-state.util';
+import { computeBatchProgressCounts } from './shift-batch-progress.util';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -35,6 +38,7 @@ export class ShiftBatchesService {
     private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
     private readonly batchCompletionReadiness: ShiftBatchCompletionReadinessService,
     private readonly batchCompletion: ShiftBatchCompletionService,
+    private readonly batchUpdateConfirmation: ShiftBatchUpdateConfirmationService,
     private readonly batchActivity: ShiftBatchActivityService,
   ) {}
 
@@ -126,6 +130,9 @@ export class ShiftBatchesService {
         centreName: centres.name,
         requestCompletedAt: shiftBatches.requestCompletedAt,
         requestCompletedByUserId: shiftBatches.requestCompletedByUserId,
+        confirmationRevision: shiftBatches.confirmationRevision,
+        pendingChangeRevision: shiftBatches.pendingChangeRevision,
+        lastConfirmationScheduledAt: shiftBatches.lastConfirmationScheduledAt,
         progressEmailScheduledAt: shiftBatches.progressEmailScheduledAt,
         createdByUserId: shiftBatches.createdByUserId,
         createdAt: shiftBatches.createdAt,
@@ -163,12 +170,27 @@ export class ShiftBatchesService {
     const finalConfirmationStatus =
       await this.batchCompletion.resolveFinalConfirmationStatus(id);
 
+    const progress = computeBatchProgressCounts(childRows);
+    const confirmationUiState = deriveBatchConfirmationUiState(
+      {
+        requestCompletedAt: batch.requestCompletedAt,
+        confirmationRevision: batch.confirmationRevision,
+        pendingChangeRevision: batch.pendingChangeRevision,
+        lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt,
+      },
+      progress,
+    );
+
     return {
       id: batch.id,
       centreId: batch.centreId,
       centreName: batch.centreName,
       requestCompletedAt: batch.requestCompletedAt?.toISOString() ?? null,
       requestCompletedByUserId: batch.requestCompletedByUserId,
+      confirmationRevision: batch.confirmationRevision,
+      pendingChangeRevision: batch.pendingChangeRevision,
+      lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt?.toISOString() ?? null,
+      confirmationUiState,
       progressEmailScheduledAt: batch.progressEmailScheduledAt?.toISOString() ?? null,
       progressEmailStatus,
       finalConfirmationStatus,
@@ -253,6 +275,18 @@ export class ShiftBatchesService {
 
   async retryProgressEmail(batchId: string, actorUserId: string) {
     return this.batchProgressCommunications.retryProgressEmail(batchId, actorUserId);
+  }
+
+  async getUpdateReadiness(batchId: string) {
+    return this.batchUpdateConfirmation.getUpdateReadiness(batchId);
+  }
+
+  async sendUpdatesConfirmation(batchId: string, selectedChangeIds: string[], actorUserId: string) {
+    return this.batchUpdateConfirmation.scheduleUpdate(batchId, actorUserId, selectedChangeIds);
+  }
+
+  async retryUpdateConfirmation(batchId: string, actorUserId: string) {
+    return this.batchUpdateConfirmation.retryUpdateConfirmation(batchId, actorUserId);
   }
 
   async getBatchActivity(batchId: string, page?: number, pageSize?: number) {

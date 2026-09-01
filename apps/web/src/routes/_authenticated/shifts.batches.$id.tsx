@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { BatchActivityLogPanel } from "@/components/shifts/BatchActivityLogPanel";
 import { BatchAddShiftsPanel } from "@/components/shifts/BatchAddShiftsPanel";
 import { BatchCompleteRequestAction } from "@/components/shifts/BatchCompleteRequestAction";
+import { BatchSendUpdatesConfirmationAction } from "@/components/shifts/BatchSendUpdatesConfirmationAction";
 import { BatchFinalConfirmationStatus } from "@/components/shifts/BatchFinalConfirmationStatus";
 import { BatchProgressEmailStatus } from "@/components/shifts/BatchProgressEmailStatus";
 import { BatchWorkspaceChildCard } from "@/components/shifts/BatchWorkspaceChildCard";
@@ -43,13 +44,37 @@ function BatchWorkspace() {
     () => computeBatchProgress(workspace?.shifts ?? []),
     [workspace?.shifts],
   );
-  const displayState = deriveBatchDisplayState(workspace?.requestCompletedAt ?? null, progress);
+  const displayState = deriveBatchDisplayState(
+    workspace?.requestCompletedAt ?? null,
+    progress,
+    {
+      confirmationUiState: workspace?.confirmationUiState,
+      pendingChangeRevision: workspace?.pendingChangeRevision,
+    },
+  );
   const canAddShifts = workspace != null && workspace.requestCompletedAt == null;
 
   if (!workspace) return <DetailLoading />;
 
   const stateLabel =
-    displayState === "completed" ? "Completed" : displayState === "ready" ? "Ready" : "Open";
+    displayState === "completed"
+      ? "Completed"
+      : displayState === "ready_to_send_updates"
+        ? "Ready to send updates"
+        : displayState === "updates_required"
+          ? "Updates required"
+          : displayState === "ready"
+            ? "Ready"
+            : "Open";
+
+  const confirmationPanelCopy =
+    displayState === "updates_required" || displayState === "ready_to_send_updates"
+      ? "Centre confirmation needs updating"
+      : workspace.requestCompletedAt && workspace.pendingChangeRevision === 0
+        ? "Centre confirmation up to date"
+        : workspace.requestCompletedAt
+          ? "Final Centre confirmation sent"
+          : null;
 
   return (
     <div className="max-w-[960px] space-y-6">
@@ -58,24 +83,15 @@ function BatchWorkspace() {
       <PageHeader
         title={workspace.centreName}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {canAddShifts ? (
-              <Button type="button" onClick={() => setAddShiftsOpen(true)}>
-                Add shifts
-              </Button>
-            ) : null}
-            {displayState === "completed" ? (
-              <StatusBadge status="completed">Completed</StatusBadge>
-            ) : displayState === "ready" ? (
-              <StatusBadge status="filled">Ready</StatusBadge>
-            ) : (
-              <StatusBadge status="pending">Open</StatusBadge>
-            )}
-          </div>
+          canAddShifts ? (
+            <Button type="button" onClick={() => setAddShiftsOpen(true)}>
+              Add shifts
+            </Button>
+          ) : null
         }
       />
 
-      {displayState !== "completed" ? (
+      {displayState === "ready" ? (
         <BatchCompleteRequestAction
           batchId={workspace.id}
           displayReady={displayState === "ready"}
@@ -83,14 +99,20 @@ function BatchWorkspace() {
         />
       ) : null}
 
-      <div className="rounded-xl bg-surface-brand-dusk p-5 text-primary-foreground shadow-md">
+      {displayState === "ready_to_send_updates" ? (
+        <BatchSendUpdatesConfirmationAction batchId={workspace.id} displayReady />
+      ) : displayState === "updates_required" ? (
+        <BatchSendUpdatesConfirmationAction batchId={workspace.id} displayReady={false} />
+      ) : null}
+
+      <div className="rounded-xl bg-surface-brand-dusk p-5 text-white shadow-md">
         <div className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-2xl font-semibold tracking-tight">
+              <p className="text-2xl font-semibold tracking-tight text-white">
                 {progress.fulfilledCount} of {progress.activeTotal} filled
               </p>
-              <p className="mt-1 text-lg text-primary-foreground/90">{progress.percentage}% progress</p>
+              <p className="mt-1 text-lg text-white/95">{progress.percentage}% progress</p>
             </div>
             <StatusBadge
               status={
@@ -100,13 +122,13 @@ function BatchWorkspace() {
                     ? "filled"
                     : "pending"
               }
-              className="border-white/20 bg-white/10 text-primary-foreground"
+              className="border-white/30 bg-white/15 text-white"
             >
               {stateLabel}
             </StatusBadge>
           </div>
           {progress.cancelledCount > 0 ? (
-            <p className="text-sm text-primary-foreground/80">
+            <p className="text-sm text-white/90">
               {progress.cancelledCount} cancelled shift{progress.cancelledCount === 1 ? "" : "s"} excluded from progress
             </p>
           ) : null}
@@ -114,15 +136,24 @@ function BatchWorkspace() {
             batchId={workspace.id}
             status={workspace.progressEmailStatus}
             requestCompletedAt={workspace.requestCompletedAt}
+            tone="onDark"
           />
           <BatchFinalConfirmationStatus
             batchId={workspace.id}
             status={workspace.finalConfirmationStatus}
             requestCompletedAt={workspace.requestCompletedAt}
+            tone="onDark"
           />
+          {confirmationPanelCopy ? (
+            <p className="text-sm font-medium text-white">{confirmationPanelCopy}</p>
+          ) : null}
           {workspace.requestCompletedAt ? (
-            <p className="text-sm text-primary-foreground/80">
-              Completed {new Date(workspace.requestCompletedAt).toLocaleString()}
+            <p className="text-sm text-white/90">
+              First completed {new Date(workspace.requestCompletedAt).toLocaleString()}
+              {workspace.lastConfirmationScheduledAt &&
+              workspace.lastConfirmationScheduledAt !== workspace.requestCompletedAt
+                ? ` · Last Centre confirmation ${new Date(workspace.lastConfirmationScheduledAt).toLocaleString()}`
+                : ""}
             </p>
           ) : null}
         </div>

@@ -54,6 +54,10 @@ export async function bootstrapWorker(): Promise<{
     '../shift-batches/shift-batch-confirmation-final.processor'
   );
   registerBatchConfirmationFinalProcessor(registry, config);
+  const { registerBatchConfirmationUpdateProcessor } = await import(
+    '../shift-batches/shift-batch-confirmation-update.processor'
+  );
+  registerBatchConfirmationUpdateProcessor(registry, config);
 
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(

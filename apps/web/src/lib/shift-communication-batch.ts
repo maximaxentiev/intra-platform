@@ -32,5 +32,5 @@ export function isOpenBatchChild(shift: {
   if (shift.centreCommunicationDeferred != null) {
     return shift.centreCommunicationDeferred;
   }
-  return !!shift.batchId && !shift.batchRequestCompletedAt;
+  return !!shift.batchId;
 }

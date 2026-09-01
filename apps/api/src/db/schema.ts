@@ -309,6 +309,11 @@ export const shiftBatches = pgTable(
       onDelete: 'set null',
     }),
     progressEmailScheduledAt: timestamp('progress_email_scheduled_at', { withTimezone: true }),
+    confirmationRevision: integer('confirmation_revision').notNull().default(0),
+    pendingChangeRevision: integer('pending_change_revision').notNull().default(0),
+    lastConfirmationScheduledAt: timestamp('last_confirmation_scheduled_at', {
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

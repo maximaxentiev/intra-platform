@@ -3,17 +3,24 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BatchFinalConfirmationStatus } from "@/lib/db";
 import { shiftBatchesApi } from "@/lib/db";
+import { cn } from "@/lib/utils";
 
 export function BatchFinalConfirmationStatus({
   batchId,
   status,
   requestCompletedAt,
+  tone = "default",
 }: {
   batchId: string;
   status: BatchFinalConfirmationStatus;
   requestCompletedAt: string | null;
+  tone?: "default" | "onDark";
 }) {
   const qc = useQueryClient();
+  const onDark = tone === "onDark";
+  const mutedClass = onDark ? "text-white/90" : "text-muted-foreground";
+  const destructiveClass = onDark ? "text-red-200" : "text-destructive";
+
   const retryM = useMutation({
     mutationFn: () => shiftBatchesApi.retryFinalConfirmation(batchId),
     onSuccess: () => {
@@ -29,20 +36,20 @@ export function BatchFinalConfirmationStatus({
   if (status.state === "none") return null;
 
   if (status.state === "scheduled") {
-    return <p className="text-sm text-muted-foreground">Final Centre confirmation scheduled</p>;
+    return <p className={cn("text-sm", mutedClass)}>Final Centre confirmation scheduled</p>;
   }
 
   if (status.state === "sending") {
-    return <p className="text-sm text-muted-foreground">Final Centre confirmation sending…</p>;
+    return <p className={cn("text-sm", mutedClass)}>Final Centre confirmation sending…</p>;
   }
 
   if (status.state === "sent") {
-    return <p className="text-sm text-muted-foreground">Final Centre confirmation sent</p>;
+    return <p className={cn("text-sm", mutedClass)}>Final Centre confirmation sent</p>;
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <p className="text-sm text-destructive">
+      <p className={cn("text-sm", destructiveClass)}>
         Final Centre confirmation could not be sent
         {status.reason ? `: ${status.reason}` : ""}
       </p>
@@ -50,6 +57,7 @@ export function BatchFinalConfirmationStatus({
         type="button"
         size="sm"
         variant="outline"
+        className={onDark ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : undefined}
         disabled={retryM.isPending}
         onClick={() => retryM.mutate()}
       >

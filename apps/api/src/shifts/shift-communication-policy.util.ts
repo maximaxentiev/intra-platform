@@ -1,7 +1,7 @@
 import type { ShiftAssignmentRecipientResult } from './dto/shift-assignment.dto';
 
 export const SHIFT_COMMUNICATION_DEFER_REASON = {
-  openBatchCentreDeferred: 'deferred_batch_confirmation',
+  batchCentreConsolidated: 'deferred_batch_confirmation',
 } as const;
 
 export type ShiftCommunicationDeferReason =
@@ -27,24 +27,29 @@ export type ShiftRecipientAvailability = {
 export type ShiftCommunicationPolicy = {
   batchId: string | null;
   batchRequestCompleted: boolean;
+  batchConfirmationStale: boolean;
   centreCommunicationDeferred: boolean;
   centreDeferReason: ShiftCommunicationDeferReason | null;
 };
 
 export function resolveShiftCommunicationPolicyFromRow(row: {
   batchId: string | null;
-  requestCompletedAt: Date | string | null;
+  requestCompletedAt?: Date | string | null;
+  pendingChangeRevision?: number;
 }): ShiftCommunicationPolicy {
   const batchId = row.batchId ?? null;
   const batchRequestCompleted = row.requestCompletedAt != null;
-  const centreCommunicationDeferred = batchId != null && !batchRequestCompleted;
+  const batchConfirmationStale =
+    batchRequestCompleted && (row.pendingChangeRevision ?? 0) > 0;
+  const centreCommunicationDeferred = batchId != null;
 
   return {
     batchId,
     batchRequestCompleted,
+    batchConfirmationStale,
     centreCommunicationDeferred,
     centreDeferReason: centreCommunicationDeferred
-      ? SHIFT_COMMUNICATION_DEFER_REASON.openBatchCentreDeferred
+      ? SHIFT_COMMUNICATION_DEFER_REASON.batchCentreConsolidated
       : null,
   };
 }
@@ -54,7 +59,7 @@ export function centreDeferredRecipientResult(): ShiftAssignmentRecipientResult 
     attempted: false,
     sent: false,
     deferred: true,
-    skippedReason: SHIFT_COMMUNICATION_DEFER_REASON.openBatchCentreDeferred,
+    skippedReason: SHIFT_COMMUNICATION_DEFER_REASON.batchCentreConsolidated,
   };
 }
 

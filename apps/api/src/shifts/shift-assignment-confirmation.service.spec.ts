@@ -101,6 +101,7 @@ describe('ShiftAssignmentConfirmationService', () => {
       resolveForShift: vi.fn().mockResolvedValue({
         batchId: null,
         batchRequestCompleted: false,
+        batchConfirmationStale: false,
         centreCommunicationDeferred: false,
         centreDeferReason: null,
       }),
@@ -171,6 +172,7 @@ describe('ShiftAssignmentConfirmationService', () => {
       resolveForShift: vi.fn().mockResolvedValue({
         batchId: 'batch-1',
         batchRequestCompleted: false,
+        batchConfirmationStale: false,
         centreCommunicationDeferred: true,
         centreDeferReason: 'deferred_batch_confirmation',
       }),

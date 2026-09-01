@@ -24,6 +24,7 @@ import { ShiftBatchCompletionReadinessService } from './shift-batch-completion-r
 import {
   BATCH_CONFIRMATION_FINAL_COMMUNICATION_TYPE,
   buildBatchConfirmationFinalIdempotencyKey,
+  buildBatchConfirmationRevisionIdempotencyKey,
   type BatchFinalConfirmationStatusDto,
 } from './shift-batch-completion.types';
 import { isActiveFulfilledShift } from './shift-batch-completion.util';
@@ -129,6 +130,9 @@ export class ShiftBatchCompletionService {
         .set({
           requestCompletedAt: completedAt,
           requestCompletedByUserId: actorUserId,
+          confirmationRevision: 1,
+          pendingChangeRevision: 0,
+          lastConfirmationScheduledAt: completedAt,
           updatedAt: completedAt,
         })
         .where(eq(shiftBatches.id, batchId));
@@ -257,6 +261,8 @@ export class ShiftBatchCompletionService {
     const batchRows = await this.db
       .select({
         requestCompletedAt: shiftBatches.requestCompletedAt,
+        confirmationRevision: shiftBatches.confirmationRevision,
+        pendingChangeRevision: shiftBatches.pendingChangeRevision,
       })
       .from(shiftBatches)
       .where(eq(shiftBatches.id, batchId))
@@ -265,7 +271,8 @@ export class ShiftBatchCompletionService {
     const batch = batchRows[0];
     if (!batch?.requestCompletedAt) return { state: 'none' };
 
-    const idempotencyKey = buildBatchConfirmationFinalIdempotencyKey(batchId);
+    const revision = batch.confirmationRevision > 0 ? batch.confirmationRevision : 1;
+    const idempotencyKey = buildBatchConfirmationRevisionIdempotencyKey(batchId, revision);
     const commRows = await this.db
       .select({
         status: scheduledCommunications.status,

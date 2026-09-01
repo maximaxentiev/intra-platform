@@ -15,17 +15,28 @@ describe('resolveShiftCommunicationPolicyFromRow', () => {
     });
     expect(policy.centreCommunicationDeferred).toBe(true);
     expect(policy.centreDeferReason).toBe(
-      SHIFT_COMMUNICATION_DEFER_REASON.openBatchCentreDeferred,
+      SHIFT_COMMUNICATION_DEFER_REASON.batchCentreConsolidated,
     );
   });
 
-  it('restores centre communication after batch completion', () => {
+  it('still defers centre communication after batch completion', () => {
     const policy = resolveShiftCommunicationPolicyFromRow({
       batchId: 'batch-1',
       requestCompletedAt: new Date('2026-08-01'),
+      pendingChangeRevision: 0,
     });
-    expect(policy.centreCommunicationDeferred).toBe(false);
+    expect(policy.centreCommunicationDeferred).toBe(true);
     expect(policy.batchRequestCompleted).toBe(true);
+    expect(policy.batchConfirmationStale).toBe(false);
+  });
+
+  it('marks stale confirmation when pending changes exist', () => {
+    const policy = resolveShiftCommunicationPolicyFromRow({
+      batchId: 'batch-1',
+      requestCompletedAt: new Date('2026-08-01'),
+      pendingChangeRevision: 2,
+    });
+    expect(policy.batchConfirmationStale).toBe(true);
   });
 
   it('does not defer individual shifts', () => {
@@ -44,13 +55,13 @@ describe('centreDeferredRecipientResult', () => {
       attempted: false,
       sent: false,
       deferred: true,
-      skippedReason: SHIFT_COMMUNICATION_DEFER_REASON.openBatchCentreDeferred,
+      skippedReason: SHIFT_COMMUNICATION_DEFER_REASON.batchCentreConsolidated,
     });
   });
 });
 
 describe('applyCentreBatchDeferral', () => {
-  it('overrides available centre probe for open batch', () => {
+  it('overrides available centre probe for batch child', () => {
     const deferred = applyCentreBatchDeferral(
       { available: true },
       resolveShiftCommunicationPolicyFromRow({ batchId: 'batch-1', requestCompletedAt: null }),
@@ -60,7 +71,7 @@ describe('applyCentreBatchDeferral', () => {
     expect(deferred.unavailableCode).toBe('deferred_open_batch');
   });
 
-  it('preserves document-share unavailability for completed batch', () => {
+  it('defers centre even when document share probe failed for batch child', () => {
     const probe = {
       available: false,
       reason: 'Carer document share is unavailable for centre confirmation.',
@@ -73,6 +84,7 @@ describe('applyCentreBatchDeferral', () => {
         requestCompletedAt: new Date(),
       }),
     );
-    expect(result).toEqual(probe);
+    expect(result.available).toBe(false);
+    expect(result.reason).toBe(BATCH_CENTRE_DEFER_MESSAGE);
   });
 });

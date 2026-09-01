@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { asc, eq } from 'drizzle-orm';
 import { getStaffLegalFullName } from '@intra/shared';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
-import { centreContacts, centres, staff, staffAccounts } from '../db/schema';
+import { centreContacts, centres, shifts, staff, staffAccounts } from '../db/schema';
 import { EmailService } from '../email/email.service';
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
@@ -98,10 +98,24 @@ export class ShiftUpdateCommunicationService {
 
   private async loadContext(shiftId: string, centreId: string, assignedStaffId: string | null) {
     const centreRows = await this.db
-      .select({ name: centres.name })
+      .select({ name: centres.name, notes: centres.notes })
       .from(centres)
       .where(eq(centres.id, centreId));
     const centreName = centreRows[0]?.name ?? 'Centre';
+    const centreNotes = centreRows[0]?.notes ?? '';
+
+    const shiftRows = await this.db
+      .select({
+        shiftDate: shifts.shiftDate,
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+        roleNeeded: shifts.roleNeeded,
+        shiftConfirmationNotes: shifts.shiftConfirmationNotes,
+      })
+      .from(shifts)
+      .where(eq(shifts.id, shiftId))
+      .limit(1);
+    const shiftRow = shiftRows[0];
 
     let carerLegalName: string | null = null;
     let carerStaffEmail = '';
@@ -131,7 +145,24 @@ export class ShiftUpdateCommunicationService {
       }
     }
 
-    return { shiftId, centreName, carerLegalName, carerStaffEmail, carerAccountEmail };
+    return {
+      shiftId,
+      centreName,
+      centreNotes,
+      currentDetails: shiftRow
+        ? {
+            shiftDate: String(shiftRow.shiftDate),
+            startTime: String(shiftRow.startTime),
+            endTime: String(shiftRow.endTime),
+            roleNeeded: shiftRow.roleNeeded,
+            shiftConfirmationNotes: shiftRow.shiftConfirmationNotes ?? '',
+            centreNotes: centreNotes ?? '',
+          }
+        : undefined,
+      carerLegalName,
+      carerStaffEmail,
+      carerAccountEmail,
+    };
   }
 
   private filterChanges(
@@ -269,6 +300,7 @@ export class ShiftUpdateCommunicationService {
       : buildShiftUpdateCarerEmailContent({
           centreName: params.context.centreName,
           includedChanges,
+          currentDetails: params.context.currentDetails,
         });
 
     try {

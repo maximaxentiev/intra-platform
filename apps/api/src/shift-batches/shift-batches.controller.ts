@@ -74,6 +74,25 @@ export class ShiftBatchesController {
     return this.shiftBatches.completeRequest(id, user.userId);
   }
 
+  @Get(':id/update-readiness')
+  getUpdateReadiness(@Param('id') id: string) {
+    return this.shiftBatches.getUpdateReadiness(id);
+  }
+
+  @Post(':id/send-updates-confirmation')
+  sendUpdatesConfirmation(
+    @Param('id') id: string,
+    @Body() dto: { selectedChangeIds: string[] },
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shiftBatches.sendUpdatesConfirmation(id, dto.selectedChangeIds ?? [], user.userId);
+  }
+
+  @Post(':id/update-confirmation/retry')
+  retryUpdateConfirmation(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
+    return this.shiftBatches.retryUpdateConfirmation(id, user.userId);
+  }
+
   @Post(':id/final-confirmation/retry')
   retryFinalConfirmation(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
     return this.shiftBatches.retryFinalConfirmation(id, user.userId);

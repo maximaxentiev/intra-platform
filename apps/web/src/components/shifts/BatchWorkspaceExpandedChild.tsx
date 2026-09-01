@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ShiftComments } from "@/components/ShiftComments";
 import {
@@ -86,6 +86,9 @@ type Props = {
   summary: ShiftBatchChildSummary;
 };
 
+const batchWorkspaceFieldClass =
+  "border-border/70 bg-white text-foreground focus-visible:border-primary/30 focus-visible:ring-primary/20";
+
 function toEditVals(shift: {
   shiftDate: string;
   startTime: string;
@@ -169,6 +172,8 @@ export function BatchWorkspaceExpandedChild({
   const [assigneePreview, setAssigneePreview] = useState<ShiftUpdatePreviewResponse | null>(null);
   const [pendingAssignmentResolution, setPendingAssignmentResolution] =
     useState<ShiftAssignmentResolution | null>(null);
+  const assignmentResolutionRef = useRef<ShiftAssignmentResolution | null>(null);
+  const skipAssigneeResetRef = useRef(false);
 
   useEffect(() => {
     if (shift) setEditVals(toEditVals(shift));
@@ -296,6 +301,15 @@ export function BatchWorkspaceExpandedChild({
     setAssigneeImpact(null);
     setAssigneePreview(null);
     setPendingAssignmentResolution(null);
+    assignmentResolutionRef.current = null;
+  }
+
+  function chooseAssignmentResolution(resolution: ShiftAssignmentResolution) {
+    assignmentResolutionRef.current = resolution;
+    setPendingAssignmentResolution(resolution);
+    skipAssigneeResetRef.current = true;
+    setAssigneeDialogOpen(false);
+    proceedAfterAssigneeCheck(resolution);
   }
 
   async function performSave(
@@ -303,9 +317,11 @@ export function BatchWorkspaceExpandedChild({
     assignmentResolution?: ShiftAssignmentResolution,
   ) {
     if (savingEdits) return;
+    const resolution =
+      assignmentResolution ?? assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined;
     setSavingEdits(true);
     try {
-      const result = await shiftsApi.update(shiftId, buildUpdatePayload(communications, assignmentResolution));
+      const result = await shiftsApi.update(shiftId, buildUpdatePayload(communications, resolution));
       const message = shiftUpdateFeedbackMessage(result.communications);
       const partialFailure =
         result.communications &&
@@ -341,9 +357,13 @@ export function BatchWorkspaceExpandedChild({
   function proceedAfterAssigneeCheck(resolution?: ShiftAssignmentResolution) {
     const effectiveResolution = resolution ?? pendingAssignmentResolution ?? undefined;
     const unassigning = effectiveResolution === "unassign";
-    if (hasShiftEditCommunicationChanges(communicationChanges) || unassigning) {
+    const hasCarer = Boolean(assignedStaffId);
+    if (hasCarer && (hasShiftEditCommunicationChanges(communicationChanges) || unassigning)) {
       setCommDialogOpen(true);
       return;
+    }
+    if (!hasCarer && hasShiftEditCommunicationChanges(communicationChanges)) {
+      if (!window.confirm("Save these changes?")) return;
     }
     void performSave(undefined, effectiveResolution);
   }
@@ -553,7 +573,7 @@ export function BatchWorkspaceExpandedChild({
       className="space-y-0 border-t border-primary/20 px-4 py-4"
       data-testid={`batch-child-expanded-${shiftId}`}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
         <Button asChild variant="outline" size="sm">
           <Link to="/shifts/$id" params={{ id: shiftId }}>
             Open Shift
@@ -594,6 +614,7 @@ export function BatchWorkspaceExpandedChild({
                       <Input
                         id={`batch-date-${shiftId}`}
                         type="date"
+                        className={batchWorkspaceFieldClass}
                         value={editVals.shiftDate}
                         onChange={(e) => setEditVals({ ...editVals, shiftDate: e.target.value })}
                       />
@@ -603,6 +624,7 @@ export function BatchWorkspaceExpandedChild({
                       <Input
                         id={`batch-start-${shiftId}`}
                         type="time"
+                        className={batchWorkspaceFieldClass}
                         value={editVals.startTime}
                         onChange={(e) => setEditVals({ ...editVals, startTime: e.target.value })}
                       />
@@ -612,6 +634,7 @@ export function BatchWorkspaceExpandedChild({
                       <Input
                         id={`batch-end-${shiftId}`}
                         type="time"
+                        className={batchWorkspaceFieldClass}
                         value={editVals.endTime}
                         onChange={(e) => setEditVals({ ...editVals, endTime: e.target.value })}
                       />
@@ -624,7 +647,7 @@ export function BatchWorkspaceExpandedChild({
                         value={editVals.roleNeeded || undefined}
                         onValueChange={(v) => setEditVals({ ...editVals, roleNeeded: v })}
                       >
-                        <SelectTrigger aria-label="Role required">
+                        <SelectTrigger className={batchWorkspaceFieldClass} aria-label="Role required">
                           <SelectValue placeholder="Choose role..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -644,7 +667,7 @@ export function BatchWorkspaceExpandedChild({
                           setEditVals({ ...editVals, addedToStaffpoint: v === "yes" })
                         }
                       >
-                        <SelectTrigger aria-label="Added to Staffpoint">
+                        <SelectTrigger className={batchWorkspaceFieldClass} aria-label="Added to Staffpoint">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -657,6 +680,7 @@ export function BatchWorkspaceExpandedChild({
                   <ShiftNotesField
                     id={`batch-notes-${shiftId}`}
                     compact
+                    inputClassName={batchWorkspaceFieldClass}
                     value={editVals.confirmationNotes}
                     onChange={(v) => setEditVals({ ...editVals, confirmationNotes: v })}
                   />
@@ -773,7 +797,7 @@ export function BatchWorkspaceExpandedChild({
           </div>
         ) : null}
 
-        <ShiftComments shiftId={shiftId} enabled />
+        <ShiftComments shiftId={shiftId} enabled inputClassName={batchWorkspaceFieldClass} />
       </section>
 
       <ShiftAssignmentConfirmDialog
@@ -801,7 +825,13 @@ export function BatchWorkspaceExpandedChild({
       <ShiftAssigneeImpactDialog
         open={assigneeDialogOpen}
         onOpenChange={(open) => {
-          if (!open) resetAssigneeImpactState();
+          if (!open) {
+            if (skipAssigneeResetRef.current) {
+              skipAssigneeResetRef.current = false;
+              return;
+            }
+            resetAssigneeImpactState();
+          }
         }}
         impact={
           assigneeImpact ?? {
@@ -813,16 +843,8 @@ export function BatchWorkspaceExpandedChild({
           }
         }
         scheduleSummary={assigneePreview ? formatAssigneeImpactScheduleLine(assigneePreview) : null}
-        onUnassign={() => {
-          setPendingAssignmentResolution("unassign");
-          setAssigneeDialogOpen(false);
-          proceedAfterAssigneeCheck("unassign");
-        }}
-        onOverride={() => {
-          setPendingAssignmentResolution("availability_override");
-          setAssigneeDialogOpen(false);
-          proceedAfterAssigneeCheck("availability_override");
-        }}
+        onUnassign={() => chooseAssignmentResolution("unassign")}
+        onOverride={() => chooseAssignmentResolution("availability_override")}
         onGoBack={resetAssigneeImpactState}
       />
 
@@ -832,10 +854,19 @@ export function BatchWorkspaceExpandedChild({
         changes={communicationChanges}
         centreAvailability={centreAvailability}
         carerAvailability={carerCommAvailability}
-        assignmentUnassigned={pendingAssignmentResolution === "unassign"}
+        assignmentUnassigned={
+          (assignmentResolutionRef.current ?? pendingAssignmentResolution) === "unassign"
+        }
         saving={savingEdits}
-        onSaveWithoutEmail={() => void performSave()}
-        onSaveWithCommunications={(communications) => void performSave(communications)}
+        onSaveWithoutEmail={() =>
+          void performSave(undefined, assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined)
+        }
+        onSaveWithCommunications={(communications) =>
+          void performSave(
+            communications,
+            assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined,
+          )
+        }
       />
 
       <ShiftResendConfirmationDialog

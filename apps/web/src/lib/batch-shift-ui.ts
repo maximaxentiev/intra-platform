@@ -29,7 +29,14 @@ export type BatchProgressSummary = {
   percentage: number;
 };
 
-export type BatchDisplayState = "open" | "ready" | "completed";
+export type BatchDisplayState =
+  | "open"
+  | "ready"
+  | "completed"
+  | "updates_required"
+  | "ready_to_send_updates";
+
+export type BatchConfirmationUiState = BatchDisplayState;
 
 const TIME_RE = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
@@ -169,8 +176,23 @@ export function computeBatchProgress(shifts: ShiftBatchChildSummary[]): BatchPro
 export function deriveBatchDisplayState(
   requestCompletedAt: string | null,
   progress: BatchProgressSummary,
+  options?: {
+    confirmationUiState?: BatchConfirmationUiState | null;
+    pendingChangeRevision?: number;
+  },
 ): BatchDisplayState {
-  if (requestCompletedAt) return "completed";
+  if (options?.confirmationUiState) {
+    return options.confirmationUiState;
+  }
+  if (requestCompletedAt) {
+    if ((options?.pendingChangeRevision ?? 0) > 0) {
+      if (progress.activeTotal > 0 && progress.fulfilledCount === progress.activeTotal) {
+        return "ready_to_send_updates";
+      }
+      return "updates_required";
+    }
+    return "completed";
+  }
   if (progress.activeTotal > 0 && progress.fulfilledCount === progress.activeTotal) return "ready";
   return "open";
 }
@@ -193,4 +215,52 @@ export function batchChildAssigneeLabel(shift: ShiftBatchChildSummary): string |
 export function canInlineEditBatchChild(status: ShiftStatus, assignedStaffId: string | null): boolean {
   void assignedStaffId;
   return status === "pending" || status === "filled";
+}
+
+export type IndividualShiftCreatePrefill = {
+  centreId: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  roleNeeded: string;
+  addedToStaffpoint: boolean;
+  confirmationNotes: string;
+  pendingInternalComment?: string;
+};
+
+export const INDIVIDUAL_SHIFT_CREATE_PREFILL_KEY = "individualShiftCreatePrefill";
+
+export function batchDraftToIndividualPrefill(
+  centreId: string,
+  row: BatchDraftShift,
+): IndividualShiftCreatePrefill {
+  return {
+    centreId,
+    shiftDate: row.shiftDate,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    roleNeeded: row.roleNeeded,
+    addedToStaffpoint: row.addedToStaffpoint,
+    confirmationNotes: row.confirmationNotes,
+    pendingInternalComment: row.internalComment.trim() || undefined,
+  };
+}
+
+export function readIndividualShiftCreatePrefill(): IndividualShiftCreatePrefill | null {
+  if (typeof sessionStorage === "undefined") return null;
+  const raw = sessionStorage.getItem(INDIVIDUAL_SHIFT_CREATE_PREFILL_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as IndividualShiftCreatePrefill;
+  } catch {
+    return null;
+  }
+}
+
+export function writeIndividualShiftCreatePrefill(prefill: IndividualShiftCreatePrefill): void {
+  sessionStorage.setItem(INDIVIDUAL_SHIFT_CREATE_PREFILL_KEY, JSON.stringify(prefill));
+}
+
+export function clearIndividualShiftCreatePrefill(): void {
+  sessionStorage.removeItem(INDIVIDUAL_SHIFT_CREATE_PREFILL_KEY);
 }
