@@ -281,8 +281,18 @@ export class ShiftBatchesService {
     return this.batchUpdateConfirmation.getUpdateReadiness(batchId);
   }
 
-  async sendUpdatesConfirmation(batchId: string, selectedChangeIds: string[], actorUserId: string) {
-    return this.batchUpdateConfirmation.scheduleUpdate(batchId, actorUserId, selectedChangeIds);
+  async sendUpdatesConfirmation(
+    batchId: string,
+    selectedChangeIds: string[],
+    actorUserId: string,
+    expectedPendingChangeRevision?: number,
+  ) {
+    return this.batchUpdateConfirmation.scheduleUpdate(
+      batchId,
+      actorUserId,
+      selectedChangeIds,
+      expectedPendingChangeRevision,
+    );
   }
 
   async retryUpdateConfirmation(batchId: string, actorUserId: string) {

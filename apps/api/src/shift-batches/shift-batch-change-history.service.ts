@@ -112,10 +112,10 @@ export class ShiftBatchChangeHistoryService {
       }
 
       const metadata = (event.metadata ?? {}) as Record<string, unknown>;
-      const changes = metadata.changes as FieldChange[] | undefined;
-      if (!changes?.length) continue;
+      const fieldChanges = extractFieldChangesFromAuditMetadata(metadata);
+      if (!fieldChanges.length) continue;
 
-      for (const change of changes) {
+      for (const change of fieldChanges) {
         if (change.field === 'notes' || change.field === 'addedToStaffpoint') continue;
         const fieldKey = change.field === 'confirmationNotes' ? 'confirmationNotes' : change.field;
         const label = FIELD_LABELS[fieldKey] ?? fieldKey;
@@ -145,6 +145,35 @@ export class ShiftBatchChangeHistoryService {
       defaultSelected: true,
     }));
   }
+}
+
+function extractFieldChangesFromAuditMetadata(
+  metadata: Record<string, unknown>,
+): Array<{ field: string; before: unknown; after: unknown }> {
+  const raw = metadata.changes;
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((entry) => {
+        const change = entry as FieldChange;
+        if (!change?.field) return null;
+        return { field: String(change.field), before: change.before, after: change.after };
+      })
+      .filter((entry): entry is { field: string; before: unknown; after: unknown } => entry != null);
+  }
+
+  if (typeof raw === 'object') {
+    return Object.entries(raw as Record<string, { from?: unknown; to?: unknown; before?: unknown; after?: unknown }>).map(
+      ([field, value]) => ({
+        field,
+        before: value.before ?? value.from,
+        after: value.after ?? value.to,
+      }),
+    );
+  }
+
+  return [];
 }
 
 function formatShiftLabel(shiftDate: string, startTime: string, endTime: string): string {

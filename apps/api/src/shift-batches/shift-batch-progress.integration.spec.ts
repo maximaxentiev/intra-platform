@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -124,12 +124,13 @@ describe.runIf(POSTGRES_READY)('Batch progress 70% email integration', () => {
     batchIds.push(batchId);
 
     for (let i = 0; i < statuses.length; i++) {
+      const hour = 8 + (i % 8);
       await db.insert(shifts).values({
         centreId: FIXTURE.centreId,
         batchId,
         shiftDate: '2026-09-10',
-        startTime: `${8 + i}:00:00`,
-        endTime: `${16 + i}:00:00`,
+        startTime: `${String(hour).padStart(2, '0')}:00:00`,
+        endTime: `${String(hour + 1).padStart(2, '0')}:00:00`,
         roleNeeded: 'ECE',
         status: statuses[i] as never,
         assignedStaffId: statuses[i] === 'filled' ? null : null,
@@ -193,7 +194,7 @@ describe.runIf(POSTGRES_READY)('Batch progress 70% email integration', () => {
     const pending = await db
       .select({ id: shifts.id })
       .from(shifts)
-      .where(eq(shifts.batchId, batchId))
+      .where(and(eq(shifts.batchId, batchId), eq(shifts.status, 'pending')))
       .limit(2);
     for (const row of pending) {
       await db.update(shifts).set({ status: 'cancelled' }).where(eq(shifts.id, row.id));

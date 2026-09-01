@@ -35,7 +35,11 @@ export function BatchSendUpdatesConfirmationAction({
 
   const sendM = useMutation({
     mutationFn: (changeIds: string[]) =>
-      shiftBatchesApi.sendUpdatesConfirmation(batchId, changeIds),
+      shiftBatchesApi.sendUpdatesConfirmation(
+        batchId,
+        changeIds,
+        readiness?.pendingChangeRevision,
+      ),
     onSuccess: () => {
       toast.success("Centre update confirmation scheduled.");
       setDialogOpen(false);

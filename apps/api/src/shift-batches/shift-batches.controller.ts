@@ -82,10 +82,15 @@ export class ShiftBatchesController {
   @Post(':id/send-updates-confirmation')
   sendUpdatesConfirmation(
     @Param('id') id: string,
-    @Body() dto: { selectedChangeIds: string[] },
+    @Body() dto: { selectedChangeIds: string[]; expectedPendingChangeRevision?: number },
     @CurrentUser() user: SessionPayload,
   ) {
-    return this.shiftBatches.sendUpdatesConfirmation(id, dto.selectedChangeIds ?? [], user.userId);
+    return this.shiftBatches.sendUpdatesConfirmation(
+      id,
+      dto.selectedChangeIds ?? [],
+      user.userId,
+      dto.expectedPendingChangeRevision,
+    );
   }
 
   @Post(':id/update-confirmation/retry')

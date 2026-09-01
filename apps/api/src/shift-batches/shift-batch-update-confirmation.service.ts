@@ -98,7 +98,28 @@ export class ShiftBatchUpdateConfirmationService {
     batchId: string,
     actorUserId: string,
     selectedChangeIds: string[],
+    expectedPendingChangeRevision?: number,
   ) {
+    const batchSnapshot = await this.loadBatch(batchId);
+    if (
+      batchSnapshot.requestCompletedAt &&
+      batchSnapshot.pendingChangeRevision <= 0 &&
+      batchSnapshot.confirmationRevision >= 2
+    ) {
+      const idempotencyKey = buildBatchConfirmationRevisionIdempotencyKey(
+        batchId,
+        batchSnapshot.confirmationRevision,
+      );
+      const existing = await this.db
+        .select({ id: scheduledCommunications.id })
+        .from(scheduledCommunications)
+        .where(eq(scheduledCommunications.idempotencyKey, idempotencyKey))
+        .limit(1);
+      if (existing[0]) {
+        return { scheduled: true, scheduledCommunicationId: existing[0].id };
+      }
+    }
+
     const readiness = await this.getUpdateReadiness(batchId);
     if (!readiness.ready) {
       throw new ConflictException({
@@ -125,7 +146,35 @@ export class ShiftBatchUpdateConfirmationService {
         throw new ConflictException('Batch has not been confirmed.');
       }
       if (batch.pendingChangeRevision <= 0) {
+        const idempotencyKey = buildBatchConfirmationRevisionIdempotencyKey(
+          batchId,
+          batch.confirmationRevision,
+        );
+        const existing = await tx
+          .select({ id: scheduledCommunications.id })
+          .from(scheduledCommunications)
+          .where(eq(scheduledCommunications.idempotencyKey, idempotencyKey))
+          .limit(1);
+        if (existing[0]) return existing[0].id;
         throw new ConflictException('Batch confirmation is already current.');
+      }
+
+      if (
+        expectedPendingChangeRevision != null &&
+        batch.pendingChangeRevision !== expectedPendingChangeRevision
+      ) {
+        throw new ConflictException({
+          message: 'Batch changes were updated while you were reviewing. Refresh and try again.',
+          code: 'stale_pending_change_revision',
+        });
+      }
+
+      const fulfillmentBlockers = await this.validateFulfillmentBlockers(batchId);
+      if (fulfillmentBlockers.length > 0) {
+        throw new ConflictException({
+          message: 'Batch is no longer ready to send update confirmation.',
+          blockers: fulfillmentBlockers,
+        });
       }
 
       const nextRevision = batch.confirmationRevision + 1;

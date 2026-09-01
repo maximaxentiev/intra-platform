@@ -929,14 +929,23 @@ export class ShiftsService {
           assignedStaffId: shifts.assignedStaffId,
           centreId: shifts.centreId,
           batchId: shifts.batchId,
-          requestCompletedAt: shiftBatches.requestCompletedAt,
         })
         .from(shifts)
-        .leftJoin(shiftBatches, eq(shifts.batchId, shiftBatches.id))
         .where(eq(shifts.id, id))
         .for('update');
 
       if (!locked[0]) throw new NotFoundException('Shift not found.');
+
+      let requestCompletedAt: Date | null = null;
+      if (locked[0].batchId) {
+        const batchRows = await tx
+          .select({ requestCompletedAt: shiftBatches.requestCompletedAt })
+          .from(shiftBatches)
+          .where(eq(shiftBatches.id, locked[0].batchId))
+          .limit(1);
+        requestCompletedAt = batchRows[0]?.requestCompletedAt ?? null;
+      }
+
       if (locked[0].status === 'cancelled') {
         const existing = await tx.select().from(shifts).where(eq(shifts.id, id)).limit(1);
         return existing[0]!;
@@ -979,7 +988,7 @@ export class ShiftsService {
 
       const batchPolicy = resolveShiftCommunicationPolicyFromRow({
         batchId: locked[0].batchId,
-        requestCompletedAt: locked[0].requestCompletedAt,
+        requestCompletedAt,
       });
       const effectiveRecipients = {
         centre: commRecipients.centre && !batchPolicy.centreCommunicationDeferred,

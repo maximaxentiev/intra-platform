@@ -3,7 +3,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as schema from '../db/schema';
-import { centres, shiftBatches, shifts, users } from '../db/schema';
+import { centres, shiftBatches, shifts, staff, users } from '../db/schema';
 import { ShiftBatchesService } from '../shift-batches/shift-batches.service';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
 import {
@@ -36,6 +36,7 @@ const POSTGRES_READY = await probePostgres();
 const FIXTURE = {
   centreA: '77777777-7777-4777-8777-777777777701',
   opsUser: '77777777-7777-4777-8777-777777777702',
+  staffId: '77777777-7777-4777-8777-777777777799',
 };
 
 function buildBatchesService(db: NodePgDatabase<typeof schema>, shiftsService: ShiftsService) {
@@ -69,6 +70,7 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
 
     await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centreA));
     await db.delete(shiftBatches).where(eq(shiftBatches.centreId, FIXTURE.centreA));
+    await db.delete(staff).where(eq(staff.id, FIXTURE.staffId));
     await db.delete(centres).where(eq(centres.id, FIXTURE.centreA));
     await db.delete(users).where(eq(users.id, FIXTURE.opsUser));
 
@@ -86,11 +88,19 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
       city: 'Toronto',
       status: 'active',
     });
+    await db.insert(staff).values({
+      id: FIXTURE.staffId,
+      legalName: 'Feed Carer',
+      email: 'feed-carer@example.test',
+      role: 'ECE',
+      status: 'active',
+    });
   });
 
   afterAll(async () => {
     if (shiftIds.length) await db.delete(shifts).where(inArray(shifts.id, shiftIds));
     if (batchIds.length) await db.delete(shiftBatches).where(inArray(shiftBatches.id, batchIds));
+    await db.delete(staff).where(eq(staff.id, FIXTURE.staffId));
     await db.delete(centres).where(eq(centres.id, FIXTURE.centreA));
     await db.delete(users).where(eq(users.id, FIXTURE.opsUser));
     await pool.end();
@@ -301,10 +311,9 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
 
     const childA = created.created[0]!.id;
     const childB = created.created[1]!.id;
-    const staffPlaceholder = '77777777-7777-4777-8777-777777777799';
     await db
       .update(shifts)
-      .set({ status: 'filled', assignedStaffId: staffPlaceholder })
+      .set({ status: 'filled', assignedStaffId: FIXTURE.staffId })
       .where(inArray(shifts.id, [childA, childB]));
 
     const confirmedAt = new Date('2028-03-01T12:00:00Z');
@@ -335,7 +344,7 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
 
     await db
       .update(shifts)
-      .set({ status: 'filled', assignedStaffId: staffPlaceholder })
+      .set({ status: 'filled', assignedStaffId: FIXTURE.staffId })
       .where(eq(shifts.id, childA));
     const feedReady = await feedService.feed({
       centreId: FIXTURE.centreA,

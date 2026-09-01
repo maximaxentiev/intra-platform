@@ -44,6 +44,21 @@ export class ShiftBatchCompletionService {
   ) {}
 
   async complete(batchId: string, actorUserId: string) {
+    const existingBatch = await this.db
+      .select({
+        id: shiftBatches.id,
+        requestCompletedAt: shiftBatches.requestCompletedAt,
+      })
+      .from(shiftBatches)
+      .where(eq(shiftBatches.id, batchId))
+      .limit(1);
+
+    if (!existingBatch[0]) throw new NotFoundException('Batch not found.');
+    if (existingBatch[0].requestCompletedAt) {
+      const scheduledCommunicationId = await this.findExistingFinalCommunicationId(this.db, batchId);
+      return { completed: true, scheduledCommunicationId };
+    }
+
     const readiness = await this.readiness.getReadiness(batchId);
     if (!readiness.ready) {
       throw new ConflictException({

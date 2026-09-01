@@ -692,10 +692,14 @@ export const shiftBatchesApi = {
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/progress-email/retry`),
   getUpdateReadiness: (id: string) =>
     api.get<BatchUpdateReadiness>(`/shift-batches/${id}/update-readiness`),
-  sendUpdatesConfirmation: (id: string, selectedChangeIds: string[]) =>
+  sendUpdatesConfirmation: (
+    id: string,
+    selectedChangeIds: string[],
+    expectedPendingChangeRevision?: number,
+  ) =>
     api.post<{ scheduled: boolean; scheduledCommunicationId: string | null }>(
       `/shift-batches/${id}/send-updates-confirmation`,
-      { selectedChangeIds },
+      { selectedChangeIds, expectedPendingChangeRevision },
     ),
   retryUpdateConfirmation: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/update-confirmation/retry`),
