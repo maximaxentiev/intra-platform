@@ -600,7 +600,7 @@ export class ShiftsService {
       };
     }
 
-    const previousStaffId = existing[0].assignedStaffId;
+    let previousStaffId: string | null = null;
     let assignmentChanged = false;
     let scheduledReminderIds: string[] = [];
 
@@ -614,6 +614,8 @@ export class ShiftsService {
         .for('update');
       if (!locked[0]) throw new NotFoundException('Shift not found.');
       if (locked[0].assignedStaffId === staffId) return;
+
+      const authoritativePreviousStaffId = locked[0].assignedStaffId;
 
       const eligibility = await this.shiftMatching.evaluateStaffForShift(id, staffId, tx);
       if (!eligibility.eligible) {
@@ -633,7 +635,8 @@ export class ShiftsService {
 
       if (updated[0]) {
         assignmentChanged = true;
-        const action = assignmentAuditAction(previousStaffId, staffId);
+        previousStaffId = authoritativePreviousStaffId;
+        const action = assignmentAuditAction(authoritativePreviousStaffId, staffId);
         if (action) {
           await this.platformAudit.record(
             {
@@ -645,7 +648,7 @@ export class ShiftsService {
               staffId,
               entityId: id,
               metadata: {
-                previousStaffId: previousStaffId ?? undefined,
+                previousStaffId: authoritativePreviousStaffId ?? undefined,
                 newStaffId: staffId,
                 assignedStaffId: staffId,
                 shiftDate: String(updated[0].shiftDate),

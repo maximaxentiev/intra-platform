@@ -171,6 +171,65 @@ describe('ShiftsService.assign idempotency', () => {
     });
   });
 
+  it('uses locked-row assignee as previous carer when pre-read is stale', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { assignedStaffId: 'staff-a', shiftDate: '2026-09-01', centreId: 'centre-1' },
+          ]),
+        }),
+      }),
+      transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
+        const tx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                for: vi
+                  .fn()
+                  .mockResolvedValue([{ assignedStaffId: 'staff-c', centreId: 'centre-1' }]),
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([
+                  {
+                    id: 'shift-1',
+                    shiftDate: '2026-09-01',
+                    startTime: '09:00:00',
+                    centreId: 'centre-1',
+                  },
+                ]),
+              }),
+            }),
+          }),
+        };
+        return fn(tx);
+      }),
+    };
+
+    vi.mocked(manualUnassignCommunications.sendCommunications).mockResolvedValue({
+      centre: null,
+      carer: { attempted: true, sent: true },
+    });
+
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
+    vi.spyOn(service, 'get').mockResolvedValue({
+      id: 'shift-1',
+      assignedStaffId: 'staff-b',
+      centreId: 'centre-1',
+    } as never);
+
+    await service.assign('shift-1', 'staff-b', 'ops-1', { notifyPreviousCarer: true });
+
+    expect(manualUnassignCommunications.sendCommunications).toHaveBeenCalledWith(
+      expect.objectContaining({ previousStaffId: 'staff-c' }),
+    );
+  });
+
   it('skips previous-carer email when reassignment notification not requested', async () => {
     const db = {
       select: vi.fn().mockReturnValue({
