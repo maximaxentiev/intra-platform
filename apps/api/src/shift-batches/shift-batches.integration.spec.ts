@@ -6,20 +6,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as schema from '../db/schema';
 import { centres, shiftBatches, shiftComments, shifts, users } from '../db/schema';
 import { ShiftBatchesService } from './shift-batches.service';
-import { ShiftAssignmentConfirmationService } from '../shifts/shift-assignment-confirmation.service';
-import { ShiftMatchingService } from '../shifts/shift-matching.service';
-import { createMockShiftCancellationService } from '../shifts/shift-cancellation-test.util';
-import { createMockShiftReminderService } from '../shifts/shift-reminder-test.util';
-import { createMockShiftUpdateCommunicationService } from '../shifts/shift-update-communication-test.util';
-import { createMockShiftManualUnassignCommunicationService } from '../shifts/shift-manual-unassign-communication-test.util';
-import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
+import { createMockShiftBatchProgressCommunicationService } from './shift-batch-progress-test.util';
+import { createIntegrationShiftsService } from '../shifts/shifts-integration-test.util';
+import type { ShiftsService } from '../shifts/shifts.service';
+import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
 import {
   createMockShiftBatchCompletionReadinessService,
   createMockShiftBatchCompletionService,
+  createMockShiftBatchUpdateConfirmationService,
 } from './shift-batch-completion-test.util';
-import { PlatformAuditService } from '../platform-audit/platform-audit.service';
-import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
-import { ShiftsService } from '../shifts/shifts.service';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -45,22 +40,7 @@ const FIXTURE = {
 };
 
 function buildShiftsService(db: NodePgDatabase<typeof schema>) {
-  return new ShiftsService(
-    db,
-    {
-      sendAssignmentConfirmations: vi.fn(),
-    } as unknown as ShiftAssignmentConfirmationService,
-    {
-      evaluateStaffForShift: vi.fn().mockResolvedValue({ eligible: true, reasons: [] }),
-    } as unknown as ShiftMatchingService,
-    createMockShiftReminderService(),
-    createMockShiftCancellationService(),
-    new PlatformAuditService(db),
-    createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+  return createIntegrationShiftsService(db);
 }
 
 describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
@@ -82,6 +62,7 @@ describe.skipIf(!POSTGRES_READY)('Shift batches Phase A integration', () => {
       createMockShiftBatchProgressCommunicationService(),
       createMockShiftBatchCompletionReadinessService(),
       createMockShiftBatchCompletionService(),
+      createMockShiftBatchUpdateConfirmationService(),
       { getBatchActivity: vi.fn() } as never,
     );
 

@@ -77,10 +77,37 @@ describe('batch feed display state', () => {
       child({ status: 'filled' }),
       child({ id: '2', status: 'completed' }),
     ]);
-    expect(deriveBatchFeedDisplayState(null, full)).toBe('ready');
-    expect(deriveBatchFeedDisplayState(new Date(), full)).toBe('completed');
+    expect(deriveBatchFeedDisplayState({ requestCompletedAt: null }, full)).toBe('ready');
+    expect(
+      deriveBatchFeedDisplayState({ requestCompletedAt: new Date(), pendingChangeRevision: 0 }, full),
+    ).toBe('completed');
     const open = computeBatchFeedProgress([child({ status: 'pending' })]);
-    expect(deriveBatchFeedDisplayState(null, open)).toBe('open');
+    expect(deriveBatchFeedDisplayState({ requestCompletedAt: null }, open)).toBe('open');
+  });
+
+  it('derives stale update states from pending change revision', () => {
+    const full = computeBatchFeedProgress([
+      child({ status: 'filled' }),
+      child({ id: '2', status: 'filled' }),
+    ]);
+    const partial = computeBatchFeedProgress([
+      child({ status: 'filled' }),
+      child({ id: '2', status: 'pending' }),
+    ]);
+    const confirmedAt = new Date('2026-09-01T12:00:00Z');
+
+    expect(
+      deriveBatchFeedDisplayState(
+        { requestCompletedAt: confirmedAt, pendingChangeRevision: 2 },
+        full,
+      ),
+    ).toBe('ready_to_send_updates');
+    expect(
+      deriveBatchFeedDisplayState(
+        { requestCompletedAt: confirmedAt, pendingChangeRevision: 1 },
+        partial,
+      ),
+    ).toBe('updates_required');
   });
 });
 

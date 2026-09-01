@@ -155,6 +155,9 @@ export class ShiftsFeedService {
               centreId: shiftBatches.centreId,
               centreName: centres.name,
               requestCompletedAt: shiftBatches.requestCompletedAt,
+              confirmationRevision: shiftBatches.confirmationRevision,
+              pendingChangeRevision: shiftBatches.pendingChangeRevision,
+              lastConfirmationScheduledAt: shiftBatches.lastConfirmationScheduledAt,
             })
             .from(shiftBatches)
             .innerJoin(centres, eq(centres.id, shiftBatches.centreId))
@@ -250,7 +253,15 @@ export class ShiftsFeedService {
           centreName: batch.centreName,
           requestCompletedAt: batch.requestCompletedAt?.toISOString() ?? null,
           dateRange: formatBatchFeedDateRange(allChildren),
-          displayState: deriveBatchFeedDisplayState(batch.requestCompletedAt, progress),
+          displayState: deriveBatchFeedDisplayState(
+            {
+              requestCompletedAt: batch.requestCompletedAt,
+              confirmationRevision: batch.confirmationRevision,
+              pendingChangeRevision: batch.pendingChangeRevision,
+              lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt,
+            },
+            progress,
+          ),
         },
         matchingChildren,
         totalChildCount: allChildren.length,

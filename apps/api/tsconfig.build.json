@@ -6,5 +6,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "drizzle.config.ts"]
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "**/*-test.util.ts", "**/*integration-test.util.ts", "drizzle.config.ts"]
 }

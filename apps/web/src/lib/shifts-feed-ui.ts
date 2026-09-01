@@ -43,8 +43,29 @@ export function batchFeedStateLabel(state: ShiftFeedBatchItem['batch']['displayS
       return 'Ready';
     case 'completed':
       return 'Completed';
+    case 'updates_required':
+      return 'Updates Required';
+    case 'ready_to_send_updates':
+      return 'Ready to Send Updates';
     default:
       return 'Open';
+  }
+}
+
+/** Maps batch workflow state to StatusPill tone — stale states must not use completed/green. */
+export function batchFeedStatusBadgeTone(
+  state: ShiftFeedBatchItem['batch']['displayState'],
+): 'pending' | 'filled' | 'completed' {
+  switch (state) {
+    case 'ready':
+    case 'ready_to_send_updates':
+      return 'filled';
+    case 'completed':
+      return 'completed';
+    case 'updates_required':
+      return 'pending';
+    default:
+      return 'pending';
   }
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShiftFeedBatchItem, ShiftFeedItem } from '@/lib/db';
-import { formatBatchFeedDateLabel, formatBatchFeedProgressLabel } from './shifts-feed-ui';
+import { formatBatchFeedDateLabel, formatBatchFeedProgressLabel, batchFeedStateLabel, batchFeedStatusBadgeTone } from './shifts-feed-ui';
 
 describe('batch feed display labels', () => {
   it('formats progress as fulfilled over active children', () => {
@@ -28,6 +28,14 @@ describe('batch feed display labels', () => {
     expect(formatBatchFeedDateLabel('2026-09-07')).toBe('09-07-2026');
     expect(formatBatchFeedDateLabel('2026-09-07 – 2026-09-11')).toBe('09-07 to 09-11 2026');
     expect(formatBatchFeedDateLabel('2026-12-31 – 2027-01-02')).toBe('12-31-2026 to 01-02-2027');
+  });
+
+  it('labels stale batch states distinctly from completed', () => {
+    expect(batchFeedStateLabel('updates_required')).toBe('Updates Required');
+    expect(batchFeedStateLabel('ready_to_send_updates')).toBe('Ready to Send Updates');
+    expect(batchFeedStatusBadgeTone('completed')).toBe('completed');
+    expect(batchFeedStatusBadgeTone('updates_required')).toBe('pending');
+    expect(batchFeedStatusBadgeTone('ready_to_send_updates')).toBe('filled');
   });
 });
 

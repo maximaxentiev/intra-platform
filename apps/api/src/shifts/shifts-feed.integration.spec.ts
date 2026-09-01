@@ -5,16 +5,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as schema from '../db/schema';
 import { centres, shiftBatches, shifts, users } from '../db/schema';
 import { ShiftBatchesService } from '../shift-batches/shift-batches.service';
-import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
-import { ShiftMatchingService } from './shift-matching.service';
-import { createMockShiftCancellationService } from './shift-cancellation-test.util';
-import { createMockShiftReminderService } from './shift-reminder-test.util';
-import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
-import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
-import { PlatformAuditService } from '../platform-audit/platform-audit.service';
+import {
+  createMockShiftBatchCompletionReadinessService,
+  createMockShiftBatchCompletionService,
+  createMockShiftBatchUpdateConfirmationService,
+} from '../shift-batches/shift-batch-completion-test.util';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
-import { ShiftsService } from './shifts.service';
+import { createIntegrationShiftsService } from './shifts-integration-test.util';
+import type { ShiftsService } from './shifts.service';
 import { ShiftsFeedService } from './shifts-feed.service';
 
 const DATABASE_URL =
@@ -39,18 +38,15 @@ const FIXTURE = {
   opsUser: '77777777-7777-4777-8777-777777777702',
 };
 
-function buildShiftsService(db: NodePgDatabase<typeof schema>) {
-  return new ShiftsService(
+function buildBatchesService(db: NodePgDatabase<typeof schema>, shiftsService: ShiftsService) {
+  return new ShiftBatchesService(
     db,
-    { sendAssignmentConfirmations: vi.fn() } as unknown as ShiftAssignmentConfirmationService,
-    { evaluateStaffForShift: vi.fn().mockResolvedValue({ eligible: true, reasons: [] }) } as unknown as ShiftMatchingService,
-    createMockShiftReminderService(),
-    createMockShiftCancellationService(),
-    new PlatformAuditService(db),
-    createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
+    shiftsService,
     createMockShiftBatchProgressCommunicationService(),
+    createMockShiftBatchCompletionReadinessService(),
+    createMockShiftBatchCompletionService(),
+    createMockShiftBatchUpdateConfirmationService(),
+    { getBatchActivity: vi.fn() } as never,
   );
 }
 
@@ -67,8 +63,8 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
     db = drizzle(pool, { schema });
     await ensurePlatformAuditTable(pool);
-    shiftsService = buildShiftsService(db);
-    batchesService = new ShiftBatchesService(db, shiftsService);
+    shiftsService = createIntegrationShiftsService(db);
+    batchesService = buildBatchesService(db, shiftsService);
     feedService = new ShiftsFeedService(db);
 
     await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centreA));
@@ -277,5 +273,81 @@ describe.skipIf(!POSTGRES_READY)('Shifts feed Phase B2 integration', () => {
     );
     expect(batchItem?.matchingChildren).toHaveLength(1);
     expect(batchItem?.matchingChildren[0]?.addedToStaffpoint).toBe(true);
+  });
+
+  it('shows stale batch states in feed instead of completed', async () => {
+    const created = await batchesService.createWithShifts(
+      {
+        centreId: FIXTURE.centreA,
+        shifts: [
+          {
+            shiftDate: '2028-03-01',
+            startTime: '08:00:00',
+            endTime: '16:00:00',
+            roleNeeded: 'ECE',
+          },
+          {
+            shiftDate: '2028-03-02',
+            startTime: '08:00:00',
+            endTime: '16:00:00',
+            roleNeeded: 'ECA',
+          },
+        ],
+      },
+      FIXTURE.opsUser,
+    );
+    batchIds.push(created.batch.id);
+    shiftIds.push(...created.created.map((row) => row.id));
+
+    const childA = created.created[0]!.id;
+    const childB = created.created[1]!.id;
+    const staffPlaceholder = '77777777-7777-4777-8777-777777777799';
+    await db
+      .update(shifts)
+      .set({ status: 'filled', assignedStaffId: staffPlaceholder })
+      .where(inArray(shifts.id, [childA, childB]));
+
+    const confirmedAt = new Date('2028-03-01T12:00:00Z');
+    await db
+      .update(shiftBatches)
+      .set({
+        requestCompletedAt: confirmedAt,
+        confirmationRevision: 1,
+        pendingChangeRevision: 0,
+        lastConfirmationScheduledAt: confirmedAt,
+      })
+      .where(eq(shiftBatches.id, created.batch.id));
+
+    await shiftsService.unassign(childA, FIXTURE.opsUser);
+
+    const feed = await feedService.feed({
+      centreId: FIXTURE.centreA,
+      from: '2028-03-01',
+      to: '2028-03-31',
+      page: 1,
+      pageSize: 25,
+    });
+    const batchItem = feed.items.find(
+      (item): item is Extract<(typeof feed.items)[number], { type: 'batch' }> =>
+        item.type === 'batch' && item.batch.id === created.batch.id,
+    );
+    expect(batchItem?.batch.displayState).toBe('updates_required');
+
+    await db
+      .update(shifts)
+      .set({ status: 'filled', assignedStaffId: staffPlaceholder })
+      .where(eq(shifts.id, childA));
+    const feedReady = await feedService.feed({
+      centreId: FIXTURE.centreA,
+      from: '2028-03-01',
+      to: '2028-03-31',
+      page: 1,
+      pageSize: 25,
+    });
+    const readyItem = feedReady.items.find(
+      (item): item is Extract<(typeof feedReady.items)[number], { type: 'batch' }> =>
+        item.type === 'batch' && item.batch.id === created.batch.id,
+    );
+    expect(readyItem?.batch.displayState).toBe('ready_to_send_updates');
   });
 });

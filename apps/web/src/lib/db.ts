@@ -460,7 +460,12 @@ export type ShiftFeedBatchItem = {
     centreName: string;
     requestCompletedAt: string | null;
     dateRange: string | null;
-    displayState: "open" | "ready" | "completed";
+    displayState:
+      | "open"
+      | "ready"
+      | "completed"
+      | "updates_required"
+      | "ready_to_send_updates";
   };
   matchingChildren: ShiftFeedShiftSummary[];
   totalChildCount: number;

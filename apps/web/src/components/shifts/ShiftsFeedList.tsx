@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { dataTable, DataTableEmptyRow, DataTableLoadingRows } from "@/components/ui-kit";
 import {
   batchFeedStateLabel,
+  batchFeedStatusBadgeTone,
   formatBatchFeedDateLabel,
   formatBatchFeedProgressLabel,
 } from "@/lib/shifts-feed-ui";
@@ -183,12 +184,7 @@ function BatchDesktopRows({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const batchStatus =
-    item.batch.displayState === "open"
-      ? "pending"
-      : item.batch.displayState === "ready"
-        ? "filled"
-        : "completed";
+  const batchStatus = batchFeedStatusBadgeTone(item.batch.displayState);
 
   return (
     <>
@@ -296,12 +292,7 @@ function BatchMobileCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const batchStatus =
-    item.batch.displayState === "open"
-      ? "pending"
-      : item.batch.displayState === "ready"
-        ? "filled"
-        : "completed";
+  const batchStatus = batchFeedStatusBadgeTone(item.batch.displayState);
 
   return (
     <li className="rounded-xl border border-primary/15 bg-primary/[0.04] shadow-xs">

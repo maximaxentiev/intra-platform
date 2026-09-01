@@ -1,3 +1,6 @@
+import type { BatchConfirmationUiState } from '../shift-batches/shift-batch-confirmation-state.util';
+import { deriveBatchConfirmationUiState } from '../shift-batches/shift-batch-confirmation-state.util';
+
 export type ShiftFeedChildSummary = {
   id: string;
   shiftDate: string;
@@ -57,17 +60,34 @@ export function computeBatchFeedProgress(children: ShiftFeedChildSummary[]): Bat
   };
 }
 
-export type BatchFeedDisplayState = 'open' | 'ready' | 'completed';
+export type BatchFeedDisplayState = BatchConfirmationUiState;
 
 export function deriveBatchFeedDisplayState(
-  requestCompletedAt: Date | null,
+  batch: {
+    requestCompletedAt: Date | null;
+    confirmationRevision?: number;
+    pendingChangeRevision?: number;
+    lastConfirmationScheduledAt?: Date | null;
+  },
   progress: BatchFeedProgress,
 ): BatchFeedDisplayState {
-  if (requestCompletedAt) return 'completed';
-  if (progress.activeChildCount > 0 && progress.fulfilledChildCount === progress.activeChildCount) {
-    return 'ready';
-  }
-  return 'open';
+  return deriveBatchConfirmationUiState(
+    {
+      requestCompletedAt: batch.requestCompletedAt,
+      confirmationRevision: batch.confirmationRevision ?? 0,
+      pendingChangeRevision: batch.pendingChangeRevision ?? 0,
+      lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt ?? null,
+    },
+    {
+      activeTotal: progress.activeChildCount,
+      fulfilledCount: progress.fulfilledChildCount,
+      cancelledCount: progress.cancelledChildCount,
+      percentage:
+        progress.activeChildCount > 0
+          ? Math.round((progress.fulfilledChildCount / progress.activeChildCount) * 100)
+          : 0,
+    },
+  );
 }
 
 /** Includes cancelled children in the historical date span. */
