@@ -85,7 +85,7 @@ describe('ensureFreshStaffDocumentShareUrlForCentreEmail', () => {
       'ops-1',
     );
 
-    expect(generateShareLink).toHaveBeenCalledWith('staff-1', 'ops-1', expect.anything());
+    expect(generateShareLink).toHaveBeenCalledWith('staff-1', 'ops-1');
     expect(url).toBe('https://platform.intra.ca/documents/new-carer#token');
   });
 });

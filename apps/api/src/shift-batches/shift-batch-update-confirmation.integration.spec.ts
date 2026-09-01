@@ -33,6 +33,11 @@ import {
 import { ShiftBatchUpdateConfirmationService } from './shift-batch-update-confirmation.service';
 import { ShiftBatchesService } from './shift-batches.service';
 import { createMockShiftBatchProgressCommunicationService } from './shift-batch-progress-test.util';
+import {
+  clearStaffPublicShareDocuments,
+  createBatchDocumentShareTestConfig,
+  seedApprovedPublicShareDocument,
+} from './shift-batch-document-share-test.util';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -50,7 +55,6 @@ async function probePostgres(): Promise<boolean> {
 }
 
 const POSTGRES_READY = await probePostgres();
-const TEST_SIGNING_SECRET = 'test-document-share-signing-secret-32chars-min';
 
 const FIXTURE = {
   centreId: '44444444-4444-4444-8444-444444444401',
@@ -78,20 +82,7 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     await ensureCommunicationsTables(pool);
     await ensurePlatformAuditTable(pool);
 
-    const config = {
-      get: (key: string) => {
-        if (key === 'DOCUMENT_SHARE_SIGNING_SECRET') return TEST_SIGNING_SECRET;
-        if (key === 'APP_PUBLIC_URL') return 'https://platform.intra.ca';
-        if (key === 'APP_HOST') return 'platform.intra.ca';
-        if (key === 'NODE_ENV') return 'test';
-        return undefined;
-      },
-      getOrThrow: (key: string) => {
-        const value = config.get(key);
-        if (!value) throw new Error(`missing ${key}`);
-        return value;
-      },
-    } as ConfigService;
+    const config = createBatchDocumentShareTestConfig();
 
     const { StaffDocumentShareService } = await import('../staff-documents/staff-document-share.service');
     const { StaffDocumentShareLifecycleService } = await import(
@@ -170,8 +161,6 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
       sortOrder: 0,
     });
 
-    const generatedA = shareService.generateShareTokenState(FIXTURE.staffA, new Date('2026-08-01T12:00:00Z'));
-    const generatedB = shareService.generateShareTokenState(FIXTURE.staffB, new Date('2026-08-01T12:00:00Z'));
     await db.insert(staff).values([
       {
         id: FIXTURE.staffA,
@@ -180,8 +169,6 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
         role: 'ECE',
         status: 'active',
         documentSlug: 'carer-alpha',
-        documentShareTokenHash: generatedA.hash,
-        documentShareTokenCreatedAt: generatedA.createdAt,
       },
       {
         id: FIXTURE.staffB,
@@ -190,10 +177,11 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
         role: 'ECE',
         status: 'active',
         documentSlug: 'carer-beta',
-        documentShareTokenHash: generatedB.hash,
-        documentShareTokenCreatedAt: generatedB.createdAt,
       },
     ]);
+
+    await seedApprovedPublicShareDocument(db, FIXTURE.staffA);
+    await seedApprovedPublicShareDocument(db, FIXTURE.staffB);
   });
 
   afterAll(async () => {
@@ -202,6 +190,8 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
       await db.delete(scheduledCommunications).where(inArray(scheduledCommunications.entityId, batchIds));
       await db.delete(shiftBatches).where(inArray(shiftBatches.id, batchIds));
     }
+    await clearStaffPublicShareDocuments(db, FIXTURE.staffA);
+    await clearStaffPublicShareDocuments(db, FIXTURE.staffB);
     await db.delete(staff).where(inArray(staff.id, [FIXTURE.staffA, FIXTURE.staffB]));
     await db.delete(centreContacts).where(eq(centreContacts.centreId, FIXTURE.centreId));
     await db.delete(centres).where(eq(centres.id, FIXTURE.centreId));
