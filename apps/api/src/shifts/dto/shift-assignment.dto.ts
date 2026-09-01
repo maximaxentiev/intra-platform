@@ -20,6 +20,7 @@ export type ShiftAssignResponse = {
   shift: Record<string, unknown>;
   assignment: ShiftAssignmentOutcome;
   notifications: ShiftAssignmentNotificationsResult | null;
+  previousCarerNotification?: ShiftAssignmentRecipientResult | null;
 };
 
 export type ShiftResendConfirmationsResponse = {

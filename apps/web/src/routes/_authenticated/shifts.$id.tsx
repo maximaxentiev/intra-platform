@@ -108,6 +108,7 @@ function ShiftDetail() {
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [pendingAssignStaff, setPendingAssignStaff] = useState<AvailableStaff | null>(null);
+  const [notifyPreviousCarer, setNotifyPreviousCarer] = useState(true);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
@@ -394,11 +395,17 @@ function ShiftDetail() {
     resetAssigneeImpactState();
   }
 
-  async function assignStaff(staffId: string, staffLegalName: string): Promise<boolean> {
+  async function assignStaff(
+    staffId: string,
+    staffLegalName: string,
+    options?: { notifyPreviousCarer?: boolean },
+  ): Promise<boolean> {
     if (assigningStaffId) return false;
     setAssigningStaffId(staffId);
     try {
-      const result = await shiftsApi.assign(id, staffId);
+      const result = await shiftsApi.assign(id, staffId, {
+        notifyPreviousCarer: options?.notifyPreviousCarer,
+      });
       const message = shiftAssignmentFeedbackMessage(
         staffLegalName,
         result.assignment,
@@ -435,19 +442,30 @@ function ShiftDetail() {
 
   function openAssignConfirm(staff: AvailableStaff) {
     setPendingAssignStaff(staff);
+    setNotifyPreviousCarer(true);
     setAssignConfirmOpen(true);
   }
 
   function closeAssignConfirm() {
     setAssignConfirmOpen(false);
     setPendingAssignStaff(null);
+    setNotifyPreviousCarer(true);
   }
 
   async function confirmAssignStaff() {
     if (!pendingAssignStaff || assigningStaffId) return;
-    const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName);
+    const isReassignment =
+      shift.assignedStaffId != null && shift.assignedStaffId !== pendingAssignStaff.id;
+    const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName, {
+      notifyPreviousCarer: isReassignment ? notifyPreviousCarer : undefined,
+    });
     if (success) closeAssignConfirm();
   }
+
+  const isPendingReassignment =
+    pendingAssignStaff != null &&
+    shift.assignedStaffId != null &&
+    shift.assignedStaffId !== pendingAssignStaff.id;
 
   const assignConfirmDetails = pendingAssignStaff
     ? buildShiftAssignmentConfirmDetails({
@@ -556,28 +574,18 @@ function ShiftDetail() {
 
   return (
     <div className="space-y-6">
-      <BackLink to="/shifts" label="Back to Shifts" />
       {shift.batchId ? (
-        <div className="rounded-lg border border-primary/15 bg-primary/[0.04] px-4 py-3 text-sm text-foreground">
-          <p className="font-medium">Part of Batch Request</p>
-          <p className="mt-1 text-muted-foreground">
-            This shift belongs to a batch workspace.{" "}
-            <Link
-              to="/shifts/batches/$id"
-              params={{ id: shift.batchId }}
-              className="font-medium text-foreground underline underline-offset-2"
-            >
-              Back to Batch
-            </Link>
-            {batchCentreDeferred ? (
-              <>
-                {" "}
-                Centre confirmations are managed through the Batch Request until it is completed.
-              </>
-            ) : null}
-          </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <BackLink
+            to="/shifts/batches/$id"
+            params={{ id: shift.batchId }}
+            label="Back to Batch"
+          />
+          <BackLink to="/shifts" label="Back to Shifts" />
         </div>
-      ) : null}
+      ) : (
+        <BackLink to="/shifts" label="Back to Shifts" />
+      )}
       <PageHeader
         title={shift.centreName ?? "Shift"}
         actions={
@@ -594,6 +602,17 @@ function ShiftDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {!isHistorical && status !== "cancelled" ? (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setCancelDialogOpen(true);
+                    }}
+                  >
+                    Cancel shift
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onSelect={(e) => {
@@ -752,19 +771,6 @@ function ShiftDetail() {
                 <StatusBadge status={shift.status} size="md">{shift.status}</StatusBadge>
               </span>
             }
-            action={
-              !isHistorical && status !== "cancelled" ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive"
-                  disabled={cancelling}
-                  onClick={() => setCancelDialogOpen(true)}
-                >
-                  Cancel shift
-                </Button>
-              ) : undefined
-            }
             padded={false}
           >
             {status === "cancelled" && shift.cancellationReason && (
@@ -809,6 +815,13 @@ function ShiftDetail() {
           if (!open) closeAssignConfirm();
         }}
         details={assignConfirmDetails}
+        reassignment={
+          isPendingReassignment && assignedName
+            ? { currentCarerName: assignedName }
+            : null
+        }
+        notifyPreviousCarer={notifyPreviousCarer}
+        onNotifyPreviousCarerChange={setNotifyPreviousCarer}
         confirming={assigningStaffId != null}
         batchCentreDeferred={batchCentreDeferred}
         onConfirm={() => void confirmAssignStaff()}

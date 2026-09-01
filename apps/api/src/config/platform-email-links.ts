@@ -52,3 +52,10 @@ export function buildCarerShiftDetailLink(shiftId: string, env: PlatformUrlEnv):
 export function buildCarerDocumentsLink(env: PlatformUrlEnv): string {
   return buildGenericPlatformEmailLink('/carer/documents', env);
 }
+
+/** Public HTTPS URL for the Intra logo in outbound HTML email. */
+export function buildIntraEmailLogoUrl(env: PlatformUrlEnv): string {
+  const url = buildGenericPlatformEmailLink('/intra-logo-purple.png', env);
+  assertProductionOutboundUrl(url, env);
+  return url;
+}

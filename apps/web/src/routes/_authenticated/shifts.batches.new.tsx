@@ -154,16 +154,7 @@ function NewBatchRequest() {
           </div>
         </SectionCard>
 
-        <SectionCard
-          id="batch-shifts"
-          title="Shift drafts"
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={addRow}>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              Add shift
-            </Button>
-          }
-        >
+        <SectionCard id="batch-shifts" title="Shift drafts">
           <div className="hidden md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-3 md:px-3 md:pb-2 md:text-xs md:font-medium md:uppercase md:tracking-wide md:text-muted-foreground sticky top-0 z-10 bg-card">
             <span>Date</span>
             <span>Start</span>
@@ -186,6 +177,13 @@ function NewBatchRequest() {
                 canRemove={rows.length > 1}
               />
             ))}
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <Button type="button" onClick={addRow}>
+              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+              Add shift
+            </Button>
           </div>
         </SectionCard>
 

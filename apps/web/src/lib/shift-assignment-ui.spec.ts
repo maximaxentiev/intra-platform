@@ -37,8 +37,8 @@ describe('ops shift smart matching UI', () => {
     const page = readFileSync(join(webRoot, 'routes/_authenticated/shifts.$id.tsx'), 'utf8');
     const list = readFileSync(join(webRoot, 'components/shifts/ShiftAvailableStaffList.tsx'), 'utf8');
     expect(page).toContain('ShiftAvailableStaffList');
-    expect(list).toContain('md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]');
-    expect(list).toContain('formatAvailableStaffPriorityLine');
+    expect(list).toContain('xl:grid-cols-[minmax(9rem,1.1fr)_minmax(18rem,2fr)_minmax(5rem,0.6fr)_minmax(7rem,0.7fr)_max-content]');
+    expect(list).toContain('formatAvailableStaffPriorityChips');
     expect(page).not.toContain('Eligible based on availability, conflicts, centre restrictions and compliance.');
   });
 

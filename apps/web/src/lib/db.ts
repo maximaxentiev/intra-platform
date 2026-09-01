@@ -206,6 +206,7 @@ export type ShiftAssignResponse = {
   shift: Shift;
   assignment: ShiftAssignmentOutcome;
   notifications: ShiftAssignmentNotificationsResult | null;
+  previousCarerNotification?: ShiftAssignmentRecipientResult | null;
 };
 
 export type ShiftResendConfirmationsResponse = {
@@ -521,8 +522,13 @@ export const shiftsApi = {
     values,
   ),
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
-  assign: (id: string, staffId: string) =>
-    api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, { staffId }),
+  assign: (id: string, staffId: string, options?: { notifyPreviousCarer?: boolean }) =>
+    api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, {
+      staffId,
+      ...(options?.notifyPreviousCarer !== undefined
+        ? { notifyPreviousCarer: options.notifyPreviousCarer }
+        : {}),
+    }),
   resendAssignmentConfirmation: (
     id: string,
     recipients: ShiftCommunicationRecipientsPayload,
@@ -658,6 +664,11 @@ export const shiftBatchesApi = {
     api.post<{ batch: { id: string }; created: { id: string; shiftDate: string }[] }>(
       "/shift-batches/with-shifts",
       payload,
+    ),
+  bulkAddShifts: (batchId: string, shifts: CreateBatchChildShiftInput[]) =>
+    api.post<{ created: { id: string; shiftDate: string }[] }>(
+      `/shift-batches/${batchId}/shifts/bulk`,
+      { shifts },
     ),
 };
 

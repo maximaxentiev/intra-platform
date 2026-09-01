@@ -14,17 +14,35 @@ function mockPlatformAudit() {
   return { record: vi.fn().mockResolvedValue(undefined) } as unknown as PlatformAuditService;
 }
 
+function buildService(
+  db: unknown,
+  confirmation: ShiftAssignmentConfirmationService,
+  shiftMatching: ShiftMatchingService,
+  manualUnassignCommunications: ReturnType<typeof createMockShiftManualUnassignCommunicationService>,
+) {
+  return new ShiftsService(
+    db as never,
+    confirmation,
+    shiftMatching,
+    createMockShiftReminderService(),
+    createMockShiftCancellationService(),
+    mockPlatformAudit(),
+    createMockShiftUpdateCommunicationService(),
+    manualUnassignCommunications,
+    createMockShiftBatchProgressCommunicationService(),
+  );
+}
+
 describe('ShiftsService.assign idempotency', () => {
   let service: ShiftsService;
   let confirmation: ShiftAssignmentConfirmationService;
   let shiftMatching: ShiftMatchingService;
-  let shiftReminders: ReturnType<typeof createMockShiftReminderService>;
+  let manualUnassignCommunications: ReturnType<typeof createMockShiftManualUnassignCommunicationService>;
   let txUpdateWhere: ReturnType<typeof vi.fn>;
-  let txSelectWhere: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    manualUnassignCommunications = createMockShiftManualUnassignCommunicationService();
     txUpdateWhere = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) });
-    txSelectWhere = vi.fn().mockResolvedValue([{ assignedStaffId: null }]);
 
     const tx = {
       execute: vi.fn().mockResolvedValue(undefined),
@@ -62,28 +80,18 @@ describe('ShiftsService.assign idempotency', () => {
       evaluateStaffForShift: vi.fn().mockResolvedValue({ eligible: true, reasons: [] }),
     } as unknown as ShiftMatchingService;
 
-    service = new ShiftsService(
-      db as never,
-      confirmation,
-      shiftMatching,
-      createMockShiftReminderService(),
-      createMockShiftCancellationService(),
-      mockPlatformAudit(),
-      createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
+      centreId: 'centre-1',
     } as never);
   });
 
   it('sends confirmations when assignment changes', async () => {
     txUpdateWhere.mockReturnValue({
       returning: vi.fn().mockResolvedValue([
-        { id: 'shift-1', shiftDate: '2026-09-01', startTime: '09:00:00' },
+        { id: 'shift-1', shiftDate: '2026-09-01', startTime: '09:00:00', centreId: 'centre-1' },
       ]),
     });
 
@@ -99,6 +107,120 @@ describe('ShiftsService.assign idempotency', () => {
     });
   });
 
+  it('sends previous-carer unassignment email on reassignment when requested', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { assignedStaffId: 'staff-a', shiftDate: '2026-09-01', centreId: 'centre-1' },
+          ]),
+        }),
+      }),
+      transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
+        const tx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                for: vi.fn().mockResolvedValue([{ assignedStaffId: 'staff-a', centreId: 'centre-1' }]),
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([
+                  {
+                    id: 'shift-1',
+                    shiftDate: '2026-09-01',
+                    startTime: '09:00:00',
+                    centreId: 'centre-1',
+                  },
+                ]),
+              }),
+            }),
+          }),
+        };
+        return fn(tx);
+      }),
+    };
+
+    vi.mocked(manualUnassignCommunications.sendCommunications).mockResolvedValue({
+      centre: null,
+      carer: { attempted: true, sent: true },
+    });
+
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
+    vi.spyOn(service, 'get').mockResolvedValue({
+      id: 'shift-1',
+      assignedStaffId: 'staff-b',
+      centreId: 'centre-1',
+    } as never);
+
+    const result = await service.assign('shift-1', 'staff-b', 'ops-1', {
+      notifyPreviousCarer: true,
+    });
+
+    expect(result.previousCarerNotification).toEqual({ attempted: true, sent: true });
+    expect(manualUnassignCommunications.sendCommunications).toHaveBeenCalledWith({
+      shiftId: 'shift-1',
+      centreId: 'centre-1',
+      previousStaffId: 'staff-a',
+      actorUserId: 'ops-1',
+      recipients: { centre: false, carer: true },
+    });
+  });
+
+  it('skips previous-carer email when reassignment notification not requested', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { assignedStaffId: 'staff-a', shiftDate: '2026-09-01', centreId: 'centre-1' },
+          ]),
+        }),
+      }),
+      transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
+        const tx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                for: vi.fn().mockResolvedValue([{ assignedStaffId: 'staff-a', centreId: 'centre-1' }]),
+              }),
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([
+                  {
+                    id: 'shift-1',
+                    shiftDate: '2026-09-01',
+                    startTime: '09:00:00',
+                    centreId: 'centre-1',
+                  },
+                ]),
+              }),
+            }),
+          }),
+        };
+        return fn(tx);
+      }),
+    };
+
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
+    vi.spyOn(service, 'get').mockResolvedValue({
+      id: 'shift-1',
+      assignedStaffId: 'staff-b',
+      centreId: 'centre-1',
+    } as never);
+
+    await service.assign('shift-1', 'staff-b', 'ops-1', { notifyPreviousCarer: false });
+
+    expect(manualUnassignCommunications.sendCommunications).not.toHaveBeenCalled();
+  });
+
   it('returns no-op without sending confirmations for same staff', async () => {
     const db = {
       select: vi.fn().mockReturnValue({
@@ -108,18 +230,7 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(
-      db as never,
-      confirmation,
-      shiftMatching,
-      createMockShiftReminderService(),
-      createMockShiftCancellationService(),
-      mockPlatformAudit(),
-      createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
     vi.spyOn(service, 'get').mockResolvedValue({
       id: 'shift-1',
       assignedStaffId: 'staff-1',
@@ -142,18 +253,7 @@ describe('ShiftsService.assign idempotency', () => {
       }),
       transaction: vi.fn(),
     };
-    service = new ShiftsService(
-      db as never,
-      confirmation,
-      shiftMatching,
-      createMockShiftReminderService(),
-      createMockShiftCancellationService(),
-      mockPlatformAudit(),
-      createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
 
     await expect(service.assign('missing', 'staff-1', 'ops-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -184,18 +284,12 @@ describe('ShiftsService.sendAssignmentConfirmation', () => {
     const confirmation = {
       sendAssignmentConfirmations: vi.fn(),
     } as unknown as ShiftAssignmentConfirmationService;
-    const service = new ShiftsService(
-      db as never,
+    const service = buildService(
+      db,
       confirmation,
       {} as ShiftMatchingService,
-      createMockShiftReminderService(),
-      createMockShiftCancellationService(),
-      mockPlatformAudit(),
-      createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+      createMockShiftManualUnassignCommunicationService(),
+    );
 
     await expect(
       service.sendAssignmentConfirmation('shift-1', 'ops-1', { recipients: { centre: true } }),
@@ -210,18 +304,12 @@ describe('ShiftsService.availableStaff', () => {
         { id: 'staff-1', legalName: 'A', isTop: true, contacted: false },
       ]),
     } as unknown as ShiftMatchingService;
-    const service = new ShiftsService(
+    const service = buildService(
       {} as never,
       {} as never,
       shiftMatching,
-      createMockShiftReminderService(),
-      createMockShiftCancellationService(),
-      mockPlatformAudit(),
-      createMockShiftUpdateCommunicationService(),
-    createMockShiftManualUnassignCommunicationService(),
-      
-    createMockShiftBatchProgressCommunicationService(),
-  );
+      createMockShiftManualUnassignCommunicationService(),
+    );
 
     const rows = await service.availableStaff('shift-1');
     expect(rows).toHaveLength(1);

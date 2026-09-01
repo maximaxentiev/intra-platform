@@ -39,7 +39,7 @@ describe('Batch C1 foundation guards', () => {
     });
     expect(content.text).toContain('Shift Notes:');
     expect(content.text).toContain('Bring indoor shoes.');
-    expect(content.text).toContain('Rules, Policies, and Other Notes:');
+    expect(content.text).toContain('Centre Rules, Policies, and Notes:');
     expect(content.text).toContain('Use rear entrance.');
   });
 

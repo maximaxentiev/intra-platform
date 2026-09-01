@@ -1,9 +1,8 @@
+import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { BatchWorkspaceExpandedChild } from "@/components/shifts/BatchWorkspaceExpandedChild";
 import { StatusBadge } from "@/components/StatusBadge";
-import { batchChildAssigneeLabel } from "@/lib/batch-shift-ui";
 import { fmtTime, type ShiftBatchChildSummary } from "@/lib/db";
-import { formatShiftRoleLabel } from "@/lib/shift-role-ui";
 import { cn } from "@/lib/utils";
 
 export function BatchWorkspaceChildCard({
@@ -23,15 +22,11 @@ export function BatchWorkspaceChildCard({
   centreName: string;
   onToggle: () => void;
 }) {
-  const assignee = batchChildAssigneeLabel(shift);
-
   return (
     <article
       className={cn(
-        "rounded-xl border shadow-xs transition-colors",
-        expanded
-          ? "border-primary/25 bg-primary/[0.05] ring-1 ring-primary/15"
-          : "border-primary/10 bg-primary/[0.035]",
+        "rounded-xl border border-primary/20 shadow-xs transition-colors",
+        "bg-[#e8eefe]",
       )}
       data-testid={`batch-child-${shift.id}`}
       data-expanded={expanded ? "true" : "false"}
@@ -53,11 +48,6 @@ export function BatchWorkspaceChildCard({
             </p>
             <StatusBadge status={shift.status} />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {formatShiftRoleLabel(shift.roleNeeded)} ·{" "}
-            {shift.addedToStaffpoint ? "Staffpoint" : "Not on Staffpoint"}
-            {assignee ? ` · ${assignee}` : " · Unassigned"}
-          </p>
         </div>
         <ChevronDown
           className={cn(
@@ -69,7 +59,7 @@ export function BatchWorkspaceChildCard({
       </button>
 
       {expanded ? (
-        <div id={`batch-child-panel-${shift.id}`}>
+        <div id={`batch-child-panel-${shift.id}`} className="bg-[#e8eefe]">
           <BatchWorkspaceExpandedChild
             shiftId={shift.id}
             batchId={batchId}

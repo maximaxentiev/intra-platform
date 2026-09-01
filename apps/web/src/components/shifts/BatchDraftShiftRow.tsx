@@ -1,10 +1,12 @@
 import { ChevronDown, Copy, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfirmDestructiveDialog } from "@/components/ui-kit";
 import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import {
   type BatchDraftFieldErrors,
@@ -17,6 +19,9 @@ import { Info } from "lucide-react";
 
 const STAFFPOINT_HELP =
   "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
+
+const draftFieldClass =
+  "border-primary/15 bg-primary-soft text-foreground focus-visible:border-primary/30 focus-visible:ring-primary/20";
 
 export function BatchDraftShiftRow({
   index,
@@ -35,12 +40,13 @@ export function BatchDraftShiftRow({
   onRemove: () => void;
   canRemove: boolean;
 }) {
+  const [removeOpen, setRemoveOpen] = useState(false);
   const set = <K extends keyof BatchDraftShift>(key: K, value: BatchDraftShift[K]) =>
     onChange({ ...row, [key]: value });
 
   return (
     <div
-      className="rounded-lg border border-border/70 bg-card p-3 shadow-xs"
+      className="rounded-lg border border-primary/15 bg-primary-soft/50 p-3 shadow-xs"
       data-testid={`batch-draft-row-${index}`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -53,10 +59,30 @@ export function BatchDraftShiftRow({
             Duplicate
           </Button>
           {canRemove ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
-              <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden />
-              Remove
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setRemoveOpen(true)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden />
+                Remove
+              </Button>
+              <ConfirmDestructiveDialog
+                open={removeOpen}
+                onOpenChange={setRemoveOpen}
+                title="Remove this shift?"
+                consequence="This shift will be removed from the current Batch draft."
+                cancelLabel="Keep shift"
+                confirmLabel="Remove shift"
+                onConfirm={() => {
+                  onRemove();
+                  setRemoveOpen(false);
+                }}
+              />
+            </>
           ) : null}
         </div>
       </div>
@@ -67,6 +93,7 @@ export function BatchDraftShiftRow({
           <Input
             id={`batch-date-${row.key}`}
             type="date"
+            className={draftFieldClass}
             value={row.shiftDate}
             onChange={(e) => set("shiftDate", e.target.value)}
             aria-invalid={!!errors.shiftDate}
@@ -79,6 +106,7 @@ export function BatchDraftShiftRow({
           <Input
             id={`batch-start-${row.key}`}
             type="time"
+            className={draftFieldClass}
             value={row.startTime}
             onChange={(e) => set("startTime", e.target.value)}
             aria-invalid={!!errors.startTime}
@@ -91,6 +119,7 @@ export function BatchDraftShiftRow({
           <Input
             id={`batch-end-${row.key}`}
             type="time"
+            className={draftFieldClass}
             value={row.endTime}
             onChange={(e) => set("endTime", e.target.value)}
             aria-invalid={!!errors.endTime}
@@ -101,7 +130,7 @@ export function BatchDraftShiftRow({
         <div className="space-y-1.5">
           <Label>Role *</Label>
           <Select value={row.roleNeeded || undefined} onValueChange={(v) => set("roleNeeded", v)}>
-            <SelectTrigger aria-label={`Role for shift ${index + 1}`}>
+            <SelectTrigger className={draftFieldClass} aria-label={`Role for shift ${index + 1}`}>
               <SelectValue placeholder="Choose role..." />
             </SelectTrigger>
             <SelectContent>
@@ -135,7 +164,7 @@ export function BatchDraftShiftRow({
             value={row.addedToStaffpoint ? "yes" : "no"}
             onValueChange={(v) => set("addedToStaffpoint", v === "yes")}
           >
-            <SelectTrigger aria-label={`Staffpoint for shift ${index + 1}`}>
+            <SelectTrigger className={draftFieldClass} aria-label={`Staffpoint for shift ${index + 1}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -145,12 +174,12 @@ export function BatchDraftShiftRow({
           </Select>
         </div>
 
-        <div className="md:self-end">
+        <div className="space-y-1.5 md:space-y-0">
+          <Label className="sr-only md:not-sr-only md:mb-1.5 md:block md:opacity-0">Notes</Label>
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="w-full md:w-auto"
+            className={cn("h-9 w-full border-primary/15 bg-primary-soft md:w-auto", draftFieldClass)}
             aria-expanded={row.detailsOpen}
             onClick={() => set("detailsOpen", !row.detailsOpen)}
           >
@@ -164,7 +193,7 @@ export function BatchDraftShiftRow({
       </div>
 
       {row.detailsOpen ? (
-        <div className="mt-3 grid gap-4 border-t border-border/60 pt-3 md:grid-cols-2">
+        <div className="mt-3 grid gap-4 border-t border-primary/15 pt-3 md:grid-cols-2">
           <ShiftNotesField
             id={`batch-notes-${row.key}`}
             value={row.confirmationNotes}
@@ -174,14 +203,13 @@ export function BatchDraftShiftRow({
           />
           <div className="space-y-2">
             <Label htmlFor={`batch-internal-${row.key}`}>Internal Comment</Label>
-            <p className="text-xs text-muted-foreground">Internal only. Not included in Centre communications.</p>
             <Textarea
               id={`batch-internal-${row.key}`}
               value={row.internalComment}
               maxLength={INTERNAL_COMMENT_MAX_LENGTH}
               rows={2}
               placeholder="Optional"
-              className="min-h-[4.5rem] resize-y"
+              className={cn("min-h-[4.5rem] resize-y", draftFieldClass)}
               onChange={(e) => set("internalComment", e.target.value)}
             />
             {errors.internalComment ? (

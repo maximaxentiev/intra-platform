@@ -165,8 +165,9 @@ describe("Batch Shift Requests Phase B1 UI", () => {
     expect(detail).toContain("Shift Notes");
     expect(detail).toContain("confirmationNotes");
     expect(detail).not.toContain("shift.notes");
-    expect(detail).toContain("Part of Batch Request");
+    expect(detail).not.toContain("Part of Batch Request");
     expect(detail).toContain("Back to Batch");
+    expect(detail).toContain("Back to Shifts");
   });
 
   it("uses atomic batch create endpoint and maps notes separately", () => {

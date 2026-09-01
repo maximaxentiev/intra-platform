@@ -77,7 +77,7 @@ describe("Batch Shift Requests Phase C2", () => {
   it("keeps one expanded child model with visual highlight", () => {
     expect(batchWorkspace).toContain("expandedShiftId");
     expect(childCard).toContain("data-expanded");
-    expect(childCard).toContain("ring-primary");
+    expect(childCard).toContain("bg-[#e8eefe]");
   });
 
   it("invalidates batch workspace and shifts feed after operations", () => {

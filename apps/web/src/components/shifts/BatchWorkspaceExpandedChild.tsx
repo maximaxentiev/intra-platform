@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ShiftComments } from "@/components/ShiftComments";
@@ -15,6 +16,12 @@ import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import { ShiftResendConfirmationDialog } from "@/components/shifts/ShiftResendConfirmationDialog";
 import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -149,6 +156,7 @@ export function BatchWorkspaceExpandedChild({
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [pendingAssignStaff, setPendingAssignStaff] = useState<AvailableStaff | null>(null);
+  const [notifyPreviousCarer, setNotifyPreviousCarer] = useState(true);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
@@ -370,11 +378,17 @@ export function BatchWorkspaceExpandedChild({
     proceedAfterAssigneeCheck();
   }
 
-  async function assignStaff(staffId: string, staffLegalName: string): Promise<boolean> {
+  async function assignStaff(
+    staffId: string,
+    staffLegalName: string,
+    options?: { notifyPreviousCarer?: boolean },
+  ): Promise<boolean> {
     if (assigningStaffId) return false;
     setAssigningStaffId(staffId);
     try {
-      const result = await shiftsApi.assign(shiftId, staffId);
+      const result = await shiftsApi.assign(shiftId, staffId, {
+        notifyPreviousCarer: options?.notifyPreviousCarer,
+      });
       const message = shiftAssignmentFeedbackMessage(
         staffLegalName,
         result.assignment,
@@ -412,10 +426,15 @@ export function BatchWorkspaceExpandedChild({
 
   async function confirmAssignStaff() {
     if (!pendingAssignStaff || assigningStaffId) return;
-    const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName);
+    const isReassignment =
+      assignedStaffId != null && assignedStaffId !== pendingAssignStaff.id;
+    const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName, {
+      notifyPreviousCarer: isReassignment ? notifyPreviousCarer : undefined,
+    });
     if (success) {
       setAssignConfirmOpen(false);
       setPendingAssignStaff(null);
+      setNotifyPreviousCarer(true);
     }
   }
 
@@ -524,21 +543,49 @@ export function BatchWorkspaceExpandedChild({
     );
   }
 
+  const isPendingReassignment =
+    pendingAssignStaff != null &&
+    assignedStaffId != null &&
+    assignedStaffId !== pendingAssignStaff.id;
+
   return (
     <div
-      className="space-y-4 border-t border-primary/15 bg-primary/[0.02] px-4 py-4"
+      className="space-y-0 border-t border-primary/20 px-4 py-4"
       data-testid={`batch-child-expanded-${shiftId}`}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <section aria-labelledby={`batch-shift-details-${shiftId}`}>
-            <h3
-              id={`batch-shift-details-${shiftId}`}
-              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-            >
-              Shift details
-            </h3>
-            <div className="mt-3 space-y-3">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link to="/shifts/$id" params={{ id: shiftId }}>
+            Open Shift
+          </Link>
+        </Button>
+        {!historical && status !== "cancelled" ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="More shift actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() => setCancelDialogOpen(true)}
+              >
+                Cancel shift
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </div>
+
+      <section aria-labelledby={`batch-shift-details-${shiftId}`} className="space-y-4 pb-6">
+        <h3
+          id={`batch-shift-details-${shiftId}`}
+          className="text-sm font-bold uppercase tracking-wide text-foreground"
+        >
+          Shift details
+        </h3>
+        <div className="space-y-4 rounded-lg border border-primary/10 bg-background/70 p-3">
               {editable ? (
                 <>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -641,110 +688,93 @@ export function BatchWorkspaceExpandedChild({
                   ]}
                 />
               )}
-            </div>
-          </section>
-
-          <section aria-labelledby={`batch-assignment-${shiftId}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3
-                id={`batch-assignment-${shiftId}`}
-                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-              >
-                {showAssignment ? "Assignment" : "Available staff"}
-              </h3>
-              {!historical && status !== "cancelled" ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive"
-                  disabled={cancelling}
-                  onClick={() => setCancelDialogOpen(true)}
-                >
-                  Cancel shift
-                </Button>
-              ) : null}
-            </div>
-
-            <div className="mt-3 overflow-hidden rounded-lg border border-border/70 bg-background">
-              {showAssignment && assignedName ? (
-                <ShiftAssignedCarerBar
-                  assignedName={assignedName}
-                  resendDisabled={resendingConfirmations || status !== "filled"}
-                  unassignDisabled={unassigning || historical}
-                  onResend={() => setResendDialogOpen(true)}
-                  onUnassign={() => setUnassignDialogOpen(true)}
-                />
-              ) : null}
-
-              {loadMatching ? (
-                availableQ.isLoading ? (
-                  <p className="px-4 py-3 text-sm text-muted-foreground">Loading available staff…</p>
-                ) : availableQ.isError ? (
-                  <div className="space-y-2 px-4 py-3">
-                    <p className="text-sm text-destructive">Could not load available staff.</p>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void availableQ.refetch()}>
-                      Retry
-                    </Button>
-                  </div>
-                ) : (
-                  <ShiftAvailableStaffList
-                    candidates={availableQ.data ?? []}
-                    assignedStaffId={assignedStaffId}
-                    assignedName={assignedName}
-                    assignDisabled={assignConfirmOpen || assigningStaffId != null}
-                    onToggleContacted={toggleContacted}
-                    onAssign={(staff) => {
-                      setPendingAssignStaff(staff);
-                      setAssignConfirmOpen(true);
-                    }}
-                  />
-                )
-              ) : null}
-
-              {!showAssignment && !loadMatching && historical && !assignedName ? (
-                <p className="px-4 py-3 text-sm text-muted-foreground">
-                  This shift closed without an assignment.
-                </p>
-              ) : null}
-
-              {status === "cancelled" && shift?.cancellationReason ? (
-                <p className="border-t border-border/70 px-4 py-2.5 text-[13px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Reason:</span>{" "}
-                  {shift.cancellationReason}
-                </p>
-              ) : null}
-            </div>
-          </section>
         </div>
+      </section>
 
-        <div className="space-y-4">
-          {!editable ? (
-            <section aria-labelledby={`batch-shift-notes-read-${shiftId}`}>
-              <h3
-                id={`batch-shift-notes-read-${shiftId}`}
-                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-              >
-                Shift Notes
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Shared in Shift confirmation communications.
-              </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                {summary.confirmationNotes?.trim() || shift?.confirmationNotes?.trim() || "—"}
-              </p>
-            </section>
+      <hr className="border-border/60" />
+
+      <section aria-labelledby={`batch-assignment-${shiftId}`} className="space-y-4 py-6">
+        <h3
+          id={`batch-assignment-${shiftId}`}
+          className="text-sm font-bold uppercase tracking-wide text-foreground"
+        >
+          {showAssignment ? "Assignment" : "Available staff"}
+        </h3>
+
+        <div className="overflow-hidden rounded-lg border border-border/70 bg-background/70">
+          {showAssignment && assignedName ? (
+            <ShiftAssignedCarerBar
+              assignedName={assignedName}
+              resendDisabled={resendingConfirmations || status !== "filled"}
+              unassignDisabled={unassigning || historical}
+              onResend={() => setResendDialogOpen(true)}
+              onUnassign={() => setUnassignDialogOpen(true)}
+            />
           ) : null}
 
-          <ShiftComments shiftId={shiftId} enabled />
-        </div>
-      </div>
+          {loadMatching ? (
+            availableQ.isLoading ? (
+              <p className="px-4 py-3 text-sm text-muted-foreground">Loading available staff…</p>
+            ) : availableQ.isError ? (
+              <div className="space-y-2 px-4 py-3">
+                <p className="text-sm text-destructive">Could not load available staff.</p>
+                <Button type="button" size="sm" variant="outline" onClick={() => void availableQ.refetch()}>
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <ShiftAvailableStaffList
+                candidates={availableQ.data ?? []}
+                assignedStaffId={assignedStaffId}
+                assignedName={assignedName}
+                assignDisabled={assignConfirmOpen || assigningStaffId != null}
+                onToggleContacted={toggleContacted}
+                onAssign={(staff) => {
+                  setPendingAssignStaff(staff);
+                  setNotifyPreviousCarer(true);
+                  setAssignConfirmOpen(true);
+                }}
+              />
+            )
+          ) : null}
 
-      <Button asChild variant="outline" size="sm">
-        <Link to="/shifts/$id" params={{ id: shiftId }}>
-          Open Shift
-        </Link>
-      </Button>
+          {!showAssignment && !loadMatching && historical && !assignedName ? (
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              This shift closed without an assignment.
+            </p>
+          ) : null}
+
+          {status === "cancelled" && shift?.cancellationReason ? (
+            <p className="border-t border-border/70 px-4 py-2.5 text-[13px] text-muted-foreground">
+              <span className="font-medium text-foreground">Reason:</span>{" "}
+              {shift.cancellationReason}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <hr className="border-border/60" />
+
+      <section className="space-y-4 pt-2">
+        {!editable ? (
+          <div aria-labelledby={`batch-shift-notes-read-${shiftId}`}>
+            <h3
+              id={`batch-shift-notes-read-${shiftId}`}
+              className="text-sm font-bold uppercase tracking-wide text-foreground"
+            >
+              Shift Notes
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shared in Shift confirmation communications.
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+              {summary.confirmationNotes?.trim() || shift?.confirmationNotes?.trim() || "—"}
+            </p>
+          </div>
+        ) : null}
+
+        <ShiftComments shiftId={shiftId} enabled />
+      </section>
 
       <ShiftAssignmentConfirmDialog
         open={assignConfirmOpen}
@@ -752,9 +782,17 @@ export function BatchWorkspaceExpandedChild({
           if (!open) {
             setAssignConfirmOpen(false);
             setPendingAssignStaff(null);
+            setNotifyPreviousCarer(true);
           }
         }}
         details={assignConfirmDetails}
+        reassignment={
+          isPendingReassignment && assignedName
+            ? { currentCarerName: assignedName }
+            : null
+        }
+        notifyPreviousCarer={notifyPreviousCarer}
+        onNotifyPreviousCarerChange={setNotifyPreviousCarer}
         confirming={assigningStaffId != null}
         batchCentreDeferred={batchCentreDeferred}
         onConfirm={() => void confirmAssignStaff()}

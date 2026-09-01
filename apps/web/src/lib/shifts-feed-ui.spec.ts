@@ -25,8 +25,9 @@ describe('batch feed display labels', () => {
   });
 
   it('formats single-date and ranged batch labels', () => {
-    expect(formatBatchFeedDateLabel('2026-09-07')).toBe('Sep 7');
-    expect(formatBatchFeedDateLabel('2026-09-07 – 2026-09-11')).toBe('Sep 7 – Sep 11');
+    expect(formatBatchFeedDateLabel('2026-09-07')).toBe('09-07-2026');
+    expect(formatBatchFeedDateLabel('2026-09-07 – 2026-09-11')).toBe('09-07 to 09-11 2026');
+    expect(formatBatchFeedDateLabel('2026-12-31 – 2027-01-02')).toBe('12-31-2026 to 01-02-2027');
   });
 });
 

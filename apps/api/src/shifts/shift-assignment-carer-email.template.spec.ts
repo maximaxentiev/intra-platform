@@ -27,7 +27,7 @@ describe('buildShiftAssignmentCarerEmailContent', () => {
     expect(content.text).toContain('123 Main Street');
     expect(content.text).toContain('Toronto');
     expect(content.text).toContain('Role: ECE');
-    expect(content.text).toContain('Rules, Policies, and Other Notes:');
+    expect(content.text).toContain('Centre Rules, Policies, and Notes:');
     expect(content.text).toContain('Park in the rear lot.');
     expect(content.text).toContain('Shift Notes:');
     expect(content.text).toContain('Bring indoor shoes.');
@@ -41,7 +41,7 @@ describe('buildShiftAssignmentCarerEmailContent', () => {
       shiftConfirmationNotes: '',
       roleNeeded: null,
     });
-    expect(content.text).not.toContain('Rules, Policies, and Other Notes:');
+    expect(content.text).not.toContain('Centre Rules, Policies, and Notes:');
     expect(content.text).not.toContain('Shift Notes:');
     expect(content.text).not.toContain('Role:');
   });

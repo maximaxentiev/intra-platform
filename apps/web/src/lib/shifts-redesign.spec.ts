@@ -105,9 +105,9 @@ describe("shift detail layout", () => {
 
   it("uses a desktop grid row for available staff", () => {
     expect(detail).toContain("ShiftAvailableStaffList");
-    expect(availableStaffList).toContain("md:grid-cols-[minmax(8rem,1.05fr)_minmax(0,2.5fr)_5rem_auto_auto]");
-    expect(availableStaffList).toContain("formatAvailableStaffPriorityLine(s)");
-    expect(availableStaffList).toContain("md:hidden");
+    expect(availableStaffList).toContain("xl:grid-cols-[minmax(9rem,1.1fr)_minmax(18rem,2fr)_minmax(5rem,0.6fr)_minmax(7rem,0.7fr)_max-content]");
+    expect(availableStaffList).toContain("formatAvailableStaffPriorityChips");
+    expect(availableStaffList).toContain("xl:hidden");
   });
 
   it("wires communication dialogs instead of immediate send/unassign", () => {

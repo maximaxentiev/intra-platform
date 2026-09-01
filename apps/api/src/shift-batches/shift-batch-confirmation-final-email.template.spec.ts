@@ -32,6 +32,11 @@ describe('buildBatchConfirmationFinalEmailContent', () => {
     });
 
     expect(content.subject).toContain('confirmed');
+    expect(content.text).toContain('Shift 1');
+    expect(content.text).toContain('Shift 2');
+    expect(content.html).toContain('Shift 1');
+    expect(content.html).toContain('Shift 2');
+    expect(content.html).toContain('padding-bottom:24px');
     expect(content.text).toContain('Jane Smith');
     expect(content.text).toContain('Shift Notes');
     expect(content.text).toContain('Bring RECE docs');

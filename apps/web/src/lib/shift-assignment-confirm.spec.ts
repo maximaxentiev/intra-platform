@@ -56,7 +56,7 @@ describe("ops shift assignment confirmation UI", () => {
     const staffList = readSrc("components/shifts/ShiftAvailableStaffList.tsx");
     expect(db).toContain("ShiftAssignResponse");
     expect(page).toContain("shiftAssignmentFeedbackMessage");
-    expect(staffList).toContain("Resend confirmation");
+    expect(staffList).toContain("Manage assignment");
     expect(page).toContain("assigningStaffId");
   });
 
@@ -108,7 +108,8 @@ describe("ops shift assignment confirmation UI", () => {
 
   it("calls assign exactly once from confirm handler using legal name", () => {
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
-    expect(page).toContain("await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName)");
+    expect(page).toContain("await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName, {");
+    expect(page).toContain("notifyPreviousCarer");
     expect(page).toContain("onConfirm={() => void confirmAssignStaff()}");
   });
 
@@ -116,7 +117,7 @@ describe("ops shift assignment confirmation UI", () => {
     const page = readSrc("routes/_authenticated/shifts.$id.tsx");
     const list = readSrc("components/shifts/ShiftAvailableStaffList.tsx");
     expect(page).toContain("ShiftAvailableStaffList");
-    expect(list).toContain("formatAvailableStaffPriorityLine(s)");
+    expect(list).toContain("formatAvailableStaffPriorityChips");
     expect(list).toContain("isAvailableStaffPriorityBoundary");
   });
 });

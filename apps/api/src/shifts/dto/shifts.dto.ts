@@ -134,6 +134,10 @@ export class ChangeStatusDto {
 export class AssignDto {
   @IsUUID('4')
   staffId!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyPreviousCarer?: boolean;
 }
 
 export class ContactedDto {

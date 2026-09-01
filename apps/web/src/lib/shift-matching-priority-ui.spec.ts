@@ -61,7 +61,7 @@ describe("shift detail available staff priority presentation", () => {
     const page = readFileSync(join(webRoot, "routes/_authenticated/shifts.$id.tsx"), "utf8");
     const list = readFileSync(join(webRoot, "components/shifts/ShiftAvailableStaffList.tsx"), "utf8");
     expect(page).toContain("ShiftAvailableStaffList");
-    expect(list).toContain("formatAvailableStaffPriorityLine");
+    expect(list).toContain("formatAvailableStaffPriorityChips");
     expect(list).toContain("isAvailableStaffPriorityBoundary");
   });
 });

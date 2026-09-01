@@ -576,7 +576,12 @@ export class ShiftsService {
     return { ok: true };
   }
 
-  async assign(id: string, staffId: string, actorUserId: string): Promise<ShiftAssignResponse> {
+  async assign(
+    id: string,
+    staffId: string,
+    actorUserId: string,
+    options?: { notifyPreviousCarer?: boolean },
+  ): Promise<ShiftAssignResponse> {
     const existing = await this.db
       .select({
         assignedStaffId: shifts.assignedStaffId,
@@ -678,12 +683,30 @@ export class ShiftsService {
       actorUserId,
       trigger: 'assign',
     });
+
+    let previousCarerNotification: ShiftAssignResponse['previousCarerNotification'] = null;
+    if (
+      previousStaffId &&
+      previousStaffId !== staffId &&
+      options?.notifyPreviousCarer === true
+    ) {
+      const unassignResult = await this.manualUnassignCommunications.sendCommunications({
+        shiftId: id,
+        centreId: shift.centreId,
+        previousStaffId,
+        actorUserId,
+        recipients: { centre: false, carer: true },
+      });
+      previousCarerNotification = unassignResult.carer;
+    }
+
     await this.shiftReminders.enqueueScheduledIds(scheduledReminderIds);
     await this.batchProgressCommunications.maybeEvaluateAfterFulfillmentChange(shift.batchId);
     return {
       shift,
       assignment: { changed: true, alreadyAssigned: false },
       notifications,
+      previousCarerNotification,
     };
   }
 

@@ -30,7 +30,7 @@ export function buildShiftAssignmentCarerEmailContent(params: {
   const centreRulesTrimmed = params.centreNotes.trim();
   const centreRulesText =
     centreRulesTrimmed.length > 0
-      ? ['', 'Rules, Policies, and Other Notes:', centreRulesTrimmed]
+      ? ['', 'Centre Rules, Policies, and Notes:', centreRulesTrimmed]
       : [];
 
   const shiftNotesTrimmed = params.shiftConfirmationNotes.trim();
@@ -69,7 +69,7 @@ export function buildShiftAssignmentCarerEmailContent(params: {
 
   const centreRulesHtml =
     centreRulesTrimmed.length > 0
-      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Rules, Policies, and Other Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(centreRulesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
+      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Centre Rules, Policies, and Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(centreRulesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
       : '';
 
   const shiftNotesHtml =

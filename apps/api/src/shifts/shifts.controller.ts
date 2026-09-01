@@ -75,7 +75,9 @@ export class ShiftsController {
     @Body() dto: AssignDto,
     @CurrentUser() user: SessionPayload,
   ) {
-    return this.shifts.assign(id, dto.staffId, user.userId);
+    return this.shifts.assign(id, dto.staffId, user.userId, {
+      notifyPreviousCarer: dto.notifyPreviousCarer,
+    });
   }
 
   @Get(':id/assignment-confirmation-recipients')

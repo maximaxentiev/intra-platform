@@ -1,11 +1,36 @@
-import { formatShiftDateLabel } from '@/lib/shifts-list-ui';
 import type { ShiftFeedBatchItem } from '@/lib/db';
 
+function formatCompactDate(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return isoDate;
+  const [, year, month, day] = match;
+  return `${month}-${day}-${year}`;
+}
+
+/** Compact one-line batch date period for the Shifts feed Date column. */
 export function formatBatchFeedDateLabel(dateRange: string | null): string {
   if (!dateRange) return 'No dates yet';
-  if (!dateRange.includes(' – ')) return formatShiftDateLabel(dateRange);
-  const [from, to] = dateRange.split(' – ');
-  return `${formatShiftDateLabel(from ?? dateRange)} – ${formatShiftDateLabel(to ?? dateRange)}`;
+  if (!dateRange.includes(' – ')) return formatCompactDate(dateRange.trim());
+
+  const [fromRaw, toRaw] = dateRange.split(' – ');
+  const from = (fromRaw ?? '').trim();
+  const to = (toRaw ?? from).trim();
+  if (!from) return 'No dates yet';
+  if (from === to) return formatCompactDate(from);
+
+  const fromMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(from);
+  const toMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to);
+  if (!fromMatch || !toMatch) return `${from} – ${to}`;
+
+  const fromYear = fromMatch[1];
+  const toYear = toMatch[1];
+  const fromCompact = `${fromMatch[2]}-${fromMatch[3]}`;
+  const toCompact = `${toMatch[2]}-${toMatch[3]}`;
+
+  if (fromYear === toYear) {
+    return `${fromCompact} to ${toCompact} ${fromYear}`;
+  }
+  return `${fromCompact}-${fromYear} to ${toCompact}-${toYear}`;
 }
 
 export function formatBatchFeedProgressLabel(batch: ShiftFeedBatchItem): string {

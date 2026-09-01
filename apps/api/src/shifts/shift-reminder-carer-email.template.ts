@@ -51,7 +51,7 @@ export function buildShiftReminderCarerEmailContent(params: {
   const notesTrimmed = params.centreNotes.trim();
   const notesText =
     notesTrimmed.length > 0
-      ? ['', 'Rules, Policies, and Other Notes:', notesTrimmed]
+      ? ['', 'Centre Rules, Policies, and Notes:', notesTrimmed]
       : [];
   const roleText =
     params.roleNeeded != null ? [`Role: ${params.roleNeeded}`] : [];
@@ -84,7 +84,7 @@ export function buildShiftReminderCarerEmailContent(params: {
 
   const notesHtml =
     notesTrimmed.length > 0
-      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Rules, Policies, and Other Notes</strong><br/>${escapeShiftAssignmentEmailHtml(notesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
+      ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Centre Rules, Policies, and Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(notesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
       : '';
 
   const portalHtml = portalUrl

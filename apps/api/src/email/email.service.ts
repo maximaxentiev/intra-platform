@@ -7,6 +7,7 @@ import {
   ResendEmailTransport,
   type EmailMessage,
 } from './email.transport';
+import { appendIntraEmailSignOffText } from './platform-email-branding.util';
 
 export const EMAIL_TRANSPORT = Symbol('EMAIL_TRANSPORT');
 
@@ -29,7 +30,8 @@ export class EmailService {
   }
 
   async send(message: EmailMessage) {
-    return this.transport.send(message);
+    const text = message.text ? appendIntraEmailSignOffText(message.text) : message.text;
+    return this.transport.send({ ...message, text });
   }
 
   isConfigured(): boolean {

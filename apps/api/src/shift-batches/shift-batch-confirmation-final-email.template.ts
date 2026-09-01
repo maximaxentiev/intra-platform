@@ -25,11 +25,12 @@ export function buildBatchConfirmationFinalEmailContent(params: {
 }) {
   const subject = `Your Intra shift request is confirmed — ${params.centreName}`;
 
-  const textBlocks = params.assignments.map((shift) => {
+  const textBlocks = params.assignments.map((shift, index) => {
     const dateLabel = formatShiftAssignmentDateLabel(shift.shiftDate);
     const timeLabel = formatShiftAssignmentTimeRange(shift.startTime, shift.endTime);
     const notes = shift.shiftConfirmationNotes.trim();
     return [
+      `Shift ${index + 1}`,
       `Date: ${dateLabel}`,
       `Time: ${timeLabel}`,
       shift.roleNeeded ? `Role: ${shift.roleNeeded}` : null,
@@ -55,7 +56,7 @@ export function buildBatchConfirmationFinalEmailContent(params: {
   ].join('\n');
 
   const assignmentHtml = params.assignments
-    .map((shift, index) => renderAssignmentBlockHtml(shift, index > 0))
+    .map((shift, index) => renderAssignmentBlockHtml(shift, index + 1, index > 0))
     .join('');
 
   const html = wrapShiftAssignmentEmailHtml(`
@@ -68,12 +69,16 @@ export function buildBatchConfirmationFinalEmailContent(params: {
   return { subject, html, text };
 }
 
-function renderAssignmentBlockHtml(shift: BatchFinalConfirmationShiftBlock, withSeparator: boolean) {
+function renderAssignmentBlockHtml(
+  shift: BatchFinalConfirmationShiftBlock,
+  shiftNumber: number,
+  withSeparator: boolean,
+) {
   const dateLabel = formatShiftAssignmentDateLabel(shift.shiftDate);
   const timeLabel = formatShiftAssignmentTimeRange(shift.startTime, shift.endTime);
   const notes = shift.shiftConfirmationNotes.trim();
   const separator = withSeparator
-    ? `<tr><td style="padding-top:20px;border-top:1px solid #e5e5e5;"></td></tr>`
+    ? `<tr><td style="padding-top:24px;border-top:1px solid #e5e5e5;"></td></tr>`
     : `<tr><td style="padding-top:20px;"></td></tr>`;
 
   const roleHtml = shift.roleNeeded
@@ -87,12 +92,13 @@ function renderAssignmentBlockHtml(shift: BatchFinalConfirmationShiftBlock, with
 
   return `
         ${separator}
-        <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Date:</strong> ${escapeShiftAssignmentEmailHtml(dateLabel)}</td></tr>
+        <tr><td style="padding-top:${withSeparator ? '24' : '16'}px;font-size:17px;font-weight:600;color:#111;">Shift ${shiftNumber}</td></tr>
+        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Date:</strong> ${escapeShiftAssignmentEmailHtml(dateLabel)}</td></tr>
         <tr><td style="padding-top:8px;font-size:15px;line-height:1.5;color:#333;"><strong>Time:</strong> ${escapeShiftAssignmentEmailHtml(timeLabel)}</td></tr>
         ${roleHtml}
         <tr><td style="padding-top:8px;font-size:15px;line-height:1.5;color:#333;"><strong>Assigned Carer:</strong> ${escapeShiftAssignmentEmailHtml(shift.carerLegalName)}</td></tr>
         ${notesHtml}
-        <tr><td style="padding-top:16px;">
+        <tr><td style="padding-top:16px;padding-bottom:24px;">
           <a href="${escapeShiftAssignmentEmailHtml(shift.documentShareUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 20px;border-radius:8px;">View Carer Documents</a>
         </td></tr>`;
 }

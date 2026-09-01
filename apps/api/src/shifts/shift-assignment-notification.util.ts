@@ -1,4 +1,7 @@
 import { EmailDeliveryError } from '../email/email.service';
+import { wrapIntraEmailHtml } from '../email/platform-email-branding.util';
+import { buildIntraEmailLogoUrl } from '../config/platform-email-links';
+import type { PlatformUrlEnv } from '../config/platform-url';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,18 +45,11 @@ export function escapeShiftAssignmentEmailHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export function wrapShiftAssignmentEmailHtml(bodyRows: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#f6f6f8;font-family:system-ui,-apple-system,Segoe UI,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f8;padding:24px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:28px 24px;">
-        ${bodyRows}
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+export function wrapShiftAssignmentEmailHtml(
+  bodyRows: string,
+  logoUrl?: string,
+  env: PlatformUrlEnv = process.env as PlatformUrlEnv,
+): string {
+  const resolvedLogoUrl = logoUrl ?? buildIntraEmailLogoUrl(env);
+  return wrapIntraEmailHtml(bodyRows, resolvedLogoUrl);
 }

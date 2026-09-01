@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -7,15 +7,16 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { dataTable, DataTableEmptyRow, DataTableLoadingRows } from "@/components/ui-kit";
 import {
   batchFeedStateLabel,
-  batchMatchingChildrenLabel,
   formatBatchFeedDateLabel,
-  formatBatchFeedProgressLabel,
 } from "@/lib/shifts-feed-ui";
 import { displayStaff, fmtTime, type ShiftFeedItem, type ShiftFeedShiftSummary, type ShiftStatus } from "@/lib/db";
 import { shiftAssigneeLabel } from "@/lib/shifts-list-ui";
+import { Info } from "lucide-react";
 
 const STAFFPOINT_HELP =
   "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
+
+const BATCH_CHILD_BG = "bg-[#e8eefe] hover:bg-[#dfe8fd]";
 
 function assignedNameOf(s: ShiftFeedShiftSummary) {
   return s.assignedStaffId && s.assignedLegalName
@@ -181,15 +182,30 @@ function BatchDesktopRows({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const matchingLabel = batchMatchingChildrenLabel(item.matchingChildCount);
-  const cancelledSuffix =
-    item.cancelledChildCount > 0 ? ` · ${item.cancelledChildCount} cancelled` : "";
+  const batchStatus =
+    item.batch.displayState === "open"
+      ? "pending"
+      : item.batch.displayState === "ready"
+        ? "filled"
+        : "completed";
 
   return (
     <>
-      <TableRow className="border-primary/10 bg-primary/[0.045] hover:bg-primary/[0.06]">
-        <TableCell colSpan={8} className="p-0">
-          <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <TableRow className="border-primary/15 bg-primary/[0.04] hover:bg-primary/[0.06]">
+        <TableCell className={`${dataTable.cell} max-w-[220px] py-5 font-semibold`}>
+          {item.batch.centreName}
+        </TableCell>
+        <TableCell className={`${dataTable.cell} py-5 tabular-nums whitespace-nowrap`}>
+          {formatBatchFeedDateLabel(item.batch.dateRange)}
+        </TableCell>
+        <TableCell className={`${dataTable.cell} py-5`}>
+          <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-2.5 py-1 text-xs font-medium text-foreground">
+            Batch Request
+          </span>
+        </TableCell>
+        <TableCell className={`${dataTable.cell} py-5`} colSpan={3}>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={batchStatus}>{batchFeedStateLabel(item.batch.displayState)}</StatusBadge>
             <Button
               type="button"
               variant="ghost"
@@ -204,45 +220,24 @@ function BatchDesktopRows({
                 aria-hidden
               />
             </Button>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Link
-                  to="/shifts/batches/$id"
-                  params={{ id: item.batch.id }}
-                  className="text-sm font-semibold text-foreground underline-offset-2 hover:underline"
-                >
-                  {item.batch.centreName}
-                </Link>
-                <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-2 py-0.5 text-xs font-medium text-foreground">
-                  Batch Request
-                </span>
-                <StatusBadge status={item.batch.displayState === "open" ? "pending" : item.batch.displayState === "ready" ? "filled" : "completed"}>
-                  {batchFeedStateLabel(item.batch.displayState)}
-                </StatusBadge>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {formatBatchFeedDateLabel(item.batch.dateRange)}
-                {" · "}
-                {formatBatchFeedProgressLabel(item)}
-                {cancelledSuffix}
-                {matchingLabel ? ` · ${matchingLabel}` : ""}
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link to="/shifts/batches/$id" params={{ id: item.batch.id }}>
-                Open batch
-              </Link>
-            </Button>
           </div>
+        </TableCell>
+        <TableCell className={`${dataTable.cell} py-5`} />
+        <TableCell className={`${dataTable.cell} ${dataTable.cellActions} py-5`}>
+          <Button asChild size="sm" className="relative z-10">
+            <Link to="/shifts/batches/$id" params={{ id: item.batch.id }}>
+              Open batch
+            </Link>
+          </Button>
         </TableCell>
       </TableRow>
       {expanded
         ? item.matchingChildren.map((child) => (
             <TableRow
               key={child.id}
-              className={`relative ${dataTable.row} ${dataTable.rowInteractive} bg-primary/[0.02]`}
+              className={`relative ${dataTable.row} ${dataTable.rowInteractive} ${BATCH_CHILD_BG}`}
             >
-              <TableCell className={`${dataTable.cell} max-w-[220px] pl-10 text-muted-foreground`}>
+              <TableCell className={`${dataTable.cell} max-w-[220px] pl-8 text-muted-foreground`}>
                 <Link
                   to="/shifts/$id"
                   params={{ id: child.id }}
@@ -301,40 +296,39 @@ function BatchMobileCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const matchingLabel = batchMatchingChildrenLabel(item.matchingChildCount);
+  const batchStatus =
+    item.batch.displayState === "open"
+      ? "pending"
+      : item.batch.displayState === "ready"
+        ? "filled"
+        : "completed";
 
   return (
     <li className="rounded-xl border border-primary/15 bg-primary/[0.04] shadow-xs">
-      <div className="flex items-start gap-3 px-3.5 py-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="mt-0.5 h-8 w-8 shrink-0"
-          aria-expanded={expanded}
-          aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
-          onClick={onToggle}
-        >
-          <ChevronDown className={`h-4 w-4 ${expanded ? "rotate-180" : ""}`} aria-hidden />
-        </Button>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link to="/shifts/batches/$id" params={{ id: item.batch.id }} className="text-sm font-semibold text-foreground">
-              {item.batch.centreName}
-            </Link>
-            <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-2 py-0.5 text-xs font-medium">
-              Batch Request
-            </span>
-            <StatusBadge status={item.batch.displayState === "open" ? "pending" : item.batch.displayState === "ready" ? "filled" : "completed"}>
-              {batchFeedStateLabel(item.batch.displayState)}
-            </StatusBadge>
-          </div>
-          <p className="text-[13px] text-muted-foreground">
-            {formatBatchFeedDateLabel(item.batch.dateRange)} · {formatBatchFeedProgressLabel(item)}
-            {item.cancelledChildCount > 0 ? ` · ${item.cancelledChildCount} cancelled` : ""}
-            {matchingLabel ? ` · ${matchingLabel}` : ""}
-          </p>
-          <Button asChild variant="outline" size="sm" className="mt-2 h-8">
+      <div className="flex flex-col gap-3 px-3.5 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-semibold text-foreground">{item.batch.centreName}</span>
+          <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+            {formatBatchFeedDateLabel(item.batch.dateRange)}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-2 py-0.5 text-xs font-medium">
+            Batch Request
+          </span>
+          <StatusBadge status={batchStatus}>{batchFeedStateLabel(item.batch.displayState)}</StatusBadge>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? "Collapse" : "Expand"} batch at ${item.batch.centreName}`}
+            onClick={onToggle}
+          >
+            <ChevronDown className={`h-4 w-4 ${expanded ? "rotate-180" : ""}`} aria-hidden />
+          </Button>
+          <Button asChild size="sm" className="ml-auto">
             <Link to="/shifts/batches/$id" params={{ id: item.batch.id }}>Open batch</Link>
           </Button>
         </div>
@@ -346,7 +340,7 @@ function BatchMobileCard({
               <Link
                 to="/shifts/$id"
                 params={{ id: child.id }}
-                className="block rounded-lg border border-primary/10 bg-primary/[0.02] px-3 py-2.5"
+                className={`block rounded-lg border border-primary/10 px-3 py-2.5 ${BATCH_CHILD_BG}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium tabular-nums">{child.shiftDate}</span>
@@ -357,7 +351,6 @@ function BatchMobileCard({
                 </p>
                 <p className="text-[13px] text-muted-foreground">
                   {shiftAssigneeLabel(assignedNameOf(child), child.status as ShiftStatus).text}
-                  {child.addedToStaffpoint ? " · Staffpoint" : ""}
                 </p>
               </Link>
             </li>
