@@ -12,6 +12,7 @@ import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centreContacts, centres, shifts, staff, staffAccounts } from '../db/schema';
 import { EmailService } from '../email/email.service';
 import { getStaffLegalFullName } from '@intra/shared';
+import { ensureFreshStaffDocumentShareUrlForCentreEmail } from '../staff-documents/staff-document-share-email.util';
 import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-document-share-lifecycle.service';
 import {
   normalizeStaffEmail,
@@ -379,18 +380,12 @@ export class ShiftAssignmentConfirmationService {
     staffId: string,
     actorUserId: string,
   ): Promise<string | null> {
-    const existing = await this.shareLifecycle.buildActiveStaffDocumentShareUrl(staffId);
-    if (existing) return existing;
-
-    try {
-      const generated = await this.shareLifecycle.generateShareLink(staffId, actorUserId);
-      return generated.shareUrl;
-    } catch (err) {
-      this.logger.warn(
-        `Document share unavailable for staffId=${staffId}: ${err instanceof Error ? err.message.slice(0, 120) : 'unknown'}`,
-      );
-      return null;
-    }
+    return ensureFreshStaffDocumentShareUrlForCentreEmail(
+      this.db,
+      this.config,
+      staffId,
+      actorUserId,
+    );
   }
 
   private async recordSkipped(

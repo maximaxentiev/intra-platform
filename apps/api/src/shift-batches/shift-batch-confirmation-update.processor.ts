@@ -21,7 +21,7 @@ import {
   isValidNotificationEmail,
   normalizeNotificationEmail,
 } from '../shifts/shift-assignment-notification.util';
-import { buildActiveStaffDocumentShareUrlForEmail } from '../staff-documents/staff-document-share-email.util';
+import { ensureFreshStaffDocumentShareUrlForCentreEmail } from '../staff-documents/staff-document-share-email.util';
 import {
   resolveBatchFinalCarerLegalName,
 } from './shift-batch-confirmation-final-email.template';
@@ -141,8 +141,11 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
       let shareUrl = shareCache.get(row.assignedStaffId);
       if (!shareUrl) {
         shareUrl =
-          (await buildActiveStaffDocumentShareUrlForEmail(db, this.config, row.assignedStaffId)) ??
-          '';
+          (await ensureFreshStaffDocumentShareUrlForCentreEmail(
+            db,
+            this.config,
+            row.assignedStaffId,
+          )) ?? '';
         if (!shareUrl) {
           return {
             kind: 'permanent_failure',

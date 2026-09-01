@@ -15,6 +15,9 @@ import {
   shiftBatches,
   shifts,
   staff,
+  staffDocumentFiles,
+  staffDocumentSets,
+  staffDocumentSubmissions,
   users,
 } from '../db/schema';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
@@ -60,6 +63,43 @@ describe.runIf(POSTGRES_READY)('Batch completion integration', () => {
   let completionService: ShiftBatchCompletionService;
   let progressService: ShiftBatchProgressCommunicationService;
   const batchIds: string[] = [];
+  const documentSetIds: string[] = [];
+
+  async function seedShareableDocument(staffId: string) {
+    const setRows = await db
+      .insert(staffDocumentSets)
+      .values({
+        staffId,
+        documentType: 'vulnerable_sector_check',
+        remindersEnabled: true,
+      })
+      .returning({ id: staffDocumentSets.id });
+    const setId = setRows[0]!.id;
+    documentSetIds.push(setId);
+
+    const submissionRows = await db
+      .insert(staffDocumentSubmissions)
+      .values({
+        documentSetId: setId,
+        reviewStatus: 'approved',
+        submittedAt: new Date('2026-01-01T10:00:00.000Z'),
+        submittedByActorType: 'ops_user',
+      })
+      .returning({ id: staffDocumentSubmissions.id });
+
+    await db.insert(staffDocumentFiles).values({
+      submissionId: submissionRows[0]!.id,
+      originalFilename: 'vsc.pdf',
+      contentType: 'application/pdf',
+      byteSize: 100,
+      storageKey: `test/${staffId}/vsc.pdf`,
+    });
+
+    await db
+      .update(staffDocumentSets)
+      .set({ currentSubmissionId: submissionRows[0]!.id })
+      .where(eq(staffDocumentSets.id, setId));
+  }
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: DATABASE_URL, max: 4 });
@@ -150,6 +190,7 @@ describe.runIf(POSTGRES_READY)('Batch completion integration', () => {
       documentShareTokenCreatedAt: generated.createdAt,
       documentShareTokenRevokedAt: null,
     });
+    await seedShareableDocument(FIXTURE.staffId);
   });
 
   afterAll(async () => {
@@ -157,6 +198,22 @@ describe.runIf(POSTGRES_READY)('Batch completion integration', () => {
       await db.delete(shifts).where(inArray(shifts.batchId, batchIds));
       await db.delete(scheduledCommunications).where(inArray(scheduledCommunications.entityId, batchIds));
       await db.delete(shiftBatches).where(inArray(shiftBatches.id, batchIds));
+    }
+    if (documentSetIds.length) {
+      const submissionRows = await db
+        .select({ id: staffDocumentSubmissions.id })
+        .from(staffDocumentSubmissions)
+        .where(inArray(staffDocumentSubmissions.documentSetId, documentSetIds));
+      const submissionIds = submissionRows.map((row) => row.id);
+      if (submissionIds.length) {
+        await db
+          .delete(staffDocumentFiles)
+          .where(inArray(staffDocumentFiles.submissionId, submissionIds));
+        await db
+          .delete(staffDocumentSubmissions)
+          .where(inArray(staffDocumentSubmissions.id, submissionIds));
+      }
+      await db.delete(staffDocumentSets).where(inArray(staffDocumentSets.id, documentSetIds));
     }
     await db.delete(staff).where(eq(staff.id, FIXTURE.staffId));
     await db.delete(centreContacts).where(eq(centreContacts.centreId, FIXTURE.centreId));

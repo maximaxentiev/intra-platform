@@ -5,9 +5,14 @@ import { centreContacts, centres, shifts, staff, staffAccounts } from '../db/sch
 import { EmailService } from '../email/email.service';
 import { RecordingEmailTransport } from '../email/email.transport';
 import { StaffDocumentShareLifecycleService } from '../staff-documents/staff-document-share-lifecycle.service';
+import { ensureFreshStaffDocumentShareUrlForCentreEmail } from '../staff-documents/staff-document-share-email.util';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+
+vi.mock('../staff-documents/staff-document-share-email.util', () => ({
+  ensureFreshStaffDocumentShareUrlForCentreEmail: vi.fn(),
+}));
 
 function configService() {
   return {
@@ -90,6 +95,10 @@ describe('ShiftAssignmentConfirmationService', () => {
       generateShareLink: vi.fn(),
     } as unknown as StaffDocumentShareLifecycleService;
 
+    vi.mocked(ensureFreshStaffDocumentShareUrlForCentreEmail).mockResolvedValue(
+      'https://platform.example/documents/jane#token',
+    );
+
     const notifications = {
       record: vi.fn().mockImplementation(async (row: unknown) => {
         notificationRecords.push(row);
@@ -137,8 +146,7 @@ describe('ShiftAssignmentConfirmationService', () => {
   });
 
   it('skips centre email when document share is unavailable but still attempts carer email', async () => {
-    vi.mocked(shareLifecycle.buildActiveStaffDocumentShareUrl).mockResolvedValue(null);
-    vi.mocked(shareLifecycle.generateShareLink).mockRejectedValue(new Error('cannot generate'));
+    vi.mocked(ensureFreshStaffDocumentShareUrlForCentreEmail).mockResolvedValue(null);
 
     const result = await service.sendAssignmentConfirmations({
       shiftId: 'shift-1',
@@ -153,8 +161,7 @@ describe('ShiftAssignmentConfirmationService', () => {
   });
 
   it('resolveRecipientAvailability marks centre unavailable when document share is unavailable', async () => {
-    vi.mocked(shareLifecycle.buildActiveStaffDocumentShareUrl).mockResolvedValue(null);
-    vi.mocked(shareLifecycle.generateShareLink).mockRejectedValue(new Error('cannot generate'));
+    vi.mocked(ensureFreshStaffDocumentShareUrlForCentreEmail).mockResolvedValue(null);
 
     const availability = await service.resolveRecipientAvailability({
       shiftId: 'shift-1',

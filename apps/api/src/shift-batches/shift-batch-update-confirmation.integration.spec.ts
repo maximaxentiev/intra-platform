@@ -226,13 +226,21 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     shiftIds.push(...created.created.map((row) => row.id));
 
     for (const child of created.created) {
-      await db
-        .update(shifts)
-        .set({ status: 'filled', assignedStaffId: FIXTURE.staffA })
-        .where(eq(shifts.id, child.id));
+      await shiftsService.assign(child.id, FIXTURE.staffA, FIXTURE.opsUser);
     }
 
-    await completionService.complete(created.batch.id, FIXTURE.opsUser);
+    const confirmedAt = new Date();
+    await db
+      .update(shiftBatches)
+      .set({
+        requestCompletedAt: confirmedAt,
+        requestCompletedByUserId: FIXTURE.opsUser,
+        confirmationRevision: 1,
+        pendingChangeRevision: 0,
+        lastConfirmationScheduledAt: confirmedAt,
+      })
+      .where(eq(shiftBatches.id, created.batch.id));
+
     return created;
   }
 
@@ -357,12 +365,10 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
       since: batch[0]?.requestCompletedAt ?? batch[0]?.lastConfirmationScheduledAt ?? null,
     });
     expect(changes.length).toBeGreaterThan(0);
-    const dateChange = changes.find(
-      (c) => c.id.includes('shiftDate') || c.summary.toLowerCase().includes('date'),
-    );
-    expect(dateChange?.summary).toContain('2029-04-01');
-    expect(dateChange?.summary).toContain('2029-04-03');
-    expect(dateChange?.summary).not.toContain('2029-04-02');
+    const dateChange = changes.find((c) => c.type === 'date_changed');
+    expect(dateChange?.label).toContain('2029-04-01');
+    expect(dateChange?.label).toContain('2029-04-03');
+    expect(dateChange?.label).not.toContain('2029-04-02');
   });
 
   it('records confirmation outdated once while batch remains stale', async () => {
@@ -396,7 +402,7 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
 
     const readiness = await updateService.getUpdateReadiness(created.batch.id);
     expect(readiness.ready).toBe(true);
-    expect(readiness.detectedChanges.some((c) => c.summary.includes('Cancelled'))).toBe(true);
+    expect(readiness.detectedChanges.some((c) => c.label.includes('Shift cancelled'))).toBe(true);
 
     await updateService.scheduleUpdate(
       created.batch.id,
@@ -420,6 +426,19 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     const workspace = await batchesService.getWorkspace(created.batch.id);
     expect(workspace.confirmationUiState).toBe('completed');
     expect(workspace.shifts.filter((s) => s.status !== 'cancelled')).toHaveLength(1);
+  });
+
+  it('shows actual Carer names for replacement after confirmation', async () => {
+    const created = await createConfirmedBatch(['2029-08-01']);
+    const childId = created.created[0]!.id;
+
+    await shiftsService.assign(childId, FIXTURE.staffB, FIXTURE.opsUser);
+
+    const readiness = await updateService.getUpdateReadiness(created.batch.id);
+    const carerChange = readiness.detectedChanges.find((c) => c.type === 'carer_changed');
+    expect(carerChange?.label).toContain('Carer Alpha');
+    expect(carerChange?.label).toContain('Carer Beta');
+    expect(carerChange?.label).not.toContain('previous Carer');
   });
 
   it('unassign then reassign moves feed through updates_required to ready_to_send_updates', async () => {

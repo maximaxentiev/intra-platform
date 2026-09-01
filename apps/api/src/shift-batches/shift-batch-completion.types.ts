@@ -75,11 +75,25 @@ export type BatchFinalConfirmationStatusDto =
   | { state: 'sent'; sentAt: string }
   | { state: 'failed'; reason: string; canRetry: true };
 
+export type BatchUpdateChangeType =
+  | 'carer_changed'
+  | 'date_changed'
+  | 'time_changed'
+  | 'role_changed'
+  | 'shift_notes_updated'
+  | 'shift_cancelled';
+
 export type BatchUpdateChangeItem = {
   id: string;
   shiftId: string;
   shiftLabel: string;
+  type: BatchUpdateChangeType;
+  /** Prominent human-readable change line (matches email What changed). */
+  label: string;
+  /** Full checkbox line including shift context. */
   summary: string;
+  previousValue: string | null;
+  currentValue: string | null;
   defaultSelected: boolean;
 };
 

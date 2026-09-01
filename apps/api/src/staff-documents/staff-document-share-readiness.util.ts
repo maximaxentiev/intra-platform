@@ -25,19 +25,19 @@ export async function assessStaffDocumentShareReadiness(
   staffId: string,
   hasActiveShare: boolean,
 ): Promise<StaffDocumentShareReadinessAssessment> {
+  const hasShareableDocuments = await staffHasPubliclyShareableDocuments(executor, staffId);
+  if (!hasShareableDocuments) {
+    return {
+      ready: false,
+      reason: 'No approved shareable documents are available for this Carer.',
+    };
+  }
+
   if (hasActiveShare) {
     return { ready: true, mode: 'existing' };
   }
 
-  const hasShareableDocuments = await staffHasPubliclyShareableDocuments(executor, staffId);
-  if (hasShareableDocuments) {
-    return { ready: true, mode: 'generatable' };
-  }
-
-  return {
-    ready: false,
-    reason: 'No approved shareable documents are available for this Carer.',
-  };
+  return { ready: true, mode: 'generatable' };
 }
 
 async function staffHasPubliclyShareableDocuments(

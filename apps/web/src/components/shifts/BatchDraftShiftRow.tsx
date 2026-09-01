@@ -1,4 +1,5 @@
-import { ChevronDown, Copy, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Info, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +16,36 @@ import {
 } from "@/lib/batch-shift-ui";
 import { NEW_SHIFT_ROLE_OPTIONS } from "@/lib/shift-role-ui";
 import { cn } from "@/lib/utils";
-import { Info } from "lucide-react";
 
 const STAFFPOINT_HELP =
   "Whether this shift has also been posted to Staffpoint, the external staffing marketplace.";
 
 const draftFieldClass =
   "border-border/70 bg-white text-foreground focus-visible:border-primary/30 focus-visible:ring-primary/20";
+
+const draftLabelClass = "flex min-h-5 items-center gap-1.5 leading-none";
+
+function DraftField({
+  label,
+  htmlFor,
+  error,
+  children,
+}: {
+  label: ReactNode;
+  htmlFor?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Label htmlFor={htmlFor} className={typeof label === "string" ? draftLabelClass : draftLabelClass}>
+        {label}
+      </Label>
+      {children}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
 
 export function BatchDraftShiftRow({
   index,
@@ -49,7 +73,7 @@ export function BatchDraftShiftRow({
       className="rounded-lg border border-primary/15 bg-primary-soft/50 p-3 shadow-xs"
       data-testid={`batch-draft-row-${index}`}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Shift {index + 1}
         </p>
@@ -87,9 +111,8 @@ export function BatchDraftShiftRow({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start">
-        <div className="space-y-1.5">
-          <Label htmlFor={`batch-date-${row.key}`}>Date *</Label>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <DraftField label="Date *" htmlFor={`batch-date-${row.key}`} error={errors.shiftDate}>
           <Input
             id={`batch-date-${row.key}`}
             type="date"
@@ -98,11 +121,9 @@ export function BatchDraftShiftRow({
             onChange={(e) => set("shiftDate", e.target.value)}
             aria-invalid={!!errors.shiftDate}
           />
-          {errors.shiftDate ? <p className="text-xs text-destructive">{errors.shiftDate}</p> : null}
-        </div>
+        </DraftField>
 
-        <div className="space-y-1.5">
-          <Label htmlFor={`batch-start-${row.key}`}>Start *</Label>
+        <DraftField label="Start *" htmlFor={`batch-start-${row.key}`} error={errors.startTime}>
           <Input
             id={`batch-start-${row.key}`}
             type="time"
@@ -111,11 +132,9 @@ export function BatchDraftShiftRow({
             onChange={(e) => set("startTime", e.target.value)}
             aria-invalid={!!errors.startTime}
           />
-          {errors.startTime ? <p className="text-xs text-destructive">{errors.startTime}</p> : null}
-        </div>
+        </DraftField>
 
-        <div className="space-y-1.5">
-          <Label htmlFor={`batch-end-${row.key}`}>End *</Label>
+        <DraftField label="End *" htmlFor={`batch-end-${row.key}`} error={errors.endTime}>
           <Input
             id={`batch-end-${row.key}`}
             type="time"
@@ -124,11 +143,9 @@ export function BatchDraftShiftRow({
             onChange={(e) => set("endTime", e.target.value)}
             aria-invalid={!!errors.endTime}
           />
-          {errors.endTime ? <p className="text-xs text-destructive">{errors.endTime}</p> : null}
-        </div>
+        </DraftField>
 
-        <div className="space-y-1.5">
-          <Label>Role *</Label>
+        <DraftField label="Role *" error={errors.roleNeeded}>
           <Select value={row.roleNeeded || undefined} onValueChange={(v) => set("roleNeeded", v)}>
             <SelectTrigger className={draftFieldClass} aria-label={`Role for shift ${index + 1}`}>
               <SelectValue placeholder="Choose role..." />
@@ -141,25 +158,27 @@ export function BatchDraftShiftRow({
               ))}
             </SelectContent>
           </Select>
-          {errors.roleNeeded ? <p className="text-xs text-destructive">{errors.roleNeeded}</p> : null}
-        </div>
+        </DraftField>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Label>Staffpoint</Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`About Staffpoint. ${STAFFPOINT_HELP}`}
-                >
-                  <Info className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64">{STAFFPOINT_HELP}</TooltipContent>
-            </Tooltip>
-          </div>
+        <DraftField
+          label={
+            <>
+              Staffpoint
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`About Staffpoint. ${STAFFPOINT_HELP}`}
+                  >
+                    <Info className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64">{STAFFPOINT_HELP}</TooltipContent>
+              </Tooltip>
+            </>
+          }
+        >
           <Select
             value={row.addedToStaffpoint ? "yes" : "no"}
             onValueChange={(v) => set("addedToStaffpoint", v === "yes")}
@@ -172,24 +191,24 @@ export function BatchDraftShiftRow({
               <SelectItem value="yes">Yes</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </DraftField>
 
-        <div className="flex h-9 flex-col justify-end space-y-1.5">
-          <Label className="leading-none">Notes</Label>
+        <DraftField label="Notes">
           <Button
             type="button"
             variant="outline"
-            className={cn("h-9 w-full border-border/70 bg-white md:w-auto", draftFieldClass)}
+            className={cn("h-9 w-full justify-between", draftFieldClass)}
             aria-expanded={row.detailsOpen}
+            aria-label={`Notes for shift ${index + 1}`}
             onClick={() => set("detailsOpen", !row.detailsOpen)}
           >
-            Notes
+            <span>{row.detailsOpen ? "Hide notes" : "Add notes"}</span>
             <ChevronDown
-              className={cn("ml-1.5 h-4 w-4 transition-transform", row.detailsOpen && "rotate-180")}
+              className={cn("h-4 w-4 shrink-0 transition-transform", row.detailsOpen && "rotate-180")}
               aria-hidden
             />
           </Button>
-        </div>
+        </DraftField>
       </div>
 
       {row.detailsOpen ? (
@@ -200,6 +219,7 @@ export function BatchDraftShiftRow({
             onChange={(v) => set("confirmationNotes", v)}
             error={errors.confirmationNotes}
             compact
+            inputClassName={draftFieldClass}
           />
           <div className="space-y-2">
             <Label htmlFor={`batch-internal-${row.key}`}>Internal Comment</Label>

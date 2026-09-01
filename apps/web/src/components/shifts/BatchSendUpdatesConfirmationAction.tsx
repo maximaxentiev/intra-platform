@@ -107,8 +107,12 @@ export function BatchSendUpdatesConfirmationAction({
                         : current.filter((id) => id !== change.id),
                     );
                   }}
+                  className="mt-0.5"
                 />
-                <span>{change.summary}</span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-muted-foreground">{change.shiftLabel}</span>
+                  <span className="block font-medium text-foreground">{change.label}</span>
+                </span>
               </label>
             ))}
             {(readiness?.detectedChanges.length ?? 0) === 0 ? (

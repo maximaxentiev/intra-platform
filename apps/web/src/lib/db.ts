@@ -662,7 +662,11 @@ export type BatchUpdateReadiness = {
     id: string;
     shiftId: string;
     shiftLabel: string;
+    type: string;
+    label: string;
     summary: string;
+    previousValue: string | null;
+    currentValue: string | null;
     defaultSelected: boolean;
   }>;
   blockers: Array<{ code: string; message: string }>;
