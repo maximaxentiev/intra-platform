@@ -38,6 +38,7 @@ import { Route as CarerOnboardingIndexRouteImport } from './routes/carer/onboard
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff.index'
 import { Route as AuthenticatedShiftsIndexRouteImport } from './routes/_authenticated/shifts.index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
+import { Route as AuthenticatedHelpIndexRouteImport } from './routes/_authenticated/help.index'
 import { Route as AuthenticatedCentresIndexRouteImport } from './routes/_authenticated/centres.index'
 import { Route as CarerShiftsIdRouteImport } from './routes/carer/shifts.$id'
 import { Route as CarerResetPasswordTokenRouteImport } from './routes/carer/reset-password.$token'
@@ -56,6 +57,7 @@ import { Route as AuthenticatedReportsShiftFulfillmentRouteImport } from './rout
 import { Route as AuthenticatedReportsDocumentsRouteImport } from './routes/_authenticated/reports.documents'
 import { Route as AuthenticatedReportsCentreUsageRouteImport } from './routes/_authenticated/reports.centre-usage'
 import { Route as AuthenticatedReportsActivityRouteImport } from './routes/_authenticated/reports.activity'
+import { Route as AuthenticatedHelpSlugRouteImport } from './routes/_authenticated/help.$slug'
 import { Route as AuthenticatedCentresNewRouteImport } from './routes/_authenticated/centres.new'
 import { Route as AuthenticatedCentresIdRouteImport } from './routes/_authenticated/centres.$id'
 import { Route as AuthenticatedShiftsBatchesNewRouteImport } from './routes/_authenticated/shifts.batches.new'
@@ -209,6 +211,11 @@ const AuthenticatedReportsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedReportsRoute,
   } as any)
+const AuthenticatedHelpIndexRoute = AuthenticatedHelpIndexRouteImport.update({
+  id: '/help/',
+  path: '/help/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCentresIndexRoute =
   AuthenticatedCentresIndexRouteImport.update({
     id: '/',
@@ -308,6 +315,11 @@ const AuthenticatedReportsActivityRoute =
     path: '/activity',
     getParentRoute: () => AuthenticatedReportsRoute,
   } as any)
+const AuthenticatedHelpSlugRoute = AuthenticatedHelpSlugRouteImport.update({
+  id: '/help/$slug',
+  path: '/help/$slug',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCentresNewRoute = AuthenticatedCentresNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -357,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/carer/': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/help/$slug': typeof AuthenticatedHelpSlugRoute
   '/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
@@ -375,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/centres/': typeof AuthenticatedCentresIndexRoute
+  '/help/': typeof AuthenticatedHelpIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
@@ -401,6 +415,7 @@ export interface FileRoutesByTo {
   '/carer': typeof CarerIndexRoute
   '/centres/$id': typeof AuthenticatedCentresIdRoute
   '/centres/new': typeof AuthenticatedCentresNewRoute
+  '/help/$slug': typeof AuthenticatedHelpSlugRoute
   '/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/reports/documents': typeof AuthenticatedReportsDocumentsRoute
@@ -419,6 +434,7 @@ export interface FileRoutesByTo {
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/centres': typeof AuthenticatedCentresIndexRoute
+  '/help': typeof AuthenticatedHelpIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/shifts': typeof AuthenticatedShiftsIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
@@ -455,6 +471,7 @@ export interface FileRoutesById {
   '/carer/': typeof CarerIndexRoute
   '/_authenticated/centres/$id': typeof AuthenticatedCentresIdRoute
   '/_authenticated/centres/new': typeof AuthenticatedCentresNewRoute
+  '/_authenticated/help/$slug': typeof AuthenticatedHelpSlugRoute
   '/_authenticated/reports/activity': typeof AuthenticatedReportsActivityRoute
   '/_authenticated/reports/centre-usage': typeof AuthenticatedReportsCentreUsageRoute
   '/_authenticated/reports/documents': typeof AuthenticatedReportsDocumentsRoute
@@ -473,6 +490,7 @@ export interface FileRoutesById {
   '/carer/reset-password/$token': typeof CarerResetPasswordTokenRoute
   '/carer/shifts/$id': typeof CarerShiftsIdRoute
   '/_authenticated/centres/': typeof AuthenticatedCentresIndexRoute
+  '/_authenticated/help/': typeof AuthenticatedHelpIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/shifts/': typeof AuthenticatedShiftsIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
@@ -509,6 +527,7 @@ export interface FileRouteTypes {
     | '/carer/'
     | '/centres/$id'
     | '/centres/new'
+    | '/help/$slug'
     | '/reports/activity'
     | '/reports/centre-usage'
     | '/reports/documents'
@@ -527,6 +546,7 @@ export interface FileRouteTypes {
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/centres/'
+    | '/help/'
     | '/reports/'
     | '/shifts/'
     | '/staff/'
@@ -553,6 +573,7 @@ export interface FileRouteTypes {
     | '/carer'
     | '/centres/$id'
     | '/centres/new'
+    | '/help/$slug'
     | '/reports/activity'
     | '/reports/centre-usage'
     | '/reports/documents'
@@ -571,6 +592,7 @@ export interface FileRouteTypes {
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/centres'
+    | '/help'
     | '/reports'
     | '/shifts'
     | '/staff'
@@ -606,6 +628,7 @@ export interface FileRouteTypes {
     | '/carer/'
     | '/_authenticated/centres/$id'
     | '/_authenticated/centres/new'
+    | '/_authenticated/help/$slug'
     | '/_authenticated/reports/activity'
     | '/_authenticated/reports/centre-usage'
     | '/_authenticated/reports/documents'
@@ -624,6 +647,7 @@ export interface FileRouteTypes {
     | '/carer/reset-password/$token'
     | '/carer/shifts/$id'
     | '/_authenticated/centres/'
+    | '/_authenticated/help/'
     | '/_authenticated/reports/'
     | '/_authenticated/shifts/'
     | '/_authenticated/staff/'
@@ -846,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
       parentRoute: typeof AuthenticatedReportsRoute
     }
+    '/_authenticated/help/': {
+      id: '/_authenticated/help/'
+      path: '/help'
+      fullPath: '/help/'
+      preLoaderRoute: typeof AuthenticatedHelpIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/centres/': {
       id: '/_authenticated/centres/'
       path: '/'
@@ -972,6 +1003,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsActivityRouteImport
       parentRoute: typeof AuthenticatedReportsRoute
     }
+    '/_authenticated/help/$slug': {
+      id: '/_authenticated/help/$slug'
+      path: '/help/$slug'
+      fullPath: '/help/$slug'
+      preLoaderRoute: typeof AuthenticatedHelpSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/centres/new': {
       id: '/_authenticated/centres/new'
       path: '/new'
@@ -1086,6 +1124,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedShiftsRoute: typeof AuthenticatedShiftsRouteWithChildren
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedHelpSlugRoute: typeof AuthenticatedHelpSlugRoute
+  AuthenticatedHelpIndexRoute: typeof AuthenticatedHelpIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1098,6 +1138,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedShiftsRoute: AuthenticatedShiftsRouteWithChildren,
   AuthenticatedStaffRoute: AuthenticatedStaffRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedHelpSlugRoute: AuthenticatedHelpSlugRoute,
+  AuthenticatedHelpIndexRoute: AuthenticatedHelpIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

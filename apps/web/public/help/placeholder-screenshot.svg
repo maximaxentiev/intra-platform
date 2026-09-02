@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Help screenshot placeholder">
+  <rect width="960" height="540" fill="#f4f4f5"/>
+  <rect x="48" y="48" width="864" height="72" rx="12" fill="#e4e4e7"/>
+  <rect x="48" y="152" width="520" height="24" rx="6" fill="#d4d4d8"/>
+  <rect x="48" y="196" width="760" height="16" rx="4" fill="#e4e4e7"/>
+  <rect x="48" y="228" width="680" height="16" rx="4" fill="#e4e4e7"/>
+  <rect x="48" y="276" width="864" height="216" rx="16" fill="#ffffff" stroke="#d4d4d8"/>
+  <text x="480" y="396" text-anchor="middle" fill="#71717a" font-family="system-ui, sans-serif" font-size="20">Help screenshot placeholder</text>
+</svg>

@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   BarChart3,
+  CircleHelp,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/db";
@@ -28,6 +29,7 @@ const NAV = [
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/applications", label: "Applications", icon: ClipboardList },
   { to: "/users", label: "Users", icon: UserCircle2 },
+  { to: "/help", label: "Help", icon: CircleHelp },
 ] as const;
 
 function useCurrentPath() {
