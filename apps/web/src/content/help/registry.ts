@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { HelpArticle, HelpArticleMeta, HelpCategoryId } from "./types";
 import { PlatformOverviewBody } from "./content/platform-overview-body";
 import { ManageCentresBody } from "./content/manage-centres-body";
+import { ManageStaffProfilesAndAvailabilityBody } from "./content/manage-staff-profiles-and-availability-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -66,10 +67,31 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "manage-staff-profiles-and-availability",
     title: "Manage Staff Profiles & Availability",
-    summary: "Maintain carer profiles, portal access, and weekly availability.",
+    summary:
+      "Learn how to find and update Carer profiles, manage portal access, review availability, and understand Centre preferences and Shift history.",
     category: "centres-and-staff",
-    keywords: ["staff", "carer", "profile", "availability", "portal", "invite"],
-    relatedSlugs: ["platform-overview", "review-and-approve-staff-documents"],
+    keywords: [
+      "staff",
+      "carer",
+      "profile",
+      "availability",
+      "portal",
+      "invite",
+      "resend invite",
+      "disable portal",
+      "role",
+      "centre preferences",
+      "top",
+      "banned",
+      "shift history",
+      "team availability",
+    ],
+    relatedSlugs: [
+      "manage-centres",
+      "review-and-approve-staff-documents",
+      "understand-available-staff-and-priority",
+      "create-an-individual-shift",
+    ],
   },
   {
     slug: "review-and-approve-staff-documents",
@@ -181,6 +203,7 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
 const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "platform-overview": PlatformOverviewBody,
   "manage-centres": ManageCentresBody,
+  "manage-staff-profiles-and-availability": ManageStaffProfilesAndAvailabilityBody,
 };
 
 function resolveContent(slug: string) {

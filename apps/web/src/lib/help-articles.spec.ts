@@ -80,6 +80,23 @@ describe("help article registry", () => {
     expect(searchHelpArticles("ban carer").some((a) => a.slug === "manage-centres")).toBe(true);
     expect(searchHelpArticles("staffpoint").some((a) => a.slug === "manage-centres")).toBe(true);
   });
+
+  it("searches staff profile keywords", () => {
+    expect(
+      searchHelpArticles("availability").some((a) => a.slug === "manage-staff-profiles-and-availability"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("portal").some((a) => a.slug === "manage-staff-profiles-and-availability"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("resend invite").some((a) => a.slug === "manage-staff-profiles-and-availability"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("centre preferences").some(
+        (a) => a.slug === "manage-staff-profiles-and-availability",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {

@@ -203,6 +203,87 @@ describe("manage centres article", () => {
   });
 });
 
+describe("manage staff profiles article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/manage-staff-profiles-and-availability-body.tsx",
+      ),
+      "utf8",
+    );
+    expect(body).toContain("Find a Carer");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/manage-staff-profiles-and-availability-body.tsx",
+      ),
+      "utf8",
+    );
+    const slugs = [
+      "manage-centres",
+      "review-and-approve-staff-documents",
+      "understand-available-staff-and-priority",
+      "create-an-individual-shift",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents main staff management sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("manage-staff-profiles-and-availability")!} />,
+    );
+    for (const heading of [
+      "Find a Carer",
+      "Understand the Staff profile",
+      "Create Staff manually",
+      "Manage Carer portal access",
+      "Review and update a Carer",
+      "Use Team Availability",
+      "View Centre preferences",
+      "Documents tab",
+      "Rare administrative actions",
+    ]) {
+      expect(html).toContain(heading);
+    }
+  });
+
+  it("renders portal, availability, and delete warnings", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("manage-staff-profiles-and-availability")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Before you continue");
+    expect(html).toContain("Portal invitations");
+    expect(html).toContain("Top centres");
+    expect(html).not.toContain('src="/help/manage-staff-profiles-and-availability/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("manage-staff-profiles-and-availability");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "manage-centres",
+      "review-and-approve-staff-documents",
+      "understand-available-staff-and-priority",
+      "create-an-individual-shift",
+    ]);
+
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("manage-staff-profiles-and-availability")!} />,
+    );
+    expect(html).toContain("Related Help");
+    expect(html).toContain("Review &amp; Approve Staff Documents");
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");
