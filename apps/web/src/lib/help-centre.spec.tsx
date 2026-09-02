@@ -284,6 +284,76 @@ describe("manage staff profiles article", () => {
   });
 });
 
+describe("review staff documents article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/review-and-approve-staff-documents-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Find documents that need review");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/review-and-approve-staff-documents-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents review and status sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("review-and-approve-staff-documents")!} />,
+    );
+    for (const heading of [
+      "Find documents that need review",
+      "Understand document statuses",
+      "Review a submitted document",
+      "Approve a document",
+      "Flag an issue",
+      "Vulnerable Sector Check",
+      "First Aid",
+      "Qualification documents",
+      "How documents affect Shift eligibility",
+      "Share documents",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Pending Review");
+    expect(html).toContain("Issue Flagged");
+    expect(html).toContain("Expiring Soon");
+  });
+
+  it("renders Important callouts and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("review-and-approve-staff-documents")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Approving a document");
+    expect(html).not.toContain('src="/help/review-and-approve-staff-documents/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("review-and-approve-staff-documents");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "manage-staff-profiles-and-availability",
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

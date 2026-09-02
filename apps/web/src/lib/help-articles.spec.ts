@@ -97,6 +97,24 @@ describe("help article registry", () => {
       ),
     ).toBe(true);
   });
+
+  it("searches staff documents keywords", () => {
+    expect(
+      searchHelpArticles("VSC").some((a) => a.slug === "review-and-approve-staff-documents"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("approve document").some((a) => a.slug === "review-and-approve-staff-documents"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("pending review").some((a) => a.slug === "review-and-approve-staff-documents"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("RECE proof").some((a) => a.slug === "review-and-approve-staff-documents"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("expired").some((a) => a.slug === "review-and-approve-staff-documents"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {

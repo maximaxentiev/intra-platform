@@ -3,6 +3,7 @@ import type { HelpArticle, HelpArticleMeta, HelpCategoryId } from "./types";
 import { PlatformOverviewBody } from "./content/platform-overview-body";
 import { ManageCentresBody } from "./content/manage-centres-body";
 import { ManageStaffProfilesAndAvailabilityBody } from "./content/manage-staff-profiles-and-availability-body";
+import { ReviewAndApproveStaffDocumentsBody } from "./content/review-and-approve-staff-documents-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -96,20 +97,34 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "review-and-approve-staff-documents",
     title: "Review & Approve Staff Documents",
-    summary: "Review document submissions and understand eligibility implications.",
+    summary:
+      "Learn how to review submitted staff documents, approve valid documents, flag issues, and understand how document status affects Shift eligibility.",
     category: "centres-and-staff",
     keywords: [
       "documents",
-      "approve",
+      "document review",
+      "approve document",
+      "pending review",
+      "issue flagged",
       "VSC",
+      "vulnerable sector",
       "first aid",
+      "CPR",
       "immunizations",
-      "RECE",
-      "ECA",
-      "ECE",
+      "COVID",
+      "ECA diploma",
+      "ECE diploma",
+      "RECE proof",
       "expired",
+      "expiring soon",
+      "document share",
     ],
-    relatedSlugs: ["manage-staff-profiles-and-availability", "understand-available-staff-and-priority"],
+    relatedSlugs: [
+      "manage-staff-profiles-and-availability",
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ],
   },
   {
     slug: "create-an-individual-shift",
@@ -204,6 +219,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "platform-overview": PlatformOverviewBody,
   "manage-centres": ManageCentresBody,
   "manage-staff-profiles-and-availability": ManageStaffProfilesAndAvailabilityBody,
+  "review-and-approve-staff-documents": ReviewAndApproveStaffDocumentsBody,
 };
 
 function resolveContent(slug: string) {
