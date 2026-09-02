@@ -354,6 +354,75 @@ describe("review staff documents article", () => {
   });
 });
 
+describe("create individual shift article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/create-an-individual-shift-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Before you begin");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/create-an-individual-shift-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "create-a-batch-request",
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents create shift flow sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-an-individual-shift")!} />,
+    );
+    for (const heading of [
+      "Before you begin",
+      "Create the shift",
+      "Choose the Centre",
+      "Enter the date and time",
+      "Choose the role",
+      "Staffpoint",
+      "Add Shift Notes",
+      "What happens next",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("ECA");
+    expect(html).toContain("RECE");
+    expect(html).toContain("Pending");
+  });
+
+  it("renders Important callout and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-an-individual-shift")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Double-check the centre");
+    expect(html).not.toContain('src="/help/create-an-individual-shift/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("create-an-individual-shift");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "create-a-batch-request",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

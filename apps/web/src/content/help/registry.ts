@@ -4,6 +4,7 @@ import { PlatformOverviewBody } from "./content/platform-overview-body";
 import { ManageCentresBody } from "./content/manage-centres-body";
 import { ManageStaffProfilesAndAvailabilityBody } from "./content/manage-staff-profiles-and-availability-body";
 import { ReviewAndApproveStaffDocumentsBody } from "./content/review-and-approve-staff-documents-body";
+import { CreateAnIndividualShiftBody } from "./content/create-an-individual-shift-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -129,12 +130,29 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "create-an-individual-shift",
     title: "Create an Individual Shift",
-    summary: "Create a single pending shift with schedule, role, and optional notes.",
+    summary:
+      "Learn how to create a new individual Shift with the correct Centre, date, time, role, Staffpoint setting and Shift Notes.",
     category: "individual-shifts",
-    keywords: ["create shift", "new shift", "date", "time", "role"],
+    keywords: [
+      "create shift",
+      "new shift",
+      "individual shift",
+      "centre",
+      "date",
+      "start time",
+      "end time",
+      "role",
+      "ECA",
+      "ECE",
+      "RECE",
+      "Staffpoint",
+      "Shift Notes",
+    ],
     relatedSlugs: [
       "understand-available-staff-and-priority",
       "assign-replace-or-unassign-a-carer",
+      "create-a-batch-request",
+      "communications-notes-and-important-terminology",
     ],
   },
   {
@@ -220,6 +238,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "manage-centres": ManageCentresBody,
   "manage-staff-profiles-and-availability": ManageStaffProfilesAndAvailabilityBody,
   "review-and-approve-staff-documents": ReviewAndApproveStaffDocumentsBody,
+  "create-an-individual-shift": CreateAnIndividualShiftBody,
 };
 
 function resolveContent(slug: string) {

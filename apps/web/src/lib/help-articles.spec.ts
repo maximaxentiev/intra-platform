@@ -115,6 +115,24 @@ describe("help article registry", () => {
       searchHelpArticles("expired").some((a) => a.slug === "review-and-approve-staff-documents"),
     ).toBe(true);
   });
+
+  it("searches create shift keywords", () => {
+    expect(
+      searchHelpArticles("create shift").some((a) => a.slug === "create-an-individual-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("new shift").some((a) => a.slug === "create-an-individual-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("Staffpoint").some((a) => a.slug === "create-an-individual-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("Shift Notes").some((a) => a.slug === "create-an-individual-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("RECE").some((a) => a.slug === "create-an-individual-shift"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {
