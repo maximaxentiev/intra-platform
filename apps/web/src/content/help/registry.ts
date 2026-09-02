@@ -8,6 +8,7 @@ import { CreateAnIndividualShiftBody } from "./content/create-an-individual-shif
 import { UnderstandAvailableStaffAndPriorityBody } from "./content/understand-available-staff-and-priority-body";
 import { AssignReplaceOrUnassignACarerBody } from "./content/assign-replace-or-unassign-a-carer-body";
 import { EditOrCancelAShiftBody } from "./content/edit-or-cancel-a-shift-body";
+import { CreateABatchRequestBody } from "./content/create-a-batch-request-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -251,10 +252,30 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "create-a-batch-request",
     title: "Create a Batch Request",
-    summary: "Create a batch with multiple draft shifts for one centre.",
+    summary:
+      "Learn how to create a Batch Request for multiple Shifts from the same Centre, including Shift details, notes, duplication and draft management.",
     category: "batch-requests",
-    keywords: ["batch", "create batch", "multiple shifts"],
-    relatedSlugs: ["fill-complete-and-update-a-batch-request"],
+    keywords: [
+      "create batch",
+      "batch request",
+      "multiple shifts",
+      "add shift",
+      "duplicate shift",
+      "remove shift",
+      "batch notes",
+      "shift notes",
+      "internal comment",
+      "staffpoint",
+      "ECA",
+      "ECE",
+      "RECE",
+    ],
+    relatedSlugs: [
+      "create-an-individual-shift",
+      "fill-complete-and-update-a-batch-request",
+      "understand-available-staff-and-priority",
+      "communications-notes-and-important-terminology",
+    ],
   },
   {
     slug: "fill-complete-and-update-a-batch-request",
@@ -308,6 +329,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "understand-available-staff-and-priority": UnderstandAvailableStaffAndPriorityBody,
   "assign-replace-or-unassign-a-carer": AssignReplaceOrUnassignACarerBody,
   "edit-or-cancel-a-shift": EditOrCancelAShiftBody,
+  "create-a-batch-request": CreateABatchRequestBody,
 };
 
 function resolveContent(slug: string) {

@@ -636,6 +636,75 @@ describe("edit or cancel shift article", () => {
   });
 });
 
+describe("create batch request article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/create-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("When to use a Batch Request");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/create-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "create-an-individual-shift",
+      "fill-complete-and-update-a-batch-request",
+      "understand-available-staff-and-priority",
+      "communications-notes-and-important-terminology",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents create batch workflow sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-a-batch-request")!} />,
+    );
+    for (const heading of [
+      "When to use a Batch Request",
+      "Choose the Centre",
+      "Add the requested Shifts",
+      "Duplicate a Shift",
+      "Add or remove Shifts",
+      "Shift Notes and Internal Comments",
+      "Create the Batch",
+      "What happens next",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("copy Internal Comment");
+    expect(html).toContain("One shift remaining");
+    expect(html).toContain("Open");
+  });
+
+  it("renders Important callout and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-a-batch-request")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Keep Shift Notes and Internal Comments separate");
+    expect(html).not.toContain('src="/help/create-a-batch-request/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("create-a-batch-request");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "create-an-individual-shift",
+      "fill-complete-and-update-a-batch-request",
+      "understand-available-staff-and-priority",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

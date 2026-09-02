@@ -199,6 +199,27 @@ describe("help article registry", () => {
       searchHelpArticles("delete shift").some((a) => a.slug === "edit-or-cancel-a-shift"),
     ).toBe(true);
   });
+
+  it("searches create batch keywords", () => {
+    expect(
+      searchHelpArticles("create batch").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("batch request").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("multiple shifts").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("duplicate shift").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("internal comment").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("remove shift").some((a) => a.slug === "create-a-batch-request"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {
