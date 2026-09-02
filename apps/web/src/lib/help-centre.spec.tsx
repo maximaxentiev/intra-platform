@@ -778,6 +778,76 @@ describe("fill complete update batch article", () => {
   });
 });
 
+describe("cancel batch request article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/cancel-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("When to cancel the entire Batch");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/cancel-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "edit-or-cancel-a-shift",
+      "fill-complete-and-update-a-batch-request",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents batch cancellation workflow sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("cancel-a-batch-request")!} />,
+    );
+    for (const heading of [
+      "When to cancel the entire Batch",
+      "Cancel the Batch",
+      "If no Carers have been assigned",
+      "If Carers are assigned but the Centre has not been confirmed",
+      "If the Centre has already received a Batch confirmation",
+      "What happens to the child Shifts",
+      "What happens to communications and reminders",
+      "After the Batch is cancelled",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Carer email available?");
+    expect(html).toContain("Centre email available?");
+    expect(html).toContain("Email assigned Carers about the cancellation");
+    expect(html).toContain("Choose recipients");
+  });
+
+  it("renders Before you continue callout and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("cancel-a-batch-request")!} />,
+    );
+    expect(html).toContain("Before you continue");
+    expect(html).toContain("Cancelling a Batch cancels all remaining active Shifts");
+    expect(html).not.toContain('src="/help/cancel-a-batch-request/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("cancel-a-batch-request");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "fill-complete-and-update-a-batch-request",
+      "edit-or-cancel-a-shift",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

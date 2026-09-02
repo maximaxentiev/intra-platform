@@ -10,6 +10,7 @@ import { AssignReplaceOrUnassignACarerBody } from "./content/assign-replace-or-u
 import { EditOrCancelAShiftBody } from "./content/edit-or-cancel-a-shift-body";
 import { CreateABatchRequestBody } from "./content/create-a-batch-request-body";
 import { FillCompleteAndUpdateABatchRequestBody } from "./content/fill-complete-and-update-a-batch-request-body";
+import { CancelABatchRequestBody } from "./content/cancel-a-batch-request-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -310,10 +311,27 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "cancel-a-batch-request",
     title: "Cancel a Batch Request",
-    summary: "Cancel an entire batch request and understand communication options.",
+    summary:
+      "Learn how to cancel an entire Batch Request and choose the appropriate Carer and Centre communications based on the Batch's current history.",
     category: "batch-requests",
-    keywords: ["cancel batch", "batch cancellation"],
-    relatedSlugs: ["communications-notes-and-important-terminology"],
+    keywords: [
+      "cancel batch",
+      "batch cancellation",
+      "cancel entire batch",
+      "cancel request",
+      "centre cancellation",
+      "carer cancellation",
+      "cancellation reason",
+      "cancelled batch",
+      "no centre email",
+      "assigned carers",
+    ],
+    relatedSlugs: [
+      "fill-complete-and-update-a-batch-request",
+      "edit-or-cancel-a-shift",
+      "assign-replace-or-unassign-a-carer",
+      "communications-notes-and-important-terminology",
+    ],
   },
   {
     slug: "communications-notes-and-important-terminology",
@@ -344,6 +362,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "edit-or-cancel-a-shift": EditOrCancelAShiftBody,
   "create-a-batch-request": CreateABatchRequestBody,
   "fill-complete-and-update-a-batch-request": FillCompleteAndUpdateABatchRequestBody,
+  "cancel-a-batch-request": CancelABatchRequestBody,
 };
 
 function resolveContent(slug: string) {

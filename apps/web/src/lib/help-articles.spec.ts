@@ -244,6 +244,19 @@ describe("help article registry", () => {
       searchHelpArticles("what changed").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
     ).toBe(true);
   });
+
+  it("finds cancel batch article by operational search terms", () => {
+    for (const query of [
+      "cancel batch",
+      "batch cancellation",
+      "centre cancellation",
+      "carer cancellation",
+      "cancellation reason",
+      "cancel entire batch",
+    ]) {
+      expect(searchHelpArticles(query).some((a) => a.slug === "cancel-a-batch-request")).toBe(true);
+    }
+  });
 });
 
 describe("help centre shell wiring", () => {
