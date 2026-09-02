@@ -705,6 +705,79 @@ describe("create batch request article", () => {
   });
 });
 
+describe("fill complete update batch article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/fill-complete-and-update-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Understand the Batch workspace");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/fill-complete-and-update-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "create-a-batch-request",
+      "edit-or-cancel-a-shift",
+      "cancel-a-batch-request",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents batch fulfillment lifecycle sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("fill-complete-and-update-a-batch-request")!} />,
+    );
+    for (const heading of [
+      "Understand the Batch workspace",
+      "Fill the Shifts",
+      "Understand Batch progress",
+      "Complete the Batch Request",
+      "What the Centre receives",
+      "If the Batch changes after completion",
+      "Send Updates Confirmation",
+      "Check communication status and activity",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Open");
+    expect(html).toContain("Ready to send updates");
+    expect(html).toContain("Updates required");
+    expect(html).toContain("Centre communication is managed through this Batch Request");
+    expect(html).toContain("Changes to highlight");
+    expect(html).toContain("always included regardless of which boxes are selected");
+  });
+
+  it("renders Important callout and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("fill-complete-and-update-a-batch-request")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Complete Request schedules the consolidated centre confirmation");
+    expect(html).not.toContain('src="/help/fill-complete-and-update-a-batch-request/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("fill-complete-and-update-a-batch-request");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "create-a-batch-request",
+      "assign-replace-or-unassign-a-carer",
+      "edit-or-cancel-a-shift",
+      "cancel-a-batch-request",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

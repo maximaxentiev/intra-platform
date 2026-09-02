@@ -220,6 +220,30 @@ describe("help article registry", () => {
       searchHelpArticles("remove shift").some((a) => a.slug === "create-a-batch-request"),
     ).toBe(true);
   });
+
+  it("searches batch fulfillment keywords", () => {
+    expect(
+      searchHelpArticles("fill batch").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("complete request").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("batch confirmation").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("updates required").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("ready to send updates").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("send updates").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("what changed").some((a) => a.slug === "fill-complete-and-update-a-batch-request"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {

@@ -9,6 +9,7 @@ import { UnderstandAvailableStaffAndPriorityBody } from "./content/understand-av
 import { AssignReplaceOrUnassignACarerBody } from "./content/assign-replace-or-unassign-a-carer-body";
 import { EditOrCancelAShiftBody } from "./content/edit-or-cancel-a-shift-body";
 import { CreateABatchRequestBody } from "./content/create-a-batch-request-body";
+import { FillCompleteAndUpdateABatchRequestBody } from "./content/fill-complete-and-update-a-batch-request-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -280,18 +281,30 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "fill-complete-and-update-a-batch-request",
     title: "Fill, Complete & Update a Batch Request",
-    summary: "Assign child shifts, complete the request, and send update confirmations.",
+    summary:
+      "Learn how to fill a Batch Request, complete it for the Centre, and send a consolidated update when assignments or Shift details change later.",
     category: "batch-requests",
     keywords: [
       "fill batch",
+      "batch progress",
       "complete request",
-      "update batch",
+      "complete batch",
+      "batch confirmation",
+      "centre confirmation",
+      "70 percent",
       "updates required",
+      "ready to send updates",
       "send updates",
+      "update confirmation",
+      "what changed",
+      "batch email",
+      "retry batch email",
     ],
     relatedSlugs: [
+      "create-a-batch-request",
+      "assign-replace-or-unassign-a-carer",
+      "edit-or-cancel-a-shift",
       "cancel-a-batch-request",
-      "communications-notes-and-important-terminology",
     ],
   },
   {
@@ -330,6 +343,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "assign-replace-or-unassign-a-carer": AssignReplaceOrUnassignACarerBody,
   "edit-or-cancel-a-shift": EditOrCancelAShiftBody,
   "create-a-batch-request": CreateABatchRequestBody,
+  "fill-complete-and-update-a-batch-request": FillCompleteAndUpdateABatchRequestBody,
 };
 
 function resolveContent(slug: string) {
