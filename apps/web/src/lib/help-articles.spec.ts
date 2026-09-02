@@ -133,6 +133,27 @@ describe("help article registry", () => {
       searchHelpArticles("RECE").some((a) => a.slug === "create-an-individual-shift"),
     ).toBe(true);
   });
+
+  it("searches available staff keywords", () => {
+    expect(
+      searchHelpArticles("priority").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("available staff").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("contacted").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("banned staff").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("RECE proof").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("overlap").some((a) => a.slug === "understand-available-staff-and-priority"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {

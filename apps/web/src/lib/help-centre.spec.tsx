@@ -423,6 +423,78 @@ describe("create individual shift article", () => {
   });
 });
 
+describe("understand available staff article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/understand-available-staff-and-priority-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Eligibility comes first");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/understand-available-staff-and-priority-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "assign-replace-or-unassign-a-carer",
+      "review-and-approve-staff-documents",
+      "manage-staff-profiles-and-availability",
+      "manage-centres",
+      "edit-or-cancel-a-shift",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents available staff reference sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("understand-available-staff-and-priority")!} />,
+    );
+    for (const heading of [
+      "What Available staff shows",
+      "Eligibility comes first",
+      "Top staff",
+      "Banned staff",
+      "Role and qualifications",
+      "Availability and schedule conflicts",
+      "Documents and onboarding",
+      "What affects priority",
+      "Contacted",
+      "How to use the list",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Two-hour buffer");
+    expect(html).toContain("RECE Proof");
+  });
+
+  it("renders Important callout and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("understand-available-staff-and-priority")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Top status or a high priority number never overrides");
+    expect(html).toContain("Top and Banned are mutually exclusive");
+    expect(html).not.toContain('src="/help/understand-available-staff-and-priority/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("understand-available-staff-and-priority");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "assign-replace-or-unassign-a-carer",
+      "review-and-approve-staff-documents",
+      "manage-staff-profiles-and-availability",
+      "manage-centres",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

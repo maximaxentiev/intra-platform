@@ -5,6 +5,7 @@ import { ManageCentresBody } from "./content/manage-centres-body";
 import { ManageStaffProfilesAndAvailabilityBody } from "./content/manage-staff-profiles-and-availability-body";
 import { ReviewAndApproveStaffDocumentsBody } from "./content/review-and-approve-staff-documents-body";
 import { CreateAnIndividualShiftBody } from "./content/create-an-individual-shift-body";
+import { UnderstandAvailableStaffAndPriorityBody } from "./content/understand-available-staff-and-priority-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -158,10 +159,33 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "understand-available-staff-and-priority",
     title: "Understand Available Staff & Priority",
-    summary: "Interpret matching results, priority, exclusions, and eligibility.",
+    summary:
+      "Learn how the Available Staff list works, what makes a Carer eligible for a Shift, and how Top, location, qualifications and Contacted affect what you see.",
     category: "individual-shifts",
-    keywords: ["available staff", "priority", "matching", "top", "banned", "eligible", "availability"],
-    relatedSlugs: ["assign-replace-or-unassign-a-carer"],
+    keywords: [
+      "available staff",
+      "priority",
+      "matching",
+      "eligible",
+      "not eligible",
+      "top staff",
+      "banned staff",
+      "contacted",
+      "availability",
+      "overlap",
+      "buffer",
+      "role",
+      "RECE proof",
+      "documents",
+      "same city",
+      "geography",
+    ],
+    relatedSlugs: [
+      "assign-replace-or-unassign-a-carer",
+      "review-and-approve-staff-documents",
+      "manage-staff-profiles-and-availability",
+      "manage-centres",
+    ],
   },
   {
     slug: "assign-replace-or-unassign-a-carer",
@@ -239,6 +263,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "manage-staff-profiles-and-availability": ManageStaffProfilesAndAvailabilityBody,
   "review-and-approve-staff-documents": ReviewAndApproveStaffDocumentsBody,
   "create-an-individual-shift": CreateAnIndividualShiftBody,
+  "understand-available-staff-and-priority": UnderstandAvailableStaffAndPriorityBody,
 };
 
 function resolveContent(slug: string) {
