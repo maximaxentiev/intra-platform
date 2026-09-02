@@ -7,6 +7,7 @@ import { ReviewAndApproveStaffDocumentsBody } from "./content/review-and-approve
 import { CreateAnIndividualShiftBody } from "./content/create-an-individual-shift-body";
 import { UnderstandAvailableStaffAndPriorityBody } from "./content/understand-available-staff-and-priority-body";
 import { AssignReplaceOrUnassignACarerBody } from "./content/assign-replace-or-unassign-a-carer-body";
+import { EditOrCancelAShiftBody } from "./content/edit-or-cancel-a-shift-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -220,10 +221,32 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "edit-or-cancel-a-shift",
     title: "Edit or Cancel a Shift",
-    summary: "Change shift details or cancel a shift with optional communications.",
+    summary:
+      "Learn how to update an existing Shift, handle changes that affect the assigned Carer, and cancel a Shift with the appropriate communications.",
     category: "individual-shifts",
-    keywords: ["edit shift", "change shift", "cancel shift", "schedule", "date", "time"],
-    relatedSlugs: ["assign-replace-or-unassign-a-carer"],
+    keywords: [
+      "edit shift",
+      "change shift",
+      "change schedule",
+      "change time",
+      "change date",
+      "change role",
+      "shift notes",
+      "unavailable carer",
+      "availability confirmed",
+      "unassign after edit",
+      "cancel shift",
+      "cancellation",
+      "cancellation reason",
+      "delete shift",
+      "updates required",
+    ],
+    relatedSlugs: [
+      "assign-replace-or-unassign-a-carer",
+      "understand-available-staff-and-priority",
+      "fill-complete-and-update-a-batch-request",
+      "communications-notes-and-important-terminology",
+    ],
   },
   {
     slug: "create-a-batch-request",
@@ -284,6 +307,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "create-an-individual-shift": CreateAnIndividualShiftBody,
   "understand-available-staff-and-priority": UnderstandAvailableStaffAndPriorityBody,
   "assign-replace-or-unassign-a-carer": AssignReplaceOrUnassignACarerBody,
+  "edit-or-cancel-a-shift": EditOrCancelAShiftBody,
 };
 
 function resolveContent(slug: string) {

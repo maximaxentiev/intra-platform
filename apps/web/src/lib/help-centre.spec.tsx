@@ -564,6 +564,78 @@ describe("assign replace unassign article", () => {
   });
 });
 
+describe("edit or cancel shift article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/edit-or-cancel-a-shift-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Edit a Shift");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/edit-or-cancel-a-shift-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "assign-replace-or-unassign-a-carer",
+      "understand-available-staff-and-priority",
+      "fill-complete-and-update-a-batch-request",
+      "communications-notes-and-important-terminology",
+      "cancel-a-batch-request",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents edit and cancel workflow sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("edit-or-cancel-a-shift")!} />,
+    );
+    for (const heading of [
+      "Edit a Shift",
+      "If no Carer is assigned",
+      "If a Carer is already assigned",
+      "If the revised Shift no longer works for the Carer",
+      "Cancel a Shift",
+      "Editing a Shift inside a Batch Request",
+      "Cancel vs Delete",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Save Shift changes");
+    expect(html).toContain("Keep Staff assigned — availability confirmed");
+    expect(html).toContain("Cancellation reason");
+  });
+
+  it("renders Important and Before you continue callouts and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("edit-or-cancel-a-shift")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Review the dialog before saving");
+    expect(html).toContain("Cancelling a shift changes its operational status");
+    expect(html).toContain("Before you continue");
+    expect(html).toContain("Deleting a shift is permanent");
+    expect(html).not.toContain('src="/help/edit-or-cancel-a-shift/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("edit-or-cancel-a-shift");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "assign-replace-or-unassign-a-carer",
+      "understand-available-staff-and-priority",
+      "fill-complete-and-update-a-batch-request",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

@@ -175,6 +175,30 @@ describe("help article registry", () => {
       searchHelpArticles("resend confirmation").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
     ).toBe(true);
   });
+
+  it("searches edit and cancel shift keywords", () => {
+    expect(
+      searchHelpArticles("edit shift").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("change schedule").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("unavailable carer").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("availability confirmed").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("cancel shift").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("cancellation reason").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("delete shift").some((a) => a.slug === "edit-or-cancel-a-shift"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {
