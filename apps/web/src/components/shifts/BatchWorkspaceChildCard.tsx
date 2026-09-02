@@ -11,6 +11,7 @@ export function BatchWorkspaceChildCard({
   expanded,
   batchId,
   requestCompletedAt,
+  batchCancelled = false,
   centreName,
   onToggle,
 }: {
@@ -19,6 +20,7 @@ export function BatchWorkspaceChildCard({
   expanded: boolean;
   batchId: string;
   requestCompletedAt: string | null;
+  batchCancelled?: boolean;
   centreName: string;
   onToggle: () => void;
 }) {
@@ -64,6 +66,7 @@ export function BatchWorkspaceChildCard({
             shiftId={shift.id}
             batchId={batchId}
             requestCompletedAt={requestCompletedAt}
+            batchCancelled={batchCancelled}
             centreName={centreName}
             summary={shift}
           />

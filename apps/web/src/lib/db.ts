@@ -465,7 +465,8 @@ export type ShiftFeedBatchItem = {
       | "ready"
       | "completed"
       | "updates_required"
-      | "ready_to_send_updates";
+      | "ready_to_send_updates"
+      | "cancelled";
   };
   matchingChildren: ShiftFeedShiftSummary[];
   totalChildCount: number;
@@ -635,12 +636,16 @@ export type ShiftBatchWorkspace = {
   confirmationRevision: number;
   pendingChangeRevision: number;
   lastConfirmationScheduledAt: string | null;
+  cancelledAt: string | null;
+  cancelledByUserId: string | null;
+  cancellationReason: string | null;
   confirmationUiState:
     | "open"
     | "ready"
     | "completed"
     | "updates_required"
-    | "ready_to_send_updates";
+    | "ready_to_send_updates"
+    | "cancelled";
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatus;
   finalConfirmationStatus: BatchFinalConfirmationStatus;
@@ -719,6 +724,20 @@ export const shiftBatchesApi = {
       `/shift-batches/${batchId}/shifts/bulk`,
       { shifts },
     ),
+  cancelBatch: (
+    batchId: string,
+    payload: {
+      cancellationReason: string;
+      communications?: { centre?: boolean; carer?: boolean };
+    },
+  ) =>
+    api.post<{
+      cancelled: boolean;
+      batchId: string;
+      cancelledAt: string;
+      cancelledChildCount: number;
+      alreadyCancelled: boolean;
+    }>(`/shift-batches/${batchId}/cancel`, payload),
 };
 
 export const dashboardApi = {

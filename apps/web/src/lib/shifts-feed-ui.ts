@@ -47,6 +47,8 @@ export function batchFeedStateLabel(state: ShiftFeedBatchItem['batch']['displayS
       return 'Updates Required';
     case 'ready_to_send_updates':
       return 'Ready to Send Updates';
+    case 'cancelled':
+      return 'Cancelled';
     default:
       return 'Open';
   }
@@ -63,6 +65,8 @@ export function batchFeedStatusBadgeTone(
     case 'completed':
       return 'completed';
     case 'updates_required':
+      return 'pending';
+    case 'cancelled':
       return 'pending';
     default:
       return 'pending';

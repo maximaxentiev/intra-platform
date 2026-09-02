@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
 import {
   BulkCreateBatchChildShiftsDto,
+  CancelShiftBatchDto,
   CreateBatchChildShiftDto,
   CreateBatchWithShiftsDto,
   CreateShiftBatchDto,
@@ -106,5 +107,19 @@ export class ShiftBatchesController {
   @Post(':id/progress-email/retry')
   retryProgressEmail(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
     return this.shiftBatches.retryProgressEmail(id, user.userId);
+  }
+
+  @Post(':id/cancel')
+  cancelBatch(
+    @Param('id') id: string,
+    @Body() dto: CancelShiftBatchDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shiftBatches.cancelBatch(
+      id,
+      dto.cancellationReason,
+      user.userId,
+      dto.communications,
+    );
   }
 }

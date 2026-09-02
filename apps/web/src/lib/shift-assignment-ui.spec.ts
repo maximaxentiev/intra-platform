@@ -47,6 +47,14 @@ describe('ops shift smart matching UI', () => {
     expect(page).toContain('err.status === 409');
     expect(page).toContain('["shift-available", id]');
   });
+
+  it('disables Assign until Contacted is checked', () => {
+    const list = readFileSync(join(webRoot, 'components/shifts/ShiftAvailableStaffList.tsx'), 'utf8');
+    const batchChild = readFileSync(join(webRoot, 'components/shifts/BatchWorkspaceExpandedChild.tsx'), 'utf8');
+    expect(list).toContain('rowAssignDisabled = assignDisabled || !s.contacted');
+    expect(list).toContain('Mark as Contacted before assigning');
+    expect(batchChild).toContain('ShiftAvailableStaffList');
+  });
 });
 
 describe('centre hourly rate UI', () => {

@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ShiftCommunicationRecipientsDto } from '../../shifts/dto/shift-communication-recipients.dto';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -114,12 +115,16 @@ export type ShiftBatchWorkspaceDto = {
   confirmationRevision: number;
   pendingChangeRevision: number;
   lastConfirmationScheduledAt: string | null;
+  cancelledAt: string | null;
+  cancelledByUserId: string | null;
+  cancellationReason: string | null;
   confirmationUiState:
     | 'open'
     | 'ready'
     | 'completed'
     | 'updates_required'
-    | 'ready_to_send_updates';
+    | 'ready_to_send_updates'
+    | 'cancelled';
   progressEmailScheduledAt: string | null;
   progressEmailStatus: BatchProgressEmailStatusDto;
   finalConfirmationStatus: BatchFinalConfirmationStatusDto;
@@ -156,3 +161,13 @@ export type CreateBatchWithShiftsResultDto = {
   };
   created: { id: string; shiftDate: string }[];
 };
+
+export class CancelShiftBatchDto {
+  @IsString()
+  cancellationReason!: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShiftCommunicationRecipientsDto)
+  communications?: ShiftCommunicationRecipientsDto;
+}

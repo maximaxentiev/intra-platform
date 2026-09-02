@@ -114,7 +114,8 @@ export type ShiftFeedBatchItemDto = {
       | 'ready'
       | 'completed'
       | 'updates_required'
-      | 'ready_to_send_updates';
+      | 'ready_to_send_updates'
+      | 'cancelled';
   };
   matchingChildren: Array<{
     id: string;

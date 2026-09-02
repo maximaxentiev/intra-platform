@@ -222,6 +222,31 @@ function buildCopy(
       description: centreLabel(ctx),
     };
   }
+  if (action === 'batch_request_cancelled') {
+    const count =
+      typeof ctx.metadata?.cancelledChildCount === 'number'
+        ? ctx.metadata.cancelledChildCount
+        : null;
+    return {
+      title: 'Batch Request cancelled',
+      description:
+        count != null
+          ? `${count} active shift${count === 1 ? '' : 's'} cancelled`
+          : centreLabel(ctx),
+    };
+  }
+  if (action === 'batch_cancellation_centre_scheduled') {
+    return {
+      title: 'Batch cancellation email scheduled (Centre)',
+      description: centreLabel(ctx),
+    };
+  }
+  if (action === 'batch_cancellation_carer_scheduled') {
+    return {
+      title: 'Batch cancellation email scheduled (Carer)',
+      description: ctx.staffName ?? 'Carer',
+    };
+  }
   if (action === 'communication_sent' || action === 'communication_failed') {
     const commType =
       typeof ctx.metadata?.communicationType === 'string'
@@ -251,6 +276,16 @@ function buildCopy(
         description: ctx.centreName
           ? `Final confirmation ${verb} to ${ctx.centreName}`
           : `Final Centre confirmation ${verb}`,
+      };
+    }
+
+    if (commType === 'batch_cancellation_centre' || commType === 'batch_cancellation_carer') {
+      return {
+        title: `Batch cancellation email ${verb}`,
+        description:
+          commType === 'batch_cancellation_centre'
+            ? (ctx.centreName ?? 'Centre')
+            : (ctx.staffName ?? 'Carer'),
       };
     }
 

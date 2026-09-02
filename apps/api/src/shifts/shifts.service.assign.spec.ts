@@ -14,6 +14,61 @@ function mockPlatformAudit() {
   return { record: vi.fn().mockResolvedValue(undefined) } as unknown as PlatformAuditService;
 }
 
+function mockBatchStaleness() {
+  return { recordMaterialChange: vi.fn().mockResolvedValue(undefined) };
+}
+
+function createAssignTransactionMock(
+  lockedRow: {
+    assignedStaffId: string | null;
+    centreId: string;
+    batchId?: string | null;
+  },
+  options?: { contacted?: boolean; batchCancelled?: boolean },
+) {
+  let selectCall = 0;
+  return {
+    execute: vi.fn().mockResolvedValue(undefined),
+    select: vi.fn().mockImplementation(() => {
+      selectCall += 1;
+      if (selectCall === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              for: vi.fn().mockResolvedValue([lockedRow]),
+            }),
+          }),
+        };
+      }
+      if (selectCall === 2) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(
+                options?.contacted === false ? [] : [{ shiftId: 'shift-1' }],
+              ),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([
+              { cancelledAt: options?.batchCancelled ? new Date() : null },
+            ]),
+          }),
+        }),
+      };
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn(),
+      }),
+    }),
+  };
+}
+
 function buildService(
   db: unknown,
   confirmation: ShiftAssignmentConfirmationService,
@@ -30,6 +85,7 @@ function buildService(
     createMockShiftUpdateCommunicationService(),
     manualUnassignCommunications,
     createMockShiftBatchProgressCommunicationService(),
+    mockBatchStaleness() as never,
   );
 }
 
@@ -44,21 +100,14 @@ describe('ShiftsService.assign idempotency', () => {
     manualUnassignCommunications = createMockShiftManualUnassignCommunicationService();
     txUpdateWhere = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) });
 
-    const tx = {
-      execute: vi.fn().mockResolvedValue(undefined),
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            for: vi.fn().mockResolvedValue([{ assignedStaffId: null }]),
-          }),
-        }),
+    const tx = createAssignTransactionMock(
+      { assignedStaffId: null, centreId: 'centre-1', batchId: null },
+    );
+    tx.update = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: txUpdateWhere,
       }),
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: txUpdateWhere,
-        }),
-      }),
-    };
+    });
 
     const db = {
       select: vi.fn().mockReturnValue({
@@ -117,30 +166,25 @@ describe('ShiftsService.assign idempotency', () => {
         }),
       }),
       transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
-        const tx = {
-          execute: vi.fn().mockResolvedValue(undefined),
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                for: vi.fn().mockResolvedValue([{ assignedStaffId: 'staff-a', centreId: 'centre-1' }]),
-              }),
+        const tx = createAssignTransactionMock({
+          assignedStaffId: 'staff-a',
+          centreId: 'centre-1',
+          batchId: null,
+        });
+        tx.update = vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: 'shift-1',
+                  shiftDate: '2026-09-01',
+                  startTime: '09:00:00',
+                  centreId: 'centre-1',
+                },
+              ]),
             }),
           }),
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([
-                  {
-                    id: 'shift-1',
-                    shiftDate: '2026-09-01',
-                    startTime: '09:00:00',
-                    centreId: 'centre-1',
-                  },
-                ]),
-              }),
-            }),
-          }),
-        };
+        });
         return fn(tx);
       }),
     };
@@ -181,32 +225,25 @@ describe('ShiftsService.assign idempotency', () => {
         }),
       }),
       transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
-        const tx = {
-          execute: vi.fn().mockResolvedValue(undefined),
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                for: vi
-                  .fn()
-                  .mockResolvedValue([{ assignedStaffId: 'staff-c', centreId: 'centre-1' }]),
-              }),
+        const tx = createAssignTransactionMock({
+          assignedStaffId: 'staff-c',
+          centreId: 'centre-1',
+          batchId: null,
+        });
+        tx.update = vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: 'shift-1',
+                  shiftDate: '2026-09-01',
+                  startTime: '09:00:00',
+                  centreId: 'centre-1',
+                },
+              ]),
             }),
           }),
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([
-                  {
-                    id: 'shift-1',
-                    shiftDate: '2026-09-01',
-                    startTime: '09:00:00',
-                    centreId: 'centre-1',
-                  },
-                ]),
-              }),
-            }),
-          }),
-        };
+        });
         return fn(tx);
       }),
     };
@@ -240,30 +277,25 @@ describe('ShiftsService.assign idempotency', () => {
         }),
       }),
       transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
-        const tx = {
-          execute: vi.fn().mockResolvedValue(undefined),
-          select: vi.fn().mockReturnValue({
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                for: vi.fn().mockResolvedValue([{ assignedStaffId: 'staff-a', centreId: 'centre-1' }]),
-              }),
+        const tx = createAssignTransactionMock({
+          assignedStaffId: 'staff-a',
+          centreId: 'centre-1',
+          batchId: null,
+        });
+        tx.update = vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: 'shift-1',
+                  shiftDate: '2026-09-01',
+                  startTime: '09:00:00',
+                  centreId: 'centre-1',
+                },
+              ]),
             }),
           }),
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([
-                  {
-                    id: 'shift-1',
-                    shiftDate: '2026-09-01',
-                    startTime: '09:00:00',
-                    centreId: 'centre-1',
-                  },
-                ]),
-              }),
-            }),
-          }),
-        };
+        });
         return fn(tx);
       }),
     };
@@ -328,6 +360,30 @@ describe('ShiftsService.assign idempotency', () => {
       ConflictException,
     );
     expect(confirmation.sendAssignmentConfirmations).not.toHaveBeenCalled();
+  });
+
+  it('rejects assignment when carer is not marked contacted', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { assignedStaffId: null, shiftDate: '2026-09-01', centreId: 'centre-1' },
+          ]),
+        }),
+      }),
+      transaction: vi.fn(async (fn: (client: unknown) => Promise<void>) => {
+        const tx = createAssignTransactionMock(
+          { assignedStaffId: null, centreId: 'centre-1', batchId: null },
+          { contacted: false },
+        );
+        return fn(tx);
+      }),
+    };
+    service = buildService(db, confirmation, shiftMatching, manualUnassignCommunications);
+
+    await expect(service.assign('shift-1', 'staff-1', 'ops-1')).rejects.toMatchObject({
+      response: { code: 'carer_not_contacted' },
+    });
   });
 });
 

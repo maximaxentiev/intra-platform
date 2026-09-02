@@ -26,16 +26,17 @@ describe('deriveBatchConfirmationUiState', () => {
     ).toBe('ready_to_send_updates');
   });
 
-  it('returns completed when confirmed and current', () => {
+  it('returns cancelled when batch is cancelled', () => {
     expect(
       deriveBatchConfirmationUiState(
         {
           requestCompletedAt: '2026-09-01',
           confirmationRevision: 1,
           pendingChangeRevision: 0,
+          cancelledAt: '2026-09-02',
         },
         fullProgress,
       ),
-    ).toBe('completed');
+    ).toBe('cancelled');
   });
 });

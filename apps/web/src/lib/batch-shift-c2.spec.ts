@@ -85,4 +85,17 @@ describe("Batch Shift Requests Phase C2", () => {
     expect(read("lib/shift-query-invalidation.ts")).toContain('queryKey: ["shift-batch", batchId]');
     expect(read("lib/shift-query-invalidation.ts")).toContain('queryKey: ["shifts-feed"]');
   });
+
+  it("exposes batch cancel in overflow menu with cancelled workspace state", () => {
+    expect(batchWorkspace).toContain("BatchCancelBatchDialog");
+    expect(batchWorkspace).toContain("Cancel batch");
+    expect(batchWorkspace).toContain('displayState === "cancelled"');
+    expect(read("lib/shifts-feed-ui.ts")).toContain("Cancelled");
+  });
+
+  it("uses white Shift Details card inside light-blue batch child", () => {
+    expect(childCard).toContain("bg-[#e8eefe]");
+    expect(expanded).toContain("Shift details");
+    expect(expanded).toContain("border border-primary/10 bg-white p-3");
+  });
 });

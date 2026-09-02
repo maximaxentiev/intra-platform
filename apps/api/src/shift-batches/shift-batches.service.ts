@@ -24,6 +24,7 @@ import { ShiftBatchProgressCommunicationService } from './shift-batch-progress-c
 import { ShiftBatchCompletionReadinessService } from './shift-batch-completion-readiness.service';
 import { ShiftBatchCompletionService } from './shift-batch-completion.service';
 import { ShiftBatchUpdateConfirmationService } from './shift-batch-update-confirmation.service';
+import { ShiftBatchCancellationService } from './shift-batch-cancellation.service';
 import { ShiftBatchActivityService } from './shift-batch-activity.service';
 import { deriveBatchConfirmationUiState } from './shift-batch-confirmation-state.util';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
@@ -39,6 +40,7 @@ export class ShiftBatchesService {
     private readonly batchCompletionReadiness: ShiftBatchCompletionReadinessService,
     private readonly batchCompletion: ShiftBatchCompletionService,
     private readonly batchUpdateConfirmation: ShiftBatchUpdateConfirmationService,
+    private readonly batchCancellation: ShiftBatchCancellationService,
     private readonly batchActivity: ShiftBatchActivityService,
   ) {}
 
@@ -133,6 +135,9 @@ export class ShiftBatchesService {
         confirmationRevision: shiftBatches.confirmationRevision,
         pendingChangeRevision: shiftBatches.pendingChangeRevision,
         lastConfirmationScheduledAt: shiftBatches.lastConfirmationScheduledAt,
+        cancelledAt: shiftBatches.cancelledAt,
+        cancelledByUserId: shiftBatches.cancelledByUserId,
+        cancellationReason: shiftBatches.cancellationReason,
         progressEmailScheduledAt: shiftBatches.progressEmailScheduledAt,
         createdByUserId: shiftBatches.createdByUserId,
         createdAt: shiftBatches.createdAt,
@@ -177,6 +182,7 @@ export class ShiftBatchesService {
         confirmationRevision: batch.confirmationRevision,
         pendingChangeRevision: batch.pendingChangeRevision,
         lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt,
+        cancelledAt: batch.cancelledAt,
       },
       progress,
     );
@@ -190,6 +196,9 @@ export class ShiftBatchesService {
       confirmationRevision: batch.confirmationRevision,
       pendingChangeRevision: batch.pendingChangeRevision,
       lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt?.toISOString() ?? null,
+      cancelledAt: batch.cancelledAt?.toISOString() ?? null,
+      cancelledByUserId: batch.cancelledByUserId,
+      cancellationReason: batch.cancellationReason,
       confirmationUiState,
       progressEmailScheduledAt: batch.progressEmailScheduledAt?.toISOString() ?? null,
       progressEmailStatus,
@@ -301,6 +310,15 @@ export class ShiftBatchesService {
 
   async getBatchActivity(batchId: string, page?: number, pageSize?: number) {
     return this.batchActivity.getBatchActivity(batchId, page, pageSize);
+  }
+
+  async cancelBatch(
+    batchId: string,
+    cancellationReason: string | undefined,
+    actorUserId: string,
+    communications?: { centre?: boolean; carer?: boolean },
+  ) {
+    return this.batchCancellation.cancel(batchId, actorUserId, cancellationReason, communications);
   }
 
   private validateBulkPayload(rows: CreateBatchChildShiftDto[]) {

@@ -16,6 +16,8 @@ export type CommunicationType =
   | 'batch_progress_70'
   | 'batch_confirmation_final'
   | 'batch_confirmation_update'
+  | 'batch_cancellation_centre'
+  | 'batch_cancellation_carer'
   | 'test_ping';
 
 export type ScheduledCommunicationStatus =
@@ -68,6 +70,8 @@ export const COMMUNICATION_TYPE_VALUES: readonly CommunicationType[] = [
   'batch_progress_70',
   'batch_confirmation_final',
   'batch_confirmation_update',
+  'batch_cancellation_centre',
+  'batch_cancellation_carer',
   'test_ping',
 ] as const;
 

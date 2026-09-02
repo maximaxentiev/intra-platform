@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import type { DbExecutor } from '../db/drizzle.module';
 import { shiftBatches, shifts } from '../db/schema';
@@ -16,6 +16,7 @@ export async function lockOpenShiftBatch(
       id: shiftBatches.id,
       centreId: shiftBatches.centreId,
       requestCompletedAt: shiftBatches.requestCompletedAt,
+      cancelledAt: shiftBatches.cancelledAt,
     })
     .from(shiftBatches)
     .where(eq(shiftBatches.id, batchId))
@@ -23,6 +24,9 @@ export async function lockOpenShiftBatch(
 
   const batch = rows[0];
   if (!batch) throw new NotFoundException('Batch not found.');
+  if (batch.cancelledAt) {
+    throw new ConflictException('This Batch Request has been cancelled.');
+  }
   if (batch.requestCompletedAt) {
     throw new BadRequestException('Batch request is already completed.');
   }

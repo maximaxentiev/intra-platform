@@ -145,6 +145,9 @@ export class ShiftBatchUpdateConfirmationService {
       if (!batch?.requestCompletedAt) {
         throw new ConflictException('Batch has not been confirmed.');
       }
+      if (batch.cancelledAt) {
+        throw new ConflictException('This Batch Request has been cancelled.');
+      }
       if (batch.pendingChangeRevision <= 0) {
         const idempotencyKey = buildBatchConfirmationRevisionIdempotencyKey(
           batchId,

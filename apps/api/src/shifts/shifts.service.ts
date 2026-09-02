@@ -631,7 +631,11 @@ export class ShiftsService {
       await acquireShiftStaffDateAdvisoryLock(tx, staffId, existing[0].shiftDate);
 
       const locked = await tx
-        .select({ assignedStaffId: shifts.assignedStaffId, centreId: shifts.centreId })
+        .select({
+          assignedStaffId: shifts.assignedStaffId,
+          centreId: shifts.centreId,
+          batchId: shifts.batchId,
+        })
         .from(shifts)
         .where(eq(shifts.id, id))
         .for('update');
@@ -646,6 +650,32 @@ export class ShiftsService {
           message: SHIFT_ASSIGN_INELIGIBLE_MESSAGE,
           reasons: eligibility.reasons,
         });
+      }
+
+      const contactedRows = await tx
+        .select({ shiftId: shiftContacted.shiftId })
+        .from(shiftContacted)
+        .where(and(eq(shiftContacted.shiftId, id), eq(shiftContacted.staffId, staffId)))
+        .limit(1);
+      if (!contactedRows[0]) {
+        throw new ConflictException({
+          message: 'Carer must be marked as Contacted before assignment.',
+          code: 'carer_not_contacted',
+        });
+      }
+
+      if (locked[0].batchId) {
+        const batchRows = await tx
+          .select({ cancelledAt: shiftBatches.cancelledAt })
+          .from(shiftBatches)
+          .where(eq(shiftBatches.id, locked[0].batchId))
+          .limit(1);
+        if (batchRows[0]?.cancelledAt) {
+          throw new ConflictException({
+            message: 'This Batch Request has been cancelled.',
+            code: 'batch_cancelled',
+          });
+        }
       }
 
       await this.shiftReminders.cancelPendingForShift(id, tx);

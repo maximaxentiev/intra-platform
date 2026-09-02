@@ -56,6 +56,7 @@ export function ShiftAvailableStaffList({
         const showPriorityBoundary = isAvailableStaffPriorityBoundary(previous, s);
         const staffName = displayStaff(s);
         const priorityChips = formatAvailableStaffPriorityChips(s);
+        const rowAssignDisabled = assignDisabled || !s.contacted;
 
         return (
           <li
@@ -86,9 +87,10 @@ export function ShiftAvailableStaffList({
               <Button
                 size="sm"
                 className="justify-self-end"
-                disabled={assignDisabled}
+                disabled={rowAssignDisabled}
                 onClick={() => onAssign(s)}
                 aria-label={`${isReplacement ? "Replace with" : "Assign"} ${staffName} on this shift`}
+                title={!s.contacted ? "Mark as Contacted before assigning" : undefined}
               >
                 {isReplacement ? "Replace" : "Assign"}
               </Button>
@@ -120,9 +122,10 @@ export function ShiftAvailableStaffList({
               <Button
                 size="sm"
                 className="w-full sm:w-auto"
-                disabled={assignDisabled}
+                disabled={rowAssignDisabled}
                 onClick={() => onAssign(s)}
                 aria-label={`${isReplacement ? "Replace with" : "Assign"} ${staffName} on this shift`}
+                title={!s.contacted ? "Mark as Contacted before assigning" : undefined}
               >
                 {isReplacement ? "Replace" : "Assign"}
               </Button>

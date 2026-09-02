@@ -73,6 +73,7 @@ export class ShiftBatchCompletionService {
           id: shiftBatches.id,
           centreId: shiftBatches.centreId,
           requestCompletedAt: shiftBatches.requestCompletedAt,
+          cancelledAt: shiftBatches.cancelledAt,
         })
         .from(shiftBatches)
         .where(eq(shiftBatches.id, batchId))
@@ -81,6 +82,9 @@ export class ShiftBatchCompletionService {
 
       const batch = batchRows[0];
       if (!batch) throw new NotFoundException('Batch not found.');
+      if (batch.cancelledAt) {
+        throw new ConflictException('This Batch Request has been cancelled.');
+      }
       if (batch.requestCompletedAt) {
         return this.findExistingFinalCommunicationId(tx, batchId);
       }

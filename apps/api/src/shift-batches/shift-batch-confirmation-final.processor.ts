@@ -59,6 +59,7 @@ export class BatchConfirmationFinalCommunicationProcessor implements Communicati
         id: shiftBatches.id,
         centreId: shiftBatches.centreId,
         requestCompletedAt: shiftBatches.requestCompletedAt,
+        cancelledAt: shiftBatches.cancelledAt,
         centreName: centres.name,
       })
       .from(shiftBatches)
@@ -68,6 +69,7 @@ export class BatchConfirmationFinalCommunicationProcessor implements Communicati
 
     const batch = batchRows[0];
     if (!batch) return { kind: 'stale' };
+    if (batch.cancelledAt) return { kind: 'stale' };
     if (!batch.requestCompletedAt) return { kind: 'stale' };
     if (context.recipientEntityId && context.recipientEntityId !== batch.centreId) {
       return { kind: 'stale' };

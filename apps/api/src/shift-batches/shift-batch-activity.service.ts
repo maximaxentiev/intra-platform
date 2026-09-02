@@ -91,7 +91,14 @@ export class ShiftBatchActivityService {
         ('platform:' || p.id::text) AS source_key,
         p.occurred_at,
         CASE
-          WHEN p.action IN ('batch_progress_email_scheduled', 'batch_progress_email_blocked', 'batch_request_completed', 'batch_final_confirmation_scheduled') THEN 'communications'
+          WHEN p.action IN (
+            'batch_progress_email_scheduled',
+            'batch_progress_email_blocked',
+            'batch_request_completed',
+            'batch_final_confirmation_scheduled',
+            'batch_cancellation_centre_scheduled',
+            'batch_cancellation_carer_scheduled'
+          ) THEN 'communications'
           ELSE 'shifts'
         END AS category,
         p.action,
@@ -132,7 +139,13 @@ export class ShiftBatchActivityService {
       INNER JOIN shift_batches sb ON sc.entity_type = 'shift_batch' AND sc.entity_id = sb.id
       WHERE sb.id = ${batchId}::uuid
         AND d.status IN ('sent', 'failed', 'skipped')
-        AND sc.communication_type IN ('batch_progress_70', 'batch_confirmation_final')
+        AND sc.communication_type IN (
+          'batch_progress_70',
+          'batch_confirmation_final',
+          'batch_confirmation_update',
+          'batch_cancellation_centre',
+          'batch_cancellation_carer'
+        )
 
       UNION ALL
 
@@ -156,7 +169,13 @@ export class ShiftBatchActivityService {
       INNER JOIN shift_batches sb ON sc.entity_type = 'shift_batch' AND sc.entity_id = sb.id
       WHERE sb.id = ${batchId}::uuid
         AND sc.status = 'cancelled'
-        AND sc.communication_type IN ('batch_progress_70', 'batch_confirmation_final')
+        AND sc.communication_type IN (
+          'batch_progress_70',
+          'batch_confirmation_final',
+          'batch_confirmation_update',
+          'batch_cancellation_centre',
+          'batch_cancellation_carer'
+        )
     `;
   }
 }

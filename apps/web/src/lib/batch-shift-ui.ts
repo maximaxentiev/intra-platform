@@ -34,9 +34,12 @@ export type BatchDisplayState =
   | "ready"
   | "completed"
   | "updates_required"
-  | "ready_to_send_updates";
+  | "ready_to_send_updates"
+  | "cancelled";
 
 export type BatchConfirmationUiState = BatchDisplayState;
+
+export type BatchCancelCase = "A" | "B" | "C";
 
 const TIME_RE = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
@@ -179,8 +182,12 @@ export function deriveBatchDisplayState(
   options?: {
     confirmationUiState?: BatchConfirmationUiState | null;
     pendingChangeRevision?: number;
+    cancelledAt?: string | null;
   },
 ): BatchDisplayState {
+  if (options?.cancelledAt || options?.confirmationUiState === "cancelled") {
+    return "cancelled";
+  }
   if (options?.confirmationUiState) {
     return options.confirmationUiState;
   }
@@ -195,6 +202,47 @@ export function deriveBatchDisplayState(
   }
   if (progress.activeTotal > 0 && progress.fulfilledCount === progress.activeTotal) return "ready";
   return "open";
+}
+
+export function hasBatchCentreConfirmation(workspace: {
+  requestCompletedAt: string | null;
+  confirmationRevision: number;
+}): boolean {
+  return workspace.requestCompletedAt != null && workspace.confirmationRevision >= 1;
+}
+
+export function resolveBatchCancelCase(
+  workspace: {
+    requestCompletedAt: string | null;
+    confirmationRevision: number;
+    shifts: ShiftBatchChildSummary[];
+  },
+): BatchCancelCase {
+  if (hasBatchCentreConfirmation(workspace)) return "C";
+  const hasAssigned = workspace.shifts.some(
+    (shift) =>
+      (shift.status === "pending" || shift.status === "filled") && shift.assignedStaffId,
+  );
+  return hasAssigned ? "B" : "A";
+}
+
+export function batchAssignedCarerSummaries(
+  shifts: ShiftBatchChildSummary[],
+): Array<{ staffId: string; name: string; shiftCount: number }> {
+  const map = new Map<string, { staffId: string; name: string; shiftCount: number }>();
+  for (const shift of shifts) {
+    if (shift.status === "cancelled" || shift.status === "completed" || !shift.assignedStaffId) {
+      continue;
+    }
+    const name = batchChildAssigneeLabel(shift) ?? "Assigned carer";
+    const existing = map.get(shift.assignedStaffId);
+    if (existing) {
+      existing.shiftCount += 1;
+    } else {
+      map.set(shift.assignedStaffId, { staffId: shift.assignedStaffId, name, shiftCount: 1 });
+    }
+  }
+  return [...map.values()];
 }
 
 export function formatBatchDateRange(shifts: ShiftBatchChildSummary[]): string | null {

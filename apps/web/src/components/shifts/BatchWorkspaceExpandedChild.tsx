@@ -82,6 +82,7 @@ type Props = {
   shiftId: string;
   batchId: string;
   requestCompletedAt: string | null;
+  batchCancelled?: boolean;
   centreName: string;
   summary: ShiftBatchChildSummary;
 };
@@ -111,6 +112,7 @@ export function BatchWorkspaceExpandedChild({
   shiftId,
   batchId,
   requestCompletedAt,
+  batchCancelled = false,
   centreName,
   summary,
 }: Props) {
@@ -125,7 +127,8 @@ export function BatchWorkspaceExpandedChild({
   const status = (shift?.status ?? summary.status) as ShiftStatus;
   const assignedStaffId = shift?.assignedStaffId ?? summary.assignedStaffId;
   const historical = isShiftHistorical(status);
-  const editable = canEditShiftFields(status);
+  const operationalDisabled = historical || batchCancelled;
+  const editable = canEditShiftFields(status) && !batchCancelled;
   const loadMatching = shouldLoadAvailableStaff(status, assignedStaffId);
   const showAssignment = showAssignedCarerSection(status, assignedStaffId);
 
@@ -579,7 +582,7 @@ export function BatchWorkspaceExpandedChild({
             Open Shift
           </Link>
         </Button>
-        {!historical && status !== "cancelled" ? (
+        {!operationalDisabled && status !== "cancelled" ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="More shift actions">
@@ -605,7 +608,7 @@ export function BatchWorkspaceExpandedChild({
         >
           Shift details
         </h3>
-        <div className="space-y-4 rounded-lg border border-primary/10 bg-background/70 p-3">
+        <div className="space-y-4 rounded-lg border border-primary/10 bg-white p-3">
               {editable ? (
                 <>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -730,7 +733,7 @@ export function BatchWorkspaceExpandedChild({
             <ShiftAssignedCarerBar
               assignedName={assignedName}
               resendDisabled={resendingConfirmations || status !== "filled"}
-              unassignDisabled={unassigning || historical}
+              unassignDisabled={unassigning || operationalDisabled}
               onResend={() => setResendDialogOpen(true)}
               onUnassign={() => setUnassignDialogOpen(true)}
             />
@@ -751,7 +754,7 @@ export function BatchWorkspaceExpandedChild({
                 candidates={availableQ.data ?? []}
                 assignedStaffId={assignedStaffId}
                 assignedName={assignedName}
-                assignDisabled={assignConfirmOpen || assigningStaffId != null}
+                assignDisabled={batchCancelled || assignConfirmOpen || assigningStaffId != null}
                 onToggleContacted={toggleContacted}
                 onAssign={(staff) => {
                   setPendingAssignStaff(staff);

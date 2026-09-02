@@ -68,6 +68,7 @@ export function deriveBatchFeedDisplayState(
     confirmationRevision?: number;
     pendingChangeRevision?: number;
     lastConfirmationScheduledAt?: Date | null;
+    cancelledAt?: Date | null;
   },
   progress: BatchFeedProgress,
 ): BatchFeedDisplayState {
@@ -77,6 +78,7 @@ export function deriveBatchFeedDisplayState(
       confirmationRevision: batch.confirmationRevision ?? 0,
       pendingChangeRevision: batch.pendingChangeRevision ?? 0,
       lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt ?? null,
+      cancelledAt: batch.cancelledAt ?? null,
     },
     {
       activeTotal: progress.activeChildCount,

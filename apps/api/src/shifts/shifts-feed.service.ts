@@ -158,6 +158,7 @@ export class ShiftsFeedService {
               confirmationRevision: shiftBatches.confirmationRevision,
               pendingChangeRevision: shiftBatches.pendingChangeRevision,
               lastConfirmationScheduledAt: shiftBatches.lastConfirmationScheduledAt,
+              cancelledAt: shiftBatches.cancelledAt,
             })
             .from(shiftBatches)
             .innerJoin(centres, eq(centres.id, shiftBatches.centreId))
@@ -259,6 +260,7 @@ export class ShiftsFeedService {
               confirmationRevision: batch.confirmationRevision,
               pendingChangeRevision: batch.pendingChangeRevision,
               lastConfirmationScheduledAt: batch.lastConfirmationScheduledAt,
+              cancelledAt: batch.cancelledAt,
             },
             progress,
           ),

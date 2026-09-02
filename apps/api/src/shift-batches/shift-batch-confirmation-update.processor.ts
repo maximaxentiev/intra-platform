@@ -61,6 +61,7 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
         id: shiftBatches.id,
         centreId: shiftBatches.centreId,
         requestCompletedAt: shiftBatches.requestCompletedAt,
+        cancelledAt: shiftBatches.cancelledAt,
         centreName: centres.name,
       })
       .from(shiftBatches)
@@ -69,7 +70,7 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
       .limit(1);
 
     const batch = batchRows[0];
-    if (!batch?.requestCompletedAt) return { kind: 'stale' };
+    if (!batch?.requestCompletedAt || batch.cancelledAt) return { kind: 'stale' };
     if (context.recipientEntityId && context.recipientEntityId !== batch.centreId) {
       return { kind: 'stale' };
     }

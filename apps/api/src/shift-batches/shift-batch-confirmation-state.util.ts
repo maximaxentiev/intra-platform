@@ -5,13 +5,15 @@ export type BatchConfirmationUiState =
   | 'ready'
   | 'completed'
   | 'updates_required'
-  | 'ready_to_send_updates';
+  | 'ready_to_send_updates'
+  | 'cancelled';
 
 export type BatchConfirmationRevisionRow = {
   requestCompletedAt: Date | string | null;
   confirmationRevision: number;
   pendingChangeRevision: number;
   lastConfirmationScheduledAt?: Date | string | null;
+  cancelledAt?: Date | string | null;
 };
 
 export function isBatchConfirmationStale(row: BatchConfirmationRevisionRow): boolean {
@@ -26,6 +28,10 @@ export function deriveBatchConfirmationUiState(
   row: BatchConfirmationRevisionRow,
   progress: BatchProgressCounts,
 ): BatchConfirmationUiState {
+  if (row.cancelledAt) {
+    return 'cancelled';
+  }
+
   if (!row.requestCompletedAt) {
     if (progress.activeTotal > 0 && progress.fulfilledCount === progress.activeTotal) {
       return 'ready';
