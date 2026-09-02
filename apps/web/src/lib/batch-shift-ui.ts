@@ -226,6 +226,37 @@ export function resolveBatchCancelCase(
   return hasAssigned ? "B" : "A";
 }
 
+export function buildBatchCancelConfirmPayload(params: {
+  reason: string;
+  cancelCase: BatchCancelCase;
+  sendCommunication: boolean;
+  centreSelected: boolean;
+  carerSelected: boolean;
+}): {
+  reason: string;
+  communications: { centre: boolean; carer: boolean };
+} {
+  if (!params.sendCommunication || params.cancelCase === "A") {
+    return {
+      reason: params.reason,
+      communications: { centre: false, carer: false },
+    };
+  }
+  if (params.cancelCase === "B") {
+    return {
+      reason: params.reason,
+      communications: { centre: false, carer: params.carerSelected },
+    };
+  }
+  return {
+    reason: params.reason,
+    communications: {
+      centre: params.centreSelected,
+      carer: params.carerSelected,
+    },
+  };
+}
+
 export function batchAssignedCarerSummaries(
   shifts: ShiftBatchChildSummary[],
 ): Array<{ staffId: string; name: string; shiftCount: number }> {

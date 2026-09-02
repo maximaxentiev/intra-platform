@@ -15,6 +15,7 @@ import {
   hasSelectedRecipient,
 } from "@/components/shifts/ShiftRecipientCheckboxes";
 import type { BatchCancelCase } from "@/lib/batch-shift-ui";
+import { buildBatchCancelConfirmPayload } from "@/lib/batch-shift-ui";
 import { normalizeCancellationReason } from "@/lib/shifts-lifecycle-ui";
 
 type Step = "reason" | "communications";
@@ -68,25 +69,17 @@ export function BatchCancelBatchDialog({
     onOpenChange(next);
   }
 
-  function submitWithoutCommunication() {
+  function submitCancellation() {
     if (!normalizedReason) return;
-    onConfirm({ reason: normalizedReason });
-  }
-
-  function submitWithCommunication() {
-    if (!normalizedReason) return;
-    if (cancelCase === "B") {
-      onConfirm({
+    onConfirm(
+      buildBatchCancelConfirmPayload({
         reason: normalizedReason,
-        communications: { centre: false, carer: carerSelected },
-      });
-      return;
-    }
-    if (!hasSelectedRecipient(centreSelected, carerSelected)) return;
-    onConfirm({
-      reason: normalizedReason,
-      communications: { centre: centreSelected, carer: carerSelected },
-    });
+        cancelCase,
+        sendCommunication,
+        centreSelected,
+        carerSelected,
+      }),
+    );
   }
 
   const activeStep: Step = cancelCase === "A" ? "reason" : step;
@@ -180,7 +173,7 @@ export function BatchCancelBatchDialog({
                 <Button
                   variant="destructive"
                   disabled={!normalizedReason || submitting}
-                  onClick={submitWithoutCommunication}
+                  onClick={submitCancellation}
                 >
                   {submitting ? "Cancelling…" : "Cancel batch"}
                 </Button>
@@ -203,9 +196,12 @@ export function BatchCancelBatchDialog({
                     cancelCase === "C" &&
                     !hasSelectedRecipient(centreSelected, carerSelected))
                 }
-                onClick={() =>
-                  sendCommunication ? submitWithCommunication() : submitWithoutCommunication()
-                }
+                onClick={() => {
+                  if (sendCommunication && cancelCase === "C" && !hasSelectedRecipient(centreSelected, carerSelected)) {
+                    return;
+                  }
+                  submitCancellation();
+                }}
               >
                 {submitting ? "Cancelling…" : "Cancel batch"}
               </Button>

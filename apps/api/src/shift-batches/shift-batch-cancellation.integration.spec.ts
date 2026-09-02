@@ -189,7 +189,7 @@ describe.runIf(POSTGRES_READY)('Batch cancellation integration', () => {
     expect(comms).toHaveLength(0);
   });
 
-  it('Case B: schedules carer-only communications and rejects centre', async () => {
+  it('Case B: schedules carer-only communications when explicitly requested', async () => {
     const batchId = await createBatch([
       { status: 'filled', assignedStaffId: FIXTURE.staffId },
       { status: 'pending' },
@@ -209,6 +209,48 @@ describe.runIf(POSTGRES_READY)('Batch cancellation integration', () => {
       .where(eq(scheduledCommunications.entityId, batchId));
     expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CARER_COMMUNICATION_TYPE)).toBe(true);
     expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CENTRE_COMMUNICATION_TYPE)).toBe(false);
+  });
+
+  it('Case B: no communication when carer is not explicitly requested', async () => {
+    const batchId = await createBatch([
+      { status: 'filled', assignedStaffId: FIXTURE.staffId },
+      { status: 'filled', assignedStaffId: FIXTURE.staffId2 },
+    ]);
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'No emails', undefined);
+
+    expect(result.cancelledChildCount).toBe(2);
+    expect(result.scheduledCommunicationIds).toHaveLength(0);
+
+    const comms = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, batchId));
+    expect(comms).toHaveLength(0);
+  });
+
+  it('Case B: no communication when carer is explicitly false', async () => {
+    const batchId = await createBatch([{ status: 'filled', assignedStaffId: FIXTURE.staffId }]);
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'No emails', {
+      centre: false,
+      carer: false,
+    });
+
+    expect(result.cancelledChildCount).toBe(1);
+    expect(result.scheduledCommunicationIds).toHaveLength(0);
+  });
+
+  it('Case B: crafted centre request does not schedule centre communication', async () => {
+    const batchId = await createBatch([{ status: 'filled', assignedStaffId: FIXTURE.staffId }]);
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'Centre blocked', {
+      centre: true,
+      carer: false,
+    });
+
+    expect(result.cancelledChildCount).toBe(1);
+    expect(result.scheduledCommunicationIds).toHaveLength(0);
   });
 
   it('Case C: allows centre communication after prior confirmation', async () => {
@@ -232,6 +274,73 @@ describe.runIf(POSTGRES_READY)('Batch cancellation integration', () => {
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, batchId));
     expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CENTRE_COMMUNICATION_TYPE)).toBe(true);
+    expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CARER_COMMUNICATION_TYPE)).toBe(false);
+  });
+
+  it('Case C: no communication when recipients are omitted', async () => {
+    const batchId = await createBatch([{ status: 'filled', assignedStaffId: FIXTURE.staffId }]);
+    await db
+      .update(shiftBatches)
+      .set({
+        requestCompletedAt: new Date('2026-08-01T12:00:00Z'),
+        confirmationRevision: 1,
+      })
+      .where(eq(shiftBatches.id, batchId));
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'Silent cancel', undefined);
+
+    expect(result.cancelledChildCount).toBe(1);
+    expect(result.scheduledCommunicationIds).toHaveLength(0);
+  });
+
+  it('Case C: schedules carer-only communication when selected', async () => {
+    const batchId = await createBatch([{ status: 'filled', assignedStaffId: FIXTURE.staffId }]);
+    await db
+      .update(shiftBatches)
+      .set({
+        requestCompletedAt: new Date('2026-08-01T12:00:00Z'),
+        confirmationRevision: 1,
+      })
+      .where(eq(shiftBatches.id, batchId));
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'Carer only', {
+      centre: false,
+      carer: true,
+    });
+
+    expect(result.cancelledChildCount).toBe(1);
+    expect(result.scheduledCommunicationIds).toHaveLength(1);
+    const comms = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, batchId));
+    expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CARER_COMMUNICATION_TYPE)).toBe(true);
+    expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CENTRE_COMMUNICATION_TYPE)).toBe(false);
+  });
+
+  it('Case C: schedules both centre and carer when selected', async () => {
+    const batchId = await createBatch([{ status: 'filled', assignedStaffId: FIXTURE.staffId }]);
+    await db
+      .update(shiftBatches)
+      .set({
+        requestCompletedAt: new Date('2026-08-01T12:00:00Z'),
+        confirmationRevision: 1,
+      })
+      .where(eq(shiftBatches.id, batchId));
+
+    const result = await cancellationService.cancel(batchId, FIXTURE.opsUser, 'Both recipients', {
+      centre: true,
+      carer: true,
+    });
+
+    expect(result.cancelledChildCount).toBe(1);
+    expect(result.scheduledCommunicationIds).toHaveLength(2);
+    const comms = await db
+      .select()
+      .from(scheduledCommunications)
+      .where(eq(scheduledCommunications.entityId, batchId));
+    expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CENTRE_COMMUNICATION_TYPE)).toBe(true);
+    expect(comms.some((row) => row.communicationType === BATCH_CANCELLATION_CARER_COMMUNICATION_TYPE)).toBe(true);
   });
 
   it('is idempotent on repeated cancel', async () => {

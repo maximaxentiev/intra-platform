@@ -81,16 +81,14 @@ export function resolveBatchCancellationRecipients(params: {
   if (params.cancelCase === 'A') {
     return { centre: false, carer: false };
   }
-  if (params.cancelCase === 'B') {
-    return {
-      centre: false,
-      carer: params.requested?.carer ?? true,
-    };
-  }
-  return {
-    centre: params.requested?.centre ?? false,
-    carer: params.requested?.carer ?? false,
+  const selected = {
+    centre: params.requested?.centre === true,
+    carer: params.requested?.carer === true,
   };
+  if (params.cancelCase === 'B') {
+    return { centre: false, carer: selected.carer };
+  }
+  return selected;
 }
 
 export type BatchCancellationResultDto = {
