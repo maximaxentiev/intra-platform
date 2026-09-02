@@ -136,6 +136,73 @@ describe("platform overview article", () => {
   });
 });
 
+describe("manage centres article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/manage-centres-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Find a Centre");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/manage-centres-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "communications-notes-and-important-terminology",
+      "create-an-individual-shift",
+      "understand-available-staff-and-priority",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents main centre management sections", () => {
+    const html = renderToString(<HelpArticleLayout article={getHelpArticle("manage-centres")!} />);
+    for (const heading of [
+      "Find a Centre",
+      "Create a new Centre",
+      "Edit Centre details",
+      "Manage Centre contacts",
+      "Add or remove Top staff",
+      "Ban or unban a staff member",
+      "View a Centre&#x27;s Shifts",
+      "Delete a Centre",
+    ]) {
+      expect(html).toContain(heading);
+    }
+  });
+
+  it("renders Important and Before you continue callouts", () => {
+    const html = renderToString(<HelpArticleLayout article={getHelpArticle("manage-centres")!} />);
+    expect(html).toContain("Important");
+    expect(html).toContain("Before you continue");
+    expect(html).toContain("primary contact");
+    expect(html).toContain("Top staff and Banned staff");
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("manage-centres");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "manage-staff-profiles-and-availability",
+      "understand-available-staff-and-priority",
+      "create-an-individual-shift",
+      "communications-notes-and-important-terminology",
+    ]);
+
+    const html = renderToString(<HelpArticleLayout article={getHelpArticle("manage-centres")!} />);
+    expect(html).toContain("Related Help");
+    expect(html).toContain("Understand Available Staff");
+    expect(html).not.toContain('src="/help/manage-centres/');
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

@@ -71,6 +71,15 @@ describe("help article registry", () => {
       true,
     );
   });
+
+  it("searches manage-centres keywords", () => {
+    expect(searchHelpArticles("primary contact").some((a) => a.slug === "manage-centres")).toBe(
+      true,
+    );
+    expect(searchHelpArticles("top carer").some((a) => a.slug === "manage-centres")).toBe(true);
+    expect(searchHelpArticles("ban carer").some((a) => a.slug === "manage-centres")).toBe(true);
+    expect(searchHelpArticles("staffpoint").some((a) => a.slug === "manage-centres")).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {

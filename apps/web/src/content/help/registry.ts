@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { HelpArticle, HelpArticleMeta, HelpCategoryId } from "./types";
 import { PlatformOverviewBody } from "./content/platform-overview-body";
+import { ManageCentresBody } from "./content/manage-centres-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -36,10 +37,31 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "manage-centres",
     title: "Manage Centres",
-    summary: "Create and maintain centres, contacts, Top Carers, and banned Carers.",
+    summary:
+      "Learn how to find, create and update Centres, manage contacts, and maintain Top and Banned Carer preferences.",
     category: "centres-and-staff",
-    keywords: ["centre", "contact", "primary contact", "top", "banned", "staffpoint"],
-    relatedSlugs: ["platform-overview"],
+    keywords: [
+      "centre",
+      "create centre",
+      "edit centre",
+      "centre contact",
+      "primary contact",
+      "top carer",
+      "top staff",
+      "banned carer",
+      "ban carer",
+      "banned staff",
+      "staff preferences",
+      "staffpoint",
+      "centre rules",
+      "rules notes",
+    ],
+    relatedSlugs: [
+      "manage-staff-profiles-and-availability",
+      "understand-available-staff-and-priority",
+      "create-an-individual-shift",
+      "communications-notes-and-important-terminology",
+    ],
   },
   {
     slug: "manage-staff-profiles-and-availability",
@@ -158,6 +180,7 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
 
 const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "platform-overview": PlatformOverviewBody,
+  "manage-centres": ManageCentresBody,
 };
 
 function resolveContent(slug: string) {
