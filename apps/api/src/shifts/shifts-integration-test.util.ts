@@ -32,3 +32,15 @@ export function createIntegrationShiftsService(db: NodePgDatabase<typeof schema>
     new ShiftBatchStalenessService(db, platformAudit),
   );
 }
+
+/** Marks staff Contacted then assigns — required for integration tests after the assign contact guard. */
+export async function assignContactedStaffForIntegration(
+  service: ShiftsService,
+  shiftId: string,
+  staffId: string,
+  actorUserId: string,
+  options?: Parameters<ShiftsService['assign']>[3],
+) {
+  await service.setContacted(shiftId, staffId, true);
+  return service.assign(shiftId, staffId, actorUserId, options);
+}

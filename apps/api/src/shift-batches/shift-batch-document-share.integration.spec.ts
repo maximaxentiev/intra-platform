@@ -21,7 +21,10 @@ import { EmailService } from '../email/email.service';
 import { RecordingEmailTransport } from '../email/email.transport';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
-import { createIntegrationShiftsService } from '../shifts/shifts-integration-test.util';
+import {
+  assignContactedStaffForIntegration,
+  createIntegrationShiftsService,
+} from '../shifts/shifts-integration-test.util';
 import { ShiftAssignmentConfirmationService } from '../shifts/shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from '../shifts/shift-assignment-notifications.service';
 import { ShiftCommunicationPolicyService } from '../shifts/shift-communication-policy.service';
@@ -149,7 +152,12 @@ describe.runIf(POSTGRES_READY)('Batch document share integration', () => {
     shiftIds.push(...created.created.map((row) => row.id));
 
     for (const child of created.created) {
-      await shiftsService.assign(child.id, assignStaffId, FIXTURE.opsUser);
+      await assignContactedStaffForIntegration(
+        shiftsService,
+        child.id,
+        assignStaffId,
+        FIXTURE.opsUser,
+      );
     }
 
     return created;
@@ -550,8 +558,18 @@ describe.runIf(POSTGRES_READY)('Batch document share integration', () => {
     const childId = created.created[0]!.id;
     await markBatchConfirmed(created.batch.id);
 
-    await shiftsService.assign(childId, FIXTURE.staffB, FIXTURE.opsUser);
-    await shiftsService.assign(childId, FIXTURE.staffC, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(
+      shiftsService,
+      childId,
+      FIXTURE.staffB,
+      FIXTURE.opsUser,
+    );
+    await assignContactedStaffForIntegration(
+      shiftsService,
+      childId,
+      FIXTURE.staffC,
+      FIXTURE.opsUser,
+    );
 
     const batch = await db
       .select({ lastConfirmationScheduledAt: shiftBatches.lastConfirmationScheduledAt })

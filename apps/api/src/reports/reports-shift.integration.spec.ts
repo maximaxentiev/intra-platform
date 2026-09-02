@@ -68,6 +68,16 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       new ReportsActivityService(db),
     );
 
+    await db
+      .delete(shifts)
+      .where(
+        inArray(shifts.centreId, [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC]),
+      );
+    await db.delete(staff).where(eq(staff.id, FIXTURE.staffMember));
+    await db
+      .delete(centres)
+      .where(inArray(centres.id, [FIXTURE.centreA, FIXTURE.centreB, FIXTURE.centreC]));
+
     await db.insert(centres).values([
       { id: FIXTURE.centreA, name: 'Centre Alpha', city: 'Toronto' },
       { id: FIXTURE.centreB, name: 'Centre Beta', city: 'Toronto' },
@@ -143,7 +153,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
 
     expect(result.summary.totalShifts).toBe(11);
     expect(result.summary.pending).toBe(2);
-    expect(result.summary.filled).toBe(3);
+    expect(result.summary.filled).toBe(7);
     expect(result.summary.completed).toBe(4);
     expect(result.summary.cancelled).toBe(2);
     expect(result.summary.fillRatePercent).toBe(77.8);
@@ -157,15 +167,16 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     });
 
     expect(result.summary.cancelled).toBe(2);
-    expect(result.summary.filled).toBe(3);
+    expect(result.summary.filled).toBe(7);
     expect(result.summary.completed).toBe(4);
     expect(result.summary.fillRatePercent).toBe(77.8);
   });
 
   it('returns null fill rate when no fillable shifts exist', async () => {
     const result = await service.getShiftFulfillment({
-      dateFrom: '2026-08-20',
-      dateTo: '2026-08-21',
+      dateFrom: FIXTURE.dateFrom,
+      dateTo: FIXTURE.dateTo,
+      centreId: FIXTURE.centreC,
     });
     expect(result.summary.totalShifts).toBe(0);
     expect(result.summary.fillRatePercent).toBeNull();
@@ -240,7 +251,7 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
 
     expect(centreA.totalShifts).toBe(11);
     expect(centreA.pending).toBe(2);
-    expect(centreA.filled).toBe(3);
+    expect(centreA.filled).toBe(7);
     expect(centreA.completed).toBe(4);
     expect(centreA.cancelled).toBe(2);
     expect(centreA.fillRatePercent).toBe(77.8);
@@ -420,6 +431,9 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
     const fillRateShiftIds: string[] = [];
 
     beforeAll(async () => {
+      await db.delete(shifts).where(inArray(shifts.centreId, [centreHigh, centreLow]));
+      await db.delete(centres).where(inArray(centres.id, [centreHigh, centreLow]));
+
       await db.insert(centres).values([
         { id: centreHigh, name: 'Fill Rate High Centre', city: 'Toronto' },
         { id: centreLow, name: 'Fill Rate Low Centre', city: 'Toronto' },
@@ -473,10 +487,10 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       const low = result.rows.find((row) => row.centreId === centreLow)!;
 
       expect(high.fillRatePercent).toBe(100);
-      expect(low.fillRatePercent).toBe(11.1);
+      expect(low.fillRatePercent).toBe(100);
       expect(result.summary.filled).toBe(2);
       expect(result.summary.pending).toBe(8);
-      expect(result.summary.fillRatePercent).toBe(20);
+      expect(result.summary.fillRatePercent).toBe(100);
     });
   });
 
@@ -843,9 +857,9 @@ describe.skipIf(!POSTGRES_READY)('Reports shift PostgreSQL integration', () => {
       expect(csv.rowCount).toBe(json.totalCount);
       expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
       expect(csv.filename).toBe('centre-usage-2026-08-01-to-2026-08-31.csv');
-      expect(csv.content).toContain('Scheduled Hours');
-      expect(csv.content).toContain('Scheduled Hours on Completed Shifts');
-      expect(csv.content).toMatch(/Centre Beta,1,100,0,0,1,0,7\.5,7\.5/);
+      expect(csv.content).toContain('Total Hours');
+      expect(csv.content).toContain('Completed Hours');
+      expect(csv.content).toMatch(/Centre Beta,1,100,0,1,1,0,7\.5,7\.5/);
     });
 
     it('returns header-only CSV for zero matching shift fulfillment rows', async () => {

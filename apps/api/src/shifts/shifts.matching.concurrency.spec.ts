@@ -31,7 +31,21 @@ import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+import { assignContactedStaffForIntegration } from './shifts-integration-test.util';
 import { ShiftsService } from './shifts.service';
+
+function createMockCommunicationPolicy() {
+  return {
+    resolveForShift: vi.fn().mockResolvedValue({
+      batchId: null,
+      batchRequestCompleted: false,
+      batchConfirmationStale: false,
+      centreCommunicationDeferred: false,
+      centreDeferReason: null,
+    }),
+  } as unknown as ShiftCommunicationPolicyService;
+}
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://intra:intra-dev-password@127.0.0.1:5434/intra';
@@ -213,6 +227,7 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
       { get: () => 'test' } as ConfigService,
       new ShiftAssignmentNotificationsService(db),
       shareLifecycle,
+      createMockCommunicationPolicy(),
     );
 
     service = new ShiftsService(
@@ -291,6 +306,9 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
     await insertShift(shiftA, '09:00:00', '13:00:00');
     await insertShift(shiftB, '11:00:00', '15:00:00');
 
+    await service.setContacted(shiftA, STAFF_A, true);
+    await service.setContacted(shiftB, STAFF_A, true);
+
     const results = await Promise.allSettled([
       service.assign(shiftA, STAFF_A, OPS_USER_ID),
       service.assign(shiftB, STAFF_A, OPS_USER_ID),
@@ -309,7 +327,8 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
     await insertShift(shiftA, '09:00:00', '13:00:00');
     await insertShift(shiftB, '14:00:00', '18:00:00');
 
-    await service.assign(shiftA, STAFF_A, OPS_USER_ID);
+    await assignContactedStaffForIntegration(service, shiftA, STAFF_A, OPS_USER_ID);
+    await service.setContacted(shiftB, STAFF_A, true);
     await expect(service.assign(shiftB, STAFF_A, OPS_USER_ID)).rejects.toBeInstanceOf(
       ConflictException,
     );
@@ -321,8 +340,13 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
     await insertShift(shiftA, '08:00:00', '10:00:00');
     await insertShift(shiftB, '12:00:00', '14:00:00');
 
-    await service.assign(shiftA, STAFF_A, OPS_USER_ID);
-    const second = await service.assign(shiftB, STAFF_A, OPS_USER_ID);
+    await assignContactedStaffForIntegration(service, shiftA, STAFF_A, OPS_USER_ID);
+    const second = await assignContactedStaffForIntegration(
+      service,
+      shiftB,
+      STAFF_A,
+      OPS_USER_ID,
+    );
 
     expect(second.assignment.changed).toBe(true);
   });
@@ -332,6 +356,9 @@ describe.runIf(POSTGRES_READY)('Shift matching postgres concurrency', () => {
     const shiftB = '55555555-5555-4555-8555-555555555558';
     await insertShift(shiftA, '09:00:00', '13:00:00');
     await insertShift(shiftB, '11:00:00', '15:00:00');
+
+    await service.setContacted(shiftA, STAFF_A, true);
+    await service.setContacted(shiftB, STAFF_B, true);
 
     const [first, second] = await Promise.all([
       service.assign(shiftA, STAFF_A, OPS_USER_ID),

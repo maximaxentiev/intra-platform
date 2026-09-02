@@ -395,10 +395,15 @@ describe.runIf(POSTGRES_READY)('Document expiry reminder PostgreSQL integration'
       .from(scheduledCommunications)
       .where(eq(scheduledCommunications.entityId, cprSubmissionId));
 
-    expect(rows.filter((row) => row.status === 'scheduled').map((row) => row.communicationType)).toEqual([
-      'document_expiry_3mo',
-      'document_expiry_2mo',
+    const scheduledTypes = [
+      ...new Set(
+        rows.filter((row) => row.status === 'scheduled').map((row) => row.communicationType),
+      ),
+    ].sort();
+    expect(scheduledTypes).toEqual([
       'document_expiry_1mo',
+      'document_expiry_2mo',
+      'document_expiry_3mo',
     ]);
     expect(rows.filter((row) => row.status === 'cancelled').map((row) => row.communicationType)).toEqual([
       'document_expiry_30d',

@@ -5,7 +5,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as schema from '../db/schema';
 import { centres, shiftBatches, shiftComments, shifts, staff, users } from '../db/schema';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
-import { createIntegrationShiftsService } from '../shifts/shifts-integration-test.util';
+import {
+  assignContactedStaffForIntegration,
+  createIntegrationShiftsService,
+} from '../shifts/shifts-integration-test.util';
 import type { ShiftsService } from '../shifts/shifts.service';
 import { ShiftsFeedService } from '../shifts/shifts-feed.service';
 import { ShiftBatchesService } from './shift-batches.service';
@@ -233,7 +236,12 @@ describe.runIf(POSTGRES_READY)('Batch confirmation revision integration', () => 
       .where(eq(shifts.id, childId));
     await markBatchConfirmed(db, created.batch.id, FIXTURE.opsUser);
 
-    await shiftsService.assign(childId, FIXTURE.staffB, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(
+      shiftsService,
+      childId,
+      FIXTURE.staffB,
+      FIXTURE.opsUser,
+    );
 
     const workspace = await batchesService.getWorkspace(created.batch.id);
     expect(workspace.pendingChangeRevision).toBeGreaterThan(0);

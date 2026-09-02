@@ -25,6 +25,7 @@ import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
+import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
 import { ShiftsService } from './shifts.service';
 import {
   availability,
@@ -42,6 +43,18 @@ const CENTRE_ID = '66666666-6666-4666-8666-666666666662';
 const STAFF_ID = '99999999-9999-4999-8999-999999999991';
 const OPS_USER_ID = '88888888-8888-4888-8888-888888888889';
 const ACCOUNT_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+function createMockCommunicationPolicy() {
+  return {
+    resolveForShift: vi.fn().mockResolvedValue({
+      batchId: null,
+      batchRequestCompleted: false,
+      batchConfirmationStale: false,
+      centreCommunicationDeferred: false,
+      centreDeferReason: null,
+    }),
+  } as unknown as ShiftCommunicationPolicyService;
+}
 
 async function probePostgres(): Promise<boolean> {
   const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2500, max: 1 });
@@ -117,6 +130,7 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       } as ConfigService,
       new ShiftAssignmentNotificationsService(db),
       shareLifecycle,
+      createMockCommunicationPolicy(),
     );
 
     service = new ShiftsService(
@@ -244,6 +258,8 @@ describe.runIf(POSTGRES_READY)('ShiftsService.assign postgres concurrency', () =
       .set({ assignedStaffId: null, status: 'pending' })
       .where(eq(shifts.id, SHIFT_ID));
     await db.delete(shiftAssignmentNotifications).where(eq(shiftAssignmentNotifications.shiftId, SHIFT_ID));
+
+    await service.setContacted(SHIFT_ID, STAFF_ID, true);
 
     const results = await Promise.all([
       service.assign(SHIFT_ID, STAFF_ID, OPS_USER_ID),

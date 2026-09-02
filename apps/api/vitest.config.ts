@@ -11,5 +11,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.spec.ts'],
     setupFiles: ['./vitest.setup.ts'],
+    // Integration specs share one PostgreSQL database; parallel files race reconcilers/fixtures.
+    fileParallelism: false,
   },
 });

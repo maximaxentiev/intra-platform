@@ -15,7 +15,9 @@ import {
 import { buildDocumentExpiryIdempotencyKey } from '../staff-documents/document-expiry-reminder.types';
 import {
   addCalendarDays,
+  addCalendarYears,
   formatDateOnly,
+  parseDateOnly,
   startOfUtcDay,
 } from '../staff-documents/staff-document-dates.util';
 import type { StaffDocumentType } from '../staff-documents/staff-document.constants';
@@ -148,6 +150,9 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
 
     const today = startOfUtcDay(new Date());
     const expiringSoonDate = formatDateOnly(addCalendarDays(today, 20));
+    const vscProcessedExpiringSoon = formatDateOnly(
+      addCalendarYears(parseDateOnly(expiringSoonDate), -1),
+    );
     const expiredDate = formatDateOnly(addCalendarDays(today, -10));
 
     await db.insert(staff).values([
@@ -234,7 +239,7 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
       FIXTURE.staffB,
       'vulnerable_sector_check',
       {
-        processedDate: '2025-08-01',
+        processedDate: vscProcessedExpiringSoon,
         expiryDate: expiringSoonDate,
       },
     );
@@ -444,7 +449,12 @@ describe.skipIf(!POSTGRES_READY)('Reports documents PostgreSQL integration', () 
     const result = await service.getDocumentCompliance({ pageSize: 100 });
     expect(result.staffIds).toBeNull();
     expect(result.totalCount).toBeGreaterThanOrEqual(FIXTURE_ACTIVE_STAFF_IDS.length);
-    expect(result.items.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(true);
+
+    const inactiveOnly = await service.getDocumentCompliance({
+      staffIds: [FIXTURE.staffInactive],
+      pageSize: 1,
+    });
+    expect(inactiveOnly.items.some((row) => row.staffId === FIXTURE.staffInactive)).toBe(true);
 
     const fixtureSlice = await service.getDocumentCompliance({
       staffIds: [FIXTURE.staffF],

@@ -4,6 +4,11 @@ import {
   deriveStaffShiftDocumentGate,
   type StaffDocumentCategoryComplianceInput,
 } from '../staff-documents/staff-document-compliance.util';
+import {
+  addCalendarDays,
+  formatDateOnly,
+  startOfUtcDay,
+} from '../staff-documents/staff-document-dates.util';
 import type { SameDayStaffShift, ShiftMatchingTarget } from './shift-matching.types';
 import {
   addHoursToTimeString,
@@ -268,6 +273,7 @@ describe('evaluateStaffShiftEligibility — documents', () => {
   });
 
   it('allows expiring soon and optional missing COVID', () => {
+    const expiringSoonDate = formatDateOnly(addCalendarDays(startOfUtcDay(new Date()), 20));
     const gate = deriveStaffShiftDocumentGate([
       approved('vulnerable_sector_check'),
       approved('first_aid_cpr'),
@@ -276,7 +282,7 @@ describe('evaluateStaffShiftEligibility — documents', () => {
         reviewStatus: 'approved',
         fileCount: 1,
         currentSubmissionId: 'x',
-        expiryDate: '2026-09-01',
+        expiryDate: expiringSoonDate,
       }),
     ]);
     expect(eligibleBase({ documentGate: gate }).eligible).toBe(true);

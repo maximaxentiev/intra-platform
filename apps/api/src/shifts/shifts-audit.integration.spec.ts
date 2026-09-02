@@ -21,6 +21,7 @@ import { createMockShiftCancellationService } from './shift-cancellation-test.ut
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
+import { assignContactedStaffForIntegration } from './shifts-integration-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -198,8 +199,8 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService platform audit integration', () 
     );
     shiftIds.push(created.id);
 
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
-    await service.assign(created.id, FIXTURE.staffB, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffB, FIXTURE.opsUser);
     await service.unassign(created.id, FIXTURE.opsUser);
 
     const actions = await auditActionsForShift(created.id);
@@ -219,7 +220,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService platform audit integration', () 
       FIXTURE.opsUser,
     );
     shiftIds.push(created.id);
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     await service.changeStatus(
       created.id,
@@ -237,7 +238,12 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService platform audit integration', () 
       FIXTURE.opsUser,
     );
     shiftIds.push(completedShift.id);
-    await service.assign(completedShift.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(
+      service,
+      completedShift.id,
+      FIXTURE.staffA,
+      FIXTURE.opsUser,
+    );
     await service.changeStatus(completedShift.id, { status: 'completed' }, FIXTURE.opsUser);
 
     expect(await auditActionsForShift(created.id)).toContain('shift_cancelled');

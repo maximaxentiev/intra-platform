@@ -14,6 +14,7 @@ import { createMockShiftReminderService } from './shift-reminder-test.util';
 import { createMockShiftUpdateCommunicationService } from './shift-update-communication-test.util';
 import { createMockShiftManualUnassignCommunicationService } from './shift-manual-unassign-communication-test.util';
 import { createMockShiftBatchProgressCommunicationService } from '../shift-batches/shift-batch-progress-test.util';
+import { assignContactedStaffForIntegration } from './shifts-integration-test.util';
 import { ShiftsService } from './shifts.service';
 
 const DATABASE_URL =
@@ -129,7 +130,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('cancels with a valid reason and trims it', async () => {
     const created = await createPendingShift('2026-10-01');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     const cancelled = await service.changeStatus(
       created.id,
@@ -144,7 +145,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('rejects cancellation with empty or whitespace-only reason', async () => {
     const created = await createPendingShift('2026-10-02');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     await expect(
       service.changeStatus(created.id, { status: 'cancelled', cancellationReason: '' }, FIXTURE.opsUser),
@@ -163,7 +164,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('allows completed without cancellationReason when shift is filled', async () => {
     const created = await createPendingShift('2026-10-03');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     const completed = await service.changeStatus(
       created.id,
@@ -195,7 +196,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('unassigns via the dedicated endpoint', async () => {
     const created = await createPendingShift('2026-10-06');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     const unassigned = await service.unassign(created.id, FIXTURE.opsUser);
     expect(unassigned.shift.status).toBe('pending');
@@ -204,7 +205,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('rejects generic status transition to pending', async () => {
     const created = await createPendingShift('2026-10-07');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
 
     await expect(
       service.changeStatus(created.id, { status: 'pending' }, FIXTURE.opsUser),
@@ -217,7 +218,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('preserves cancelled assignment history when pending is rejected', async () => {
     const created = await createPendingShift('2026-10-08');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
     await service.changeStatus(
       created.id,
       { status: 'cancelled', cancellationReason: 'Centre closed' },
@@ -235,7 +236,7 @@ describe.skipIf(!POSTGRES_READY)('ShiftsService lifecycle contracts', () => {
 
   it('preserves completed assignment history when pending is rejected', async () => {
     const created = await createPendingShift('2026-10-09');
-    await service.assign(created.id, FIXTURE.staffA, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(service, created.id, FIXTURE.staffA, FIXTURE.opsUser);
     await service.changeStatus(created.id, { status: 'completed' }, FIXTURE.opsUser);
 
     await expect(

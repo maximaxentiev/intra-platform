@@ -21,7 +21,10 @@ import {
 import { PLATFORM_AUDIT_ACTIONS } from '../platform-audit/platform-audit.constants';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ensurePlatformAuditTable } from '../platform-audit/test-platform-audit-schema.util';
-import { createIntegrationShiftsService } from '../shifts/shifts-integration-test.util';
+import {
+  assignContactedStaffForIntegration,
+  createIntegrationShiftsService,
+} from '../shifts/shifts-integration-test.util';
 import type { ShiftsService } from '../shifts/shifts.service';
 import { ShiftsFeedService } from '../shifts/shifts-feed.service';
 import { ShiftBatchChangeHistoryService } from './shift-batch-change-history.service';
@@ -216,7 +219,12 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     shiftIds.push(...created.created.map((row) => row.id));
 
     for (const child of created.created) {
-      await shiftsService.assign(child.id, FIXTURE.staffA, FIXTURE.opsUser);
+      await assignContactedStaffForIntegration(
+        shiftsService,
+        child.id,
+        FIXTURE.staffA,
+        FIXTURE.opsUser,
+      );
     }
 
     const confirmedAt = new Date();
@@ -422,7 +430,12 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     const created = await createConfirmedBatch(['2029-08-01']);
     const childId = created.created[0]!.id;
 
-    await shiftsService.assign(childId, FIXTURE.staffB, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(
+      shiftsService,
+      childId,
+      FIXTURE.staffB,
+      FIXTURE.opsUser,
+    );
 
     const readiness = await updateService.getUpdateReadiness(created.batch.id);
     const carerChange = readiness.detectedChanges.find((c) => c.type === 'carer_changed');
@@ -439,7 +452,12 @@ describe.runIf(POSTGRES_READY)('Batch update confirmation integration', () => {
     let workspace = await batchesService.getWorkspace(created.batch.id);
     expect(workspace.confirmationUiState).toBe('updates_required');
 
-    await shiftsService.assign(childId, FIXTURE.staffB, FIXTURE.opsUser);
+    await assignContactedStaffForIntegration(
+      shiftsService,
+      childId,
+      FIXTURE.staffB,
+      FIXTURE.opsUser,
+    );
     workspace = await batchesService.getWorkspace(created.batch.id);
     expect(workspace.confirmationUiState).toBe('ready_to_send_updates');
   });
