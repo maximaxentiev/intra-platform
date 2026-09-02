@@ -495,6 +495,75 @@ describe("understand available staff article", () => {
   });
 });
 
+describe("assign replace unassign article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/assign-replace-or-unassign-a-carer-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("Before you assign");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/assign-replace-or-unassign-a-carer-body.tsx"),
+      "utf8",
+    );
+    const slugs = [
+      "understand-available-staff-and-priority",
+      "edit-or-cancel-a-shift",
+      "fill-complete-and-update-a-batch-request",
+      "communications-notes-and-important-terminology",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents assignment workflow sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("assign-replace-or-unassign-a-carer")!} />,
+    );
+    for (const heading of [
+      "Before you assign",
+      "Assign a Carer",
+      "What happens after assignment",
+      "Replace an assigned Carer",
+      "Unassign a Carer",
+      "Individual Shift vs Batch Request",
+      "Resend an assignment confirmation",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Contacted");
+    expect(html).toContain("Email the previous Carer to confirm they have been unassigned");
+    expect(html).toContain("Centre communication is managed through this Batch Request");
+  });
+
+  it("renders Important callouts and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("assign-replace-or-unassign-a-carer")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Review the confirmation dialog before assigning");
+    expect(html).toContain("review previous-carer and centre communication choices carefully");
+    expect(html).not.toContain('src="/help/assign-replace-or-unassign-a-carer/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("assign-replace-or-unassign-a-carer");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "understand-available-staff-and-priority",
+      "edit-or-cancel-a-shift",
+      "fill-complete-and-update-a-batch-request",
+      "communications-notes-and-important-terminology",
+    ]);
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

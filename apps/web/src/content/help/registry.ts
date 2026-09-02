@@ -6,6 +6,7 @@ import { ManageStaffProfilesAndAvailabilityBody } from "./content/manage-staff-p
 import { ReviewAndApproveStaffDocumentsBody } from "./content/review-and-approve-staff-documents-body";
 import { CreateAnIndividualShiftBody } from "./content/create-an-individual-shift-body";
 import { UnderstandAvailableStaffAndPriorityBody } from "./content/understand-available-staff-and-priority-body";
+import { AssignReplaceOrUnassignACarerBody } from "./content/assign-replace-or-unassign-a-carer-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -190,11 +191,29 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "assign-replace-or-unassign-a-carer",
     title: "Assign, Replace or Unassign a Carer",
-    summary: "Mark Contacted, assign staff, replace an assignee, or unassign a shift.",
+    summary:
+      "Learn how to contact and assign a Carer, replace an existing assignment, or unassign a Carer while managing the appropriate communications.",
     category: "individual-shifts",
-    keywords: ["assign", "contacted", "replace", "reassign", "unassign", "switch carer"],
+    keywords: [
+      "assign",
+      "assignment",
+      "assign carer",
+      "contacted",
+      "replace carer",
+      "replacement",
+      "reassign",
+      "switch carer",
+      "previous carer",
+      "unassign",
+      "remove carer",
+      "resend confirmation",
+      "filled",
+      "pending",
+    ],
     relatedSlugs: [
+      "understand-available-staff-and-priority",
       "edit-or-cancel-a-shift",
+      "fill-complete-and-update-a-batch-request",
       "communications-notes-and-important-terminology",
     ],
   },
@@ -264,6 +283,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "review-and-approve-staff-documents": ReviewAndApproveStaffDocumentsBody,
   "create-an-individual-shift": CreateAnIndividualShiftBody,
   "understand-available-staff-and-priority": UnderstandAvailableStaffAndPriorityBody,
+  "assign-replace-or-unassign-a-carer": AssignReplaceOrUnassignACarerBody,
 };
 
 function resolveContent(slug: string) {

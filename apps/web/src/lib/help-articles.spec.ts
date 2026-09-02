@@ -154,6 +154,27 @@ describe("help article registry", () => {
       searchHelpArticles("overlap").some((a) => a.slug === "understand-available-staff-and-priority"),
     ).toBe(true);
   });
+
+  it("searches assignment keywords", () => {
+    expect(
+      searchHelpArticles("assign carer").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("contacted").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("replace carer").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("reassign").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("unassign").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+    expect(
+      searchHelpArticles("resend confirmation").some((a) => a.slug === "assign-replace-or-unassign-a-carer"),
+    ).toBe(true);
+  });
 });
 
 describe("help centre shell wiring", () => {
