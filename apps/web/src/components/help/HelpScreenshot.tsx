@@ -8,7 +8,8 @@ import {
 import { cn } from "@/lib/utils";
 
 type HelpScreenshotProps = {
-  src: string;
+  /** Omit or leave undefined until the asset file exists under public/help/. */
+  src?: string;
   alt: string;
   caption?: string;
   className?: string;
@@ -16,6 +17,8 @@ type HelpScreenshotProps = {
 
 export function HelpScreenshot({ src, alt, caption, className }: HelpScreenshotProps) {
   const [enlarged, setEnlarged] = useState(false);
+
+  if (!src) return null;
 
   return (
     <figure className={cn("not-prose my-6", className)}>
