@@ -19,7 +19,7 @@ export function HelpCallout({
 }) {
   return (
     <aside
-      className={cn("my-6 rounded-lg border px-4 py-3.5 not-prose", VARIANT_STYLES[variant])}
+      className={cn("my-8 rounded-lg border px-4 py-4 not-prose", VARIANT_STYLES[variant])}
       role="note"
       aria-label={title}
     >

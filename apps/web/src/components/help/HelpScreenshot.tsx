@@ -21,7 +21,7 @@ export function HelpScreenshot({ src, alt, caption, className }: HelpScreenshotP
   if (!src) return null;
 
   return (
-    <figure className={cn("not-prose my-6", className)}>
+    <figure className={cn("not-prose my-8", className)}>
       <button
         type="button"
         onClick={() => setEnlarged(true)}

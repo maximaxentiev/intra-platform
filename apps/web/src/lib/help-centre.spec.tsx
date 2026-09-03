@@ -85,7 +85,7 @@ describe("help presentation components", () => {
     expect(html).toContain("overflow-x-auto");
   });
 
-  it("applies readable typography spacing for article prose", () => {
+  it("applies Help-specific typography and list styling", () => {
     const html = renderToString(
       <HelpArticleProse>
         <h2>Section</h2>
@@ -95,9 +95,23 @@ describe("help presentation components", () => {
         </ul>
       </HelpArticleProse>,
     );
-    expect(html).toContain("prose-h2:mt-10");
-    expect(html).toContain("prose-p:leading-relaxed");
-    expect(html).toContain("prose-ul:my-4");
+    expect(html).toContain("help-article-prose");
+    expect(html).toContain("_h2]:mt-12");
+    expect(html).toContain("_p]:leading-7");
+    expect(html).toContain("_ul]:list-disc");
+    expect(html).not.toContain("prose-h2:");
+  });
+
+  it("renders available staff field list as a bulleted ul", () => {
+    const body = readFileSync(
+      join(process.cwd(), "src/content/help/content/understand-available-staff-and-priority-body.tsx"),
+      "utf8",
+    );
+    expect(body).toContain("<ul>");
+    expect(body).toContain("<li>Carer name</li>");
+    expect(body).toContain("<strong>Role</strong>");
+    expect(body).toContain("<strong>Contacted</strong>");
+    expect(body).toContain("<strong>Assign</strong>");
   });
 });
 

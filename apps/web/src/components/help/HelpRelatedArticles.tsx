@@ -6,7 +6,7 @@ export function HelpRelatedArticles({ slug }: { slug: string }) {
   if (related.length === 0) return null;
 
   return (
-    <section aria-labelledby="help-related-heading" className="mt-10 space-y-4 border-t border-border pt-10">
+    <section aria-labelledby="help-related-heading" className="mt-12 space-y-4 border-t border-border pt-12">
       <h2 id="help-related-heading" className="text-base font-semibold text-foreground">
         Related Help
       </h2>

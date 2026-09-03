@@ -92,22 +92,24 @@ export function ReviewAndApproveStaffDocumentsBody() {
 
       <h2>Document categories</h2>
       <p>The Documents tab lists these categories:</p>
-      <p>
-        <strong>Compliance documents</strong>
-      </p>
       <ul>
-        <li>Vulnerable Sector Check</li>
-        <li>First Aid &amp; CPR Certification</li>
-        <li>Immunizations</li>
-        <li>COVID-19 Vaccination (optional)</li>
-      </ul>
-      <p>
-        <strong>Qualifications</strong>
-      </p>
-      <ul>
-        <li>ECA Diploma</li>
-        <li>ECE Diploma</li>
-        <li>RECE Proof</li>
+        <li>
+          <strong>Compliance documents</strong>
+          <ul>
+            <li>Vulnerable Sector Check</li>
+            <li>First Aid &amp; CPR Certification</li>
+            <li>Immunizations</li>
+            <li>COVID-19 Vaccination (optional)</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Qualifications</strong>
+          <ul>
+            <li>ECA Diploma</li>
+            <li>ECE Diploma</li>
+            <li>RECE Proof</li>
+          </ul>
+        </li>
       </ul>
       <p>
         Required compliance documents must be submitted and approved for baseline shift matching.
