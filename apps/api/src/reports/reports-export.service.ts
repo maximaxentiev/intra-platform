@@ -21,6 +21,7 @@ import {
   minutesToCsvHours,
   reportCsvFilename,
 } from './report-csv.util';
+import { sanitizeCentreFilenameSegment } from '../centres/centre-shift-history.types';
 import { ReportsActivityService } from './reports-activity.service';
 import { ReportsDocumentsService } from './reports-documents.service';
 import { ReportsShiftService } from './reports-shift.service';
@@ -130,6 +131,46 @@ export class ReportsExportService {
     ]);
     const prefix =
       audience === 'centre' ? 'centre-usage-shift-detail-centre' : 'centre-usage-shift-detail';
+    return {
+      content: buildCsvContent(headers, body),
+      filename: reportCsvFilename(prefix, dateFrom, dateTo),
+      rowCount: rows.length,
+    };
+  }
+
+  /** Centre-facing shift history CSV for a single Centre (legal Carer names, all statuses). */
+  async exportCentreShiftHistory(
+    centreId: string,
+    centreName: string,
+    dateFrom: string,
+    dateTo: string,
+  ): Promise<ReportCsvExportResult> {
+    const { rows } = await this.reportsShift.getCentreUsageShiftsExportRows({
+      centreIds: [centreId],
+      dateFrom,
+      dateTo,
+      status: 'all',
+      audience: 'centre',
+    });
+    const headers = [
+      'Date',
+      'Start Time',
+      'End Time',
+      'Role',
+      'Carer',
+      'Status',
+      'Scheduled Hours',
+    ];
+    const body = rows.map((row) => [
+      csvTextCell(formatCsvDateOnly(row.shiftDate)),
+      csvTextCell(formatCsvTimeOnly(row.startTime)),
+      csvTextCell(formatCsvTimeOnly(row.endTime)),
+      csvTextCell(row.role),
+      csvTextCell(row.staffName),
+      csvTextCell(row.statusLabel),
+      csvNumberCell(minutesToCsvHours(row.scheduledMinutes)),
+    ]);
+    const prefix = `${sanitizeCentreFilenameSegment(centreName)}-shift-history`;
     return {
       content: buildCsvContent(headers, body),
       filename: reportCsvFilename(prefix, dateFrom, dateTo),

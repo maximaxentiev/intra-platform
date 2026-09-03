@@ -1,3 +1,10 @@
+export type EmailAttachment = {
+  filename: string;
+  /** UTF-8 content encoded as base64 for Resend. */
+  content: string;
+  contentType?: string;
+};
+
 export type EmailMessage = {
   to: string;
   subject: string;
@@ -5,6 +12,7 @@ export type EmailMessage = {
   text: string;
   /** Optional Resend Idempotency-Key header for automated communications retries. */
   idempotencyKey?: string;
+  attachments?: EmailAttachment[];
 };
 
 export type EmailSendResult = { providerId?: string };
@@ -46,16 +54,25 @@ export class ResendEmailTransport implements EmailTransport {
       headers['Idempotency-Key'] = message.idempotencyKey;
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    const body: Record<string, unknown> = {
         from: this.fromAddress,
         to: [message.to],
         subject: message.subject,
         html: message.html,
         text: message.text,
-      }),
+      };
+    if (message.attachments?.length) {
+      body.attachments = message.attachments.map((attachment) => ({
+        filename: attachment.filename,
+        content: attachment.content,
+        ...(attachment.contentType ? { content_type: attachment.contentType } : {}),
+      }));
+    }
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');

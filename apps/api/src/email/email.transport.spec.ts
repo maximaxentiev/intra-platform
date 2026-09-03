@@ -45,6 +45,39 @@ describe('ResendEmailTransport idempotency', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('includes attachments in Resend payload when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'msg-3' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const transport = new ResendEmailTransport('re_test_key', 'Test <test@example.com>');
+    await transport.send({
+      to: 'user@example.com',
+      subject: 'CSV',
+      html: '<p>Hi</p>',
+      text: 'Hi',
+      attachments: [
+        {
+          filename: 'history.csv',
+          content: Buffer.from('Date,Carer', 'utf8').toString('base64'),
+          contentType: 'text/csv',
+        },
+      ],
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body)) as {
+      attachments: Array<{ filename: string; content: string; content_type?: string }>;
+    };
+    expect(body.attachments).toHaveLength(1);
+    expect(body.attachments[0]!.filename).toBe('history.csv');
+    expect(body.attachments[0]!.content_type).toBe('text/csv');
+
+    vi.unstubAllGlobals();
+  });
 });
 
 describe('RecordingEmailTransport', () => {

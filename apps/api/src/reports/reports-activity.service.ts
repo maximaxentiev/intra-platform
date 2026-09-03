@@ -145,7 +145,7 @@ export class ReportsActivityService {
           p.occurred_at,
           CASE
             WHEN p.action IN ('shift_update_communication_sent', 'shift_update_communication_failed') THEN 'communications'
-            WHEN p.action IN ('batch_progress_email_scheduled', 'batch_progress_email_blocked') THEN 'communications'
+            WHEN p.action IN ('batch_progress_email_scheduled', 'batch_progress_email_blocked', 'centre_shift_history_email_scheduled') THEN 'communications'
             WHEN p.action IN ('batch_request_completed', 'batch_final_confirmation_scheduled') THEN 'communications'
             WHEN p.action LIKE 'shift_%' THEN 'shifts'
             WHEN p.action LIKE 'centre_%' THEN 'centres'

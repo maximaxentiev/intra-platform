@@ -23,6 +23,7 @@ export type CommunicationType =
   | 'onboarding_reminder_7d'
   | 'onboarding_reminder_14d'
   | 'onboarding_reminder_30d'
+  | 'centre_shift_history'
   | 'test_ping';
 
 export type ScheduledCommunicationStatus =
@@ -34,7 +35,7 @@ export type ScheduledCommunicationStatus =
 
 export type CommunicationDeliveryStatus = 'sent' | 'failed' | 'skipped';
 
-export type CommunicationEntityType = 'shift' | 'shift_batch' | 'staff_document' | 'staff_account' | 'test';
+export type CommunicationEntityType = 'shift' | 'shift_batch' | 'staff_document' | 'staff_account' | 'centre' | 'test';
 
 export type CommunicationRecipientType = 'centre' | 'carer' | 'staff' | 'test';
 
@@ -49,7 +50,14 @@ export type ScheduleCommunicationInput = {
 };
 
 export type CommunicationProcessorOutcome =
-  | { kind: 'valid'; recipientEmail: string; subject: string; html: string; text: string }
+  | {
+      kind: 'valid';
+      recipientEmail: string;
+      subject: string;
+      html: string;
+      text: string;
+      attachments?: import('../email/email.transport').EmailAttachment[];
+    }
   | { kind: 'stale' }
   | { kind: 'skipped'; code: string; reason: string }
   | { kind: 'permanent_failure'; code: string; reason: string };
@@ -82,6 +90,7 @@ export const COMMUNICATION_TYPE_VALUES: readonly CommunicationType[] = [
   'onboarding_reminder_7d',
   'onboarding_reminder_14d',
   'onboarding_reminder_30d',
+  'centre_shift_history',
   'test_ping',
 ] as const;
 

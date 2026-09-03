@@ -13,6 +13,7 @@ import { AutomatedCommunicationsReconcilerService } from '../automated-communica
 import { ShiftCommunicationsModule } from '../shifts/shift-communications.module';
 import { DocumentCommunicationsModule } from '../staff-documents/document-communications.module';
 import { OnboardingCommunicationsModule } from '../staff-portal/onboarding-communications.module';
+import { ReportsModule } from '../reports/reports.module';
 import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
 import { registerShiftCancellationProcessors } from '../shifts/shift-cancellation.processor';
 import { registerDocumentExpiryProcessors } from '../staff-documents/document-expiry-reminder.processor';
@@ -29,6 +30,7 @@ import { registerOnboardingReminderProcessors } from '../staff-portal/onboarding
     ShiftCommunicationsModule,
     DocumentCommunicationsModule,
     OnboardingCommunicationsModule,
+    ReportsModule,
   ],
 })
 export class WorkerModule {}
@@ -66,6 +68,11 @@ export async function bootstrapWorker(): Promise<{
     '../shift-batches/shift-batch-cancellation.processor'
   );
   registerBatchCancellationProcessors(registry, config);
+  const { registerCentreShiftHistoryProcessor } = await import(
+    '../centres/centre-shift-history.processor'
+  );
+  const { ReportsExportService } = await import('../reports/reports-export.service');
+  registerCentreShiftHistoryProcessor(registry, config, app.get(ReportsExportService));
 
   if (process.env.NODE_ENV === 'test' || process.env.WORKER_REGISTER_TEST_PROCESSOR === 'true') {
     registerTestPingProcessor(

@@ -216,6 +216,26 @@ function buildCopy(
       description: reason ?? centreLabel(ctx),
     };
   }
+  if (action === 'centre_shift_history_email_scheduled') {
+    const dateFrom =
+      typeof ctx.metadata?.dateFrom === 'string' ? ctx.metadata.dateFrom : null;
+    const dateTo = typeof ctx.metadata?.dateTo === 'string' ? ctx.metadata.dateTo : null;
+    const shiftRowCount =
+      typeof ctx.metadata?.shiftRowCount === 'number' ? ctx.metadata.shiftRowCount : null;
+    const recipientEmail =
+      typeof ctx.metadata?.recipientEmail === 'string' ? ctx.metadata.recipientEmail : null;
+    const range =
+      dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : centreLabel(ctx);
+    const countLabel =
+      shiftRowCount != null ? `${shiftRowCount} shift${shiftRowCount === 1 ? '' : 's'}` : null;
+    const description = [countLabel, recipientEmail ? `to ${recipientEmail}` : null, range]
+      .filter(Boolean)
+      .join(' · ');
+    return {
+      title: 'Centre shift history email scheduled',
+      description: description || centreLabel(ctx),
+    };
+  }
   if (action === 'batch_request_completed') {
     return {
       title: 'Batch Request completed',

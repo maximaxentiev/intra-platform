@@ -1,7 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionPayload } from '../auth/session.service';
+import { CentreShiftHistoryService } from './centre-shift-history.service';
+import {
+  CentreShiftHistoryEmailDto,
+  CentreShiftHistoryQueryDto,
+} from './dto/centre-shift-history.dto';
 import { CentresService } from './centres.service';
 import {
   ReorderContactsDto,
@@ -14,7 +20,10 @@ import {
 @ApiTags('centres')
 @Controller('centres')
 export class CentresController {
-  constructor(private readonly centres: CentresService) {}
+  constructor(
+    private readonly centres: CentresService,
+    private readonly centreShiftHistory: CentreShiftHistoryService,
+  ) {}
 
   @Get()
   list() {
@@ -105,5 +114,39 @@ export class CentresController {
   @Get(':id/shifts')
   shifts(@Param('id') id: string) {
     return this.centres.shiftHistory(id);
+  }
+
+  @Get(':id/shift-history/preview')
+  shiftHistoryPreview(@Param('id') id: string, @Query() query: CentreShiftHistoryQueryDto) {
+    return this.centreShiftHistory.getPreview(id, query.dateFrom, query.dateTo);
+  }
+
+  @Get(':id/shift-history/export')
+  async shiftHistoryExport(
+    @Param('id') id: string,
+    @Query() query: CentreShiftHistoryQueryDto,
+    @Res() res: Response,
+  ) {
+    const csv = await this.centreShiftHistory.exportCsv(id, query.dateFrom, query.dateTo);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${csv.filename}"`);
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(csv.content);
+  }
+
+  @Post(':id/shift-history/email')
+  shiftHistoryEmail(
+    @Param('id') id: string,
+    @Body() dto: CentreShiftHistoryEmailDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.centreShiftHistory.scheduleEmail(
+      id,
+      dto.dateFrom,
+      dto.dateTo,
+      user.userId,
+    );
   }
 }

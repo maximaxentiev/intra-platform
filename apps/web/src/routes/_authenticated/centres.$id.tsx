@@ -214,7 +214,7 @@ function CentreDetail() {
         </TabsContent>
 
         <TabsContent value="shifts" className="pt-4">
-          <CentreShiftsTab centreId={id} />
+          <CentreShiftsTab centreId={id} centreName={centreQ.data?.name ?? "Centre"} />
         </TabsContent>
       </Tabs>
     </div>

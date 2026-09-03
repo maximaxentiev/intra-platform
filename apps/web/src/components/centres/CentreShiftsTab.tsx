@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { centresApi, fmtTime } from "@/lib/db";
 import { centreShiftAssignedLabel } from "@/lib/centres-ui";
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,18 @@ import {
   DataTableEmptyRow,
   DataTableLoadingRows,
 } from "@/components/ui-kit";
-import { AlertCircle, CalendarClock, ChevronRight } from "lucide-react";
+import { CentreShiftHistoryDialog } from "@/components/centres/CentreShiftHistoryDialog";
+import { AlertCircle, CalendarClock, ChevronRight, Mail } from "lucide-react";
 
 /** Answers one question: what shifts happen at this centre? */
-export function CentreShiftsTab({ centreId }: { centreId: string }) {
+export function CentreShiftsTab({
+  centreId,
+  centreName,
+}: {
+  centreId: string;
+  centreName: string;
+}) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["centre-shifts", centreId],
     queryFn: () => centresApi.shifts(centreId),
@@ -49,6 +58,26 @@ export function CentreShiftsTab({ centreId }: { centreId: string }) {
 
   return (
     <>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Shifts</h2>
+          <p className="text-sm text-muted-foreground">
+            Shift history for this Centre. Export or email a date-range CSV to the primary contact.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={() => setHistoryOpen(true)}>
+          <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          Email shift history
+        </Button>
+      </div>
+
+      <CentreShiftHistoryDialog
+        centreId={centreId}
+        centreName={centreName}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+      />
+
       {/* Mobile: shift cards matching /shifts */}
       <div className="md:hidden">
         {isLoading ? (

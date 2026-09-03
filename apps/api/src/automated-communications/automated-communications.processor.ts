@@ -214,6 +214,7 @@ export class AutomatedCommunicationsProcessor {
         html: outcome.html,
         text: outcome.text,
         idempotencyKey: providerKey,
+        attachments: outcome.attachments,
       });
 
       await this.scheduled.recordDeliveryAttempt({
