@@ -70,6 +70,7 @@ describe("centre usage shift detail UI", () => {
     expect(detail).toContain("Scheduled Hours");
     expect(detail).toContain("Shift Detail");
     expect(detail).toContain("Export Shift Detail CSV");
+    expect(detail).toContain("ReportExportAudienceButton");
     expect(detail).not.toMatch(/Actual Hours|Hours Worked|Billable Hours|Payroll Hours/i);
   });
 

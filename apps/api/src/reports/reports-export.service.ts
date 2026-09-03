@@ -104,7 +104,7 @@ export class ReportsExportService {
   async exportCentreUsageShifts(
     query: CentreUsageShiftsQueryDto,
   ): Promise<ReportCsvExportResult> {
-    const { dateFrom, dateTo, rows } =
+    const { dateFrom, dateTo, audience, rows } =
       await this.reportsShift.getCentreUsageShiftsExportRows(query);
     const headers = [
       'Date',
@@ -128,9 +128,11 @@ export class ReportsExportService {
       csvNumberCell(minutesToCsvHours(row.scheduledMinutes)),
       csvTextCell(row.shiftId),
     ]);
+    const prefix =
+      audience === 'centre' ? 'centre-usage-shift-detail-centre' : 'centre-usage-shift-detail';
     return {
       content: buildCsvContent(headers, body),
-      filename: reportCsvFilename('centre-usage-shift-detail', dateFrom, dateTo),
+      filename: reportCsvFilename(prefix, dateFrom, dateTo),
       rowCount: rows.length,
     };
   }

@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ReportExportButton } from "@/components/reports/ReportExportButton";
+import { ReportExportAudienceButton } from "@/components/reports/ReportExportAudienceButton";
 import { ReportPagination } from "@/components/reports/ReportPagination";
 import { ReportStaffMultiSelect } from "@/components/reports/StaffUsageFilters";
 import {
@@ -231,7 +231,7 @@ export function CentreUsageShiftDetail({
           <p className="text-sm text-muted-foreground">
           </p>
         </div>
-        <ReportExportButton
+        <ReportExportAudienceButton
           exportPath={reportExportPaths.centreUsageShiftDetail}
           query={{
             dateFrom,
@@ -241,6 +241,7 @@ export function CentreUsageShiftDetail({
             status: detail.shiftStatus === "completed" ? undefined : detail.shiftStatus,
             staffIds: detail.shiftStaffIds.length ? detail.shiftStaffIds : undefined,
           }}
+          centreIds={centreIds}
           ready={detailReady}
           totalCount={detailQ.data?.totalCount}
           label="Export Shift Detail CSV"

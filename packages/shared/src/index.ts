@@ -27,3 +27,9 @@ export {
   type NormalizedShiftRole,
 } from './shift-role';
 export { getStaffLegalFullName, type StaffLegalNameInput } from './staff-legal-name';
+export {
+  DEFAULT_REPORT_EXPORT_AUDIENCE,
+  REPORT_EXPORT_AUDIENCES,
+  isReportExportAudience,
+  type ReportExportAudience,
+} from './report-export-audience';

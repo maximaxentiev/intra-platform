@@ -25,7 +25,11 @@ import { scheduledShiftDurationMinutesSql } from './report-duration.sql';
 import { normalizeReportCount, normalizeReportScheduledMinutes } from './report-minutes.util';
 import { computeCentreReportFillRatePercent } from './report-percentage.util';
 import { combineCentreReportFilledMetric } from './report-centre-metrics.util';
-import { formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
+import { formatCarerNameForReport, formatStaffReportName, formatStaffReportRole } from './report-staff-name.util';
+import {
+  assertCentreExportAudienceAllowed,
+  resolveReportExportAudience,
+} from './report-export-audience.util';
 import {
   formatReportShiftStatusLabel,
   resolveCentreUsageShiftDetailStatus,
@@ -194,6 +198,8 @@ export class ReportsShiftService {
   /** Full filtered shift rows for centre usage shift detail export (ignores pagination). */
   async getCentreUsageShiftsExportRows(query: CentreUsageShiftsQueryDto) {
     const resolved = await this.resolveCentreUsageShiftsQuery(query);
+    const audience = resolveReportExportAudience(query.audience);
+    assertCentreExportAudienceAllowed(audience, resolved.centreIds);
 
     const rawRows = await this.db
       .select({
@@ -201,6 +207,8 @@ export class ReportsShiftService {
         shiftDate: shifts.shiftDate,
         centreName: centres.name,
         staffId: shifts.assignedStaffId,
+        legalFirstName: staff.legalFirstName,
+        legalLastName: staff.legalLastName,
         legalName: staff.legalName,
         displayName: staff.displayName,
         useDisplayName: staff.useDisplayName,
@@ -221,11 +229,16 @@ export class ReportsShiftService {
       shiftDate: String(row.shiftDate),
       centreName: row.centreName,
       staffName: row.staffId
-        ? formatStaffReportName({
-            legalName: row.legalName!,
-            displayName: row.displayName ?? '',
-            useDisplayName: row.useDisplayName ?? false,
-          })
+        ? formatCarerNameForReport(
+            {
+              legalFirstName: row.legalFirstName,
+              legalLastName: row.legalLastName,
+              legalName: row.legalName!,
+              displayName: row.displayName ?? '',
+              useDisplayName: row.useDisplayName ?? false,
+            },
+            audience,
+          )
         : 'Unassigned',
       role: formatStaffReportRole(row.roleNeeded),
       statusLabel: formatReportShiftStatusLabel(row.status as ReportShiftStatus),
@@ -237,6 +250,7 @@ export class ReportsShiftService {
     return {
       dateFrom: resolved.dateFrom,
       dateTo: resolved.dateTo,
+      audience,
       rows,
     };
   }

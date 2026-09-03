@@ -73,18 +73,22 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
     await db.insert(staff).values([
       {
         id: FIXTURE.staffA,
-        legalFirstName: 'Jane',
-        legalLastName: 'Alpha',
-        legalName: 'Jane Alpha',
+        legalFirstName: 'Alexandra',
+        legalLastName: 'Morgan',
+        legalName: 'Alexandra Morgan',
+        displayName: 'Alex',
+        useDisplayName: true,
         email: `${FIXTURE.staffA}@example.test`,
         city: 'Toronto',
         role: 'ECE',
       },
       {
         id: FIXTURE.staffB,
-        legalFirstName: 'Bob',
+        legalFirstName: 'Robert',
         legalLastName: 'Beta',
-        legalName: 'Bob Beta',
+        legalName: 'Robert Beta',
+        displayName: 'Bobby',
+        useDisplayName: true,
         email: `${FIXTURE.staffB}@example.test`,
         city: 'Toronto',
         role: 'ECA',
@@ -203,7 +207,7 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
     expect(result.summary.totalScheduledMinutes).toBe(480 + 450 + 0);
     expect(result.rows.every((row) => row.status === 'completed')).toBe(true);
     expect(result.rows[0]!.role).toBe('ECE');
-    expect(result.rows.some((row) => row.staffName === 'Jane Alpha')).toBe(true);
+    expect(result.rows.some((row) => row.staffName === 'Alex')).toBe(true);
   });
 
   it('returns multiple centres ordered by centre name then date', async () => {
@@ -245,7 +249,7 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
       status: 'cancelled',
     });
     expect(cancelled.totalCount).toBe(1);
-    expect(cancelled.rows[0]!.staffName).toBe('Jane Alpha');
+    expect(cancelled.rows[0]!.staffName).toBe('Alex');
 
     const all = await service.getCentreUsageShifts({
       centreIds: [FIXTURE.centreA, FIXTURE.centreB],
@@ -405,8 +409,65 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
       expect(csvDataRowCount(csv.content)).toBe(json.totalCount);
       expect(csv.filename).toBe('centre-usage-shift-detail-2026-08-01-to-2026-08-31.csv');
       expect(csv.content).toContain('Date,Centre,Staff,Role,Status');
-      expect(csv.content).toContain('Jane Alpha');
+      expect(csv.content).toContain('Alex');
+      expect(csv.content).not.toContain('Alexandra Morgan');
       expect(csv.content).toContain(',8,');
+    });
+
+    it('uses display names for Ops audience export', async () => {
+      const query = {
+        centreIds: [FIXTURE.centreA],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        status: 'completed' as const,
+        audience: 'ops' as const,
+      };
+      const csv = await exportService.exportCentreUsageShifts(query);
+
+      expect(csv.content).toContain('Alex');
+      expect(csv.content).not.toContain('Alexandra Morgan');
+      expect(csv.filename).toBe('centre-usage-shift-detail-2026-08-01-to-2026-08-31.csv');
+    });
+
+    it('uses legal names for Centre audience export', async () => {
+      const query = {
+        centreIds: [FIXTURE.centreA],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        status: 'completed' as const,
+        audience: 'centre' as const,
+      };
+      const csv = await exportService.exportCentreUsageShifts(query);
+
+      expect(csv.content).toContain('Alexandra Morgan');
+      expect(csv.content).not.toContain(',Alex,');
+      expect(csv.filename).toBe('centre-usage-shift-detail-centre-2026-08-01-to-2026-08-31.csv');
+    });
+
+    it('rejects Centre audience when multiple centres are selected', async () => {
+      await expect(
+        exportService.exportCentreUsageShifts({
+          centreIds: [FIXTURE.centreA, FIXTURE.centreB],
+          dateFrom: FIXTURE.dateFrom,
+          dateTo: FIXTURE.dateTo,
+          audience: 'centre',
+        }),
+      ).rejects.toThrow(/single Centre/i);
+    });
+
+    it('Centre audience export excludes other centres rows', async () => {
+      const csv = await exportService.exportCentreUsageShifts({
+        centreIds: [FIXTURE.centreA],
+        dateFrom: FIXTURE.dateFrom,
+        dateTo: FIXTURE.dateTo,
+        status: 'completed',
+        audience: 'centre',
+      });
+
+      expect(csv.content).toContain('Alpha Centre');
+      expect(csv.content).toContain('Alexandra Morgan');
+      expect(csv.content).not.toContain('Beta Centre');
+      expect(csv.content).not.toContain('Robert Beta');
     });
   });
 });
