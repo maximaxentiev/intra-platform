@@ -144,19 +144,21 @@ export function CreateABatchRequestBody() {
         caption="Expand Notes to enter Shift Notes and Internal Comment per shift."
       />
 
-      <p>
-        <strong>Shift Notes</strong> are shift-specific information that may later appear in carer
-        and centre communications — for example room assignment, arrival instructions, or
-        responsibilities for that day. Do not put Ops-only information here.
-      </p>
-      <p>
-        <strong>Internal Comment</strong> is for Ops-only information. It is not sent to the centre
-        or carer. See{" "}
-        <HelpArticleLink slug="communications-notes-and-important-terminology">
-          Communications, Notes &amp; Important Terminology
-        </HelpArticleLink>
-        .
-      </p>
+      <ul>
+        <li>
+          <strong>Shift Notes</strong> are shift-specific information that may later appear in carer
+          and centre communications — for example room assignment, arrival instructions, or
+          responsibilities for that day. Do not put Ops-only information here.
+        </li>
+        <li>
+          <strong>Internal Comment</strong> is for Ops-only information. It is not sent to the centre
+          or carer. See{" "}
+          <HelpArticleLink slug="communications-notes-and-important-terminology">
+            Communications, Notes &amp; Important Terminology
+          </HelpArticleLink>
+          .
+        </li>
+      </ul>
 
       <HelpCallout title="Important" variant="important">
         Keep Shift Notes and Internal Comments separate. External shift details belong in Shift

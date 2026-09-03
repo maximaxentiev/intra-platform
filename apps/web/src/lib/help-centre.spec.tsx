@@ -84,6 +84,21 @@ describe("help presentation components", () => {
     );
     expect(html).toContain("overflow-x-auto");
   });
+
+  it("applies readable typography spacing for article prose", () => {
+    const html = renderToString(
+      <HelpArticleProse>
+        <h2>Section</h2>
+        <p>Paragraph</p>
+        <ul>
+          <li>Item</li>
+        </ul>
+      </HelpArticleProse>,
+    );
+    expect(html).toContain("prose-h2:mt-10");
+    expect(html).toContain("prose-p:leading-relaxed");
+    expect(html).toContain("prose-ul:my-4");
+  });
 });
 
 describe("platform overview article", () => {

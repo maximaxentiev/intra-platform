@@ -10,7 +10,7 @@ export function HelpBeforeYouContinueCallout({
 }) {
   return (
     <aside
-      className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 not-prose"
+      className="my-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3.5 not-prose"
       role="note"
       aria-label={title}
     >

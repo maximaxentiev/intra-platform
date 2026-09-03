@@ -165,15 +165,17 @@ export function EditOrCancelAShiftBody() {
       </p>
 
       <h2>Shift Notes and Staffpoint</h2>
-      <p>
-        <strong>Shift Notes</strong> are external shift-specific information and may appear in carer
-        and centre communications. Changing them can trigger the communication review dialog when
-        a carer is assigned.
-      </p>
-      <p>
-        <strong>Added to Staffpoint</strong> can be updated without triggering communications or
-        assignee revalidation. The change is still recorded in shift activity.
-      </p>
+      <ul>
+        <li>
+          <strong>Shift Notes</strong> are external shift-specific information and may appear in carer
+          and centre communications. Changing them can trigger the communication review dialog when
+          a carer is assigned.
+        </li>
+        <li>
+          <strong>Added to Staffpoint</strong> can be updated without triggering communications or
+          assignee revalidation. The change is still recorded in shift activity.
+        </li>
+      </ul>
 
       <h2>Cancel a Shift</h2>
       <p>
@@ -261,15 +263,17 @@ export function EditOrCancelAShiftBody() {
       </p>
 
       <h2>Cancel vs Delete</h2>
-      <p>
-        <strong>Cancel</strong> — use when a real shift was requested but is no longer required.
-        The shift stays in operational history with <strong>Cancelled</strong> status.
-      </p>
-      <p>
-        <strong>Delete</strong> — available from the same menu on individual shifts. Permanently
-        removes the shift record and cannot be undone. Reserve delete for incorrect, test, or
-        duplicate records.
-      </p>
+      <ul>
+        <li>
+          <strong>Cancel</strong> — use when a real shift was requested but is no longer required.
+          The shift stays in operational history with <strong>Cancelled</strong> status.
+        </li>
+        <li>
+          <strong>Delete</strong> — available from the same menu on individual shifts. Permanently
+          removes the shift record and cannot be undone. Reserve delete for incorrect, test, or
+          duplicate records.
+        </li>
+      </ul>
 
       <HelpBeforeYouContinueCallout title="Before you continue">
         Deleting a shift is permanent. Prefer cancellation when the shift was a genuine request

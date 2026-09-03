@@ -180,17 +180,19 @@ export function UnderstandAvailableStaffAndPriorityBody() {
         window must start at or before the shift start and end at or after the shift end. Partial
         overlap is not enough. Availability is an eligibility requirement, not just a ranking factor.
       </p>
-      <p>
-        <strong>Shift overlap:</strong> if the carer already has another <strong>filled</strong>{" "}
-        assigned shift on the same day whose times overlap, they are excluded.
-      </p>
-      <p>
-        <strong>Two-hour buffer:</strong> even without a direct overlap, a carer may be excluded when
-        a prior assigned shift on the same day ends too close to this shift&apos;s start. The
-        platform requires at least two hours between the end of a prior filled or completed shift
-        and the start of the requested shift. Exactly two hours is allowed — for example, a shift
-        ending at 13:00 and one starting at 15:00 is fine; starting at 14:00 is not.
-      </p>
+      <ul>
+        <li>
+          <strong>Shift overlap:</strong> if the carer already has another <strong>filled</strong>{" "}
+          assigned shift on the same day whose times overlap, they are excluded.
+        </li>
+        <li>
+          <strong>Two-hour buffer:</strong> even without a direct overlap, a carer may be excluded when
+          a prior assigned shift on the same day ends too close to this shift&apos;s start. The
+          platform requires at least two hours between the end of a prior filled or completed shift
+          and the start of the requested shift. Exactly two hours is allowed — for example, a shift
+          ending at 13:00 and one starting at 15:00 is fine; starting at 14:00 is not.
+        </li>
+      </ul>
       <p>
         Review availability on the staff profile or Team Availability. See{" "}
         <HelpArticleLink slug="manage-staff-profiles-and-availability">

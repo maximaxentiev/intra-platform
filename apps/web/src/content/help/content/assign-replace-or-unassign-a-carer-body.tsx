@@ -203,18 +203,20 @@ export function AssignReplaceOrUnassignACarerBody() {
         Assignment controls are the same, but centre communications differ for shifts inside an
         open batch request.
       </p>
-      <p>
-        <strong>Individual shift:</strong> confirming assignment sends carer and centre
-        confirmation emails as part of the assign workflow (subject to valid email addresses and
-        document availability for the centre).
-      </p>
-      <p>
-        <strong>Shift inside a Batch Request:</strong> the carer still receives per-shift
-        confirmation. Centre confirmation is not sent at the child level — the dialog states that{" "}
-        <strong>Centre confirmation will be sent through the Batch Request</strong>. On resend and
-        unassign, the centre option shows{" "}
-        <strong>Centre communication is managed through this Batch Request.</strong>
-      </p>
+      <ul>
+        <li>
+          <strong>Individual shift:</strong> confirming assignment sends carer and centre
+          confirmation emails as part of the assign workflow (subject to valid email addresses and
+          document availability for the centre).
+        </li>
+        <li>
+          <strong>Shift inside a Batch Request:</strong> the carer still receives per-shift
+          confirmation. Centre confirmation is not sent at the child level — the dialog states that{" "}
+          <strong>Centre confirmation will be sent through the Batch Request</strong>. On resend and
+          unassign, the centre option shows{" "}
+          <strong>Centre communication is managed through this Batch Request.</strong>
+        </li>
+      </ul>
       <p>
         Assigning carers updates the batch&apos;s fulfilment progress automatically.
       </p>
