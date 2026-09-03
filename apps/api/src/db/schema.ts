@@ -107,6 +107,8 @@ export const centres = pgTable('centres', {
   // Labelled "Rules, Policies, and Other Notes" in the UI; included verbatim
   // in shift assignment + reminder emails to staff.
   notes: text('notes').notNull().default(''),
+  // Ops-only; never included in Carer/Centre communications or external APIs.
+  internalOpsNotes: text('internal_ops_notes'),
   requiresQualificationForMatching: boolean('requires_qualification_for_matching')
     .notNull()
     .default(false),

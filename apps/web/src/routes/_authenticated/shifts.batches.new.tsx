@@ -8,6 +8,7 @@ import { BackLink, ConfirmDestructiveDialog, SectionCard } from "@/components/ui
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
+import { CentreInternalOpsNotesPanel } from "@/components/centres/CentreInternalOpsNotesPanel";
 import { ApiError } from "@/lib/api";
 import {
   batchDraftRowHasContent,
@@ -158,6 +159,7 @@ function NewBatchRequest() {
           <div className="space-y-2">
             <Label>Centre *</Label>
             <SearchableCentreSelect value={centreId} onChange={handleCentreChange} />
+            <CentreInternalOpsNotesPanel centreId={centreId} />
             <p className="text-xs text-muted-foreground">
               Selected once for the whole batch. Changing centre after entering shifts requires confirmation.
             </p>

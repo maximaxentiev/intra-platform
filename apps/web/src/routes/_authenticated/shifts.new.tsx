@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { SearchableCentreSelect } from "@/components/SearchableCentreSelect";
+import { CentreInternalOpsNotesPanel } from "@/components/centres/CentreInternalOpsNotesPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { BackLink, SectionCard } from "@/components/ui-kit";
 import { Info } from "lucide-react";
@@ -106,6 +107,7 @@ function NewShift() {
           <div className="space-y-2">
             <Label>Centre *</Label>
             <SearchableCentreSelect value={values.centreId} onChange={(v) => set("centreId", v)} />
+            <CentreInternalOpsNotesPanel centreId={values.centreId} />
           </div>
 
           <div className="border-t border-border/70 pt-6">

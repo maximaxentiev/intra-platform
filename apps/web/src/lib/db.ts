@@ -102,6 +102,7 @@ export interface Centre {
   hourlyRate: string | null;
   primaryChannel: CentreChannel;
   notes: string;
+  internalOpsNotes: string | null;
   requiresQualificationForMatching: boolean;
   eceQualificationRequirement: "ece_or_rece" | "rece_required";
   createdAt: string;

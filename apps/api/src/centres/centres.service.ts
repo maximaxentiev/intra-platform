@@ -24,6 +24,12 @@ import {
 
 type Channel = 'whatsapp' | 'goto' | 'email';
 
+function normalizeInternalOpsNotes(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 @Injectable()
 export class CentresService {
   constructor(
@@ -68,6 +74,7 @@ export class CentresService {
           hourlyRate: dto.hourlyRate ?? null,
           primaryChannel: dto.primaryChannel,
           notes: dto.notes ?? '',
+          internalOpsNotes: normalizeInternalOpsNotes(dto.internalOpsNotes),
         })
         .returning();
       const created = rows[0]!;
@@ -105,6 +112,7 @@ export class CentresService {
           hourlyRate: dto.hourlyRate ?? null,
           primaryChannel: dto.primaryChannel,
           notes: dto.notes ?? '',
+          internalOpsNotes: normalizeInternalOpsNotes(dto.internalOpsNotes),
           updatedAt: new Date(),
         })
         .where(eq(centres.id, id))

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { channelLabel, type Centre, type CentreChannel } from "@/lib/db";
 import { centreLocationLabel, secondaryChannelsLabel } from "@/lib/centres-ui";
 import { CentreForm, type CentreFormValues } from "@/components/CentreForm";
+import { CentreInternalOpsNotesReadPanel } from "@/components/centres/CentreInternalOpsNotesPanel";
 import { SectionCard, PropertyList } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,9 @@ export function CentreDetailsCard({
           },
         ]}
       />
+      {centre.internalOpsNotes?.trim() ? (
+        <CentreInternalOpsNotesReadPanel notes={centre.internalOpsNotes} className="mt-4" />
+      ) : null}
       <div className="mt-4 border-t border-border/70 pt-3.5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Rules &amp; notes

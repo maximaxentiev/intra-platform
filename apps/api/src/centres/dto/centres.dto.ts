@@ -45,6 +45,11 @@ export class UpsertCentreDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  internalOpsNotes?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   requiresQualificationForMatching?: boolean;
 

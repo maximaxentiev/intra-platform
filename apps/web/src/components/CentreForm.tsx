@@ -14,6 +14,7 @@ export type CentreFormValues = {
   city: string;
   primaryChannel: CentreChannel;
   notes: string;
+  internalOpsNotes: string;
 };
 
 export function CentreForm({
@@ -36,6 +37,7 @@ export function CentreForm({
     address: initial.address ?? "",
     city: initial.city ?? "",
     notes: initial.notes ?? "",
+    internalOpsNotes: initial.internalOpsNotes ?? "",
     primaryChannel: initial.primaryChannel ?? "email",
   });
   const [secondary, setSecondary] = useState<CentreChannel[]>(secondaryChannels);
@@ -121,6 +123,20 @@ export function CentreForm({
           value={values.notes}
           onChange={(e) => set("notes", e.target.value)}
           placeholder="Parking, entry, age groups, expectations..."
+        />
+      </div>
+
+      <div className="space-y-2 border-t border-border/70 pt-6">
+        <Label htmlFor="internalOpsNotes">Internal Ops Notes</Label>
+        <p className="text-xs text-muted-foreground">
+          Visible to the Intra Ops team only. This is never shared with Centres or Carers.
+        </p>
+        <Textarea
+          id="internalOpsNotes"
+          rows={4}
+          value={values.internalOpsNotes}
+          onChange={(e) => set("internalOpsNotes", e.target.value)}
+          placeholder="Internal handling instructions, operational context, account reminders..."
         />
       </div>
 
