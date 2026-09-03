@@ -322,8 +322,10 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
       const harness = createHarness();
       const state = await harness.service.ensureOnboardingState(SESSION_A);
       expect(state.anchorEstablished).toBe(true);
-      expect(state.week1Start).toBe(MONDAY);
-      expect(state.week2Start).toBe(WEEK2);
+      expect(state.week1Start).toBe(TODAY);
+      expect(state.week2Start).toBe('2026-08-20');
+      expect(state.days[0]?.calendarDate).toBe(TODAY);
+      expect(state.days[13]?.calendarDate).toBe('2026-08-26');
       expect(harness.account.availabilityOnboardingWeek1Start).toBe(MONDAY);
       expect(harness.audit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -342,12 +344,36 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
       expect(harness.audit).not.toHaveBeenCalled();
     });
 
-    it('returning next week does not move anchor', async () => {
+    it('returning later shows rolling window from current today', async () => {
       vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue('2026-08-17');
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
+      harness.availabilityRows.push({
+        id: 'avail-old',
+        staffId: STAFF_A,
+        weekStartDate: MONDAY,
+        dayOfWeek: 0,
+        startTime: '09:00:00',
+        endTime: '12:00:00',
+        createdAt: new Date(),
+      });
+      harness.availabilityRows.push({
+        id: 'avail-current',
+        staffId: STAFF_A,
+        weekStartDate: '2026-08-17',
+        dayOfWeek: 0,
+        startTime: '10:00:00',
+        endTime: '13:00:00',
+        createdAt: new Date(),
+      });
+
       const state = await harness.service.getOnboardingState(SESSION_A);
-      expect(state.week1Start).toBe(MONDAY);
-      expect(state.days.filter((d) => d.status === 'exempt_past')).toHaveLength(7);
+      expect(state.week1Start).toBe('2026-08-17');
+      expect(state.days).toHaveLength(14);
+      expect(state.days[0]?.calendarDate).toBe('2026-08-17');
+      expect(state.days[13]?.calendarDate).toBe('2026-08-30');
+      expect(state.days.some((d) => d.calendarDate === '2026-08-10')).toBe(false);
+      expect(state.days.find((d) => d.calendarDate === '2026-08-17')?.windows).toHaveLength(1);
+      expect(harness.account.availabilityOnboardingWeek1Start).toBe(MONDAY);
     });
 
     it('GET does not establish anchor', async () => {
@@ -374,12 +400,14 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
       expect(state.days.filter((d) => d.weekIndex === 2)).toHaveLength(7);
     });
 
-    it('past dates exempt in both weeks once week 2 is past', async () => {
+    it('rolling window always shows 14 future-facing dates from today', async () => {
       vi.spyOn(torontoUtil, 'torontoTodayDateString').mockReturnValue('2026-08-24');
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
       const state = await harness.service.getOnboardingState(SESSION_A);
-      expect(state.days.every((d) => d.status === 'exempt_past')).toBe(true);
-      expect(state.canCompleteOnboarding).toBe(true);
+      expect(state.days).toHaveLength(14);
+      expect(state.days[0]?.calendarDate).toBe('2026-08-24');
+      expect(state.days.every((d) => d.status !== 'exempt_past')).toBe(true);
+      expect(state.canCompleteOnboarding).toBe(false);
     });
 
     it('today incomplete until answered', async () => {
@@ -413,12 +441,12 @@ describe('StaffPortalAvailabilityService onboarding state', () => {
   });
 
   describe('mark unavailable', () => {
-    it('rejects outside anchored period and past dates', async () => {
+    it('rejects outside rolling window and past dates', async () => {
       const harness = createHarness({ availabilityOnboardingWeek1Start: MONDAY });
       await expect(
         harness.service.markUnavailable(SESSION_A, {
-          weekStartDate: '2026-08-24',
-          dayOfWeek: 0,
+          weekStartDate: '2026-08-31',
+          dayOfWeek: 1,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
 

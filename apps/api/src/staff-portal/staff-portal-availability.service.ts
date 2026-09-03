@@ -8,10 +8,10 @@ import {
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import {
   addDaysToDateString,
-  buildAnchoredOnboardingDays,
+  buildRollingOnboardingDays,
   canCompleteGuidedOnboarding,
   computeOnboardingDayStatus,
-  isAnchoredOnboardingWeekStart,
+  isCalendarDateInOnboardingWindow,
   isOnboardingWeekComplete,
   torontoMondayWeekStart,
 } from '../availability/availability-onboarding-state.util';
@@ -144,7 +144,7 @@ export class StaffPortalAvailabilityService {
     return this.buildOnboardingState(session.staffId, account);
   }
 
-  /** Idempotently establishes the two-week onboarding anchor (Toronto Monday of today). */
+  /** Idempotently marks onboarding availability as started (persists anchor for audit). */
   async ensureOnboardingState(
     session: StaffSessionPayload,
   ): Promise<StaffPortalAvailabilityOnboardingStateDto> {
@@ -201,11 +201,11 @@ export class StaffPortalAvailabilityService {
     if (!week1Start) {
       throw new BadRequestException('Establish your onboarding period before marking days unavailable.');
     }
-    if (!isAnchoredOnboardingWeekStart(week1Start, dto.weekStartDate)) {
+    const calendarDate = calendarDateFromWeekDay(dto.weekStartDate, dto.dayOfWeek);
+    const today = torontoTodayDateString();
+    if (!isCalendarDateInOnboardingWindow(calendarDate, today)) {
       throw new BadRequestException('Date is outside your guided onboarding period.');
     }
-
-    const calendarDate = calendarDateFromWeekDay(dto.weekStartDate, dto.dayOfWeek);
 
     await this.db.transaction(async (tx) => {
       await acquireCarerAvailabilityDayLock(
@@ -267,11 +267,11 @@ export class StaffPortalAvailabilityService {
     if (!week1Start) {
       throw new BadRequestException('Establish your onboarding period before clearing unavailable days.');
     }
-    if (!isAnchoredOnboardingWeekStart(week1Start, dto.weekStartDate)) {
+    const calendarDate = calendarDateFromWeekDay(dto.weekStartDate, dto.dayOfWeek);
+    const today = torontoTodayDateString();
+    if (!isCalendarDateInOnboardingWindow(calendarDate, today)) {
       throw new BadRequestException('Date is outside your guided onboarding period.');
     }
-
-    const calendarDate = calendarDateFromWeekDay(dto.weekStartDate, dto.dayOfWeek);
 
     await this.db.transaction(async (tx) => {
       await acquireCarerAvailabilityDayLock(
@@ -515,8 +515,8 @@ export class StaffPortalAvailabilityService {
     staffId: string,
     account: typeof staffAccounts.$inferSelect,
   ): Promise<StaffPortalAvailabilityOnboardingStateDto> {
-    const week1Start = account.availabilityOnboardingWeek1Start;
-    if (!week1Start) {
+    const anchorWeek1Start = account.availabilityOnboardingWeek1Start;
+    if (!anchorWeek1Start) {
       return {
         anchorEstablished: false,
         week1Start: null,
@@ -528,20 +528,20 @@ export class StaffPortalAvailabilityService {
       };
     }
 
-    const week2Start = addDaysToDateString(week1Start, 7);
-    const anchoredDays = buildAnchoredOnboardingDays(week1Start);
-    const calendarDates = anchoredDays.map((d) => d.calendarDate);
     const today = torontoTodayDateString();
+    const rollingDays = buildRollingOnboardingDays(today);
+    const calendarDates = rollingDays.map((d) => d.calendarDate);
+    const calendarDateSet = new Set(calendarDates);
+    const weekStarts = [...new Set(rollingDays.map((d) => d.weekStartDate))];
+    const week1Start = today;
+    const week2Start = addDaysToDateString(today, 7);
 
     const [windows, unavailableRows] = await Promise.all([
       this.db
         .select()
         .from(availability)
         .where(
-          and(
-            eq(availability.staffId, staffId),
-            inArray(availability.weekStartDate, [week1Start, week2Start]),
-          ),
+          and(eq(availability.staffId, staffId), inArray(availability.weekStartDate, weekStarts)),
         )
         .orderBy(asc(availability.weekStartDate), asc(availability.dayOfWeek), asc(availability.startTime)),
       this.db
@@ -557,16 +557,17 @@ export class StaffPortalAvailabilityService {
 
     const unavailableSet = new Set(unavailableRows.map((r) => r.calendarDate));
     const windowsByDate = new Map<string, Availability[]>();
-    for (const day of anchoredDays) {
+    for (const day of rollingDays) {
       windowsByDate.set(day.calendarDate, []);
     }
     for (const row of windows) {
       const date = calendarDateFromWeekDay(row.weekStartDate, row.dayOfWeek);
+      if (!calendarDateSet.has(date)) continue;
       const bucket = windowsByDate.get(date);
       if (bucket) bucket.push(row);
     }
 
-    const days = anchoredDays.map((day) => {
+    const days = rollingDays.map((day) => {
       const dayWindows = windowsByDate.get(day.calendarDate) ?? [];
       const status = computeOnboardingDayStatus(
         day.calendarDate,

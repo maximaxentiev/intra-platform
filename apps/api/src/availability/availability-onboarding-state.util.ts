@@ -49,7 +49,50 @@ export function torontoMondayWeekStart(today = torontoTodayDateString()): string
   return mondayOfDateString(today);
 }
 
-/** The 14 calendar dates in anchored onboarding Weeks 1 and 2. */
+/** Availability week coordinates for a calendar date (Mon=0 .. Sun=6). */
+export function weekDayFromCalendarDate(calendarDate: string): {
+  weekStartDate: string;
+  dayOfWeek: number;
+} {
+  const weekStartDate = mondayOfDateString(calendarDate);
+  const start = parseCalendarDateString(weekStartDate);
+  const current = parseCalendarDateString(calendarDate);
+  const dayOfWeek = Math.round(
+    (Date.UTC(current.year, current.month - 1, current.day) -
+      Date.UTC(start.year, start.month - 1, start.day)) /
+      (24 * 60 * 60 * 1000),
+  );
+  return { weekStartDate, dayOfWeek };
+}
+
+/** Rolling onboarding window: today through today + 13 days (14 calendar dates). */
+export function getOnboardingAvailabilityWindow(today: string): {
+  start: string;
+  end: string;
+} {
+  return {
+    start: today,
+    end: addDaysToDateString(today, 13),
+  };
+}
+
+/** The 14 calendar dates shown during guided onboarding (today → today + 13). */
+export function buildRollingOnboardingDays(today: string): AnchoredOnboardingDay[] {
+  const days: AnchoredOnboardingDay[] = [];
+  for (let offset = 0; offset < 14; offset++) {
+    const calendarDate = addDaysToDateString(today, offset);
+    const { weekStartDate, dayOfWeek } = weekDayFromCalendarDate(calendarDate);
+    days.push({
+      calendarDate,
+      weekIndex: offset < 7 ? 1 : 2,
+      dayOfWeek,
+      weekStartDate,
+    });
+  }
+  return days;
+}
+
+/** @deprecated Legacy Monday-anchored onboarding weeks; retained for reference only. */
 export function buildAnchoredOnboardingDays(week1Start: string): AnchoredOnboardingDay[] {
   const week2Start = addDaysToDateString(week1Start, 7);
   const days: AnchoredOnboardingDay[] = [];
@@ -70,6 +113,13 @@ export function buildAnchoredOnboardingDays(week1Start: string): AnchoredOnboard
     });
   }
   return days;
+}
+
+export function isCalendarDateInOnboardingWindow(calendarDate: string, today: string): boolean {
+  const { start, end } = getOnboardingAvailabilityWindow(today);
+  return (
+    compareDateStrings(calendarDate, start) >= 0 && compareDateStrings(calendarDate, end) <= 0
+  );
 }
 
 export function computeOnboardingDayStatus(

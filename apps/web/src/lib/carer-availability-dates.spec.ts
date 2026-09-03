@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   addDaysToDateString,
   addMonthsToMonthYear,
+  buildRollingOnboardingDays,
   calendarDateFromWeekDay,
   calendarDateToWeekDay,
   currentMondayWeekStart,
@@ -11,6 +12,7 @@ import {
   formatAvailabilityWindowDisplay,
   formatFullCalendarDateWithYearLabel,
   formatWeekRangeLabel,
+  getOnboardingAvailabilityWindow,
   isBeforeCurrentTorontoMonth,
   isBeforeCurrentTorontoWeek,
   isPastCalendarDate,
@@ -173,5 +175,22 @@ describe("month calendar helpers", () => {
       year: 2027,
       month: 1,
     });
+  });
+});
+
+describe("onboarding rolling availability window", () => {
+  it("getOnboardingAvailabilityWindow spans 14 calendar dates", () => {
+    expect(getOnboardingAvailabilityWindow("2026-06-10")).toEqual({
+      start: "2026-06-10",
+      end: "2026-06-23",
+    });
+  });
+
+  it("buildRollingOnboardingDays aligns week tabs with today and today+7", () => {
+    const days = buildRollingOnboardingDays("2026-06-10");
+    expect(days).toHaveLength(14);
+    expect(days[0]?.calendarDate).toBe("2026-06-10");
+    expect(days[7]?.calendarDate).toBe("2026-06-17");
+    expect(days[13]?.calendarDate).toBe("2026-06-23");
   });
 });

@@ -108,8 +108,8 @@ export const ONBOARDING_STEP_3_TITLE = "Final step - Submit availability";
 export const ONBOARDING_STEP_3_INSTRUCTIONS = (
   <>
     <p>
-      Let us know what days and times you are available for the next two weeks to work shifts. For
-      each day, you can add multiple availability windows.
+      Add your availability for the next two weeks. For each day, you can add multiple availability
+      windows.
     </p>
     <p className="mt-3">Once you have submitted two weeks of availability, click &quot;Complete onboarding&quot;.</p>
   </>

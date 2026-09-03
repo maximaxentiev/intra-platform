@@ -71,6 +71,37 @@ export function addDaysToDateString(dateStr: string, days: number): string {
   return formatUtcParts(probe.getUTCFullYear(), probe.getUTCMonth() + 1, probe.getUTCDate());
 }
 
+/** Rolling onboarding window: today through today + 13 days (14 calendar dates). */
+export function getOnboardingAvailabilityWindow(today: string): { start: string; end: string } {
+  return {
+    start: today,
+    end: addDaysToDateString(today, 13),
+  };
+}
+
+export type RollingOnboardingDay = {
+  calendarDate: string;
+  weekIndex: 1 | 2;
+  dayOfWeek: number;
+  weekStartDate: string;
+};
+
+/** The 14 calendar dates shown during guided onboarding (today → today + 13). */
+export function buildRollingOnboardingDays(today: string): RollingOnboardingDay[] {
+  const days: RollingOnboardingDay[] = [];
+  for (let offset = 0; offset < 14; offset++) {
+    const calendarDate = addDaysToDateString(today, offset);
+    const { weekStartDate, dayOfWeek } = calendarDateToWeekDay(calendarDate);
+    days.push({
+      calendarDate,
+      weekIndex: offset < 7 ? 1 : 2,
+      dayOfWeek,
+      weekStartDate,
+    });
+  }
+  return days;
+}
+
 export function formatShortCalendarDate(dateStr: string): string {
   const { year, month, day } = parseCalendarDateString(dateStr);
   return new Date(year, month - 1, day).toLocaleDateString(undefined, {

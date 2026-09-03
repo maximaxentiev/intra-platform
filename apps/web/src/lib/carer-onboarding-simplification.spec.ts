@@ -151,6 +151,11 @@ describe("carer onboarding step 3 availability", () => {
     expect(wizard()).toContain("Week {activeWeek} of 2");
     expect(wizard()).not.toContain("formatWeekRangeLabel");
   });
+
+  it("describes a rolling next-two-weeks availability window", () => {
+    expect(shell()).toContain("Add your availability for the next two weeks.");
+    expect(wizard()).toContain('d.status !== "exempt_past"');
+  });
 });
 
 describe("carer onboarding guards", () => {

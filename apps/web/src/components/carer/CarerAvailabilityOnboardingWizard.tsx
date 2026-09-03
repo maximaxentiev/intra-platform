@@ -53,7 +53,10 @@ export function CarerAvailabilityOnboardingWizard({
 
   const activeWeek = wizardWeek ?? defaultOnboardingWizardWeek(onboardingState);
   const weekDays = useMemo(
-    () => onboardingState.days.filter((d) => d.weekIndex === activeWeek),
+    () =>
+      onboardingState.days.filter(
+        (d) => d.weekIndex === activeWeek && d.status !== "exempt_past",
+      ),
     [onboardingState.days, activeWeek],
   );
 

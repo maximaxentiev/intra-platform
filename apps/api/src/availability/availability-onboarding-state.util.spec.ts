@@ -3,9 +3,12 @@ import * as torontoUtil from './availability-toronto.util';
 import {
   addDaysToDateString,
   buildAnchoredOnboardingDays,
+  buildRollingOnboardingDays,
   canCompleteGuidedOnboarding,
   computeOnboardingDayStatus,
+  getOnboardingAvailabilityWindow,
   isAnchoredOnboardingWeekStart,
+  isCalendarDateInOnboardingWindow,
   isOnboardingWeekComplete,
   mondayOfDateString,
   torontoMondayWeekStart,
@@ -25,6 +28,48 @@ describe('availability-onboarding-state.util', () => {
     vi.restoreAllMocks();
   });
 
+  describe('getOnboardingAvailabilityWindow', () => {
+    it('returns today through today + 13 days', () => {
+      expect(getOnboardingAvailabilityWindow('2026-06-10')).toEqual({
+        start: '2026-06-10',
+        end: '2026-06-23',
+      });
+    });
+
+    it('crosses month boundary', () => {
+      expect(getOnboardingAvailabilityWindow('2026-01-25')).toEqual({
+        start: '2026-01-25',
+        end: '2026-02-07',
+      });
+    });
+
+    it('crosses year boundary', () => {
+      expect(getOnboardingAvailabilityWindow('2025-12-25')).toEqual({
+        start: '2025-12-25',
+        end: '2026-01-07',
+      });
+    });
+
+    it('handles leap-year February boundary', () => {
+      expect(getOnboardingAvailabilityWindow('2024-02-20')).toEqual({
+        start: '2024-02-20',
+        end: '2024-03-04',
+      });
+    });
+  });
+
+  describe('buildRollingOnboardingDays', () => {
+    it('returns 14 dates starting today with week grouping', () => {
+      const days = buildRollingOnboardingDays('2026-06-10');
+      expect(days).toHaveLength(14);
+      expect(days[0]?.calendarDate).toBe('2026-06-10');
+      expect(days[13]?.calendarDate).toBe('2026-06-23');
+      expect(days.filter((d) => d.weekIndex === 1)).toHaveLength(7);
+      expect(days.filter((d) => d.weekIndex === 2)).toHaveLength(7);
+      expect(days[7]?.calendarDate).toBe('2026-06-17');
+    });
+  });
+
   it('buildAnchoredOnboardingDays returns 14 dates across two weeks', () => {
     const days = buildAnchoredOnboardingDays('2026-08-10');
     expect(days).toHaveLength(14);
@@ -42,6 +87,14 @@ describe('availability-onboarding-state.util', () => {
     });
     expect(days[13]?.calendarDate).toBe('2026-08-23');
     expect(addDaysToDateString('2026-08-10', 7)).toBe('2026-08-17');
+  });
+
+  it('isCalendarDateInOnboardingWindow accepts only the rolling 14-day range', () => {
+    const today = '2026-06-10';
+    expect(isCalendarDateInOnboardingWindow('2026-06-09', today)).toBe(false);
+    expect(isCalendarDateInOnboardingWindow('2026-06-10', today)).toBe(true);
+    expect(isCalendarDateInOnboardingWindow('2026-06-23', today)).toBe(true);
+    expect(isCalendarDateInOnboardingWindow('2026-06-24', today)).toBe(false);
   });
 
   it('computeOnboardingDayStatus applies past exemption in both weeks', () => {
