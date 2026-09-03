@@ -229,6 +229,7 @@ export class ReportsActivityService {
           CASE
             WHEN sc.entity_type = 'shift' THEN s.assigned_staff_id
             WHEN sc.entity_type = 'staff_document' THEN ds.staff_id
+            WHEN sc.entity_type = 'staff_account' THEN sa.staff_id
             ELSE NULL
           END AS staff_id,
           CASE
@@ -245,6 +246,7 @@ export class ReportsActivityService {
         LEFT JOIN shift_batches sb ON sc.entity_type = 'shift_batch' AND sc.entity_id = sb.id
         LEFT JOIN staff_document_submissions sub ON sc.entity_type = 'staff_document' AND sc.entity_id = sub.id
         LEFT JOIN staff_document_sets ds ON sub.document_set_id = ds.id
+        LEFT JOIN staff_accounts sa ON sc.entity_type = 'staff_account' AND sc.entity_id = sa.id
         WHERE COALESCE(d.sent_at, d.attempted_at) >= ${fromInstant}
           AND COALESCE(d.sent_at, d.attempted_at) < ${toExclusive}
           AND d.status IN ('sent', 'failed')

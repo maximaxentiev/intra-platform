@@ -18,12 +18,14 @@ import {
   isAvailabilityStepComplete,
 } from './staff-portal-onboarding-status.util';
 import type { StaffSessionPayload } from './staff-session.service';
+import { OnboardingReminderService } from './onboarding-reminder.service';
 
 @Injectable()
 export class StaffPortalOnboardingService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     private readonly audit: StaffPortalAuditService,
+    private readonly onboardingReminders: OnboardingReminderService,
   ) {}
 
   getStatus(account: typeof staffAccounts.$inferSelect): StaffPortalOnboardingStatusDto {
@@ -187,6 +189,8 @@ export class StaffPortalOnboardingService {
         },
         tx,
       );
+
+      await this.onboardingReminders.cancelPendingForAccount(locked.id, tx);
     });
 
     const refreshed = await this.loadActiveAccount(session);

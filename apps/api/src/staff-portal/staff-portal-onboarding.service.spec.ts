@@ -91,14 +91,22 @@ function createHarness(initial?: Partial<AccountRow>) {
     transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
   };
 
-  const onboarding = new StaffPortalOnboardingService(db as never, { record: audit } as never);
+  const onboardingReminders = {
+    cancelPendingForAccount: vi.fn(),
+    scheduleAndEnqueueForAccount: vi.fn(),
+  };
+  const onboarding = new StaffPortalOnboardingService(
+    db as never,
+    { record: audit } as never,
+    onboardingReminders as never,
+  );
   const availability = new StaffPortalAvailabilityService(
     db as never,
     { record: audit } as never,
     onboarding,
   );
 
-  return { onboarding, availability, account, audit };
+  return { onboarding, availability, account, audit, onboardingReminders };
 }
 
 describe('StaffPortalOnboardingService', () => {
@@ -246,6 +254,10 @@ describe('StaffPortalOnboardingService', () => {
       expect(harness.account.availabilityCompletedAt).not.toBeNull();
       expect(harness.audit).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: STAFF_PORTAL_AUDIT_EVENTS.onboardingCompleted }),
+        expect.anything(),
+      );
+      expect(harness.onboardingReminders.cancelPendingForAccount).toHaveBeenCalledWith(
+        ACCOUNT_A,
         expect.anything(),
       );
     });

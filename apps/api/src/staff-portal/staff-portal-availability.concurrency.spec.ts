@@ -79,7 +79,10 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
       ADD COLUMN IF NOT EXISTS availability_completed_at timestamp with time zone
     `);
 
-    const onboarding = new StaffPortalOnboardingService(db, { record: audit } as never);
+    const onboarding = new StaffPortalOnboardingService(db, { record: audit } as never, {
+      cancelPendingForAccount: vi.fn(),
+      scheduleAndEnqueueForAccount: vi.fn(),
+    } as never);
     service = new StaffPortalAvailabilityService(db, { record: audit } as never, onboarding);
 
     await db

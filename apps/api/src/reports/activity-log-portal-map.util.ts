@@ -62,5 +62,9 @@ export function communicationTypeLabel(type: string): string {
   if (type === 'shift_cancellation_carer') return 'Shift cancellation (carer)';
   if (type === 'batch_progress_70') return 'Centre progress update';
   if (type === 'batch_confirmation_final') return 'Final Batch confirmation';
+  if (type.startsWith('onboarding_reminder_')) {
+    const days = type.replace('onboarding_reminder_', '').replace('d', '');
+    return `${days}-day onboarding reminder`;
+  }
   return type.replace(/_/g, ' ');
 }

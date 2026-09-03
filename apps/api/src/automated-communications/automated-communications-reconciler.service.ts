@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ShiftReminderService } from '../shifts/shift-reminder.service';
 import { DocumentExpiryReminderService } from '../staff-documents/document-expiry-reminder.service';
+import { OnboardingReminderService } from '../staff-portal/onboarding-reminder.service';
 import { ScheduledCommunicationsService } from './scheduled-communications.service';
 import { CommunicationsQueueService } from './communications-queue.service';
 import { DEFAULT_COMMUNICATIONS_RECONCILE_CRON } from './automated-communications.constants';
@@ -15,6 +16,7 @@ export class AutomatedCommunicationsReconcilerService {
     private readonly queue: CommunicationsQueueService,
     @Optional() private readonly shiftReminders?: ShiftReminderService,
     @Optional() private readonly documentReminders?: DocumentExpiryReminderService,
+    @Optional() private readonly onboardingReminders?: OnboardingReminderService,
   ) {}
 
   /** Default every 10 minutes; override COMMUNICATIONS_RECONCILE_CRON in worker env if needed. */
@@ -57,9 +59,25 @@ export class AutomatedCommunicationsReconcilerService {
       documentCancelled = documentResult.cancelled;
     }
 
-    if (enqueued > 0 || recoveredStale > 0 || shiftEnsured > 0 || documentEnsured > 0 || documentCancelled > 0) {
+    let onboardingEnsured = 0;
+    let onboardingCancelled = 0;
+    if (this.onboardingReminders) {
+      const onboardingResult = await this.onboardingReminders.reconcileIncompleteAccounts();
+      onboardingEnsured = onboardingResult.ensured;
+      onboardingCancelled = onboardingResult.cancelled;
+    }
+
+    if (
+      enqueued > 0 ||
+      recoveredStale > 0 ||
+      shiftEnsured > 0 ||
+      documentEnsured > 0 ||
+      documentCancelled > 0 ||
+      onboardingEnsured > 0 ||
+      onboardingCancelled > 0
+    ) {
       this.logger.log(
-        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale} shiftReminders=${shiftEnsured} documentReminders=${documentEnsured} documentCancelled=${documentCancelled}`,
+        `Reconciled communications enqueued=${enqueued} skipped=${skipped} staleRecovered=${recoveredStale} shiftReminders=${shiftEnsured} documentReminders=${documentEnsured} documentCancelled=${documentCancelled} onboardingReminders=${onboardingEnsured} onboardingCancelled=${onboardingCancelled}`,
       );
     }
 

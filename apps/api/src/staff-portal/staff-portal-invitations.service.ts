@@ -17,6 +17,7 @@ import {
   STAFF_PORTAL_AUDIT_EVENTS,
   StaffPortalAuditService,
 } from './staff-portal-audit.service';
+import { OnboardingReminderService } from './onboarding-reminder.service';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -38,6 +39,7 @@ export class StaffPortalInvitationsService {
     private readonly email: EmailService,
     private readonly audit: StaffPortalAuditService,
     private readonly config: ConfigService,
+    private readonly onboardingReminders: OnboardingReminderService,
   ) {}
 
   async getPortalAccountForStaff(staffId: string) {
@@ -135,6 +137,7 @@ export class StaffPortalInvitationsService {
         eventType: STAFF_PORTAL_AUDIT_EVENTS.invitationEmailSent,
         detail: { email, resend: Boolean(options.resend) },
       });
+      await this.onboardingReminders.scheduleAndEnqueueForAccount(account);
       return {
         ok: true,
         emailSent: true,
@@ -237,6 +240,7 @@ export class StaffPortalInvitationsService {
       .update(staffAccounts)
       .set({ status: 'disabled', updatedAt: new Date() })
       .where(eq(staffAccounts.id, account.id));
+    await this.onboardingReminders.cancelPendingForAccount(account.id);
     await this.audit.record({
       staffId,
       staffAccountId: account.id,
@@ -264,6 +268,12 @@ export class StaffPortalInvitationsService {
       eventType: STAFF_PORTAL_AUDIT_EVENTS.portalReEnabled,
       detail: { status: nextStatus },
     });
+    const refreshed = (
+      await this.db.select().from(staffAccounts).where(eq(staffAccounts.id, account.id))
+    )[0]!;
+    if (!refreshed.onboardingCompletedAt) {
+      await this.onboardingReminders.scheduleAndEnqueueForAccount(refreshed);
+    }
     return this.getPortalAccountForStaff(staffId);
   }
 

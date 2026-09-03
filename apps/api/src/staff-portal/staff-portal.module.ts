@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { OnboardingCommunicationsModule } from './onboarding-communications.module';
 import { StaffAuthController } from './staff-auth.controller';
 import { StaffAuthService } from './staff-auth.service';
 import { CarerPortalEnabledGuard } from './carer-portal-enabled.guard';
@@ -19,7 +20,7 @@ import { StaffPortalShiftsController } from './staff-portal-shifts.controller';
 import { StaffPortalShiftsService } from './staff-portal-shifts.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, OnboardingCommunicationsModule],
   controllers: [
     StaffAuthController,
     StaffPortalProfileController,

@@ -12,9 +12,11 @@ import { AutomatedCommunicationsProcessor } from '../automated-communications/au
 import { AutomatedCommunicationsReconcilerService } from '../automated-communications/automated-communications-reconciler.service';
 import { ShiftCommunicationsModule } from '../shifts/shift-communications.module';
 import { DocumentCommunicationsModule } from '../staff-documents/document-communications.module';
+import { OnboardingCommunicationsModule } from '../staff-portal/onboarding-communications.module';
 import { registerShiftReminderProcessors } from '../shifts/shift-reminder.processor';
 import { registerShiftCancellationProcessors } from '../shifts/shift-cancellation.processor';
 import { registerDocumentExpiryProcessors } from '../staff-documents/document-expiry-reminder.processor';
+import { registerOnboardingReminderProcessors } from '../staff-portal/onboarding-reminder.processor';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { registerDocumentExpiryProcessors } from '../staff-documents/document-ex
     AutomatedCommunicationsWorkerModule,
     ShiftCommunicationsModule,
     DocumentCommunicationsModule,
+    OnboardingCommunicationsModule,
   ],
 })
 export class WorkerModule {}
@@ -46,6 +49,7 @@ export async function bootstrapWorker(): Promise<{
   registerShiftReminderProcessors(registry, config);
   registerShiftCancellationProcessors(registry, config);
   registerDocumentExpiryProcessors(registry, config);
+  registerOnboardingReminderProcessors(registry, config);
   const { registerBatchProgress70Processor } = await import(
     '../shift-batches/shift-batch-progress.processor'
   );

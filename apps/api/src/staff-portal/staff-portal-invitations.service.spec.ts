@@ -46,6 +46,7 @@ describe('StaffPortalInvitationsService', () => {
   let lastIssuedToken: string;
   let service: StaffPortalInvitationsService;
   let email: EmailService;
+  let onboardingReminders: { scheduleAndEnqueueForAccount: ReturnType<typeof vi.fn>; cancelPendingForAccount: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     staffRows = [
@@ -134,7 +135,24 @@ describe('StaffPortalInvitationsService', () => {
     email = new EmailService(configService());
     email.useTransport(new RecordingEmailTransport());
 
-    service = new StaffPortalInvitationsService(db, auth, email, audit, configService());
+    onboardingReminders = {
+      scheduleAndEnqueueForAccount: vi.fn(),
+      cancelPendingForAccount: vi.fn(),
+    };
+
+    service = new StaffPortalInvitationsService(
+      db,
+      auth,
+      email,
+      audit,
+      configService(),
+      onboardingReminders as never,
+    );
+  });
+
+  it('schedules onboarding reminders after successful invitation email', async () => {
+    await service.sendInvitation('staff-1', 'ops-user-1');
+    expect(onboardingReminders.scheduleAndEnqueueForAccount).toHaveBeenCalledTimes(1);
   });
 
   it('creates portal account, sends email, and returns invited status without raw token', async () => {

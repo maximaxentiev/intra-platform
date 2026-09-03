@@ -305,7 +305,15 @@ function createHarness(initial?: Partial<AccountRow>) {
     transaction: vi.fn().mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
   };
 
-  const onboarding = new StaffPortalOnboardingService(db as never, { record: audit } as never);
+  const onboardingReminders = {
+    cancelPendingForAccount: vi.fn(),
+    scheduleAndEnqueueForAccount: vi.fn(),
+  };
+  const onboarding = new StaffPortalOnboardingService(
+    db as never,
+    { record: audit } as never,
+    onboardingReminders as never,
+  );
   const service = new StaffPortalAvailabilityService(db as never, { record: audit } as never, onboarding);
   const opsService = new AvailabilityService(db as never);
 

@@ -18,6 +18,11 @@ export type CommunicationType =
   | 'batch_confirmation_update'
   | 'batch_cancellation_centre'
   | 'batch_cancellation_carer'
+  | 'onboarding_reminder_1d'
+  | 'onboarding_reminder_3d'
+  | 'onboarding_reminder_7d'
+  | 'onboarding_reminder_14d'
+  | 'onboarding_reminder_30d'
   | 'test_ping';
 
 export type ScheduledCommunicationStatus =
@@ -29,7 +34,7 @@ export type ScheduledCommunicationStatus =
 
 export type CommunicationDeliveryStatus = 'sent' | 'failed' | 'skipped';
 
-export type CommunicationEntityType = 'shift' | 'shift_batch' | 'staff_document' | 'test';
+export type CommunicationEntityType = 'shift' | 'shift_batch' | 'staff_document' | 'staff_account' | 'test';
 
 export type CommunicationRecipientType = 'centre' | 'carer' | 'staff' | 'test';
 
@@ -72,6 +77,11 @@ export const COMMUNICATION_TYPE_VALUES: readonly CommunicationType[] = [
   'batch_confirmation_update',
   'batch_cancellation_centre',
   'batch_cancellation_carer',
+  'onboarding_reminder_1d',
+  'onboarding_reminder_3d',
+  'onboarding_reminder_7d',
+  'onboarding_reminder_14d',
+  'onboarding_reminder_30d',
   'test_ping',
 ] as const;
 
