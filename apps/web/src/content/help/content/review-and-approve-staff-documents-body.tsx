@@ -8,12 +8,10 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * Screenshot assets (add when available):
  * - /help/review-and-approve-staff-documents/documents-tab.png
  * - /help/review-and-approve-staff-documents/approve-document.png
- * - /help/review-and-approve-staff-documents/document-dates.png
  */
 const SCREENSHOTS = {
   documentsTab: undefined as string | undefined,
   approveDocument: undefined as string | undefined,
-  documentDates: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -199,12 +197,6 @@ export function ReviewAndApproveStaffDocumentsBody() {
         <strong>Expiring Soon</strong> as the renewal date approaches, or <strong>Expired</strong>{" "}
         once past due.
       </p>
-
-      <HelpScreenshot
-        src={SCREENSHOTS.documentDates}
-        alt="Vulnerable Sector Check upload showing Processed Date and renewal due date"
-        caption="Enter the Processed Date when uploading or replacing a Vulnerable Sector Check."
-      />
 
       <h2>First Aid &amp; CPR</h2>
       <p>

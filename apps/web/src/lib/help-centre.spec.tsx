@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { HelpBeforeYouContinueCallout } from "@/components/help/HelpBeforeYouContinueCallout";
+import { HelpArticleProse } from "@/components/help/HelpArticleProse";
 import { HelpCallout } from "@/components/help/HelpCallout";
 import { HelpScreenshot } from "@/components/help/HelpScreenshot";
 import { HelpArticleLayout } from "@/components/help/HelpArticleLayout";
@@ -67,6 +68,21 @@ describe("help presentation components", () => {
   it("renders search input with accessible label", () => {
     const html = renderToString(<HelpSearchInput value="" onChange={() => {}} />);
     expect(html).toContain("Search Help");
+  });
+
+  it("applies horizontal scroll styling for prose tables", () => {
+    const html = renderToString(
+      <HelpArticleProse>
+        <table>
+          <tbody>
+            <tr>
+              <td>Example</td>
+            </tr>
+          </tbody>
+        </table>
+      </HelpArticleProse>,
+    );
+    expect(html).toContain("overflow-x-auto");
   });
 });
 

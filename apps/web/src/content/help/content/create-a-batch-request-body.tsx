@@ -8,12 +8,10 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * Screenshot assets (add when available):
  * - /help/create-a-batch-request/create-batch.png
  * - /help/create-a-batch-request/notes.png
- * - /help/create-a-batch-request/open-batch.png
  */
 const SCREENSHOTS = {
   createBatch: undefined as string | undefined,
   notes: undefined as string | undefined,
-  openBatch: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -183,12 +181,6 @@ export function CreateABatchRequestBody() {
         On success, you are taken to the batch workspace. The batch starts in <strong>Open</strong>{" "}
         status — it has been created and still needs to be filled.
       </p>
-
-      <HelpScreenshot
-        src={SCREENSHOTS.openBatch}
-        alt="Open batch workspace after creation"
-        caption="After creation, the batch workspace opens with Open status."
-      />
 
       <h2>What happens next</h2>
       <p>After creation:</p>

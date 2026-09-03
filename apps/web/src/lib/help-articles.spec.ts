@@ -330,6 +330,35 @@ describe("help V1 content completeness", () => {
       expect(searchHelpArticles(query).some((a) => a.slug === slug)).toBe(true);
     }
   });
+
+  it("finds common Ops search queries from the V1 review list", () => {
+    const cases: Array<[string, string]> = [
+      ["create shift", "create-an-individual-shift"],
+      ["new shift", "create-an-individual-shift"],
+      ["assign carer", "assign-replace-or-unassign-a-carer"],
+      ["replace carer", "assign-replace-or-unassign-a-carer"],
+      ["remove carer", "assign-replace-or-unassign-a-carer"],
+      ["unavailable", "edit-or-cancel-a-shift"],
+      ["priority", "understand-available-staff-and-priority"],
+      ["contacted", "understand-available-staff-and-priority"],
+      ["documents", "review-and-approve-staff-documents"],
+      ["VSC", "review-and-approve-staff-documents"],
+      ["availability", "manage-staff-profiles-and-availability"],
+      ["centre contact", "manage-centres"],
+      ["top staff", "manage-centres"],
+      ["banned", "manage-centres"],
+      ["create batch", "create-a-batch-request"],
+      ["complete request", "fill-complete-and-update-a-batch-request"],
+      ["batch update", "fill-complete-and-update-a-batch-request"],
+      ["cancel batch", "cancel-a-batch-request"],
+      ["shift notes", "communications-notes-and-important-terminology"],
+      ["internal comment", "communications-notes-and-important-terminology"],
+      ["staffpoint", "create-an-individual-shift"],
+    ];
+    for (const [query, slug] of cases) {
+      expect(searchHelpArticles(query).some((a) => a.slug === slug)).toBe(true);
+    }
+  });
 });
 
 describe("help centre shell wiring", () => {
@@ -350,6 +379,8 @@ describe("help centre shell wiring", () => {
     );
     expect(landing).toContain('createFileRoute("/_authenticated/help/")');
     expect(landing).toContain("Find step-by-step instructions");
+    expect(landing).toContain("communications-notes-and-important-terminology");
+    expect(landing).toContain("Communications, Notes &amp; Important Terminology");
     expect(article).toContain('createFileRoute("/_authenticated/help/$slug")');
     expect(article).toContain("Help article not found");
   });

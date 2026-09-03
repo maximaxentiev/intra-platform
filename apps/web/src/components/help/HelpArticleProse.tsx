@@ -10,6 +10,7 @@ export function HelpArticleProse({ children, className }: { children: ReactNode;
         "prose-p:text-muted-foreground prose-li:text-muted-foreground",
         "prose-ol:text-muted-foreground prose-ul:text-muted-foreground",
         "prose-strong:text-foreground",
+        "prose-table:block prose-table:w-full prose-table:overflow-x-auto",
         className,
       )}
     >

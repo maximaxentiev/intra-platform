@@ -85,9 +85,17 @@ function HelpLandingPage() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        Need something not listed yet? More operational guides will be added here over time.{" "}
+        Not sure where to start? Use search above or begin with the{" "}
         <Link to="/help/$slug" params={{ slug: "platform-overview" }} className="text-primary hover:underline">
-          Start with the platform overview
+          Platform Overview
+        </Link>
+        . For terminology and communication choices, see{" "}
+        <Link
+          to="/help/$slug"
+          params={{ slug: "communications-notes-and-important-terminology" }}
+          className="text-primary hover:underline"
+        >
+          Communications, Notes &amp; Important Terminology
         </Link>
         .
       </p>

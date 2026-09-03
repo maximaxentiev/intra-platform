@@ -9,12 +9,10 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * Screenshot assets (add when available):
  * - /help/manage-staff-profiles-and-availability/staff-profile.png
  * - /help/manage-staff-profiles-and-availability/availability.png
- * - /help/manage-staff-profiles-and-availability/team-availability.png
  */
 const SCREENSHOTS = {
   staffProfile: undefined as string | undefined,
   availability: undefined as string | undefined,
-  teamAvailability: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -274,12 +272,6 @@ export function ManageStaffProfilesAndAvailabilityBody() {
           expand a long list, or their name to open the staff profile.
         </li>
       </ol>
-
-      <HelpScreenshot
-        src={SCREENSHOTS.teamAvailability}
-        alt="Team availability page showing staff availability across a week"
-        caption="Team Availability helps you scan who is available across the pool for a given week."
-      />
 
       <h2>View Centre preferences</h2>
       <p>

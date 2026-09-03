@@ -7,12 +7,10 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
 /**
  * Screenshot assets (add when available):
  * - /help/understand-available-staff-and-priority/available-staff.png
- * - /help/understand-available-staff-and-priority/priority-details.png
  * - /help/understand-available-staff-and-priority/contacted.png
  */
 const SCREENSHOTS = {
   availableStaff: undefined as string | undefined,
-  priorityDetails: undefined as string | undefined,
   contacted: undefined as string | undefined,
 } as const;
 
@@ -158,12 +156,6 @@ export function UnderstandAvailableStaffAndPriorityBody() {
         In the list, each row shows a <strong>Top</strong> or <strong>Non-Top</strong> chip. Top
         carers sort above Non-Top carers when both are eligible.
       </p>
-
-      <HelpScreenshot
-        src={SCREENSHOTS.priorityDetails}
-        alt="Priority chips showing Top, Same city, and qualification indicators"
-        caption="Priority chips summarise ranking factors for each eligible carer."
-      />
 
       <h2>Banned staff</h2>
       <p>

@@ -7,11 +7,9 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
 /**
  * Screenshot assets (add when available):
  * - /help/platform-overview/dashboard.png — full app shell with sidebar
- * - /help/platform-overview/shifts.png — representative Shifts screen
  */
 const SCREENSHOTS = {
   dashboard: undefined as string | undefined,
-  shifts: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -72,12 +70,6 @@ export function PlatformOverviewBody() {
         can open any item for matching, assignment, and follow-up. Most daily scheduling work
         happens here.
       </p>
-
-      <HelpScreenshot
-        src={SCREENSHOTS.shifts}
-        alt="Shifts list showing pending and filled shift requests"
-        caption="The Shifts area is where you review, assign, and manage staffing requests."
-      />
 
       <h3>Centres</h3>
       <p>
