@@ -848,6 +848,113 @@ describe("cancel batch request article", () => {
   });
 });
 
+describe("communications reference article", () => {
+  it("uses authored content instead of placeholder copy", () => {
+    const body = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/communications-notes-and-important-terminology-body.tsx",
+      ),
+      "utf8",
+    );
+    expect(body).toContain("Notes and comments");
+    expect(body).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+  });
+
+  it("links to valid Help article slugs from the body", () => {
+    const body = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/communications-notes-and-important-terminology-body.tsx",
+      ),
+      "utf8",
+    );
+    const slugs = [
+      "manage-centres",
+      "assign-replace-or-unassign-a-carer",
+      "edit-or-cancel-a-shift",
+      "fill-complete-and-update-a-batch-request",
+      "cancel-a-batch-request",
+      "review-and-approve-staff-documents",
+      "understand-available-staff-and-priority",
+      "manage-staff-profiles-and-availability",
+      "create-an-individual-shift",
+      "create-a-batch-request",
+    ];
+    for (const slug of slugs) {
+      expect(body).toContain(`slug="${slug}"`);
+      expect(getHelpArticle(slug)).toBeDefined();
+    }
+  });
+
+  it("documents reference terminology sections", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("communications-notes-and-important-terminology")!} />,
+    );
+    for (const heading of [
+      "Notes and comments",
+      "When the platform sends communications",
+      "Individual Shift vs Batch Request communications",
+      "Shift statuses",
+      "Batch Request statuses",
+      "Important staffing terms",
+      "Where to learn more",
+    ]) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain("Centre Rules, Policies, and Other Notes");
+    expect(html).toContain("Do not put Ops-only information in Shift Notes");
+    expect(html).toContain("Centre communication is managed through this Batch Request");
+    expect(html).toContain("RECE is not a Staff profile role");
+    expect(html).toContain("Primary contact");
+    expect(html).toContain("Cancel vs Delete");
+  });
+
+  it("renders Important callouts and no broken screenshot markup", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("communications-notes-and-important-terminology")!} />,
+    );
+    expect(html).toContain("Important");
+    expect(html).toContain("Always review the recipient choices");
+    expect(html).not.toContain('src="/help/communications-notes-and-important-terminology/');
+  });
+
+  it("renders related Help links configured in the registry", () => {
+    const related = getRelatedHelpArticles("communications-notes-and-important-terminology");
+    expect(related).toHaveLength(4);
+    expect(related.map((article) => article.slug)).toEqual([
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "fill-complete-and-update-a-batch-request",
+      "manage-centres",
+    ]);
+  });
+});
+
+describe("help V1 authored bodies", () => {
+  const AUTHORED_SLUGS = [
+    "platform-overview",
+    "manage-centres",
+    "manage-staff-profiles-and-availability",
+    "review-and-approve-staff-documents",
+    "create-an-individual-shift",
+    "understand-available-staff-and-priority",
+    "assign-replace-or-unassign-a-carer",
+    "edit-or-cancel-a-shift",
+    "create-a-batch-request",
+    "fill-complete-and-update-a-batch-request",
+    "cancel-a-batch-request",
+    "communications-notes-and-important-terminology",
+  ] as const;
+
+  it("uses authored content for all 12 planned articles", () => {
+    for (const slug of AUTHORED_SLUGS) {
+      const html = renderToString(<HelpArticleLayout article={getHelpArticle(slug)!} />);
+      expect(html).not.toContain("Detailed instructions and screenshots for this topic are being prepared");
+    }
+  });
+});
+
 describe("help article page layout", () => {
   it("renders article content and related links", () => {
     const article = getHelpArticle("platform-overview");

@@ -11,6 +11,7 @@ import { EditOrCancelAShiftBody } from "./content/edit-or-cancel-a-shift-body";
 import { CreateABatchRequestBody } from "./content/create-a-batch-request-body";
 import { FillCompleteAndUpdateABatchRequestBody } from "./content/fill-complete-and-update-a-batch-request-body";
 import { CancelABatchRequestBody } from "./content/cancel-a-batch-request-body";
+import { CommunicationsNotesAndImportantTerminologyBody } from "./content/communications-notes-and-important-terminology-body";
 import { HelpPlaceholderBody } from "./content/placeholder-body";
 
 const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
@@ -336,18 +337,41 @@ const ARTICLE_DEFINITIONS: HelpArticleMeta[] = [
   {
     slug: "communications-notes-and-important-terminology",
     title: "Communications, Notes & Important Terminology",
-    summary: "Reference for emails, Shift Notes, internal comments, and common terms.",
+    summary:
+      "Use this reference to understand Intra's communication choices, notes and comments, Shift and Batch statuses, and common Ops terminology.",
     category: "reference",
     keywords: [
-      "email",
-      "communication",
       "shift notes",
-      "internal comments",
-      "activity",
-      "terminology",
+      "internal comment",
+      "centre notes",
+      "centre rules",
+      "communication",
+      "email",
+      "centre email",
+      "carer email",
       "status",
+      "pending",
+      "filled",
+      "completed",
+      "cancelled",
+      "updates required",
+      "staff",
+      "carer",
+      "contacted",
+      "staffpoint",
+      "top staff",
+      "banned staff",
+      "primary contact",
+      "RECE",
+      "terminology",
+      "activity",
     ],
-    relatedSlugs: ["assign-replace-or-unassign-a-carer"],
+    relatedSlugs: [
+      "understand-available-staff-and-priority",
+      "assign-replace-or-unassign-a-carer",
+      "fill-complete-and-update-a-batch-request",
+      "manage-centres",
+    ],
   },
 ];
 
@@ -363,6 +387,7 @@ const CONTENT_BY_SLUG: Record<string, () => React.ReactNode> = {
   "create-a-batch-request": CreateABatchRequestBody,
   "fill-complete-and-update-a-batch-request": FillCompleteAndUpdateABatchRequestBody,
   "cancel-a-batch-request": CancelABatchRequestBody,
+  "communications-notes-and-important-terminology": CommunicationsNotesAndImportantTerminologyBody,
 };
 
 function resolveContent(slug: string) {

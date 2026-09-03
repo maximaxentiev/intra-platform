@@ -257,6 +257,79 @@ describe("help article registry", () => {
       expect(searchHelpArticles(query).some((a) => a.slug === "cancel-a-batch-request")).toBe(true);
     }
   });
+
+  it("finds communications reference article by operational search terms", () => {
+    for (const query of [
+      "shift notes",
+      "internal comment",
+      "centre rules",
+      "carer email",
+      "pending",
+      "updates required",
+      "contacted",
+      "staffpoint",
+      "RECE",
+    ]) {
+      expect(
+        searchHelpArticles(query).some((a) => a.slug === "communications-notes-and-important-terminology"),
+      ).toBe(true);
+    }
+  });
+});
+
+describe("help V1 content completeness", () => {
+  const EXPECTED_SLUGS = [
+    "platform-overview",
+    "manage-centres",
+    "manage-staff-profiles-and-availability",
+    "review-and-approve-staff-documents",
+    "create-an-individual-shift",
+    "understand-available-staff-and-priority",
+    "assign-replace-or-unassign-a-carer",
+    "edit-or-cancel-a-shift",
+    "create-a-batch-request",
+    "fill-complete-and-update-a-batch-request",
+    "cancel-a-batch-request",
+    "communications-notes-and-important-terminology",
+  ] as const;
+
+  it("defines all 12 planned V1 article slugs", () => {
+    expect(HELP_ARTICLES.map((article) => article.slug).sort()).toEqual([...EXPECTED_SLUGS].sort());
+  });
+
+  it("resolves related slugs for every article", () => {
+    for (const slug of EXPECTED_SLUGS) {
+      const article = getHelpArticle(slug);
+      expect(article).toBeDefined();
+      expect(article!.relatedSlugs.length).toBeGreaterThan(0);
+      expect(article!.relatedSlugs.length).toBeLessThanOrEqual(4);
+      expect(new Set(article!.relatedSlugs).size).toBe(article!.relatedSlugs.length);
+      expect(article!.relatedSlugs).not.toContain(slug);
+      for (const relatedSlug of article!.relatedSlugs) {
+        expect(getHelpArticle(relatedSlug)).toBeDefined();
+      }
+    }
+  });
+
+  it("finds representative operational searches across V1 articles", () => {
+    const cases: Array<[string, string]> = [
+      ["create shift", "create-an-individual-shift"],
+      ["staffpoint", "create-an-individual-shift"],
+      ["approve document", "review-and-approve-staff-documents"],
+      ["availability", "manage-staff-profiles-and-availability"],
+      ["contacted", "understand-available-staff-and-priority"],
+      ["replace carer", "assign-replace-or-unassign-a-carer"],
+      ["cancel shift", "edit-or-cancel-a-shift"],
+      ["create batch", "create-a-batch-request"],
+      ["complete request", "fill-complete-and-update-a-batch-request"],
+      ["cancel batch", "cancel-a-batch-request"],
+      ["shift notes", "communications-notes-and-important-terminology"],
+      ["internal comment", "communications-notes-and-important-terminology"],
+    ];
+    for (const [query, slug] of cases) {
+      expect(searchHelpArticles(query).some((a) => a.slug === slug)).toBe(true);
+    }
+  });
 });
 
 describe("help centre shell wiring", () => {
