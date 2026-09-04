@@ -5,11 +5,14 @@ import type { SessionPayload } from '../auth/session.service';
 import {
   BulkCreateBatchChildShiftsDto,
   CancelShiftBatchDto,
+  CompleteBatchRequestDto,
   CreateBatchChildShiftDto,
   CreateBatchWithShiftsDto,
   CreateShiftBatchDto,
+  SendBatchUpdatesConfirmationDto,
 } from './dto/shift-batches.dto';
 import { ShiftBatchesService } from './shift-batches.service';
+import { BatchCentreEmailPreviewDto } from '../email/dto/centre-email-preview.dto';
 
 @ApiTags('shift-batches')
 @Controller('shift-batches')
@@ -71,8 +74,17 @@ export class ShiftBatchesController {
   }
 
   @Post(':id/complete')
-  completeRequest(@Param('id') id: string, @CurrentUser() user: SessionPayload) {
-    return this.shiftBatches.completeRequest(id, user.userId);
+  completeRequest(
+    @Param('id') id: string,
+    @Body() dto: CompleteBatchRequestDto,
+    @CurrentUser() user: SessionPayload,
+  ) {
+    return this.shiftBatches.completeRequest(id, user.userId, dto.centreEmail);
+  }
+
+  @Post(':id/centre-email-preview')
+  previewCentreEmail(@Param('id') id: string, @Body() dto: BatchCentreEmailPreviewDto) {
+    return this.shiftBatches.previewCentreEmail(id, dto);
   }
 
   @Get(':id/update-readiness')
@@ -83,7 +95,7 @@ export class ShiftBatchesController {
   @Post(':id/send-updates-confirmation')
   sendUpdatesConfirmation(
     @Param('id') id: string,
-    @Body() dto: { selectedChangeIds: string[]; expectedPendingChangeRevision?: number },
+    @Body() dto: SendBatchUpdatesConfirmationDto,
     @CurrentUser() user: SessionPayload,
   ) {
     return this.shiftBatches.sendUpdatesConfirmation(
@@ -91,6 +103,7 @@ export class ShiftBatchesController {
       dto.selectedChangeIds ?? [],
       user.userId,
       dto.expectedPendingChangeRevision,
+      dto.centreEmail,
     );
   }
 

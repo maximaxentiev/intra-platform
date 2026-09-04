@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
@@ -11,6 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CentreEmailCustomContentDto } from '../../email/dto/centre-email-custom-content.dto';
 import { ShiftCommunicationRecipientsDto } from '../../shifts/dto/shift-communication-recipients.dto';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
@@ -170,4 +172,26 @@ export class CancelShiftBatchDto {
   @ValidateNested()
   @Type(() => ShiftCommunicationRecipientsDto)
   communications?: ShiftCommunicationRecipientsDto;
+}
+
+export class CompleteBatchRequestDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CentreEmailCustomContentDto)
+  centreEmail?: CentreEmailCustomContentDto;
+}
+
+export class SendBatchUpdatesConfirmationDto {
+  @IsArray()
+  @IsString({ each: true })
+  selectedChangeIds!: string[];
+
+  @IsOptional()
+  @IsInt()
+  expectedPendingChangeRevision?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CentreEmailCustomContentDto)
+  centreEmail?: CentreEmailCustomContentDto;
 }

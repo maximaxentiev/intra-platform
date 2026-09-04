@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CentreEmailReviewDialog } from "@/components/shifts/CentreEmailReviewDialog";
 import { ApiError } from "@/lib/api";
+import { previewBatchCentreEmail } from "@/lib/centre-email-review";
 import type { BatchCompletionReadiness } from "@/lib/db";
 import { shiftBatchesApi } from "@/lib/db";
+import { useCentreEmailReview } from "@/lib/use-centre-email-review";
 
 export function BatchCompleteRequestAction({
   batchId,
@@ -25,6 +28,7 @@ export function BatchCompleteRequestAction({
 }) {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [conflictBlockers, setConflictBlockers] = useState<
     BatchCompletionReadiness["blockers"] | null
   >(null);
@@ -35,11 +39,21 @@ export function BatchCompleteRequestAction({
     enabled: !requestCompletedAt,
   });
 
+  const centreReview = useCentreEmailReview({
+    open: reviewOpen,
+    loadPreview: useCallback(
+      (centreEmail) => previewBatchCentreEmail(batchId, { variant: "final", centreEmail }),
+      [batchId],
+    ),
+  });
+
   const completeM = useMutation({
-    mutationFn: () => shiftBatchesApi.completeRequest(batchId),
+    mutationFn: (centreEmail: { subject: string; message: string }) =>
+      shiftBatchesApi.completeRequest(batchId, centreEmail),
     onSuccess: () => {
       toast.success("Batch Request completed.");
       setDialogOpen(false);
+      setReviewOpen(false);
       setConflictBlockers(null);
       void qc.invalidateQueries({ queryKey: ["shift-batch", batchId] });
       void qc.invalidateQueries({ queryKey: ["shift-batch-completion-readiness", batchId] });
@@ -66,6 +80,11 @@ export function BatchCompleteRequestAction({
   const ready = readiness?.ready ?? false;
   const blockerSummary = summarizeBlockers(readiness);
   const dialogBlockers = conflictBlockers ?? (ready ? null : readiness?.blockers ?? null);
+
+  function openReview() {
+    setDialogOpen(false);
+    setReviewOpen(true);
+  }
 
   return (
     <div className="space-y-2">
@@ -125,13 +144,33 @@ export function BatchCompleteRequestAction({
             <Button
               type="button"
               disabled={!ready || completeM.isPending || Boolean(dialogBlockers?.length)}
-              onClick={() => completeM.mutate()}
+              onClick={openReview}
             >
-              {completeM.isPending ? "Completing…" : "Complete Request"}
+              Continue to email review
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CentreEmailReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        preview={centreReview.preview}
+        previewLoading={centreReview.previewLoading}
+        previewError={centreReview.previewError}
+        subject={centreReview.subject}
+        message={centreReview.message}
+        onSubjectChange={centreReview.setSubject}
+        onMessageChange={centreReview.setMessage}
+        submitting={completeM.isPending}
+        submitLabel="Complete Request & send confirmation"
+        staleError={centreReview.staleError}
+        onBack={() => {
+          setReviewOpen(false);
+          setDialogOpen(true);
+        }}
+        onSubmit={() => completeM.mutate(centreReview.centreEmailPayload)}
+      />
     </div>
   );
 }

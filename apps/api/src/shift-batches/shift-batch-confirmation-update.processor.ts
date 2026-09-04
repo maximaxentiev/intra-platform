@@ -27,11 +27,17 @@ import {
 } from './shift-batch-confirmation-final-email.template';
 import { buildBatchConfirmationUpdateEmailContent } from './shift-batch-confirmation-update-email.template';
 import {
+  defaultBatchConfirmationUpdateEmailMessage,
+  defaultBatchConfirmationUpdateEmailSubject,
+} from './shift-batch-confirmation-update-email.template';
+import {
   BATCH_CONFIRMATION_UPDATE_COMMUNICATION_TYPE,
   parseBatchConfirmationFinalIdempotencyKey,
 } from './shift-batch-completion.types';
 import { isActiveFulfilledShift } from './shift-batch-completion.util';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
+import { loadCentreEmailCustomContentFromAudit } from '../email/centre-email-audit.util';
+import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -174,10 +180,28 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
       });
     }
 
+    const customContent = await loadCentreEmailCustomContentFromAudit(
+      db,
+      context.scheduledCommunicationId,
+      PLATFORM_AUDIT_ACTIONS.batchUpdateConfirmationScheduled,
+    );
+    const defaults = {
+      subject: defaultBatchConfirmationUpdateEmailSubject(batch.centreName),
+      message: defaultBatchConfirmationUpdateEmailMessage(batch.centreName),
+    };
+    const resolved = normalizeCentreEmailCustomContent(
+      customContent
+        ? { subject: customContent.customSubject, message: customContent.customMessage }
+        : undefined,
+      defaults,
+    );
+
     const content = buildBatchConfirmationUpdateEmailContent({
       centreName: batch.centreName,
       highlightedChanges,
       assignments,
+      customSubject: resolved.subject,
+      customMessage: resolved.message,
     });
 
     return {

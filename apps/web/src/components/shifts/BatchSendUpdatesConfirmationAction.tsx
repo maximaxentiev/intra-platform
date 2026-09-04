@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,9 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { CentreEmailReviewDialog } from "@/components/shifts/CentreEmailReviewDialog";
 import { ApiError } from "@/lib/api";
+import { previewBatchCentreEmail } from "@/lib/centre-email-review";
 import type { BatchUpdateReadiness } from "@/lib/db";
 import { shiftBatchesApi } from "@/lib/db";
+import { useCentreEmailReview } from "@/lib/use-centre-email-review";
 
 export function BatchSendUpdatesConfirmationAction({
   batchId,
@@ -25,6 +28,7 @@ export function BatchSendUpdatesConfirmationAction({
 }) {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const readinessQ = useQuery({
@@ -33,29 +37,52 @@ export function BatchSendUpdatesConfirmationAction({
     enabled: displayReady,
   });
 
+  const readiness = readinessQ.data;
+  const ready = readiness?.ready ?? false;
+
+  const centreReview = useCentreEmailReview({
+    open: reviewOpen,
+    loadPreview: useCallback(
+      (centreEmail) =>
+        previewBatchCentreEmail(batchId, {
+          variant: "update",
+          selectedChangeIds: selectedIds,
+          centreEmail,
+        }),
+      [batchId, selectedIds],
+    ),
+  });
+
   const sendM = useMutation({
-    mutationFn: (changeIds: string[]) =>
+    mutationFn: (centreEmail: { subject: string; message: string }) =>
       shiftBatchesApi.sendUpdatesConfirmation(
         batchId,
-        changeIds,
+        selectedIds,
         readiness?.pendingChangeRevision,
+        centreEmail,
       ),
     onSuccess: () => {
       toast.success("Centre update confirmation scheduled.");
       setDialogOpen(false);
+      setReviewOpen(false);
       void qc.invalidateQueries({ queryKey: ["shift-batch", batchId] });
       void qc.invalidateQueries({ queryKey: ["shift-batch-update-readiness", batchId] });
       void qc.invalidateQueries({ queryKey: ["shift-batch-activity", batchId] });
       void qc.invalidateQueries({ queryKey: ["shifts-feed"] });
     },
     onError: (err: Error) => {
+      if (err instanceof ApiError && err.status === 409) {
+        centreReview.setStaleError(
+          err.message || "Batch changes were updated while you were reviewing. Refresh and try again.",
+        );
+        void centreReview.refreshPreview(centreReview.centreEmailPayload);
+        void readinessQ.refetch();
+        return;
+      }
       toast.error(err instanceof Error ? err.message : "Could not send update confirmation.");
       void readinessQ.refetch();
     },
   });
-
-  const readiness = readinessQ.data;
-  const ready = readiness?.ready ?? false;
 
   const defaultSelected = useMemo(
     () => readiness?.detectedChanges.filter((c) => c.defaultSelected).map((c) => c.id) ?? [],
@@ -63,6 +90,11 @@ export function BatchSendUpdatesConfirmationAction({
   );
 
   if (!displayReady && !readiness?.stale) return null;
+
+  function openReview() {
+    setDialogOpen(false);
+    setReviewOpen(true);
+  }
 
   return (
     <div className="space-y-2">
@@ -129,16 +161,32 @@ export function BatchSendUpdatesConfirmationAction({
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              type="button"
-              disabled={!ready || sendM.isPending}
-              onClick={() => sendM.mutate(selectedIds)}
-            >
-              {sendM.isPending ? "Scheduling…" : "Send Updates Confirmation"}
+            <Button type="button" disabled={!ready || sendM.isPending} onClick={openReview}>
+              Continue to email review
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CentreEmailReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        preview={centreReview.preview}
+        previewLoading={centreReview.previewLoading}
+        previewError={centreReview.previewError}
+        subject={centreReview.subject}
+        message={centreReview.message}
+        onSubjectChange={centreReview.setSubject}
+        onMessageChange={centreReview.setMessage}
+        submitting={sendM.isPending}
+        submitLabel="Send updates"
+        staleError={centreReview.staleError}
+        onBack={() => {
+          setReviewOpen(false);
+          setDialogOpen(true);
+        }}
+        onSubmit={() => sendM.mutate(centreReview.centreEmailPayload)}
+      />
     </div>
   );
 }

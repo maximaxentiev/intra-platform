@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { shiftsApi, centresApi, staffApi, displayStaff, fmtTime, type AvailableStaff, type ShiftStatus } from "@/lib/db";
 import { ApiError } from "@/lib/api";
 import {
@@ -42,6 +42,7 @@ import { applyBatchCentreDeferral, isOpenBatchChild } from "@/lib/shift-communic
 import { ShiftEditCommunicationsDialog } from "@/components/shifts/ShiftEditCommunicationsDialog";
 import { ShiftAssigneeImpactDialog } from "@/components/shifts/ShiftAssigneeImpactDialog";
 import { ShiftAssignmentConfirmDialog } from "@/components/shifts/ShiftAssignmentConfirmDialog";
+import { CentreEmailReviewDialog } from "@/components/shifts/CentreEmailReviewDialog";
 import { ShiftResendConfirmationDialog } from "@/components/shifts/ShiftResendConfirmationDialog";
 import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
@@ -49,6 +50,8 @@ import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel
 import { ShiftComments } from "@/components/ShiftComments";
 import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
+import { previewShiftAssignmentCentreEmail, previewShiftUpdateCentreEmail } from "@/lib/centre-email-review";
+import { useCentreEmailReview } from "@/lib/use-centre-email-review";
 import {
   formatAssigneeImpactScheduleLine,
   hasScheduleEditChange,
@@ -111,6 +114,17 @@ function ShiftDetail() {
   const [notifyPreviousCarer, setNotifyPreviousCarer] = useState(true);
   const [resendingConfirmations, setResendingConfirmations] = useState(false);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [assignCentreReviewOpen, setAssignCentreReviewOpen] = useState(false);
+  const [resendCentreReviewOpen, setResendCentreReviewOpen] = useState(false);
+  const [pendingResendRecipients, setPendingResendRecipients] = useState<{
+    centre: boolean;
+    carer: boolean;
+  } | null>(null);
+  const [updateCentreReviewOpen, setUpdateCentreReviewOpen] = useState(false);
+  const [pendingUpdateCommunications, setPendingUpdateCommunications] =
+    useState<ShiftUpdateCommunicationsPayload | null>(null);
+  const [pendingUpdateResolution, setPendingUpdateResolution] =
+    useState<ShiftAssignmentResolution | undefined>(undefined);
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [unassigning, setUnassigning] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -265,6 +279,7 @@ function ShiftDetail() {
   function buildUpdatePayload(
     communications?: ShiftUpdateCommunicationsPayload,
     assignmentResolution?: ShiftAssignmentResolution,
+    centreEmail?: { subject: string; message: string },
   ) {
     return {
       centreId: editVals.centreId,
@@ -276,6 +291,7 @@ function ShiftDetail() {
       confirmationNotes: editVals.confirmationNotes.trim() || null,
       ...(communications ? { communications } : {}),
       ...(assignmentResolution ? { assignmentResolution } : {}),
+      ...(centreEmail ? { centreEmail } : {}),
     };
   }
 
@@ -312,13 +328,14 @@ function ShiftDetail() {
   async function performSave(
     communications?: ShiftUpdateCommunicationsPayload,
     assignmentResolution?: ShiftAssignmentResolution,
+    centreEmail?: { subject: string; message: string },
   ) {
     if (savingEdits) return;
     const resolution =
       assignmentResolution ?? assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined;
     setSavingEdits(true);
     try {
-      const result = await shiftsApi.update(id, buildUpdatePayload(communications, resolution));
+      const result = await shiftsApi.update(id, buildUpdatePayload(communications, resolution, centreEmail));
       const message = shiftUpdateFeedbackMessage(result.communications);
       const partialFailure =
         result.communications &&
@@ -410,13 +427,17 @@ function ShiftDetail() {
   async function assignStaff(
     staffId: string,
     staffLegalName: string,
-    options?: { notifyPreviousCarer?: boolean },
+    options?: {
+      notifyPreviousCarer?: boolean;
+      centreEmail?: { subject: string; message: string };
+    },
   ): Promise<boolean> {
     if (assigningStaffId) return false;
     setAssigningStaffId(staffId);
     try {
       const result = await shiftsApi.assign(id, staffId, {
         notifyPreviousCarer: options?.notifyPreviousCarer,
+        centreEmail: options?.centreEmail,
       });
       const message = shiftAssignmentFeedbackMessage(
         staffLegalName,
@@ -464,14 +485,83 @@ function ShiftDetail() {
     setNotifyPreviousCarer(true);
   }
 
+  const updateCentreReview = useCentreEmailReview({
+    open: updateCentreReviewOpen,
+    loadPreview: useCallback(
+      (centreEmail) => {
+        const includedChangeFields = pendingUpdateCommunications?.centre?.include
+          ? Object.entries(pendingUpdateCommunications.centre.include)
+              .filter(([, selected]) => selected)
+              .map(([field]) => field)
+          : undefined;
+        return previewShiftUpdateCentreEmail(id, {
+          shiftDate: editVals.shiftDate,
+          startTime: editVals.startTime + ":00",
+          endTime: editVals.endTime + ":00",
+          roleNeeded: editVals.roleNeeded,
+          includedChangeFields,
+          centreEmail,
+        });
+      },
+      [id, editVals, pendingUpdateCommunications],
+    ),
+  });
+
+  function beginUpdateCentreReview(
+    communications: ShiftUpdateCommunicationsPayload,
+    assignmentResolution?: ShiftAssignmentResolution,
+  ) {
+    setPendingUpdateCommunications(communications);
+    setPendingUpdateResolution(assignmentResolution);
+    setCommDialogOpen(false);
+    setUpdateCentreReviewOpen(true);
+  }
+
+  const assignCentreReview = useCentreEmailReview({
+    open: assignCentreReviewOpen,
+    loadPreview: useCallback(
+      (centreEmail) =>
+        previewShiftAssignmentCentreEmail(id, pendingAssignStaff!.id, centreEmail),
+      [id, pendingAssignStaff?.id],
+    ),
+  });
+
+  const resendCentreReview = useCentreEmailReview({
+    open: resendCentreReviewOpen,
+    loadPreview: useCallback(
+      (centreEmail) =>
+        previewShiftAssignmentCentreEmail(id, shift!.assignedStaffId!, centreEmail),
+      [id, shift?.assignedStaffId],
+    ),
+  });
+
   async function confirmAssignStaff() {
+    if (!pendingAssignStaff || assigningStaffId) return;
+    if (batchCentreDeferred) {
+      const isReassignment =
+        shift.assignedStaffId != null && shift.assignedStaffId !== pendingAssignStaff.id;
+      const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName, {
+        notifyPreviousCarer: isReassignment ? notifyPreviousCarer : undefined,
+      });
+      if (success) closeAssignConfirm();
+      return;
+    }
+    setAssignConfirmOpen(false);
+    setAssignCentreReviewOpen(true);
+  }
+
+  async function submitAssignWithCentreEmail() {
     if (!pendingAssignStaff || assigningStaffId) return;
     const isReassignment =
       shift.assignedStaffId != null && shift.assignedStaffId !== pendingAssignStaff.id;
     const success = await assignStaff(pendingAssignStaff.id, pendingAssignStaff.legalName, {
       notifyPreviousCarer: isReassignment ? notifyPreviousCarer : undefined,
+      centreEmail: assignCentreReview.centreEmailPayload,
     });
-    if (success) closeAssignConfirm();
+    if (success) {
+      setAssignCentreReviewOpen(false);
+      closeAssignConfirm();
+    }
   }
 
   const isPendingReassignment =
@@ -513,9 +603,23 @@ function ShiftDetail() {
 
   async function confirmResend(recipients: { centre: boolean; carer: boolean }) {
     if (resendingConfirmations) return;
+    if (recipients.centre && !batchCentreDeferred) {
+      setPendingResendRecipients(recipients);
+      setResendDialogOpen(false);
+      setResendCentreReviewOpen(true);
+      return;
+    }
+    await executeResend(recipients);
+  }
+
+  async function executeResend(
+    recipients: { centre: boolean; carer: boolean },
+    centreEmail?: { subject: string; message: string },
+  ) {
+    if (resendingConfirmations) return;
     setResendingConfirmations(true);
     try {
-      const result = await shiftsApi.resendAssignmentConfirmation(id, recipients);
+      const result = await shiftsApi.resendAssignmentConfirmation(id, recipients, centreEmail);
       const message = shiftResendFeedbackMessage(result.notifications);
       const partialFailure =
         (result.notifications.centre.attempted &&
@@ -528,6 +632,8 @@ function ShiftDetail() {
         toast.success(message);
       }
       setResendDialogOpen(false);
+      setResendCentreReviewOpen(false);
+      setPendingResendRecipients(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not resend confirmations");
     } finally {
@@ -839,6 +945,45 @@ function ShiftDetail() {
         onConfirm={() => void confirmAssignStaff()}
       />
 
+      <CentreEmailReviewDialog
+        open={assignCentreReviewOpen}
+        onOpenChange={setAssignCentreReviewOpen}
+        preview={assignCentreReview.preview}
+        previewLoading={assignCentreReview.previewLoading}
+        previewError={assignCentreReview.previewError}
+        subject={assignCentreReview.subject}
+        message={assignCentreReview.message}
+        onSubjectChange={assignCentreReview.setSubject}
+        onMessageChange={assignCentreReview.setMessage}
+        submitting={assigningStaffId != null}
+        onBack={() => {
+          setAssignCentreReviewOpen(false);
+          setAssignConfirmOpen(true);
+        }}
+        onSubmit={() => void submitAssignWithCentreEmail()}
+      />
+
+      <CentreEmailReviewDialog
+        open={resendCentreReviewOpen}
+        onOpenChange={setResendCentreReviewOpen}
+        preview={resendCentreReview.preview}
+        previewLoading={resendCentreReview.previewLoading}
+        previewError={resendCentreReview.previewError}
+        subject={resendCentreReview.subject}
+        message={resendCentreReview.message}
+        onSubjectChange={resendCentreReview.setSubject}
+        onMessageChange={resendCentreReview.setMessage}
+        submitting={resendingConfirmations}
+        onBack={() => {
+          setResendCentreReviewOpen(false);
+          setResendDialogOpen(true);
+        }}
+        onSubmit={() => {
+          if (!pendingResendRecipients) return;
+          void executeResend(pendingResendRecipients, resendCentreReview.centreEmailPayload);
+        }}
+      />
+
       <ShiftAssigneeImpactDialog
         open={assigneeDialogOpen}
         onOpenChange={(open) => {
@@ -878,12 +1023,45 @@ function ShiftDetail() {
         onSaveWithoutEmail={() =>
           void performSave(undefined, assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined)
         }
-        onSaveWithCommunications={(communications) =>
+        onSaveWithCommunications={(communications) => {
+          if (communications.centre?.send && !batchCentreDeferred) {
+            beginUpdateCentreReview(
+              communications,
+              assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined,
+            );
+            return;
+          }
           void performSave(
             communications,
             assignmentResolutionRef.current ?? pendingAssignmentResolution ?? undefined,
-          )
-        }
+          );
+        }}
+      />
+
+      <CentreEmailReviewDialog
+        open={updateCentreReviewOpen}
+        onOpenChange={setUpdateCentreReviewOpen}
+        preview={updateCentreReview.preview}
+        previewLoading={updateCentreReview.previewLoading}
+        previewError={updateCentreReview.previewError}
+        subject={updateCentreReview.subject}
+        message={updateCentreReview.message}
+        onSubjectChange={updateCentreReview.setSubject}
+        onMessageChange={updateCentreReview.setMessage}
+        submitting={savingEdits}
+        submitLabel="Save changes & send email"
+        onBack={() => {
+          setUpdateCentreReviewOpen(false);
+          setCommDialogOpen(true);
+        }}
+        onSubmit={() => {
+          if (!pendingUpdateCommunications) return;
+          void performSave(
+            pendingUpdateCommunications,
+            pendingUpdateResolution,
+            updateCentreReview.centreEmailPayload,
+          );
+        }}
       />
 
       <ShiftResendConfirmationDialog

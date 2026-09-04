@@ -15,6 +15,10 @@ import {
 import { ResendConfirmationDto, UnassignShiftDto } from './dto/shift-communication-recipients.dto';
 import { ShiftsService } from './shifts.service';
 import { ShiftsFeedService } from './shifts-feed.service';
+import {
+  ShiftCentreEmailPreviewDto,
+  ShiftCentreEmailUpdatePreviewDto,
+} from '../email/dto/centre-email-preview.dto';
 import { ShiftFeedQuery } from './dto/shifts-feed.dto';
 
 @ApiTags('shifts')
@@ -77,7 +81,18 @@ export class ShiftsController {
   ) {
     return this.shifts.assign(id, dto.staffId, user.userId, {
       notifyPreviousCarer: dto.notifyPreviousCarer,
+      centreEmail: dto.centreEmail,
     });
+  }
+
+  @Post(':id/centre-email-preview/assignment')
+  previewCentreAssignmentEmail(@Param('id') id: string, @Body() dto: ShiftCentreEmailPreviewDto) {
+    return this.shifts.previewCentreAssignmentEmail(id, dto);
+  }
+
+  @Post(':id/centre-email-preview/update')
+  previewCentreUpdateEmail(@Param('id') id: string, @Body() dto: ShiftCentreEmailUpdatePreviewDto) {
+    return this.shifts.previewCentreUpdateEmail(id, dto);
   }
 
   @Get(':id/assignment-confirmation-recipients')

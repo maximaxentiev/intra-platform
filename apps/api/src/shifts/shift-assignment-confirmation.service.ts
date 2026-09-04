@@ -38,6 +38,14 @@ import {
   applyCentreBatchDeferral,
   centreDeferredRecipientResult,
 } from './shift-communication-policy.util';
+import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
+import {
+  normalizeCentreEmailCustomContent,
+} from '../email/centre-email-custom-content.util';
+import {
+  defaultShiftAssignmentCentreEmailMessage,
+  defaultShiftAssignmentCentreEmailSubject,
+} from './shift-assignment-centre-email.template';
 
 type ConfirmationTrigger = 'assign' | 'resend';
 
@@ -79,6 +87,7 @@ export class ShiftAssignmentConfirmationService {
     actorUserId: string;
     trigger: ConfirmationTrigger;
     recipients?: { centre?: boolean; carer?: boolean };
+    centreEmail?: CentreEmailCustomContentInput;
   }): Promise<ShiftAssignmentNotificationsResult> {
     const sendCentre = params.recipients?.centre ?? true;
     const sendCarer = params.recipients?.carer ?? true;
@@ -90,7 +99,7 @@ export class ShiftAssignmentConfirmationService {
       sendCentre && policy.centreCommunicationDeferred
         ? centreDeferredRecipientResult()
         : sendCentre
-          ? await this.processCentreConfirmation(context, params, platformEnv)
+          ? await this.processCentreConfirmation(context, params, platformEnv, params.centreEmail)
           : { attempted: false, sent: false };
     const carer = sendCarer
       ? await this.processCarerConfirmation(context, params, platformEnv)
@@ -182,6 +191,7 @@ export class ShiftAssignmentConfirmationService {
       trigger: ConfirmationTrigger;
     },
     _platformEnv: PlatformUrlEnv,
+    centreEmailInput?: CentreEmailCustomContentInput,
   ): Promise<ShiftAssignmentRecipientResult> {
     const primary = await this.db
       .select({ email: centreContacts.email })
@@ -228,6 +238,15 @@ export class ShiftAssignmentConfirmationService {
       );
     }
 
+    const defaults = {
+      subject: defaultShiftAssignmentCentreEmailSubject({
+        centreName: context.centreName,
+        shiftDate: context.shiftDate,
+      }),
+      message: defaultShiftAssignmentCentreEmailMessage(),
+    };
+    const resolved = normalizeCentreEmailCustomContent(centreEmailInput, defaults);
+
     const content = buildShiftAssignmentCentreEmailContent({
       centreName: context.centreName,
       carerLegalName: context.carerLegalName,
@@ -237,6 +256,8 @@ export class ShiftAssignmentConfirmationService {
       endTime: context.endTime,
       shiftConfirmationNotes: context.shiftConfirmationNotes,
       documentShareUrl,
+      customSubject: resolved.subject,
+      customMessage: resolved.message,
     });
 
     const recipientEmail = normalizeNotificationEmail(primaryEmail);

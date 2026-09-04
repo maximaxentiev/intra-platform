@@ -114,7 +114,8 @@ describe("shift detail layout", () => {
     expect(detail).toContain("ShiftResendConfirmationDialog");
     expect(detail).toContain("ShiftUnassignDialog");
     expect(detail).toContain("ShiftCancelDialog");
-    expect(detail).toContain("resendAssignmentConfirmation(id, recipients)");
+    expect(detail).toContain("executeResend");
+    expect(detail).toContain("CentreEmailReviewDialog");
     expect(detail).toContain("confirmUnassign()");
   });
 

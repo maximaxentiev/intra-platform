@@ -28,6 +28,8 @@ import { ShiftBatchCancellationService } from './shift-batch-cancellation.servic
 import { ShiftBatchActivityService } from './shift-batch-activity.service';
 import { deriveBatchConfirmationUiState } from './shift-batch-confirmation-state.util';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
+import { CentreEmailPreviewService } from '../email/centre-email-preview.service';
+import type { BatchCentreEmailPreviewDto } from '../email/dto/centre-email-preview.dto';
 
 const assignee = aliasedTable(staff, 'assignee');
 
@@ -42,6 +44,7 @@ export class ShiftBatchesService {
     private readonly batchUpdateConfirmation: ShiftBatchUpdateConfirmationService,
     private readonly batchCancellation: ShiftBatchCancellationService,
     private readonly batchActivity: ShiftBatchActivityService,
+    private readonly centreEmailPreview: CentreEmailPreviewService,
   ) {}
 
   async createWithShifts(
@@ -274,8 +277,12 @@ export class ShiftBatchesService {
     return this.batchCompletionReadiness.getReadiness(batchId);
   }
 
-  async completeRequest(batchId: string, actorUserId: string) {
-    return this.batchCompletion.complete(batchId, actorUserId);
+  async completeRequest(
+    batchId: string,
+    actorUserId: string,
+    centreEmail?: { subject?: string; message?: string },
+  ) {
+    return this.batchCompletion.complete(batchId, actorUserId, centreEmail);
   }
 
   async retryFinalConfirmation(batchId: string, actorUserId: string) {
@@ -295,17 +302,33 @@ export class ShiftBatchesService {
     selectedChangeIds: string[],
     actorUserId: string,
     expectedPendingChangeRevision?: number,
+    centreEmail?: { subject?: string; message?: string },
   ) {
     return this.batchUpdateConfirmation.scheduleUpdate(
       batchId,
       actorUserId,
       selectedChangeIds,
       expectedPendingChangeRevision,
+      centreEmail,
     );
   }
 
   async retryUpdateConfirmation(batchId: string, actorUserId: string) {
     return this.batchUpdateConfirmation.retryUpdateConfirmation(batchId, actorUserId);
+  }
+
+  async previewCentreEmail(batchId: string, dto: BatchCentreEmailPreviewDto) {
+    if (dto.variant === 'final') {
+      return this.centreEmailPreview.previewBatchFinalConfirmation({
+        batchId,
+        custom: dto.centreEmail,
+      });
+    }
+    return this.centreEmailPreview.previewBatchUpdateConfirmation({
+      batchId,
+      selectedChangeIds: dto.selectedChangeIds ?? [],
+      custom: dto.centreEmail,
+    });
   }
 
   async getBatchActivity(batchId: string, page?: number, pageSize?: number) {

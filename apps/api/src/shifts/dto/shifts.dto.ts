@@ -17,6 +17,7 @@ import {
 } from '../../reports/dto/report-centre-ids.util';
 import { ShiftUpdateCommunicationsDto } from './shift-update.dto';
 import { ShiftCommunicationRecipientsDto } from './shift-communication-recipients.dto';
+import { CentreEmailCustomContentDto } from '../../email/dto/centre-email-custom-content.dto';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -96,6 +97,11 @@ export class UpdateShiftDto {
   @IsOptional()
   @IsIn(['unassign', 'availability_override'])
   assignmentResolution?: 'unassign' | 'availability_override';
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CentreEmailCustomContentDto)
+  centreEmail?: CentreEmailCustomContentDto;
 }
 
 export class PreviewUpdateShiftDto {
@@ -138,6 +144,11 @@ export class AssignDto {
   @IsOptional()
   @IsBoolean()
   notifyPreviousCarer?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CentreEmailCustomContentDto)
+  centreEmail?: CentreEmailCustomContentDto;
 }
 
 export class ContactedDto {

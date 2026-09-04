@@ -3,6 +3,7 @@ import { PlatformAuditModule } from '../platform-audit/platform-audit.module';
 import { ShiftBatchProgressModule } from '../shift-batches/shift-batch-progress.module';
 import { ShiftBatchStalenessModule } from '../shift-batches/shift-batch-staleness.module';
 import { StaffDocumentsModule } from '../staff-documents/staff-documents.module';
+import { CentreEmailModule } from '../email/centre-email.module';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftMatchingService } from './shift-matching.service';
@@ -16,7 +17,7 @@ import { ShiftsService } from './shifts.service';
 import { ShiftsFeedService } from './shifts-feed.service';
 
 @Module({
-  imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule, ShiftBatchProgressModule, ShiftBatchStalenessModule],
+  imports: [StaffDocumentsModule, ShiftCommunicationsModule, PlatformAuditModule, ShiftBatchProgressModule, ShiftBatchStalenessModule, CentreEmailModule],
   controllers: [ShiftsController],
   providers: [
     ShiftsService,

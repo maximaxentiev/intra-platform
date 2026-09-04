@@ -18,6 +18,13 @@ import { buildShiftUpdateCarerEmailContent } from './shift-update-carer-email.te
 import { buildShiftUpdateCentreEmailContent } from './shift-update-centre-email.template';
 import { buildShiftUpdateUnassignCarerEmailContent } from './shift-update-unassign-carer-email.template';
 import { buildShiftUpdateUnassignCentreEmailContent } from './shift-update-unassign-centre-email.template';
+import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
+import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
+import {
+  defaultShiftUpdateCentreEmailMessage,
+  defaultShiftUpdateCentreEmailSubject,
+} from './shift-update-centre-email.template';
+import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
 import { centreDeferredRecipientResult } from './shift-communication-policy.util';
 import type {
@@ -46,6 +53,7 @@ export class ShiftUpdateCommunicationService {
     selections: ValidatedShiftUpdateCommunications;
     assignmentUnassigned?: boolean;
     previousAssignedStaffId?: string | null;
+    centreEmail?: CentreEmailCustomContentInput;
   }): Promise<{ centre: ShiftAssignmentRecipientResult | null; carer: ShiftAssignmentRecipientResult | null }> {
     const carerContextStaffId = params.assignmentUnassigned
       ? params.previousAssignedStaffId ?? null
@@ -64,6 +72,7 @@ export class ShiftUpdateCommunicationService {
             context,
             include: params.selections.centre.include,
             assignmentUnassigned: params.assignmentUnassigned === true,
+            centreEmail: params.centreEmail,
           });
         } catch (err) {
           this.logger.error(
@@ -182,6 +191,7 @@ export class ShiftUpdateCommunicationService {
     include: ShiftCommunicationField[];
     context: Awaited<ReturnType<ShiftUpdateCommunicationService['loadContext']>>;
     assignmentUnassigned?: boolean;
+    centreEmail?: CentreEmailCustomContentInput;
   }): Promise<ShiftAssignmentRecipientResult> {
     const primary = await this.db
       .select({ email: centreContacts.email })
@@ -213,6 +223,11 @@ export class ShiftUpdateCommunicationService {
     }
 
     const includedChanges = this.filterChanges(params.changes, params.include);
+    const defaults = {
+      subject: defaultShiftUpdateCentreEmailSubject(params.context.centreName),
+      message: defaultShiftUpdateCentreEmailMessage(),
+    };
+    const resolved = normalizeCentreEmailCustomContent(params.centreEmail, defaults);
     const content = params.assignmentUnassigned
       ? buildShiftUpdateUnassignCentreEmailContent({
           centreName: params.context.centreName,
@@ -222,6 +237,8 @@ export class ShiftUpdateCommunicationService {
           centreName: params.context.centreName,
           carerLegalName: params.context.carerLegalName,
           includedChanges,
+          customSubject: resolved.subject,
+          customMessage: resolved.message,
         });
 
     const recipientEmail = normalizeNotificationEmail(primaryEmail);
@@ -239,6 +256,9 @@ export class ShiftUpdateCommunicationService {
         true,
         params.include,
         result.providerId ?? null,
+        undefined,
+        params.centreEmail,
+        resolved.customized,
       );
       return { attempted: true, sent: true };
     } catch (err) {
@@ -348,6 +368,8 @@ export class ShiftUpdateCommunicationService {
     includedChanges: ShiftCommunicationField[],
     providerMessageId: string | null,
     failure?: { code: string; reason: string },
+    centreEmail?: CentreEmailCustomContentInput,
+    centreEmailCustomized?: boolean,
   ): Promise<void> {
     try {
       await this.recordAudit(
@@ -358,6 +380,8 @@ export class ShiftUpdateCommunicationService {
         includedChanges,
         providerMessageId,
         failure,
+        centreEmail,
+        centreEmailCustomized,
       );
     } catch (err) {
       this.logger.error(
@@ -401,6 +425,8 @@ export class ShiftUpdateCommunicationService {
     includedChanges: ShiftCommunicationField[],
     providerMessageId: string | null,
     failure?: { code: string; reason: string },
+    centreEmail?: CentreEmailCustomContentInput,
+    centreEmailCustomized?: boolean,
   ) {
     await this.platformAudit.record({
       action: sent
@@ -419,6 +445,9 @@ export class ShiftUpdateCommunicationService {
         ...(providerMessageId ? { deliveryMessageId: providerMessageId } : {}),
         ...(failure?.code ? { failureCode: failure.code } : {}),
         ...(failure?.reason ? { failureReason: failure.reason } : {}),
+        ...(recipientType === 'centre'
+          ? centreEmailCustomAuditMetadata(centreEmail, centreEmailCustomized === true)
+          : {}),
       },
     });
   }

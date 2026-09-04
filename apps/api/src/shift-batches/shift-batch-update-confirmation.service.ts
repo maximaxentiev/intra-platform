@@ -9,6 +9,7 @@ import { AutomatedCommunicationsService } from '../automated-communications/auto
 import { DRIZZLE, type Database, type DbExecutor } from '../db/drizzle.module';
 import {
   centreContacts,
+  centres,
   scheduledCommunications,
   shiftBatches,
   shifts,
@@ -28,6 +29,13 @@ import {
   type BatchUpdateReadinessDto,
 } from './shift-batch-completion.types';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
+import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
+import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
+import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
+import {
+  defaultBatchConfirmationUpdateEmailMessage,
+  defaultBatchConfirmationUpdateEmailSubject,
+} from './shift-batch-confirmation-update-email.template';
 
 @Injectable()
 export class ShiftBatchUpdateConfirmationService {
@@ -99,6 +107,7 @@ export class ShiftBatchUpdateConfirmationService {
     actorUserId: string,
     selectedChangeIds: string[],
     expectedPendingChangeRevision?: number,
+    centreEmailInput?: CentreEmailCustomContentInput,
   ) {
     const batchSnapshot = await this.loadBatch(batchId);
     if (
@@ -132,6 +141,18 @@ export class ShiftBatchUpdateConfirmationService {
     const highlightedChanges = readiness.detectedChanges
       .filter((change) => selected.has(change.id))
       .map((change) => change.summary);
+
+    const centreMetaRows = await this.db
+      .select({ centreName: centres.name })
+      .from(shiftBatches)
+      .innerJoin(centres, eq(centres.id, shiftBatches.centreId))
+      .where(eq(shiftBatches.id, batchId))
+      .limit(1);
+    const centreName = centreMetaRows[0]?.centreName ?? 'Centre';
+    const resolvedCentreEmail = normalizeCentreEmailCustomContent(centreEmailInput, {
+      subject: defaultBatchConfirmationUpdateEmailSubject(centreName),
+      message: defaultBatchConfirmationUpdateEmailMessage(centreName),
+    });
 
     const scheduledId = await this.db.transaction(async (tx) => {
       const batchRows = await tx
@@ -240,6 +261,13 @@ export class ShiftBatchUpdateConfirmationService {
             highlightedChanges,
             scheduledCommunicationId: scheduled.id,
             recipientEmail: primary.email,
+            ...centreEmailCustomAuditMetadata(
+              {
+                subject: resolvedCentreEmail.subject,
+                message: resolvedCentreEmail.message,
+              },
+              resolvedCentreEmail.customized,
+            ),
           },
         },
         tx,

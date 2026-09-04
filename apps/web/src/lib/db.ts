@@ -519,6 +519,7 @@ export const shiftsApi = {
     values: Partial<Shift> & {
       communications?: ShiftUpdateCommunicationsPayload;
       assignmentResolution?: ShiftAssignmentResolution;
+      centreEmail?: { subject: string; message: string };
     },
   ) => api.patch<ShiftUpdateResponse>(`/shifts/${id}`, values),
   previewUpdate: (
@@ -529,19 +530,26 @@ export const shiftsApi = {
     values,
   ),
   remove: (id: string) => api.del<{ ok: true }>(`/shifts/${id}`),
-  assign: (id: string, staffId: string, options?: { notifyPreviousCarer?: boolean }) =>
+  assign: (
+    id: string,
+    staffId: string,
+    options?: { notifyPreviousCarer?: boolean; centreEmail?: { subject: string; message: string } },
+  ) =>
     api.post<ShiftAssignResponse>(`/shifts/${id}/assign`, {
       staffId,
       ...(options?.notifyPreviousCarer !== undefined
         ? { notifyPreviousCarer: options.notifyPreviousCarer }
         : {}),
+      ...(options?.centreEmail ? { centreEmail: options.centreEmail } : {}),
     }),
   resendAssignmentConfirmation: (
     id: string,
     recipients: ShiftCommunicationRecipientsPayload,
+    centreEmail?: { subject: string; message: string },
   ) =>
     api.post<ShiftResendConfirmationsResponse>(`/shifts/${id}/send-assignment-confirmation`, {
       recipients,
+      ...(centreEmail ? { centreEmail } : {}),
     }),
   assignmentConfirmationRecipients: (id: string) =>
     api.get<{
@@ -692,9 +700,10 @@ export const shiftBatchesApi = {
   getWorkspace: (id: string) => api.get<ShiftBatchWorkspace>(`/shift-batches/${id}`),
   getCompletionReadiness: (id: string) =>
     api.get<BatchCompletionReadiness>(`/shift-batches/${id}/completion-readiness`),
-  completeRequest: (id: string) =>
+  completeRequest: (id: string, centreEmail?: { subject: string; message: string }) =>
     api.post<{ completed: boolean; scheduledCommunicationId: string | null }>(
       `/shift-batches/${id}/complete`,
+      centreEmail ? { centreEmail } : {},
     ),
   retryFinalConfirmation: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/final-confirmation/retry`),
@@ -706,10 +715,11 @@ export const shiftBatchesApi = {
     id: string,
     selectedChangeIds: string[],
     expectedPendingChangeRevision?: number,
+    centreEmail?: { subject: string; message: string },
   ) =>
     api.post<{ scheduled: boolean; scheduledCommunicationId: string | null }>(
       `/shift-batches/${id}/send-updates-confirmation`,
-      { selectedChangeIds, expectedPendingChangeRevision },
+      { selectedChangeIds, expectedPendingChangeRevision, centreEmail },
     ),
   retryUpdateConfirmation: (id: string) =>
     api.post<{ scheduled: boolean }>(`/shift-batches/${id}/update-confirmation/retry`),

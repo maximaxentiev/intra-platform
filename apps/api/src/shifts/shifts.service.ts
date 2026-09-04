@@ -96,6 +96,11 @@ import {
   ShiftBatchStalenessService,
   type BatchMaterialChangeKind,
 } from '../shift-batches/shift-batch-staleness.service';
+import { CentreEmailPreviewService } from '../email/centre-email-preview.service';
+import type {
+  ShiftCentreEmailPreviewDto,
+  ShiftCentreEmailUpdatePreviewDto,
+} from '../email/dto/centre-email-preview.dto';
 
 export type CreateShiftOptions = {
   tx?: DbExecutor;
@@ -117,6 +122,7 @@ export class ShiftsService {
     private readonly manualUnassignCommunications: ShiftManualUnassignCommunicationService,
     private readonly batchProgressCommunications: ShiftBatchProgressCommunicationService,
     private readonly batchStaleness: ShiftBatchStalenessService,
+    private readonly centreEmailPreview: CentreEmailPreviewService,
   ) {}
 
   list(q: ListShiftsQuery) {
@@ -520,6 +526,7 @@ export class ShiftsService {
         selections: communicationSelections,
         assignmentUnassigned: shouldUnassign,
         previousAssignedStaffId,
+        centreEmail: dto.centreEmail,
       });
     }
 
@@ -603,7 +610,7 @@ export class ShiftsService {
     id: string,
     staffId: string,
     actorUserId: string,
-    options?: { notifyPreviousCarer?: boolean },
+    options?: { notifyPreviousCarer?: boolean; centreEmail?: { subject?: string; message?: string } },
   ): Promise<ShiftAssignResponse> {
     const existing = await this.db
       .select({
@@ -738,6 +745,7 @@ export class ShiftsService {
       assignedStaffId: staffId,
       actorUserId,
       trigger: 'assign',
+      centreEmail: options?.centreEmail,
     });
 
     let previousCarerNotification: ShiftAssignResponse['previousCarerNotification'] = null;
@@ -801,8 +809,38 @@ export class ShiftsService {
       actorUserId,
       trigger: 'resend',
       recipients,
+      centreEmail: dto.centreEmail,
     });
     return { notifications };
+  }
+
+  async previewCentreAssignmentEmail(id: string, dto: ShiftCentreEmailPreviewDto) {
+    return this.centreEmailPreview.previewAssignmentConfirmation({
+      shiftId: id,
+      staffId: dto.staffId,
+      custom: dto.centreEmail,
+    });
+  }
+
+  async previewCentreUpdateEmail(id: string, dto: ShiftCentreEmailUpdatePreviewDto) {
+    const before = await this.loadShiftUpdateBefore(id);
+    const beforeSnapshot = normalizeShiftCommunicationSnapshot(before);
+    const afterSnapshot = applyShiftUpdatePatch(beforeSnapshot, {
+      shiftDate: dto.shiftDate,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      roleNeeded: dto.roleNeeded,
+    });
+    const changes = detectShiftCommunicationChanges(beforeSnapshot, afterSnapshot);
+    const includedChanges =
+      dto.includedChangeFields != null
+        ? changes.filter((change) => dto.includedChangeFields!.includes(change.field))
+        : changes;
+    return this.centreEmailPreview.previewShiftUpdateConfirmation({
+      shiftId: id,
+      includedChanges,
+      custom: dto.centreEmail,
+    });
   }
 
   async assignmentConfirmationRecipientAvailability(id: string, actorUserId: string) {
