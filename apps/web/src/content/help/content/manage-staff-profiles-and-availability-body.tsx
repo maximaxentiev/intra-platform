@@ -206,12 +206,27 @@ export function ManageStaffProfilesAndAvailabilityBody() {
       <p>
         The summary panel and Portal account section show onboarding progress — for example{" "}
         <strong>Not started</strong>, <strong>Step 2 of 3</strong>, or <strong>Complete</strong>.
-        A carer who has not finished onboarding may not yet be ready for assignment even if their
-        staff record exists. Use this as a signal to follow up, not as a full onboarding tutorial.
+        A carer who has not finished onboarding cannot receive shifts through Intra matching and
+        assignment. Use onboarding status as a signal to follow up.
+      </p>
+      <p>
+        After a portal invitation exists, the platform sends automated reminder emails on day{" "}
+        <strong>1</strong>, <strong>3</strong>, <strong>7</strong>, <strong>14</strong>, and{" "}
+        <strong>30</strong> while onboarding remains incomplete. Reminders stop when onboarding is
+        completed. Disabling portal access prevents future reminders.
       </p>
       <p>
         To block sign-in without deleting the staff record, use <strong>Disable access</strong>.
         The carer cannot sign in until access is re-enabled.
+      </p>
+
+      <h3>Rolling availability during onboarding Step 3</h3>
+      <p>
+        If a carer returns to onboarding Step 3 several days after starting, availability always
+        begins from the current day. They see the next <strong>14 days</strong> — past onboarding
+        dates drop away automatically, while previously saved future availability is preserved.
+        This helps Ops understand what the carer sees without needing full Carer Portal
+        documentation.
       </p>
 
       <h2>Review and update a Carer&apos;s availability</h2>

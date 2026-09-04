@@ -9,11 +9,13 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * - /help/fill-complete-and-update-a-batch-request/batch-workspace.png
  * - /help/fill-complete-and-update-a-batch-request/complete-request.png
  * - /help/fill-complete-and-update-a-batch-request/send-updates.png
+ * - /help/fill-complete-and-update-a-batch-request/review-centre-email-batch.png — Review Centre Email after Complete Request or Send Updates (Useful)
  */
 const SCREENSHOTS = {
   batchWorkspace: undefined as string | undefined,
   completeRequest: undefined as string | undefined,
   sendUpdates: undefined as string | undefined,
+  reviewCentreEmailBatch: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -153,8 +155,28 @@ export function FillCompleteAndUpdateABatchRequestBody() {
           Review the <strong>Complete Batch Request</strong> dialog — it shows the centre recipient
           and how many active shift assignments will be included.
         </li>
-        <li>Select <strong>Complete Request</strong> to confirm.</li>
+        <li>Select <strong>Continue to email review</strong>.</li>
+        <li>
+          In <strong>Review Centre Email</strong>, review the read-only recipient, customise{" "}
+          <strong>Subject</strong> and <strong>Message</strong> if needed, review the rendered
+          preview, then select <strong>Complete Request &amp; send confirmation</strong>.
+        </li>
       </ol>
+
+      <p>
+        Active shift assignments, system-generated batch details, and secure document links remain
+        locked in the email preview. See{" "}
+        <HelpArticleLink slug="communications-notes-and-important-terminology">
+          Communications, Notes &amp; Important Terminology
+        </HelpArticleLink>{" "}
+        for the full Review Centre Email reference.
+      </p>
+
+      <HelpScreenshot
+        src={SCREENSHOTS.reviewCentreEmailBatch}
+        alt="Review Centre Email dialog for a batch Complete Request showing assignment preview"
+        caption="Batch Complete Request includes Review Centre Email before the confirmation is sent."
+      />
 
       <HelpScreenshot
         src={SCREENSHOTS.completeRequest}
@@ -216,7 +238,11 @@ export function FillCompleteAndUpdateABatchRequestBody() {
           Select which change summaries to highlight. The full current assignment list is always
           included regardless of which boxes are selected.
         </li>
-        <li>Select <strong>Send Updates Confirmation</strong>.</li>
+        <li>Select <strong>Continue to email review</strong>.</li>
+        <li>
+          In <strong>Review Centre Email</strong>, customise <strong>Subject</strong> and{" "}
+          <strong>Message</strong>, review the rendered preview, then send the update.
+        </li>
       </ol>
 
       <HelpScreenshot
@@ -227,8 +253,10 @@ export function FillCompleteAndUpdateABatchRequestBody() {
 
       <p>
         The update email contains the selected change summaries plus all current active
-        assignments with up-to-date details and document links. Cancelled shifts may appear in
-        what changed but not as current active assignments.
+        assignments with up-to-date details and document links. <strong>What changed</strong> and
+        the current assignment list remain system-generated and cannot be edited from the email
+        editor. If the batch changes while you are reviewing and the send becomes stale, the
+        platform may ask you to refresh and review again before sending.
       </p>
       <p>
         After a successful update, the batch returns to <strong>Completed</strong> and the new

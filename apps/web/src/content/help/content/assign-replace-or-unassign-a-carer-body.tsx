@@ -9,11 +9,13 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * - /help/assign-replace-or-unassign-a-carer/assign.png
  * - /help/assign-replace-or-unassign-a-carer/replace.png
  * - /help/assign-replace-or-unassign-a-carer/unassign.png
+ * - /help/assign-replace-or-unassign-a-carer/review-centre-email.png — Review Centre Email dialog (Required)
  */
 const SCREENSHOTS = {
   assign: undefined as string | undefined,
   replace: undefined as string | undefined,
   unassign: undefined as string | undefined,
+  reviewCentreEmail: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -87,12 +89,31 @@ export function AssignReplaceOrUnassignACarerBody() {
       />
 
       <p>
-        On an individual shift, the dialog explains that confirming assigns the carer and sends
-        existing assignment confirmation communications. The carer receives a shift confirmation
-        email with shift details and a portal link when available. Shift Notes and centre rules
-        may be included where applicable. The centre receives a staff-confirmed email that may
-        include secure links to the assigned carer&apos;s approved documents. The platform also
-        schedules carer reminders before the shift.
+        On an individual shift, when Centre communication applies, Ops next sees{" "}
+        <strong>Review Centre Email</strong> before the assignment is finalised. Customise{" "}
+        <strong>Subject</strong> and <strong>Message</strong> if needed, review the rendered email
+        preview, then select <strong>Send confirmation</strong>.
+      </p>
+
+      <HelpScreenshot
+        src={SCREENSHOTS.reviewCentreEmail}
+        alt="Review Centre Email dialog with editable Subject and Message and rendered preview"
+        caption="Review Centre Email lets Ops customise Subject and Message before sending."
+      />
+
+      <p>
+        In <strong>Review Centre Email</strong>, the Centre recipient is read-only. Shift details,
+        Carer legal names, Shift Notes, and the secure document section remain system-generated.
+        Closing or cancelling the email review before <strong>Send confirmation</strong> does not
+        complete the assignment and does not send a Centre email.
+      </p>
+
+      <p>
+        After assignment is confirmed, the carer receives a shift confirmation email with shift
+        details and a portal link when available. Shift Notes and centre rules may be included
+        where applicable. The centre receives a staff-confirmed email that may include secure links
+        to the assigned carer&apos;s approved documents. The platform also schedules carer
+        reminders before the shift.
       </p>
 
       <h2>What happens after assignment</h2>
@@ -246,8 +267,11 @@ export function AssignReplaceOrUnassignACarerBody() {
       <p>
         Confirm <strong>Send confirmation communication?</strong>, then choose{" "}
         <strong>Centre</strong> and/or <strong>Carer</strong> under <strong>Choose recipients</strong>.
-        Resending does not change assignment state — it sends another copy of the existing
-        confirmation.
+        When <strong>Centre</strong> is selected on an individual shift, Ops reviews the Centre
+        email in <strong>Review Centre Email</strong> before it is sent. Subject and Message may be
+        customised; the recipient and system-generated shift details remain locked. Carer-only
+        resend is unchanged. Resending does not change assignment state — it sends another copy of
+        the confirmation.
       </p>
       <p>
         On batch child shifts, only the carer can be selected. Centre resend is deferred with the

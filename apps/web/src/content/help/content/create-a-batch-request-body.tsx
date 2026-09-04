@@ -73,6 +73,13 @@ export function CreateABatchRequestBody() {
         If you change the centre after entering draft shifts, the platform asks you to confirm —
         draft rows are kept, but you should review them for the new centre.
       </p>
+      <p>
+        When the selected centre has <strong>Internal Ops Notes</strong>, they appear once as a
+        read-only panel near the Centre selector. Review this persistent Centre-level Ops context
+        before entering draft rows. Internal Ops Notes are not repeated on every draft row and
+        cannot be edited here — see{" "}
+        <HelpArticleLink slug="manage-centres">Manage Centres</HelpArticleLink>.
+      </p>
 
       <h2>Add the requested Shifts</h2>
       <p>

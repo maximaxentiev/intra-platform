@@ -10,11 +10,15 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * - /help/manage-centres/centre-detail.png — Centre profile with tabs
  * - /help/manage-centres/contacts.png — Contacts section
  * - /help/manage-centres/staff-preferences.png — Top staff and Banned staff
+ * - /help/manage-centres/internal-ops-notes.png — Internal Ops Notes panel on Details (Required)
+ * - /help/manage-centres/email-shift-history.png — Email shift history dialog (Required)
  */
 const SCREENSHOTS = {
   centreDetail: undefined as string | undefined,
   contacts: undefined as string | undefined,
   staffPreferences: undefined as string | undefined,
+  internalOpsNotes: undefined as string | undefined,
+  emailShiftHistory: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -82,6 +86,9 @@ export function ManageCentresBody() {
               <strong>Rules, Policies, and Other Notes</strong> — centre-specific information for
               staff (see below)
             </li>
+            <li>
+              <strong>Internal Ops Notes</strong> — Ops-only centre context (see below)
+            </li>
           </ul>
         </li>
         <li>
@@ -103,7 +110,7 @@ export function ManageCentresBody() {
         <li>Select <strong>Edit details</strong>.</li>
         <li>
           Update any of the same fields available when creating a centre: name, address, city,
-          communication channels, and rules/notes.
+          communication channels, rules/notes, and Internal Ops Notes.
         </li>
         <li>
           Select <strong>Save changes</strong>, or <strong>Cancel</strong> to discard.
@@ -120,14 +127,37 @@ export function ManageCentresBody() {
         information that assigned carers should see — for example parking, entry instructions, age
         groups, or local expectations. This is not the same as{" "}
         <HelpArticleLink slug="communications-notes-and-important-terminology">
-          Shift Notes or Internal Comments
+          Shift Notes, Internal Comments, or Internal Ops Notes
         </HelpArticleLink>
-        , which belong to individual shifts.
+        .
       </p>
       <p>
         If no notes are recorded, assigned carers see nothing extra for that centre. Keep this field
         current when a centre&apos;s on-site requirements change.
       </p>
+
+      <h2>Internal Ops Notes</h2>
+      <p>
+        Use <strong>Internal Ops Notes</strong> for Centre-specific information that only the Intra
+        Operations team should see — for example account handling, internal reminders, or
+        operational context that must never go to a Centre or Carer.
+      </p>
+      <p>
+        Internal Ops Notes are separate from <strong>Rules, Policies, and Other Notes</strong>.
+        They are edited on the centre&apos;s <strong>Details</strong> tab and displayed as their own
+        information panel when notes are present. They are not Shift Notes and not Internal Shift
+        Comments.
+      </p>
+
+      <HelpScreenshot
+        src={SCREENSHOTS.internalOpsNotes}
+        alt="Centre Details showing the Internal Ops Notes panel"
+        caption="Internal Ops Notes appear as a separate panel on Centre Details when recorded."
+      />
+
+      <HelpCallout title="Important" variant="important">
+        Internal Ops Notes are Ops-only. They are never shared externally with Centres or Carers.
+      </HelpCallout>
 
       <h2>Manage Centre contacts</h2>
       <p>
@@ -251,6 +281,42 @@ export function ManageCentresBody() {
         </li>
         <li>Select a shift row to open its full shift details.</li>
       </ol>
+
+      <h3>Email shift history</h3>
+      <p>
+        From the <strong>Shifts</strong> tab, select <strong>Email shift history</strong> to
+        generate a Centre-facing CSV for a date range and optionally email it to the primary
+        contact.
+      </p>
+      <ol>
+        <li>
+          Choose the <strong>Date range</strong> — <strong>From</strong> and <strong>To</strong>.
+        </li>
+        <li>
+          Review the primary Centre contact shown under the date fields and the shift count for
+          the range.
+        </li>
+        <li>
+          Select <strong>Download CSV</strong> to save the file locally, or{" "}
+          <strong>Send email</strong> to deliver the CSV to the primary contact.
+        </li>
+      </ol>
+      <p>
+        The CSV is Centre-facing. Carer names use legal names. All shift statuses are included.
+        Batch child shifts appear as individual rows; the Batch Request itself is not listed as a
+        shift row.
+      </p>
+      <p>
+        <strong>Send email</strong> is unavailable when the range contains no shifts. A valid email
+        on the primary Centre contact is required before sending.
+      </p>
+
+      <HelpScreenshot
+        src={SCREENSHOTS.emailShiftHistory}
+        alt="Email shift history dialog with date range, recipient, and Download CSV / Send email actions"
+        caption="Email shift history lets Ops download or send a Centre-facing shift CSV."
+      />
+
       <p>
         For creating or assigning shifts, see{" "}
         <HelpArticleLink slug="create-an-individual-shift">Create an Individual Shift</HelpArticleLink>{" "}

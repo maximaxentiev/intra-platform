@@ -213,14 +213,25 @@ describe("manage centres article", () => {
       "Find a Centre",
       "Create a new Centre",
       "Edit Centre details",
+      "Internal Ops Notes",
       "Manage Centre contacts",
       "Add or remove Top staff",
       "Ban or unban a staff member",
       "View a Centre&#x27;s Shifts",
+      "Email shift history",
       "Delete a Centre",
     ]) {
       expect(html).toContain(heading);
     }
+  });
+
+  it("documents Internal Ops Notes and shift history export", () => {
+    const html = renderToString(<HelpArticleLayout article={getHelpArticle("manage-centres")!} />);
+    expect(html).toContain("Internal Ops Notes");
+    expect(html).toContain("Email shift history");
+    expect(html).toContain("Download CSV");
+    expect(html).toContain("Send email");
+    expect(html).toContain("legal names");
   });
 
   it("renders Important and Before you continue callouts", () => {
@@ -309,6 +320,16 @@ describe("manage staff profiles article", () => {
     expect(html).toContain("Portal invitations");
     expect(html).toContain("Top centres");
     expect(html).not.toContain('src="/help/manage-staff-profiles-and-availability/');
+  });
+
+  it("documents onboarding reminders and rolling availability", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("manage-staff-profiles-and-availability")!} />,
+    );
+    expect(html).toContain("automated reminder");
+    expect(html).toContain("Rolling availability during onboarding Step 3");
+    expect(html).toContain("next");
+    expect(html).toContain("14 days");
   });
 
   it("renders related Help links configured in the registry", () => {
@@ -416,6 +437,7 @@ describe("create individual shift article", () => {
     );
     const slugs = [
       "create-a-batch-request",
+      "manage-centres",
       "understand-available-staff-and-priority",
       "assign-replace-or-unassign-a-carer",
       "communications-notes-and-important-terminology",
@@ -445,6 +467,14 @@ describe("create individual shift article", () => {
     expect(html).toContain("ECA");
     expect(html).toContain("RECE");
     expect(html).toContain("Pending");
+  });
+
+  it("documents Internal Ops Notes on create shift", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-an-individual-shift")!} />,
+    );
+    expect(html).toContain("Internal Ops Notes");
+    expect(html).toContain("read-only");
   });
 
   it("renders Important callout and no broken screenshot markup", () => {
@@ -587,6 +617,14 @@ describe("assign replace unassign article", () => {
     expect(html).toContain("Centre communication is managed through this Batch Request");
   });
 
+  it("documents Review Centre Email for assignment", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("assign-replace-or-unassign-a-carer")!} />,
+    );
+    expect(html).toContain("Review Centre Email");
+    expect(html).toContain("Send confirmation");
+  });
+
   it("renders Important callouts and no broken screenshot markup", () => {
     const html = renderToString(
       <HelpArticleLayout article={getHelpArticle("assign-replace-or-unassign-a-carer")!} />,
@@ -657,6 +695,14 @@ describe("edit or cancel shift article", () => {
     expect(html).toContain("Cancellation reason");
   });
 
+  it("documents Review Centre Email for centre shift updates", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("edit-or-cancel-a-shift")!} />,
+    );
+    expect(html).toContain("Review Centre Email");
+    expect(html).toContain("Save changes &amp; send email");
+  });
+
   it("renders Important and Before you continue callouts and no broken screenshot markup", () => {
     const html = renderToString(
       <HelpArticleLayout article={getHelpArticle("edit-or-cancel-a-shift")!} />,
@@ -698,6 +744,7 @@ describe("create batch request article", () => {
     );
     const slugs = [
       "create-an-individual-shift",
+      "manage-centres",
       "fill-complete-and-update-a-batch-request",
       "understand-available-staff-and-priority",
       "communications-notes-and-important-terminology",
@@ -727,6 +774,14 @@ describe("create batch request article", () => {
     expect(html).toContain("copy Internal Comment");
     expect(html).toContain("One shift remaining");
     expect(html).toContain("Open");
+  });
+
+  it("documents Internal Ops Notes near the selected Centre", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("create-a-batch-request")!} />,
+    );
+    expect(html).toContain("Internal Ops Notes");
+    expect(html).toContain("read-only");
   });
 
   it("renders Important callout and no broken screenshot markup", () => {
@@ -770,6 +825,7 @@ describe("fill complete update batch article", () => {
       "assign-replace-or-unassign-a-carer",
       "create-a-batch-request",
       "edit-or-cancel-a-shift",
+      "communications-notes-and-important-terminology",
       "cancel-a-batch-request",
     ];
     for (const slug of slugs) {
@@ -802,6 +858,14 @@ describe("fill complete update batch article", () => {
     expect(html).toContain("always included regardless of which boxes are selected");
   });
 
+  it("documents Review Centre Email for batch completion and updates", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("fill-complete-and-update-a-batch-request")!} />,
+    );
+    expect(html).toContain("Review Centre Email");
+    expect(html).toContain("Continue to email review");
+  });
+
   it("renders Important callout and no broken screenshot markup", () => {
     const html = renderToString(
       <HelpArticleLayout article={getHelpArticle("fill-complete-and-update-a-batch-request")!} />,
@@ -818,7 +882,7 @@ describe("fill complete update batch article", () => {
       "create-a-batch-request",
       "assign-replace-or-unassign-a-carer",
       "edit-or-cancel-a-shift",
-      "cancel-a-batch-request",
+      "communications-notes-and-important-terminology",
     ]);
   });
 });
@@ -953,6 +1017,18 @@ describe("communications reference article", () => {
     expect(html).toContain("RECE is not a Staff profile role");
     expect(html).toContain("Primary contact");
     expect(html).toContain("Cancel vs Delete");
+  });
+
+  it("documents four note types, email review scope, and name terminology", () => {
+    const html = renderToString(
+      <HelpArticleLayout article={getHelpArticle("communications-notes-and-important-terminology")!} />,
+    );
+    expect(html).toContain("Centre Internal Ops Notes");
+    expect(html).toContain("Review Centre Email");
+    expect(html).toContain("legal name");
+    expect(html).toContain("display name");
+    expect(html).toContain("onboarding reminder");
+    expect(html).toContain("Centre Shift History");
   });
 
   it("renders Important callouts and no broken screenshot markup", () => {

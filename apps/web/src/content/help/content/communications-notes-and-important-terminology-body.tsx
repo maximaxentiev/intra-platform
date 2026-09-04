@@ -33,13 +33,21 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
       <h3>Centre Rules, Policies, and Other Notes</h3>
       <p>
         Stored on the Centre record and shown in the read view as <strong>Rules &amp; notes</strong>{" "}
-        when present. Use this for centre-wide information such as arrival expectations, parking,
-        local policies, or general on-site procedures.
+        when present. Use this for centre-wide operational information such as arrival expectations,
+        parking, local policies, or general on-site procedures. This information may be used in
+        appropriate external Carer communication.
       </p>
       <p>
         Centre notes are not automatically included in every communication. They may appear in
         relevant Carer assignment confirmations when the Centre has notes recorded. See{" "}
         <HelpArticleLink slug="manage-centres">Manage Centres</HelpArticleLink>.
+      </p>
+
+      <h3>Centre Internal Ops Notes</h3>
+      <p>
+        Persistent Centre-level information visible only to authenticated Ops. Edited from the
+        Centre profile and shown as a separate information panel on Centre Details and in read-only
+        form when creating shifts or batches. Never shared with Centres or Carers.
       </p>
 
       <h3>Shift Notes</h3>
@@ -83,7 +91,13 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
             <td>Centre Rules / Notes</td>
             <td>Centre</td>
             <td>May appear in some Carer confirmations</td>
-            <td>Centre-wide information</td>
+            <td>Centre-wide operational information</td>
+          </tr>
+          <tr>
+            <td>Centre Internal Ops Notes</td>
+            <td>Centre</td>
+            <td>No — Ops only</td>
+            <td>Internal Centre context for Ops</td>
           </tr>
           <tr>
             <td>Shift Notes</td>
@@ -95,7 +109,7 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
             <td>Internal Comment</td>
             <td>Shift / Ops workflow</td>
             <td>No</td>
-            <td>Ops-only information</td>
+            <td>Ops-only shift information</td>
           </tr>
         </tbody>
       </table>
@@ -112,7 +126,61 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
         <li>supported document expiry reminders</li>
         <li>Carer shift reminders before assigned shifts</li>
         <li>batch progress communication when the configured fulfillment threshold is reached</li>
+        <li>
+          incomplete Carer onboarding reminders on day <strong>1</strong>, <strong>3</strong>,{" "}
+          <strong>7</strong>, <strong>14</strong>, and <strong>30</strong> after portal invitation
+          while onboarding remains incomplete
+        </li>
       </ul>
+      <p>
+        Onboarding reminders apply only after portal invitation or access exists. They stop when
+        onboarding is completed. Disabled portal access prevents future reminders.
+      </p>
+
+      <h3>Review Centre Email</h3>
+      <p>
+        Supported Centre shift confirmation and update workflows let Ops review the Centre
+        recipient, edit <strong>Subject</strong> and <strong>Message</strong>, and preview the final
+        email structure before sending. There is no raw HTML editing.
+      </p>
+      <p>System-managed information remains locked in the preview, including:</p>
+      <ul>
+        <li>Shift or Batch details</li>
+        <li>Carer legal names</li>
+        <li>What Changed summaries</li>
+        <li>Shift Notes</li>
+        <li>secure document sections</li>
+        <li>branding and sign-off</li>
+      </ul>
+
+      <h3>Which Centre emails support review and customisation</h3>
+      <p>Review Centre Email currently applies to:</p>
+      <ul>
+        <li>individual initial Centre assignment confirmation</li>
+        <li>individual Centre resend confirmation</li>
+        <li>individual Shift update email to the Centre</li>
+        <li>Batch Complete Request</li>
+        <li>Batch Send Updates Confirmation</li>
+      </ul>
+      <p>It does not currently apply to:</p>
+      <ul>
+        <li>cancellation or unassignment emails</li>
+        <li>Carer emails</li>
+        <li>reminder emails and onboarding reminders</li>
+        <li>Batch progress email</li>
+        <li>Centre Shift History email</li>
+      </ul>
+      <p>
+        For assignment and resend steps, see{" "}
+        <HelpArticleLink slug="assign-replace-or-unassign-a-carer">
+          Assign, Replace or Unassign a Carer
+        </HelpArticleLink>
+        . For batch completion and updates, see{" "}
+        <HelpArticleLink slug="fill-complete-and-update-a-batch-request">
+          Fill, Complete &amp; Update a Batch Request
+        </HelpArticleLink>
+        .
+      </p>
 
       <HelpCallout title="Important" variant="important">
         Always review the recipient choices shown in the current dialog. The available choices depend
@@ -346,11 +414,33 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
       <h3>Onboarding</h3>
       <p>
         Onboarding status reflects the Carer&apos;s progress through portal onboarding. A Staff
-        record existing does not necessarily mean the Carer is eligible for matching. See{" "}
+        record existing does not necessarily mean the Carer is eligible for matching. Invited Carers
+        who have not finished onboarding cannot receive Shifts. See{" "}
         <HelpArticleLink slug="manage-staff-profiles-and-availability">
           Manage Staff Profiles &amp; Availability
         </HelpArticleLink>
         .
+      </p>
+
+      <h3>Carer display name vs legal name</h3>
+      <p>
+        Staff profiles may include both a <strong>display name</strong> and a <strong>legal
+        name</strong>. Centre-facing confirmations and Centre-facing exports such as Centre Shift
+        History use the Carer&apos;s <strong>legal name</strong>.
+      </p>
+      <p>
+        When a report export contains Carer names and supports both audiences,{" "}
+        <strong>Ops team</strong> exports use Carer <strong>display names</strong> and{" "}
+        <strong>Centre</strong> exports use Carer <strong>legal names</strong>. Not every report can
+        be exported for a Centre — Centre audience choice appears only where the report is safely
+        Centre-scoped.
+      </p>
+
+      <h3>Centre Shift History</h3>
+      <p>
+        Centre Shift History CSV and email use Carer legal names because the file is intended for
+        the Centre. See{" "}
+        <HelpArticleLink slug="manage-centres">Manage Centres</HelpArticleLink> for the workflow.
       </p>
 
       <h3>Cancel vs Delete</h3>

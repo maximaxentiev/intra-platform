@@ -262,6 +262,7 @@ describe("help article registry", () => {
     for (const query of [
       "shift notes",
       "internal comment",
+      "internal ops notes",
       "centre rules",
       "carer email",
       "pending",
@@ -269,10 +270,34 @@ describe("help article registry", () => {
       "contacted",
       "staffpoint",
       "RECE",
+      "review centre email",
+      "customize email",
+      "legal name",
+      "display name",
+      "onboarding reminder",
+      "shift history",
     ]) {
       expect(
         searchHelpArticles(query).some((a) => a.slug === "communications-notes-and-important-terminology"),
       ).toBe(true);
+    }
+  });
+
+  it("finds product improvement search terms in expected articles", () => {
+    const cases: Array<[string, string]> = [
+      ["internal ops notes", "manage-centres"],
+      ["shift history", "manage-centres"],
+      ["email shift history", "manage-centres"],
+      ["onboarding reminder", "manage-staff-profiles-and-availability"],
+      ["onboarding incomplete", "manage-staff-profiles-and-availability"],
+      ["next two weeks", "manage-staff-profiles-and-availability"],
+      ["review centre email", "assign-replace-or-unassign-a-carer"],
+      ["customize email", "assign-replace-or-unassign-a-carer"],
+      ["legal name", "communications-notes-and-important-terminology"],
+      ["display name", "communications-notes-and-important-terminology"],
+    ];
+    for (const [query, slug] of cases) {
+      expect(searchHelpArticles(query).some((a) => a.slug === slug)).toBe(true);
     }
   });
 });

@@ -90,8 +90,15 @@ export function EditOrCancelAShiftBody() {
         You are asked: <strong>Notify the Centre or Carer about these changes?</strong> Choose{" "}
         <strong>Save without email</strong> or <strong>Choose communications</strong>. If sending
         communication, select <strong>Centre</strong> and/or <strong>Carer</strong>, then choose
-        which changed fields to include for each recipient before selecting{" "}
-        <strong>Save changes &amp; send email</strong>.
+        which changed fields to include for each recipient.
+      </p>
+      <p>
+        When Centre communication is selected on an individual shift, Ops next reviews{" "}
+        <strong>Review Centre Email</strong> before the update is sent. Subject and Message are
+        editable. <strong>What Changed</strong> and current shift details remain system-generated —
+        Ops cannot edit shift facts from the email review. To correct a fact, go back and edit the
+        shift itself, then select <strong>Save changes &amp; send email</strong> from the review
+        dialog.
       </p>
 
       <HelpCallout title="Important" variant="important">

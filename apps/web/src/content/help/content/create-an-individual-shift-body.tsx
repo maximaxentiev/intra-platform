@@ -8,10 +8,12 @@ import { HelpScreenshot } from "@/components/help/HelpScreenshot";
  * Screenshot assets (add when available):
  * - /help/create-an-individual-shift/create-shift-form.png
  * - /help/create-an-individual-shift/pending-shift.png
+ * - /help/create-an-individual-shift/internal-ops-notes.png — Centre selected with Internal Ops Notes panel (Useful)
  */
 const SCREENSHOTS = {
   createForm: undefined as string | undefined,
   pendingShift: undefined as string | undefined,
+  internalOpsNotes: undefined as string | undefined,
 } as const;
 
 function HelpArticleLink({ slug, children }: { slug: string; children: ReactNode }) {
@@ -78,6 +80,19 @@ export function CreateAnIndividualShiftBody() {
         Verify you have the correct location — centre details and preferences affect later matching
         and communications.
       </p>
+      <p>
+        When the selected centre has <strong>Internal Ops Notes</strong>, they appear as a read-only
+        information panel below the Centre selector. Review them before creating the shift. They are
+        internal to Ops, cannot be edited from Create Shift, and are not Shift Notes. Edit them from
+        the centre profile — see{" "}
+        <HelpArticleLink slug="manage-centres">Manage Centres</HelpArticleLink>.
+      </p>
+
+      <HelpScreenshot
+        src={SCREENSHOTS.internalOpsNotes}
+        alt="Create shift form showing read-only Internal Ops Notes below the Centre selector"
+        caption="Internal Ops Notes appear read-only when the selected Centre has them recorded."
+      />
 
       <h2>Enter the date and time</h2>
       <ul>
