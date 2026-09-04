@@ -48,6 +48,10 @@ import { ShiftUnassignDialog } from "@/components/shifts/ShiftUnassignDialog";
 import { ShiftCancelDialog } from "@/components/shifts/ShiftCancelDialog";
 import { ShiftActivityLogPanel } from "@/components/shifts/ShiftActivityLogPanel";
 import { ShiftComments } from "@/components/ShiftComments";
+import {
+  CentreInternalOpsNotesPanel,
+  CentreInternalOpsNotesReadPanel,
+} from "@/components/centres/CentreInternalOpsNotesPanel";
 import { ShiftNotesField } from "@/components/shifts/ShiftNotesField";
 import { buildShiftAssignmentConfirmDetails } from "@/lib/shift-assignment-confirm";
 import { previewShiftAssignmentCentreEmail, previewShiftUpdateCentreEmail } from "@/lib/centre-email-review";
@@ -921,6 +925,18 @@ function ShiftDetail() {
 
         <div className="space-y-6 lg:col-span-1">
           <div className="space-y-6 rounded-xl bg-surface-brand-dusk p-4 lg:p-5">
+            {editing ? (
+              <CentreInternalOpsNotesPanel
+                centreId={editValsForQueries.centreId}
+                title="Centre Internal Ops Notes"
+              />
+            ) : (
+              <CentreInternalOpsNotesReadPanel
+                notes={shift.centreInternalOpsNotes ?? ""}
+                title="Centre Internal Ops Notes"
+                subtitle="For the Intra Ops team only"
+              />
+            )}
             <ShiftComments shiftId={id} />
             <ShiftActivityLogPanel shiftId={id} />
           </div>

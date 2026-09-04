@@ -81,18 +81,34 @@ describe("shift detail layout", () => {
     expect(detail).not.toContain("This shift is staffed.");
   });
 
-  it("keeps comments and activity log in the secondary rail without internal notes", () => {
+  it("keeps comments and activity log in the secondary rail with centre internal ops notes above comments", () => {
     expect(detail).not.toContain("ShiftInternalNotesCard");
     expect(detail).not.toContain("shifts.notes");
     expect(detail).toContain("Shift Notes");
     expect(detail).toContain("confirmationNotes");
+    expect(detail).toContain("CentreInternalOpsNotesReadPanel");
+    expect(detail).toContain("CentreInternalOpsNotesPanel");
+    expect(detail).toContain('title="Centre Internal Ops Notes"');
     expect(detail).toContain("<ShiftComments shiftId={id} />");
     expect(detail).toContain("ShiftActivityLogPanel");
     expect(detail).toContain("bg-surface-brand-dusk");
     expect(detail).not.toContain("text-info-foreground");
-    expect(detail.indexOf("<ShiftComments shiftId={id} />")).toBeLessThan(
-      detail.indexOf("<ShiftActivityLogPanel shiftId={id} />"),
+    const notesIdx = Math.min(
+      detail.indexOf("CentreInternalOpsNotesReadPanel"),
+      detail.indexOf("CentreInternalOpsNotesPanel"),
     );
+    const commentsIdx = detail.indexOf("<ShiftComments shiftId={id} />");
+    const activityIdx = detail.indexOf("<ShiftActivityLogPanel shiftId={id} />");
+    expect(notesIdx).toBeGreaterThan(-1);
+    expect(notesIdx).toBeLessThan(commentsIdx);
+    expect(commentsIdx).toBeLessThan(activityIdx);
+  });
+
+  it("does not hide centre internal ops notes based on shift status", () => {
+    const rightRailStart = detail.indexOf("lg:col-span-1");
+    const rightRailBlock = detail.slice(rightRailStart, rightRailStart + 800);
+    expect(rightRailBlock).toContain("CentreInternalOpsNotes");
+    expect(rightRailBlock).not.toMatch(/status\s*===/);
   });
 
   it("declares edit centre contacts query before the loading early return", () => {

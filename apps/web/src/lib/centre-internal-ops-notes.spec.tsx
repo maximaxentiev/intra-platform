@@ -95,4 +95,49 @@ describe("centre internal ops notes UI", () => {
       "CentreInternalOpsNotesPanel",
     );
   });
+
+  it("wires centre internal ops notes into the shift workspace right rail", () => {
+    const shiftDetail = read("src/routes/_authenticated/shifts.$id.tsx");
+    expect(shiftDetail).toContain("CentreInternalOpsNotesReadPanel");
+    expect(shiftDetail).toContain("CentreInternalOpsNotesPanel");
+    expect(shiftDetail).toContain('title="Centre Internal Ops Notes"');
+    expect(shiftDetail).toContain("shift.centreInternalOpsNotes");
+    const notesIdx = Math.min(
+      shiftDetail.indexOf("CentreInternalOpsNotesReadPanel"),
+      shiftDetail.indexOf("CentreInternalOpsNotesPanel"),
+    );
+    const commentsIdx = shiftDetail.indexOf("<ShiftComments shiftId={id} />");
+    expect(notesIdx).toBeLessThan(commentsIdx);
+  });
+
+  it("renders centre internal ops notes on the shift workspace when notes exist", () => {
+    const html = renderToString(
+      <CentreInternalOpsNotesReadPanel
+        notes="Synthetic centre context"
+        title="Centre Internal Ops Notes"
+        subtitle="For the Intra Ops team only"
+      />,
+    );
+    expect(html).toContain("Centre Internal Ops Notes");
+    expect(html).toContain("Synthetic centre context");
+  });
+
+  it("hides the shift workspace centre notes panel when notes are empty or whitespace", () => {
+    expect(
+      renderToString(
+        <CentreInternalOpsNotesReadPanel
+          notes=""
+          title="Centre Internal Ops Notes"
+        />,
+      ),
+    ).toBe("");
+    expect(
+      renderToString(
+        <CentreInternalOpsNotesReadPanel
+          notes="   "
+          title="Centre Internal Ops Notes"
+        />,
+      ),
+    ).toBe("");
+  });
 });

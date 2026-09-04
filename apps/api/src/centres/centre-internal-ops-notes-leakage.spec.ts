@@ -92,4 +92,40 @@ describe('Centre internal ops notes communication leakage regression', () => {
     expect(dto).not.toHaveProperty('internalOpsNotes');
     expect(dto?.centre).not.toHaveProperty('internalOpsNotes');
   });
+
+  it('does not expose internal ops notes through carer portal shift mapping when ops shift detail includes them', () => {
+    const opsShiftDetail = {
+      id: 'shift-1',
+      centreId: 'centre-1',
+      centreName: 'ABC Centre',
+      centreInternalOpsNotes: INTERNAL_OPS_SENTINEL,
+      shiftDate: '2026-09-10',
+      startTime: '09:00:00',
+      endTime: '17:00:00',
+      roleNeeded: 'ECE',
+      status: 'filled',
+    };
+
+    expect(opsShiftDetail.centreInternalOpsNotes).toBe(INTERNAL_OPS_SENTINEL);
+
+    const carerDto = toCarerShiftSummaryDto(
+      {
+        id: 'shift-1',
+        shiftDate: '2026-09-10',
+        startTime: '09:00:00',
+        endTime: '17:00:00',
+        roleNeeded: 'ECE',
+        status: 'filled',
+        centreName: 'ABC Centre',
+        centreAddress: '123 Main',
+        centreCity: 'Toronto',
+        centreNotes: PUBLIC_CENTRE_NOTES,
+      },
+      '2026-09-03',
+      '12:00',
+    );
+
+    expect(JSON.stringify(carerDto)).not.toContain(INTERNAL_OPS_SENTINEL);
+    expect(carerDto).not.toHaveProperty('centreInternalOpsNotes');
+  });
 });

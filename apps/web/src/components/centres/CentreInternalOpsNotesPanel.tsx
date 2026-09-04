@@ -6,13 +6,20 @@ import { cn } from "@/lib/utils";
 type CentreInternalOpsNotesPanelProps = {
   centreId: string;
   className?: string;
+  title?: string;
+  subtitle?: string;
 };
 
 /**
  * Read-only Ops-only centre notes shown while creating shifts/batches.
  * Hidden when the centre has no internal notes.
  */
-export function CentreInternalOpsNotesPanel({ centreId, className }: CentreInternalOpsNotesPanelProps) {
+export function CentreInternalOpsNotesPanel({
+  centreId,
+  className,
+  title = "Internal Ops Notes",
+  subtitle = "For the Intra Ops team only",
+}: CentreInternalOpsNotesPanelProps) {
   const { data: centres } = useQuery({
     queryKey: ["centres-all"],
     queryFn: () => centresApi.list(),
@@ -34,8 +41,8 @@ export function CentreInternalOpsNotesPanel({ centreId, className }: CentreInter
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden />
         <div className="min-w-0 space-y-2">
           <div>
-            <p className="text-sm font-semibold text-foreground">Internal Ops Notes</p>
-            <p className="text-xs text-muted-foreground">For the Intra Ops team only</p>
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{notes}</p>
         </div>
@@ -50,9 +57,13 @@ export function CentreInternalOpsNotesPanel({ centreId, className }: CentreInter
 export function CentreInternalOpsNotesReadPanel({
   notes,
   className,
+  title = "Internal Ops Notes",
+  subtitle = "Visible to the Intra Ops team only. Never shared with Centres or Carers.",
 }: {
   notes: string;
   className?: string;
+  title?: string;
+  subtitle?: string;
 }) {
   const trimmed = notes.trim();
   if (!trimmed) return null;
@@ -70,10 +81,8 @@ export function CentreInternalOpsNotesReadPanel({
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden />
         <div className="min-w-0 space-y-2">
           <div>
-            <p className="text-sm font-semibold text-foreground">Internal Ops Notes</p>
-            <p className="text-xs text-muted-foreground">
-              Visible to the Intra Ops team only. Never shared with Centres or Carers.
-            </p>
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{trimmed}</p>
         </div>

@@ -46,8 +46,9 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
       <h3>Centre Internal Ops Notes</h3>
       <p>
         Persistent Centre-level information visible only to authenticated Ops. Edited from the
-        Centre profile and shown as a separate information panel on Centre Details and in read-only
-        form when creating shifts or batches. Never shared with Centres or Carers.
+        Centre profile and shown as a separate information panel on Centre Details, in read-only
+        form when creating shifts or batches, and on the shift workspace when the Centre has notes
+        recorded. Never shared with Centres or Carers.
       </p>
 
       <h3>Shift Notes</h3>

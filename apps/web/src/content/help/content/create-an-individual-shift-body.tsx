@@ -87,6 +87,12 @@ export function CreateAnIndividualShiftBody() {
         the centre profile — see{" "}
         <HelpArticleLink slug="manage-centres">Manage Centres</HelpArticleLink>.
       </p>
+      <p>
+        After the shift is created, the same <strong>Centre Internal Ops Notes</strong> remain
+        visible on the shift workspace in the right-hand column so any Ops user handling the shift
+        can see the Centre context. They stay read-only there — update them from the Centre profile
+        if needed.
+      </p>
 
       <HelpScreenshot
         src={SCREENSHOTS.internalOpsNotes}

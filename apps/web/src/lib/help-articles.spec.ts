@@ -338,6 +338,26 @@ describe("help article registry", () => {
     expect(communications).toContain("secure document-link mechanics");
     expect(communications).toContain("cancellation or unassignment emails");
   });
+
+  it("documents centre internal ops notes on the shift workspace", () => {
+    const createShift = readFileSync(
+      join(process.cwd(), "src/content/help/content/create-an-individual-shift-body.tsx"),
+      "utf8",
+    );
+    const communications = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/communications-notes-and-important-terminology-body.tsx",
+      ),
+      "utf8",
+    );
+
+    expect(createShift).toMatch(/remain[\s\S]*visible on the shift workspace/);
+    expect(createShift).toContain("Centre Internal Ops Notes");
+    expect(createShift).toContain("read-only");
+    expect(communications).toContain("on the shift workspace when the Centre has notes");
+    expect(communications).toContain("Never shared with Centres or Carers");
+  });
 });
 
 describe("help V1 content completeness", () => {

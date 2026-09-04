@@ -151,6 +151,7 @@ export interface Shift {
   cancellationReason: string;
   addedToStaffpoint: boolean;
   centreName?: string | null;
+  centreInternalOpsNotes?: string | null;
   assignedLegalName?: string | null;
   assignedDisplayName?: string | null;
   assignedUseDisplayName?: boolean | null;

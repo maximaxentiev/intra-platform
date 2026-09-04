@@ -185,6 +185,7 @@ export class ShiftsService {
         cancellationReason: shifts.cancellationReason,
         addedToStaffpoint: shifts.addedToStaffpoint,
         centreName: centres.name,
+        centreInternalOpsNotes: centres.internalOpsNotes,
         assignedLegalName: assignee.legalName,
         assignedDisplayName: assignee.displayName,
         assignedUseDisplayName: assignee.useDisplayName,
