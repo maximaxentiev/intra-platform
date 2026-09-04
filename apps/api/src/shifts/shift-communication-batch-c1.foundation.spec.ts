@@ -65,6 +65,7 @@ describe('Batch C1 foundation guards', () => {
     const content = buildShiftAssignmentCentreEmailContent({
       centreName: 'ABC Centre',
       carerLegalName: 'Jane Doe',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       roleNeeded: 'ECE',
       shiftDate: '2026-08-25',
       startTime: '08:30:00',
@@ -95,6 +96,7 @@ describe('Batch C1 foundation guards', () => {
     const centre = buildShiftAssignmentCentreEmailContent({
       centreName: 'ABC Centre',
       carerLegalName: 'Jane Doe',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       roleNeeded: 'ECE',
       shiftDate: '2026-08-25',
       startTime: '08:30:00',

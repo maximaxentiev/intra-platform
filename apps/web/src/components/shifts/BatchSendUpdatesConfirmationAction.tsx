@@ -54,7 +54,7 @@ export function BatchSendUpdatesConfirmationAction({
   });
 
   const sendM = useMutation({
-    mutationFn: (centreEmail: { subject: string; message: string }) =>
+    mutationFn: (centreEmail: { subject: string; body: string }) =>
       shiftBatchesApi.sendUpdatesConfirmation(
         batchId,
         selectedIds,
@@ -75,7 +75,7 @@ export function BatchSendUpdatesConfirmationAction({
         centreReview.setStaleError(
           err.message || "Batch changes were updated while you were reviewing. Refresh and try again.",
         );
-        void centreReview.refreshPreview(centreReview.centreEmailPayload);
+        void centreReview.refreshPreview();
         void readinessQ.refetch();
         return;
       }
@@ -175,9 +175,10 @@ export function BatchSendUpdatesConfirmationAction({
         previewLoading={centreReview.previewLoading}
         previewError={centreReview.previewError}
         subject={centreReview.subject}
-        message={centreReview.message}
+        body={centreReview.body}
+        segments={centreReview.segments}
         onSubjectChange={centreReview.setSubject}
-        onMessageChange={centreReview.setMessage}
+        onBodyChange={centreReview.handleBodyChange}
         submitting={sendM.isPending}
         submitLabel="Send updates"
         staleError={centreReview.staleError}

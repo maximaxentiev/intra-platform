@@ -32,12 +32,11 @@ import { isActiveFulfilledShift } from './shift-batch-completion.util';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
 import { buildBatchProgress70IdempotencyKey } from './shift-batch-progress.types';
 import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
-import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
-import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 import {
-  defaultBatchConfirmationFinalEmailMessage,
-  defaultBatchConfirmationFinalEmailSubject,
-} from './shift-batch-confirmation-final-email.template';
+  validateCentreEmailBody,
+  validateCentreEmailSubject,
+} from '../email/centre-email-custom-content.util';
+import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 
 type DbLike = Pick<DbExecutor, 'select' | 'insert' | 'update'>;
 
@@ -82,13 +81,22 @@ export class ShiftBatchCompletionService {
       .where(eq(shiftBatches.id, batchId))
       .limit(1);
     const centreName = centreMetaRows[0]?.centreName ?? 'Centre';
-    const resolvedCentreEmail = normalizeCentreEmailCustomContent(centreEmailInput, {
-      subject: defaultBatchConfirmationFinalEmailSubject(centreName),
-      message: defaultBatchConfirmationFinalEmailMessage({
-        activeShiftCount: readiness.activeShiftCount,
-        centreName,
-      }),
-    });
+    const resolvedCentreEmail = centreEmailInput
+      ? {
+          subject:
+            centreEmailInput.subject != null
+              ? validateCentreEmailSubject(centreEmailInput.subject)
+              : undefined,
+          body:
+            centreEmailInput.body != null
+              ? validateCentreEmailBody(centreEmailInput.body)
+              : centreEmailInput.message != null
+                ? validateCentreEmailBody(centreEmailInput.message)
+                : undefined,
+        }
+      : undefined;
+    const centreEmailCustomized =
+      resolvedCentreEmail?.subject != null || resolvedCentreEmail?.body != null;
 
     const scheduledId = await this.db.transaction(async (tx) => {
       const batchRows = await tx
@@ -206,13 +214,7 @@ export class ShiftBatchCompletionService {
             batchId: batch.id,
             recipientEmail: primary.email,
             scheduledCommunicationId: scheduled.id,
-            ...centreEmailCustomAuditMetadata(
-              {
-                subject: resolvedCentreEmail.subject,
-                message: resolvedCentreEmail.message,
-              },
-              resolvedCentreEmail.customized,
-            ),
+            ...centreEmailCustomAuditMetadata(resolvedCentreEmail, centreEmailCustomized),
           },
         },
         tx,

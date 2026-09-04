@@ -1,9 +1,14 @@
 import { getStaffLegalFullName } from '@intra/shared';
 import {
+  buildCentreEmailSecureDocMarker,
+  renderCentreEmailFromEditableBody,
+  validateCentreEmailSecureDocMarkers,
+} from '../email/centre-email-body.util';
+import {
   documentShareLabelForCentreEmailPreview,
   documentShareUrlForCentreEmailPreview,
-  renderCentreEmailCustomMessageHtmlRows,
 } from '../email/centre-email-custom-content.util';
+import { appendIntraEmailSignOffText } from '../email/platform-email-branding.util';
 import {
   formatShiftAssignmentDateLabel,
   formatShiftAssignmentTimeRange,
@@ -14,6 +19,7 @@ import {
 } from '../shifts/shift-assignment-notification.util';
 
 export type BatchFinalConfirmationShiftBlock = {
+  assignedStaffId: string;
   shiftDate: string;
   startTime: string;
   endTime: string;
@@ -27,7 +33,28 @@ export function defaultBatchConfirmationFinalEmailSubject(centreName: string) {
   return `Your Intra shift request is confirmed — ${centreName}`;
 }
 
-export function defaultBatchConfirmationFinalEmailMessage(params: {
+export function buildBatchConfirmationFinalEmailDefaultBody(params: {
+  centreName: string;
+  activeShiftCount: number;
+  assignments: BatchFinalConfirmationShiftBlock[];
+}) {
+  const intro = defaultBatchConfirmationFinalIntro(params);
+  const textBlocks = params.assignments.map((shift, index) =>
+    buildBatchAssignmentDefaultBodyBlock(shift, index + 1),
+  );
+
+  return [
+    'Your shift request is now fully confirmed',
+    '',
+    intro,
+    '',
+    ...textBlocks.flatMap((block, index) => (index === 0 ? [block] : ['', '---', '', block])),
+    '',
+    'This confirmation includes all active shifts in the finalized request.',
+  ].join('\n');
+}
+
+function defaultBatchConfirmationFinalIntro(params: {
   activeShiftCount: number;
   centreName: string;
 }) {
@@ -37,75 +64,91 @@ export function defaultBatchConfirmationFinalEmailMessage(params: {
   ].join('\n\n');
 }
 
+function buildBatchAssignmentDefaultBodyBlock(
+  shift: BatchFinalConfirmationShiftBlock,
+  shiftNumber: number,
+) {
+  const dateLabel = formatShiftAssignmentDateLabel(shift.shiftDate);
+  const timeLabel = formatShiftAssignmentTimeRange(shift.startTime, shift.endTime);
+  const notes = shift.shiftConfirmationNotes.trim();
+  return [
+    `Shift ${shiftNumber}`,
+    `Date: ${dateLabel}`,
+    `Time: ${timeLabel}`,
+    shift.roleNeeded ? `Role: ${shift.roleNeeded}` : null,
+    `Assigned Carer: ${shift.carerLegalName}`,
+    notes ? `Shift Notes: ${notes}` : null,
+    'View Carer Documents:',
+    buildCentreEmailSecureDocMarker(shift.assignedStaffId),
+  ]
+    .filter((line): line is string => line != null && line.length > 0)
+    .join('\n');
+}
+
 export function buildBatchConfirmationFinalEmailContent(params: {
   centreName: string;
   activeShiftCount: number;
   assignments: BatchFinalConfirmationShiftBlock[];
   customSubject?: string;
-  customMessage?: string;
+  customBody?: string;
   documentSharePreviewMode?: boolean;
 }) {
-  const subject =
-    params.customSubject ?? defaultBatchConfirmationFinalEmailSubject(params.centreName);
-  const message =
-    params.customMessage ??
-    defaultBatchConfirmationFinalEmailMessage({
-      activeShiftCount: params.activeShiftCount,
-      centreName: params.centreName,
-    });
+  const defaultSubject = defaultBatchConfirmationFinalEmailSubject(params.centreName);
+  const defaultBody = buildBatchConfirmationFinalEmailDefaultBody(params);
+  const subject = params.customSubject ?? defaultSubject;
+  const body = params.customBody ?? defaultBody;
   const previewMode = params.documentSharePreviewMode === true;
+  const expectedStaffIds = params.assignments.map((shift) => shift.assignedStaffId);
+  const customized = subject !== defaultSubject || body !== defaultBody;
 
-  const textBlocks = params.assignments.map((shift, index) => {
-    const dateLabel = formatShiftAssignmentDateLabel(shift.shiftDate);
-    const timeLabel = formatShiftAssignmentTimeRange(shift.startTime, shift.endTime);
-    const notes = shift.shiftConfirmationNotes.trim();
-    return [
-      `Shift ${index + 1}`,
-      `Date: ${dateLabel}`,
-      `Time: ${timeLabel}`,
-      shift.roleNeeded ? `Role: ${shift.roleNeeded}` : null,
-      `Assigned Carer: ${shift.carerLegalName}`,
-      notes ? `Shift Notes: ${notes}` : null,
-      `View Carer Documents: ${shift.documentShareUrl}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
+  if (customized) {
+    validateCentreEmailSecureDocMarkers(body, expectedStaffIds);
+    const documentLinks = new Map(
+      params.assignments.map((shift) => [
+        shift.assignedStaffId,
+        { url: shift.documentShareUrl, carerLegalName: shift.carerLegalName },
+      ]),
+    );
+    const rendered = renderCentreEmailFromEditableBody({
+      body,
+      previewMode,
+      documentLinks,
+    });
+    return { subject, html: rendered.html, text: rendered.text, defaultSubject, defaultBody };
+  }
+
+  const intro = defaultBatchConfirmationFinalIntro({
+    activeShiftCount: params.activeShiftCount,
+    centreName: params.centreName,
   });
-
-  const text = [
-    'Your shift request is now fully confirmed',
-    ...(message.trim() ? ['', message.trim()] : []),
-    '',
-    ...textBlocks.flatMap((block, index) =>
-      index === 0 ? [block] : ['', '---', '', block],
-    ),
-    '',
-    'This confirmation includes all active shifts in the finalized request.',
-  ].join('\n');
+  const textBlocks = params.assignments.map((shift, index) =>
+    buildBatchAssignmentDefaultBodyBlock(shift, index + 1),
+  );
 
   const assignmentHtml = params.assignments
     .map((shift, index) => renderAssignmentBlockHtml(shift, index + 1, index > 0, previewMode))
     .join('');
 
-  const customMessageHtml = renderCentreEmailCustomMessageHtmlRows(message);
-
   const html = wrapShiftAssignmentEmailHtml(`
         <tr><td style="font-size:18px;font-weight:600;color:#111;">Your shift request is now fully confirmed</td></tr>
-        ${customMessageHtml || `<tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;">All ${escapeShiftAssignmentEmailHtml(String(params.activeShiftCount))} active requested shifts for ${escapeShiftAssignmentEmailHtml(params.centreName)} have been filled.</td></tr>
-        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;">Assigned Carer details and secure document links are provided below.</td></tr>`}
+        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;">All ${escapeShiftAssignmentEmailHtml(String(params.activeShiftCount))} active requested shifts for ${escapeShiftAssignmentEmailHtml(params.centreName)} have been filled.</td></tr>
+        <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;">Assigned Carer details and secure document links are provided below.</td></tr>
         ${assignmentHtml}
         <tr><td style="padding-top:20px;font-size:14px;line-height:1.5;color:#666;">This confirmation includes all active shifts in the finalized request.</td></tr>`);
 
-  return {
-    subject,
-    html,
-    text,
-    defaultSubject: defaultBatchConfirmationFinalEmailSubject(params.centreName),
-    defaultMessage: defaultBatchConfirmationFinalEmailMessage({
-      activeShiftCount: params.activeShiftCount,
-      centreName: params.centreName,
-    }),
-  };
+  const text = appendIntraEmailSignOffText(
+    [
+      'Your shift request is now fully confirmed',
+      '',
+      intro,
+      '',
+      ...textBlocks.flatMap((block, index) => (index === 0 ? [block] : ['', '---', '', block])),
+      '',
+      'This confirmation includes all active shifts in the finalized request.',
+    ].join('\n'),
+  );
+
+  return { subject, html, text, defaultSubject, defaultBody };
 }
 
 export function renderAssignmentBlockHtml(

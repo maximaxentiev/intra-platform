@@ -22,7 +22,7 @@ import {
 import { ensureFreshStaffDocumentShareUrlForCentreEmail } from '../staff-documents/staff-document-share-email.util';
 import {
   buildBatchConfirmationFinalEmailContent,
-  defaultBatchConfirmationFinalEmailMessage,
+  buildBatchConfirmationFinalEmailDefaultBody,
   defaultBatchConfirmationFinalEmailSubject,
   resolveBatchFinalCarerLegalName,
 } from './shift-batch-confirmation-final-email.template';
@@ -158,6 +158,7 @@ export class BatchConfirmationFinalCommunicationProcessor implements Communicati
       }
 
       assignments.push({
+        assignedStaffId: row.assignedStaffId,
         shiftDate: String(row.shiftDate),
         startTime: String(row.startTime),
         endTime: String(row.endTime),
@@ -181,14 +182,18 @@ export class BatchConfirmationFinalCommunicationProcessor implements Communicati
     );
     const defaults = {
       subject: defaultBatchConfirmationFinalEmailSubject(batch.centreName),
-      message: defaultBatchConfirmationFinalEmailMessage({
-        activeShiftCount: active.length,
+      body: buildBatchConfirmationFinalEmailDefaultBody({
         centreName: batch.centreName,
+        activeShiftCount: active.length,
+        assignments,
       }),
     };
     const resolved = normalizeCentreEmailCustomContent(
       customContent
-        ? { subject: customContent.customSubject, message: customContent.customMessage }
+        ? {
+            subject: customContent.customSubject,
+            body: customContent.customBody ?? customContent.customMessage,
+          }
         : undefined,
       defaults,
     );
@@ -198,7 +203,7 @@ export class BatchConfirmationFinalCommunicationProcessor implements Communicati
       activeShiftCount: active.length,
       assignments,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
     });
 
     return {

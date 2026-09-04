@@ -6,6 +6,8 @@ import type { CentreEmailCustomContentInput } from './centre-email-custom-conten
 
 export type StoredCentreEmailCustomContent = {
   customSubject?: string;
+  customBody?: string;
+  /** @deprecated Legacy field from intro-only editor. */
   customMessage?: string;
   centreEmailCustomized?: boolean;
 };
@@ -15,9 +17,10 @@ export function centreEmailCustomAuditMetadata(
   customized: boolean,
 ): StoredCentreEmailCustomContent {
   if (!content && !customized) return {};
+  const body = content?.body ?? content?.message;
   return {
     ...(content?.subject != null ? { customSubject: content.subject } : {}),
-    ...(content?.message != null ? { customMessage: content.message } : {}),
+    ...(body != null ? { customBody: body } : {}),
     ...(customized ? { centreEmailCustomized: true } : {}),
   };
 }
@@ -36,11 +39,17 @@ export async function loadCentreEmailCustomContentFromAudit(
   for (const row of rows) {
     const metadata = (row.metadata ?? {}) as Record<string, unknown>;
     if (metadata.scheduledCommunicationId !== scheduledCommunicationId) continue;
+    const customBody =
+      typeof metadata.customBody === 'string'
+        ? metadata.customBody
+        : typeof metadata.customMessage === 'string'
+          ? metadata.customMessage
+          : undefined;
     return {
       customSubject:
         typeof metadata.customSubject === 'string' ? metadata.customSubject : undefined,
-      customMessage:
-        typeof metadata.customMessage === 'string' ? metadata.customMessage : undefined,
+      customBody,
+      customMessage: typeof metadata.customMessage === 'string' ? metadata.customMessage : undefined,
       centreEmailCustomized: metadata.centreEmailCustomized === true,
     };
   }

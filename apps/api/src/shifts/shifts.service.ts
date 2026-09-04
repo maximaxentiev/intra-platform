@@ -610,7 +610,7 @@ export class ShiftsService {
     id: string,
     staffId: string,
     actorUserId: string,
-    options?: { notifyPreviousCarer?: boolean; centreEmail?: { subject?: string; message?: string } },
+    options?: { notifyPreviousCarer?: boolean; centreEmail?: { subject?: string; body?: string } },
   ): Promise<ShiftAssignResponse> {
     const existing = await this.db
       .select({

@@ -127,6 +127,7 @@ export const PLATFORM_AUDIT_METADATA_ALLOWLIST = new Set([
   'shiftRowCount',
   'recipientName',
   'customSubject',
+  'customBody',
   'customMessage',
   'centreEmailCustomized',
 ]);

@@ -56,6 +56,7 @@ function sampleBrandedHtmlTemplates() {
       html: buildShiftAssignmentCentreEmailContent({
         centreName: 'ABC Child Care Centre',
         carerLegalName: 'Jane Doe',
+        assignedStaffId: '11111111-1111-4111-8111-111111111111',
         roleNeeded: 'ECE',
         shiftDate: '2026-08-25',
         startTime: '08:30:00',
@@ -79,6 +80,7 @@ function sampleBrandedHtmlTemplates() {
         activeShiftCount: 1,
         assignments: [
           {
+            assignedStaffId: '11111111-1111-4111-8111-111111111111',
             shiftDate: '2026-09-01',
             startTime: '09:00:00',
             endTime: '17:00:00',

@@ -43,7 +43,7 @@ import {
   normalizeCentreEmailCustomContent,
 } from '../email/centre-email-custom-content.util';
 import {
-  defaultShiftAssignmentCentreEmailMessage,
+  buildShiftAssignmentCentreEmailDefaultBody,
   defaultShiftAssignmentCentreEmailSubject,
 } from './shift-assignment-centre-email.template';
 
@@ -243,13 +243,22 @@ export class ShiftAssignmentConfirmationService {
         centreName: context.centreName,
         shiftDate: context.shiftDate,
       }),
-      message: defaultShiftAssignmentCentreEmailMessage(),
+      body: buildShiftAssignmentCentreEmailDefaultBody({
+        carerLegalName: context.carerLegalName,
+        roleNeeded: context.roleNeeded,
+        shiftDate: context.shiftDate,
+        startTime: context.startTime,
+        endTime: context.endTime,
+        shiftConfirmationNotes: context.shiftConfirmationNotes,
+        assignedStaffId: context.assignedStaffId,
+      }),
     };
     const resolved = normalizeCentreEmailCustomContent(centreEmailInput, defaults);
 
     const content = buildShiftAssignmentCentreEmailContent({
       centreName: context.centreName,
       carerLegalName: context.carerLegalName,
+      assignedStaffId: context.assignedStaffId,
       roleNeeded: context.roleNeeded,
       shiftDate: context.shiftDate,
       startTime: context.startTime,
@@ -257,7 +266,7 @@ export class ShiftAssignmentConfirmationService {
       shiftConfirmationNotes: context.shiftConfirmationNotes,
       documentShareUrl,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
     });
 
     const recipientEmail = normalizeNotificationEmail(primaryEmail);

@@ -11,6 +11,7 @@ describe('buildBatchConfirmationFinalEmailContent', () => {
       activeShiftCount: 2,
       assignments: [
         {
+          assignedStaffId: '11111111-1111-4111-8111-111111111111',
           shiftDate: '2026-09-10',
           startTime: '08:00:00',
           endTime: '16:00:00',
@@ -58,6 +59,7 @@ describe('buildBatchConfirmationFinalEmailContent', () => {
       activeShiftCount: 1,
       assignments: [
         {
+          assignedStaffId: '11111111-1111-4111-8111-111111111111',
           shiftDate: '2026-09-10',
           startTime: '08:00:00',
           endTime: '16:00:00',

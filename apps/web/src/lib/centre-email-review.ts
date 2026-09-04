@@ -5,17 +5,24 @@ export type CentreEmailRecipient = {
   email: string;
 };
 
+export type CentreEmailBodySegment =
+  | { type: "text"; content: string }
+  | { type: "secureDocumentLink"; staffId: string };
+
 export type CentreEmailCustomContent = {
   subject?: string;
+  body?: string;
+  /** @deprecated Legacy intro-only field. */
   message?: string;
 };
 
 export type CentreEmailPreview = {
   recipient: CentreEmailRecipient | null;
   subject: string;
-  message: string;
+  body: string;
   defaultSubject: string;
-  defaultMessage: string;
+  defaultBody: string;
+  segments: CentreEmailBodySegment[];
   html: string;
   text: string;
   pendingChangeRevision?: number;

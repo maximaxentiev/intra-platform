@@ -33,6 +33,7 @@ describe('Centre internal ops notes communication leakage regression', () => {
     const { text, html } = buildShiftAssignmentCentreEmailContent({
       centreName: 'ABC Centre',
       carerLegalName: 'Jane Doe',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       roleNeeded: 'ECE',
       shiftConfirmationNotes: 'Room 3',
       shiftDate: '2026-08-25',
@@ -52,6 +53,7 @@ describe('Centre internal ops notes communication leakage regression', () => {
       activeShiftCount: 1,
       assignments: [
         {
+          assignedStaffId: '11111111-1111-4111-8111-111111111111',
           shiftDate: '2026-08-25',
           startTime: '08:30:00',
           endTime: '16:30:00',

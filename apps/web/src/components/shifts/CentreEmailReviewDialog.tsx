@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { CentreEmailBodyEditor } from "@/components/shifts/CentreEmailBodyEditor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,8 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import type { CentreEmailPreview, CentreEmailRecipient } from "@/lib/centre-email-review";
+import type { CentreEmailBodySegment, CentreEmailPreview, CentreEmailRecipient } from "@/lib/centre-email-review";
 
 type Props = {
   open: boolean;
@@ -20,9 +20,10 @@ type Props = {
   previewLoading?: boolean;
   previewError?: string | null;
   subject: string;
-  message: string;
+  body: string;
+  segments: CentreEmailBodySegment[];
   onSubjectChange: (value: string) => void;
-  onMessageChange: (value: string) => void;
+  onBodyChange: (value: { body: string; segments: CentreEmailBodySegment[] }) => void;
   submitting?: boolean;
   submitLabel?: string;
   staleError?: string | null;
@@ -42,9 +43,10 @@ export function CentreEmailReviewDialog({
   previewLoading = false,
   previewError,
   subject,
-  message,
+  body,
+  segments,
   onSubjectChange,
-  onMessageChange,
+  onBodyChange,
   submitting = false,
   submitLabel = "Send confirmation",
   staleError,
@@ -52,8 +54,6 @@ export function CentreEmailReviewDialog({
   onSubmit,
 }: Props) {
   const subjectId = useId();
-  const messageId = useId();
-  const previewId = useId();
   const [subjectError, setSubjectError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,6 +63,10 @@ export function CentreEmailReviewDialog({
   function handleSubmit() {
     if (!subject.trim()) {
       setSubjectError("Subject is required.");
+      return;
+    }
+    if (!body.trim()) {
+      setSubjectError(null);
       return;
     }
     setSubjectError(null);
@@ -82,8 +86,7 @@ export function CentreEmailReviewDialog({
         <DialogHeader>
           <DialogTitle>Review Centre Email</DialogTitle>
           <DialogDescription>
-            Review and customize the Centre confirmation email before it is sent. Shift and Batch
-            details below are generated from the current record and cannot be edited here.
+            Review and edit the Centre confirmation email before it is sent.
           </DialogDescription>
         </DialogHeader>
 
@@ -114,40 +117,24 @@ export function CentreEmailReviewDialog({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={messageId}>Message</Label>
-            <Textarea
-              id={messageId}
-              value={message}
+          {previewLoading ? (
+            <p className="text-sm text-muted-foreground">Loading email draft…</p>
+          ) : previewError ? (
+            <p className="text-sm text-destructive">{previewError}</p>
+          ) : segments.length > 0 ? (
+            <CentreEmailBodyEditor
+              segments={segments}
               disabled={busy}
-              rows={5}
-              maxLength={10000}
-              onChange={(event) => onMessageChange(event.target.value)}
+              onChange={onBodyChange}
             />
-          </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Email draft unavailable.</p>
+          )}
 
-          <div className="space-y-2">
-            <Label id={`${previewId}-label`}>Email preview</Label>
-            <div
-              id={previewId}
-              role="region"
-              aria-labelledby={`${previewId}-label`}
-              className="rounded-lg border border-border/70 bg-white p-4 text-sm text-foreground"
-            >
-              {previewLoading ? (
-                <p className="text-muted-foreground">Loading preview…</p>
-              ) : previewError ? (
-                <p className="text-destructive">{previewError}</p>
-              ) : preview?.html ? (
-                <div
-                  className="centre-email-preview [&_a]:pointer-events-none [&_a]:cursor-default"
-                  dangerouslySetInnerHTML={{ __html: preview.html }}
-                />
-              ) : (
-                <p className="text-muted-foreground">Preview unavailable.</p>
-              )}
-            </div>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Changes made here affect this email only. They do not change the Shift or Batch in the
+            platform.
+          </p>
 
           {staleError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -165,7 +152,7 @@ export function CentreEmailReviewDialog({
           >
             {onBack ? "Back" : "Cancel"}
           </Button>
-          <Button type="button" disabled={busy || !preview?.recipient} onClick={handleSubmit}>
+          <Button type="button" disabled={busy || !preview?.recipient || !body.trim()} onClick={handleSubmit}>
             {submitting ? "Sending…" : submitLabel}
           </Button>
         </DialogFooter>

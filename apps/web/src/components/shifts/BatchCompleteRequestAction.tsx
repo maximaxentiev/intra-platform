@@ -48,7 +48,7 @@ export function BatchCompleteRequestAction({
   });
 
   const completeM = useMutation({
-    mutationFn: (centreEmail: { subject: string; message: string }) =>
+    mutationFn: (centreEmail: { subject: string; body: string }) =>
       shiftBatchesApi.completeRequest(batchId, centreEmail),
     onSuccess: () => {
       toast.success("Batch Request completed.");
@@ -159,9 +159,10 @@ export function BatchCompleteRequestAction({
         previewLoading={centreReview.previewLoading}
         previewError={centreReview.previewError}
         subject={centreReview.subject}
-        message={centreReview.message}
+        body={centreReview.body}
+        segments={centreReview.segments}
         onSubjectChange={centreReview.setSubject}
-        onMessageChange={centreReview.setMessage}
+        onBodyChange={centreReview.handleBodyChange}
         submitting={completeM.isPending}
         submitLabel="Complete Request & send confirmation"
         staleError={centreReview.staleError}

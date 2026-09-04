@@ -5,34 +5,36 @@ import { getStaffLegalFullName } from '@intra/shared';
 import { resolveCentrePrimaryContact } from '../centres/centre-primary-contact.util';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import { centres, shifts, staff, shiftBatches } from '../db/schema';
+import type { CentreEmailBodySegment } from './centre-email-body.util';
+import { splitCentreEmailBodySegments } from './centre-email-body.util';
 import type { CentreEmailCustomContentInput } from './centre-email-custom-content.util';
 import {
   normalizeCentreEmailCustomContent,
-  validateCentreEmailMessage,
+  validateCentreEmailBody,
   validateCentreEmailSubject,
 } from './centre-email-custom-content.util';
 import { normalizeShiftRoleNeeded } from '../shifts/shift-assignment-display.util';
 import {
   buildShiftAssignmentCentreEmailContent,
-  defaultShiftAssignmentCentreEmailMessage,
+  buildShiftAssignmentCentreEmailDefaultBody,
   defaultShiftAssignmentCentreEmailSubject,
 } from '../shifts/shift-assignment-centre-email.template';
 import {
   buildShiftUpdateCentreEmailContent,
-  defaultShiftUpdateCentreEmailMessage,
+  buildShiftUpdateCentreEmailDefaultBody,
   defaultShiftUpdateCentreEmailSubject,
 } from '../shifts/shift-update-centre-email.template';
 import type { ShiftCommunicationChange } from '../shifts/shift-update-changes.util';
 import {
   buildBatchConfirmationFinalEmailContent,
-  defaultBatchConfirmationFinalEmailMessage,
+  buildBatchConfirmationFinalEmailDefaultBody,
   defaultBatchConfirmationFinalEmailSubject,
   resolveBatchFinalCarerLegalName,
   type BatchFinalConfirmationShiftBlock,
 } from '../shift-batches/shift-batch-confirmation-final-email.template';
 import {
   buildBatchConfirmationUpdateEmailContent,
-  defaultBatchConfirmationUpdateEmailMessage,
+  buildBatchConfirmationUpdateEmailDefaultBody,
   defaultBatchConfirmationUpdateEmailSubject,
 } from '../shift-batches/shift-batch-confirmation-update-email.template';
 import { ShiftBatchChangeHistoryService } from '../shift-batches/shift-batch-change-history.service';
@@ -45,9 +47,10 @@ const assignee = aliasedTable(staff, 'assignee');
 export type CentreEmailPreviewResponse = {
   recipient: { name: string; email: string } | null;
   subject: string;
-  message: string;
+  body: string;
   defaultSubject: string;
-  defaultMessage: string;
+  defaultBody: string;
+  segments: CentreEmailBodySegment[];
   html: string;
   text: string;
   pendingChangeRevision?: number;
@@ -63,7 +66,7 @@ export class CentreEmailPreviewService {
 
   resolveCustomContent(
     input: CentreEmailCustomContentInput | undefined,
-    defaults: { subject: string; message: string },
+    defaults: { subject: string; body: string },
   ) {
     return normalizeCentreEmailCustomContent(input, defaults);
   }
@@ -80,12 +83,21 @@ export class CentreEmailPreviewService {
         centreName: context.centreName,
         shiftDate: context.shiftDate,
       }),
-      message: defaultShiftAssignmentCentreEmailMessage(),
+      body: buildShiftAssignmentCentreEmailDefaultBody({
+        carerLegalName: context.carerLegalName,
+        roleNeeded: context.roleNeeded,
+        shiftDate: context.shiftDate,
+        startTime: context.startTime,
+        endTime: context.endTime,
+        shiftConfirmationNotes: context.shiftConfirmationNotes,
+        assignedStaffId: context.assignedStaffId,
+      }),
     };
     const resolved = this.resolveCustomContent(params.custom, defaults);
     const content = buildShiftAssignmentCentreEmailContent({
       centreName: context.centreName,
       carerLegalName: context.carerLegalName,
+      assignedStaffId: context.assignedStaffId,
       roleNeeded: context.roleNeeded,
       shiftDate: context.shiftDate,
       startTime: context.startTime,
@@ -93,18 +105,10 @@ export class CentreEmailPreviewService {
       shiftConfirmationNotes: context.shiftConfirmationNotes,
       documentShareUrl: CENTRE_EMAIL_DOCUMENT_SHARE_PREVIEW_HREF,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
       documentSharePreviewMode: true,
     });
-    return {
-      recipient,
-      subject: resolved.subject,
-      message: resolved.message,
-      defaultSubject: defaults.subject,
-      defaultMessage: defaults.message,
-      html: content.html,
-      text: content.text,
-    };
+    return this.buildPreviewResponse(recipient, resolved, defaults, content);
   }
 
   async previewShiftUpdateConfirmation(params: {
@@ -149,7 +153,11 @@ export class CentreEmailPreviewService {
     const recipient = await resolveCentrePrimaryContact(this.db, row.centreId);
     const defaults = {
       subject: defaultShiftUpdateCentreEmailSubject(row.centreName),
-      message: defaultShiftUpdateCentreEmailMessage(),
+      body: buildShiftUpdateCentreEmailDefaultBody({
+        centreName: row.centreName,
+        carerLegalName,
+        includedChanges: params.includedChanges,
+      }),
     };
     const resolved = this.resolveCustomContent(params.custom, defaults);
     const content = buildShiftUpdateCentreEmailContent({
@@ -157,17 +165,9 @@ export class CentreEmailPreviewService {
       carerLegalName,
       includedChanges: params.includedChanges,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
     });
-    return {
-      recipient,
-      subject: resolved.subject,
-      message: resolved.message,
-      defaultSubject: defaults.subject,
-      defaultMessage: defaults.message,
-      html: content.html,
-      text: content.text,
-    };
+    return this.buildPreviewResponse(recipient, resolved, defaults, content);
   }
 
   async previewBatchFinalConfirmation(params: {
@@ -179,9 +179,10 @@ export class CentreEmailPreviewService {
     const recipient = await resolveCentrePrimaryContact(this.db, batch.centreId);
     const defaults = {
       subject: defaultBatchConfirmationFinalEmailSubject(batch.centreName),
-      message: defaultBatchConfirmationFinalEmailMessage({
-        activeShiftCount: activeCount,
+      body: buildBatchConfirmationFinalEmailDefaultBody({
         centreName: batch.centreName,
+        activeShiftCount: activeCount,
+        assignments,
       }),
     };
     const resolved = this.resolveCustomContent(params.custom, defaults);
@@ -190,18 +191,10 @@ export class CentreEmailPreviewService {
       activeShiftCount: activeCount,
       assignments,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
       documentSharePreviewMode: true,
     });
-    return {
-      recipient,
-      subject: resolved.subject,
-      message: resolved.message,
-      defaultSubject: defaults.subject,
-      defaultMessage: defaults.message,
-      html: content.html,
-      text: content.text,
-    };
+    return this.buildPreviewResponse(recipient, resolved, defaults, content);
   }
 
   async previewBatchUpdateConfirmation(params: {
@@ -222,7 +215,11 @@ export class CentreEmailPreviewService {
     const recipient = await resolveCentrePrimaryContact(this.db, batch.centreId);
     const defaults = {
       subject: defaultBatchConfirmationUpdateEmailSubject(batch.centreName),
-      message: defaultBatchConfirmationUpdateEmailMessage(batch.centreName),
+      body: buildBatchConfirmationUpdateEmailDefaultBody({
+        centreName: batch.centreName,
+        highlightedChanges,
+        assignments,
+      }),
     };
     const resolved = this.resolveCustomContent(params.custom, defaults);
     const content = buildBatchConfirmationUpdateEmailContent({
@@ -230,17 +227,11 @@ export class CentreEmailPreviewService {
       highlightedChanges,
       assignments,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
       documentSharePreviewMode: true,
     });
     return {
-      recipient,
-      subject: resolved.subject,
-      message: resolved.message,
-      defaultSubject: defaults.subject,
-      defaultMessage: defaults.message,
-      html: content.html,
-      text: content.text,
+      ...this.buildPreviewResponse(recipient, resolved, defaults, content),
       pendingChangeRevision: batch.pendingChangeRevision,
     };
   }
@@ -249,7 +240,30 @@ export class CentreEmailPreviewService {
     if (!input) return undefined;
     return {
       subject: input.subject != null ? validateCentreEmailSubject(input.subject) : undefined,
-      message: input.message != null ? validateCentreEmailMessage(input.message) : undefined,
+      body:
+        input.body != null
+          ? validateCentreEmailBody(input.body)
+          : input.message != null
+            ? validateCentreEmailBody(input.message)
+            : undefined,
+    };
+  }
+
+  private buildPreviewResponse(
+    recipient: { name: string; email: string } | null,
+    resolved: ReturnType<typeof normalizeCentreEmailCustomContent>,
+    defaults: { subject: string; body: string },
+    content: { html: string; text: string },
+  ): CentreEmailPreviewResponse {
+    return {
+      recipient,
+      subject: resolved.subject,
+      body: resolved.body,
+      defaultSubject: defaults.subject,
+      defaultBody: defaults.body,
+      segments: splitCentreEmailBodySegments(resolved.body),
+      html: content.html,
+      text: content.text,
     };
   }
 
@@ -280,6 +294,7 @@ export class CentreEmailPreviewService {
     return {
       centreId: row.centreId,
       centreName: row.centreName,
+      assignedStaffId: staffId,
       shiftDate: String(row.shiftDate),
       startTime: String(row.startTime),
       endTime: String(row.endTime),
@@ -345,6 +360,7 @@ export class CentreEmailPreviewService {
         throw new BadRequestException('Batch has unfilled active shifts.');
       }
       return {
+        assignedStaffId: row.assignedStaffId,
         shiftDate: String(row.shiftDate),
         startTime: String(row.startTime),
         endTime: String(row.endTime),

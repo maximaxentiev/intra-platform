@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CentreEmailCustomContent, CentreEmailPreview } from "@/lib/centre-email-review";
+import { splitCentreEmailBodySegments } from "@/components/shifts/CentreEmailBodyEditor";
+import type {
+  CentreEmailBodySegment,
+  CentreEmailCustomContent,
+  CentreEmailPreview,
+} from "@/lib/centre-email-review";
 
 type UseCentreEmailReviewOptions = {
   open: boolean;
@@ -9,34 +14,30 @@ type UseCentreEmailReviewOptions = {
 export function useCentreEmailReview({ open, loadPreview }: UseCentreEmailReviewOptions) {
   const [preview, setPreview] = useState<CentreEmailPreview | null>(null);
   const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [body, setBody] = useState("");
+  const [segments, setSegments] = useState<CentreEmailBodySegment[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [staleError, setStaleError] = useState<string | null>(null);
-  const debounceRef = useRef<number | null>(null);
   const initialLoadRef = useRef(false);
 
-  const refreshPreview = useCallback(
-    async (next?: CentreEmailCustomContent) => {
-      setPreviewLoading(true);
-      setPreviewError(null);
-      try {
-        const result = await loadPreview(next);
-        setPreview(result);
-        if (!next?.subject && !next?.message) {
-          setSubject(result.subject);
-          setMessage(result.message);
-        }
-        return result;
-      } catch (error) {
-        setPreviewError(error instanceof Error ? error.message : "Could not load email preview.");
-        return null;
-      } finally {
-        setPreviewLoading(false);
-      }
-    },
-    [loadPreview],
-  );
+  const refreshPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const result = await loadPreview();
+      setPreview(result);
+      setSubject(result.subject);
+      setBody(result.body);
+      setSegments(result.segments.length > 0 ? result.segments : splitCentreEmailBodySegments(result.body));
+      return result;
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Could not load email preview.");
+      return null;
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [loadPreview]);
 
   useEffect(() => {
     if (!open) {
@@ -44,6 +45,9 @@ export function useCentreEmailReview({ open, loadPreview }: UseCentreEmailReview
       setPreview(null);
       setPreviewError(null);
       setStaleError(null);
+      setSubject("");
+      setBody("");
+      setSegments([]);
       return;
     }
     if (initialLoadRef.current) return;
@@ -51,28 +55,25 @@ export function useCentreEmailReview({ open, loadPreview }: UseCentreEmailReview
     void refreshPreview();
   }, [open, refreshPreview]);
 
-  useEffect(() => {
-    if (!open || !initialLoadRef.current) return;
-    if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => {
-      void refreshPreview({ subject, message });
-    }, 400);
-    return () => {
-      if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
-    };
-  }, [subject, message, open, refreshPreview]);
+  function handleBodyChange(next: { body: string; segments: CentreEmailBodySegment[] }) {
+    setBody(next.body);
+    setSegments(next.segments);
+  }
 
   return {
     preview,
     subject,
-    message,
+    body,
+    segments,
     setSubject,
-    setMessage,
+    setBody,
+    setSegments,
+    handleBodyChange,
     previewLoading,
     previewError,
     staleError,
     setStaleError,
     refreshPreview,
-    centreEmailPayload: { subject: subject.trim(), message },
+    centreEmailPayload: { subject: subject.trim(), body },
   };
 }

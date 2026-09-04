@@ -279,7 +279,7 @@ function ShiftDetail() {
   function buildUpdatePayload(
     communications?: ShiftUpdateCommunicationsPayload,
     assignmentResolution?: ShiftAssignmentResolution,
-    centreEmail?: { subject: string; message: string },
+    centreEmail?: { subject: string; body: string },
   ) {
     return {
       centreId: editVals.centreId,
@@ -328,7 +328,7 @@ function ShiftDetail() {
   async function performSave(
     communications?: ShiftUpdateCommunicationsPayload,
     assignmentResolution?: ShiftAssignmentResolution,
-    centreEmail?: { subject: string; message: string },
+    centreEmail?: { subject: string; body: string },
   ) {
     if (savingEdits) return;
     const resolution =
@@ -614,7 +614,7 @@ function ShiftDetail() {
 
   async function executeResend(
     recipients: { centre: boolean; carer: boolean },
-    centreEmail?: { subject: string; message: string },
+    centreEmail?: { subject: string; body: string },
   ) {
     if (resendingConfirmations) return;
     setResendingConfirmations(true);
@@ -952,9 +952,10 @@ function ShiftDetail() {
         previewLoading={assignCentreReview.previewLoading}
         previewError={assignCentreReview.previewError}
         subject={assignCentreReview.subject}
-        message={assignCentreReview.message}
+        body={assignCentreReview.body}
+        segments={assignCentreReview.segments}
         onSubjectChange={assignCentreReview.setSubject}
-        onMessageChange={assignCentreReview.setMessage}
+        onBodyChange={assignCentreReview.handleBodyChange}
         submitting={assigningStaffId != null}
         onBack={() => {
           setAssignCentreReviewOpen(false);
@@ -970,9 +971,10 @@ function ShiftDetail() {
         previewLoading={resendCentreReview.previewLoading}
         previewError={resendCentreReview.previewError}
         subject={resendCentreReview.subject}
-        message={resendCentreReview.message}
+        body={resendCentreReview.body}
+        segments={resendCentreReview.segments}
         onSubjectChange={resendCentreReview.setSubject}
-        onMessageChange={resendCentreReview.setMessage}
+        onBodyChange={resendCentreReview.handleBodyChange}
         submitting={resendingConfirmations}
         onBack={() => {
           setResendCentreReviewOpen(false);
@@ -1045,9 +1047,10 @@ function ShiftDetail() {
         previewLoading={updateCentreReview.previewLoading}
         previewError={updateCentreReview.previewError}
         subject={updateCentreReview.subject}
-        message={updateCentreReview.message}
+        body={updateCentreReview.body}
+        segments={updateCentreReview.segments}
         onSubjectChange={updateCentreReview.setSubject}
-        onMessageChange={updateCentreReview.setMessage}
+        onBodyChange={updateCentreReview.handleBodyChange}
         submitting={savingEdits}
         submitLabel="Save changes & send email"
         onBack={() => {

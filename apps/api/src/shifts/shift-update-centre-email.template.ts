@@ -1,4 +1,5 @@
-import { renderCentreEmailCustomMessageHtmlRows } from '../email/centre-email-custom-content.util';
+import { renderCentreEmailFromEditableBody } from '../email/centre-email-body.util';
+import { appendIntraEmailSignOffText } from '../email/platform-email-branding.util';
 import {
   escapeShiftAssignmentEmailHtml,
   wrapShiftAssignmentEmailHtml,
@@ -10,8 +11,22 @@ export function defaultShiftUpdateCentreEmailSubject(centreName: string) {
   return `Shift update — ${centreName}`;
 }
 
-export function defaultShiftUpdateCentreEmailMessage() {
-  return 'An upcoming Intra Shift has been updated.';
+export function buildShiftUpdateCentreEmailDefaultBody(params: {
+  centreName: string;
+  carerLegalName: string | null;
+  includedChanges: ShiftCommunicationChange[];
+}) {
+  const formatted = params.includedChanges.map((change) => formatChangeForUpdateEmail(change));
+  return [
+    'Shift update',
+    '',
+    'An upcoming Intra Shift has been updated.',
+    '',
+    params.carerLegalName ? `Assigned staff: ${params.carerLegalName}` : null,
+    ...formatted.map((item) => item.textLine),
+  ]
+    .filter((line): line is string => line != null && line.length > 0)
+    .join('\n');
 }
 
 export function buildShiftUpdateCentreEmailContent(params: {
@@ -19,44 +34,50 @@ export function buildShiftUpdateCentreEmailContent(params: {
   carerLegalName: string | null;
   includedChanges: ShiftCommunicationChange[];
   customSubject?: string;
-  customMessage?: string;
+  customBody?: string;
 }) {
-  const subject = params.customSubject ?? defaultShiftUpdateCentreEmailSubject(params.centreName);
-  const message = params.customMessage ?? defaultShiftUpdateCentreEmailMessage();
+  const defaultSubject = defaultShiftUpdateCentreEmailSubject(params.centreName);
+  const defaultBody = buildShiftUpdateCentreEmailDefaultBody(params);
+  const subject = params.customSubject ?? defaultSubject;
+  const body = params.customBody ?? defaultBody;
+  const customized = subject !== defaultSubject || body !== defaultBody;
+
+  if (customized) {
+    const rendered = renderCentreEmailFromEditableBody({
+      body,
+      documentLinks: new Map(),
+    });
+    return {
+      subject,
+      html: rendered.html,
+      text: rendered.text,
+      defaultSubject,
+      defaultBody,
+    };
+  }
+
   const formatted = params.includedChanges.map((change) => formatChangeForUpdateEmail(change));
-
-  const text = [
-    message.trim() || defaultShiftUpdateCentreEmailMessage(),
-    '',
-    params.carerLegalName ? `Assigned staff: ${params.carerLegalName}` : undefined,
-    ...formatted.map((item) => item.textLine),
-    '',
-    '— Intra',
-  ]
-    .filter(Boolean)
-    .join('\n');
-
   const changeHtml = formatted.map((item) => item.htmlBlock).join('');
-
   const assignedHtml = params.carerLegalName
     ? `<tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Assigned staff:</strong> ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}</td></tr>`
     : '';
 
-  const introHtml =
-    renderCentreEmailCustomMessageHtmlRows(message) ||
-    `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;">${escapeShiftAssignmentEmailHtml(defaultShiftUpdateCentreEmailMessage())}</td></tr>`;
-
   const html = wrapShiftAssignmentEmailHtml(`
         <tr><td style="font-size:18px;font-weight:600;color:#111;">Shift update</td></tr>
-        ${introHtml}
+        <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;">An upcoming Intra Shift has been updated.</td></tr>
         ${assignedHtml}
         ${changeHtml}`);
 
-  return {
-    subject,
-    html,
-    text,
-    defaultSubject: defaultShiftUpdateCentreEmailSubject(params.centreName),
-    defaultMessage: defaultShiftUpdateCentreEmailMessage(),
-  };
+  const text = appendIntraEmailSignOffText(
+    [
+      'An upcoming Intra Shift has been updated.',
+      '',
+      params.carerLegalName ? `Assigned staff: ${params.carerLegalName}` : undefined,
+      ...formatted.map((item) => item.textLine),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  );
+
+  return { subject, html, text, defaultSubject, defaultBody };
 }

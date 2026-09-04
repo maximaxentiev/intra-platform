@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { escapeShiftAssignmentEmailHtml } from '../shifts/shift-assignment-notification.util';
 
 export const CENTRE_EMAIL_CUSTOM_SUBJECT_MAX = 200;
-export const CENTRE_EMAIL_CUSTOM_MESSAGE_MAX = 10_000;
+export const CENTRE_EMAIL_CUSTOM_BODY_MAX = 25_000;
 
 export const CENTRE_EMAIL_DOCUMENT_SHARE_PREVIEW_LABEL =
   'Secure document link will be included when this email is sent.';
@@ -12,27 +12,35 @@ export const CENTRE_EMAIL_DOCUMENT_SHARE_PREVIEW_HREF = 'https://intra.invalid/p
 
 export type CentreEmailCustomContentInput = {
   subject?: string | null;
+  /** Full editable Centre email body (plain text with internal secure-doc markers). */
+  body?: string | null;
+  /** @deprecated Legacy intro-only field; mapped to body when body is omitted. */
   message?: string | null;
 };
 
 export type ResolvedCentreEmailCustomContent = {
   subject: string;
-  message: string;
+  body: string;
   customized: boolean;
 };
 
 export function normalizeCentreEmailCustomContent(
   input: CentreEmailCustomContentInput | undefined,
-  defaults: { subject: string; message: string },
+  defaults: { subject: string; body: string },
 ): ResolvedCentreEmailCustomContent {
   const subjectProvided = input?.subject != null;
-  const messageProvided = input?.message != null;
+  const bodyProvided = input?.body != null || input?.message != null;
   const subject = subjectProvided ? validateCentreEmailSubject(input!.subject!) : defaults.subject;
-  const message = messageProvided ? validateCentreEmailMessage(input!.message!) : defaults.message;
+  const rawBody =
+    input?.body != null
+      ? input.body
+      : input?.message != null
+        ? input.message
+        : defaults.body;
+  const body = bodyProvided ? validateCentreEmailBody(rawBody!) : defaults.body;
   const customized =
-    (subjectProvided && subject !== defaults.subject) ||
-    (messageProvided && message !== defaults.message);
-  return { subject, message, customized };
+    (subjectProvided && subject !== defaults.subject) || (bodyProvided && body !== defaults.body);
+  return { subject, body, customized };
 }
 
 export function validateCentreEmailSubject(value: string): string {
@@ -48,14 +56,24 @@ export function validateCentreEmailSubject(value: string): string {
   return trimmed;
 }
 
-export function validateCentreEmailMessage(value: string): string {
+export function validateCentreEmailBody(value: string): string {
   const normalized = value.replace(/\r\n/g, '\n');
-  if (normalized.length > CENTRE_EMAIL_CUSTOM_MESSAGE_MAX) {
+  if (normalized.length > CENTRE_EMAIL_CUSTOM_BODY_MAX) {
     throw new BadRequestException(
-      `Centre email message must be at most ${CENTRE_EMAIL_CUSTOM_MESSAGE_MAX} characters.`,
+      `Centre email body must be at most ${CENTRE_EMAIL_CUSTOM_BODY_MAX} characters.`,
     );
   }
+  if (/<\s*\/?\s*(script|iframe|object|embed|link|meta|style|img|svg|form|input|button|textarea|select)\b/i.test(
+    normalized,
+  )) {
+    throw new BadRequestException('Centre email body cannot contain HTML markup.');
+  }
   return normalized;
+}
+
+/** @deprecated Use validateCentreEmailBody */
+export function validateCentreEmailMessage(value: string): string {
+  return validateCentreEmailBody(value);
 }
 
 export function renderCentreEmailCustomMessageHtml(message: string): string {

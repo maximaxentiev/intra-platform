@@ -8,6 +8,7 @@ describe('buildShiftAssignmentCentreEmailContent', () => {
   const base = {
     centreName: 'ABC Child Care Centre',
     carerLegalName: 'Jane Doe',
+    assignedStaffId: '11111111-1111-4111-8111-111111111111',
     roleNeeded: 'ECE' as string | null,
     shiftDate: '2026-08-25',
     startTime: '08:30:00',

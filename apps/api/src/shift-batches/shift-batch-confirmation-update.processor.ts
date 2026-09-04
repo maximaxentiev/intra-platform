@@ -27,7 +27,7 @@ import {
 } from './shift-batch-confirmation-final-email.template';
 import { buildBatchConfirmationUpdateEmailContent } from './shift-batch-confirmation-update-email.template';
 import {
-  defaultBatchConfirmationUpdateEmailMessage,
+  buildBatchConfirmationUpdateEmailDefaultBody,
   defaultBatchConfirmationUpdateEmailSubject,
 } from './shift-batch-confirmation-update-email.template';
 import {
@@ -164,6 +164,7 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
       }
 
       assignments.push({
+        assignedStaffId: row.assignedStaffId,
         shiftDate: String(row.shiftDate),
         startTime: String(row.startTime),
         endTime: String(row.endTime),
@@ -187,11 +188,18 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
     );
     const defaults = {
       subject: defaultBatchConfirmationUpdateEmailSubject(batch.centreName),
-      message: defaultBatchConfirmationUpdateEmailMessage(batch.centreName),
+      body: buildBatchConfirmationUpdateEmailDefaultBody({
+        centreName: batch.centreName,
+        highlightedChanges,
+        assignments,
+      }),
     };
     const resolved = normalizeCentreEmailCustomContent(
       customContent
-        ? { subject: customContent.customSubject, message: customContent.customMessage }
+        ? {
+            subject: customContent.customSubject,
+            body: customContent.customBody ?? customContent.customMessage,
+          }
         : undefined,
       defaults,
     );
@@ -201,7 +209,7 @@ export class BatchConfirmationUpdateCommunicationProcessor implements Communicat
       highlightedChanges,
       assignments,
       customSubject: resolved.subject,
-      customMessage: resolved.message,
+      customBody: resolved.body,
     });
 
     return {

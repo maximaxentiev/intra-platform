@@ -1,8 +1,13 @@
 import {
+  buildCentreEmailSecureDocMarker,
+  renderCentreEmailFromEditableBody,
+  validateCentreEmailSecureDocMarkers,
+} from '../email/centre-email-body.util';
+import {
   documentShareLabelForCentreEmailPreview,
   documentShareUrlForCentreEmailPreview,
-  renderCentreEmailCustomMessageHtmlRows,
 } from '../email/centre-email-custom-content.util';
+import { appendIntraEmailSignOffText } from '../email/platform-email-branding.util';
 import {
   escapeShiftAssignmentEmailHtml,
   wrapShiftAssignmentEmailHtml,
@@ -20,13 +25,36 @@ export function defaultShiftAssignmentCentreEmailSubject(params: {
   return `Staff confirmed for ${params.centreName} — ${dateLabel}`;
 }
 
-export function defaultShiftAssignmentCentreEmailMessage() {
-  return '';
+export function buildShiftAssignmentCentreEmailDefaultBody(params: {
+  carerLegalName: string;
+  roleNeeded: string | null;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  shiftConfirmationNotes: string;
+  assignedStaffId: string;
+}) {
+  const dateLabel = formatShiftAssignmentDateLabel(params.shiftDate);
+  const timeLabel = formatShiftAssignmentTimeRange(params.startTime, params.endTime);
+  const shiftNotesTrimmed = params.shiftConfirmationNotes.trim();
+  return [
+    'Staffing confirmation',
+    '',
+    `Carer: ${params.carerLegalName}`,
+    ...(params.roleNeeded != null ? [`Role: ${params.roleNeeded}`] : []),
+    `Date: ${dateLabel}`,
+    `Time: ${timeLabel}`,
+    ...(shiftNotesTrimmed.length > 0 ? ['', 'Shift Notes:', shiftNotesTrimmed] : []),
+    '',
+    `View ${params.carerLegalName}'s current approved documents:`,
+    buildCentreEmailSecureDocMarker(params.assignedStaffId),
+  ].join('\n');
 }
 
 export function buildShiftAssignmentCentreEmailContent(params: {
   centreName: string;
   carerLegalName: string;
+  assignedStaffId: string;
   roleNeeded: string | null;
   shiftDate: string;
   startTime: string;
@@ -34,45 +62,56 @@ export function buildShiftAssignmentCentreEmailContent(params: {
   shiftConfirmationNotes: string;
   documentShareUrl: string;
   customSubject?: string;
-  customMessage?: string;
+  customBody?: string;
   documentSharePreviewMode?: boolean;
 }) {
+  const defaultSubject = defaultShiftAssignmentCentreEmailSubject({
+    centreName: params.centreName,
+    shiftDate: params.shiftDate,
+  });
+  const defaultBody = buildShiftAssignmentCentreEmailDefaultBody({
+    carerLegalName: params.carerLegalName,
+    roleNeeded: params.roleNeeded,
+    shiftDate: params.shiftDate,
+    startTime: params.startTime,
+    endTime: params.endTime,
+    shiftConfirmationNotes: params.shiftConfirmationNotes,
+    assignedStaffId: params.assignedStaffId,
+  });
+  const subject = params.customSubject ?? defaultSubject;
+  const body = params.customBody ?? defaultBody;
+  const previewMode = params.documentSharePreviewMode === true;
+  const customized = subject !== defaultSubject || body !== defaultBody;
+
+  if (customized) {
+    validateCentreEmailSecureDocMarkers(body, [params.assignedStaffId]);
+    const rendered = renderCentreEmailFromEditableBody({
+      body,
+      previewMode,
+      documentLinks: new Map([
+        [
+          params.assignedStaffId,
+          { url: params.documentShareUrl, carerLegalName: params.carerLegalName },
+        ],
+      ]),
+    });
+    return {
+      subject,
+      html: rendered.html,
+      text: rendered.text,
+      defaultSubject,
+      defaultBody,
+    };
+  }
+
   const dateLabel = formatShiftAssignmentDateLabel(params.shiftDate);
   const timeLabel = formatShiftAssignmentTimeRange(params.startTime, params.endTime);
-  const subject =
-    params.customSubject ??
-    defaultShiftAssignmentCentreEmailSubject({ centreName: params.centreName, shiftDate: params.shiftDate });
-  const message = params.customMessage ?? defaultShiftAssignmentCentreEmailMessage();
-  const previewMode = params.documentSharePreviewMode === true;
   const documentShareUrl = documentShareUrlForCentreEmailPreview(
     params.documentShareUrl,
     previewMode,
   );
   const documentSharePreviewLabel = documentShareLabelForCentreEmailPreview(previewMode);
-
   const shiftNotesTrimmed = params.shiftConfirmationNotes.trim();
-  const shiftNotesText =
-    shiftNotesTrimmed.length > 0 ? ['', 'Shift Notes:', shiftNotesTrimmed] : [];
-
-  const roleLines =
-    params.roleNeeded != null
-      ? [`Role: ${params.roleNeeded}`, '']
-      : [];
-
-  const messageText = message.trim();
-  const text = [
-    'Staffing confirmation',
-    ...(messageText ? ['', messageText] : []),
-    '',
-    `Carer: ${params.carerLegalName}`,
-    ...roleLines,
-    `Date: ${dateLabel}`,
-    `Time: ${timeLabel}`,
-    ...shiftNotesText,
-    '',
-    `View ${params.carerLegalName}'s current approved documents:`,
-    documentSharePreviewLabel ?? params.documentShareUrl,
-  ].join('\n');
 
   const roleHtml =
     params.roleNeeded != null
@@ -84,14 +123,12 @@ export function buildShiftAssignmentCentreEmailContent(params: {
       ? `<tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Shift Notes:</strong><br/>${escapeShiftAssignmentEmailHtml(shiftNotesTrimmed).replace(/\n/g, '<br/>')}</td></tr>`
       : '';
 
-  const customMessageHtml = renderCentreEmailCustomMessageHtmlRows(message);
   const documentButtonLabel = documentSharePreviewLabel
     ? 'View approved documents (secure link included when sent)'
     : `View ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}&apos;s current approved documents`;
 
   const html = wrapShiftAssignmentEmailHtml(`
         <tr><td style="font-size:18px;font-weight:600;color:#111;">Staffing confirmation</td></tr>
-        ${customMessageHtml}
         <tr><td style="padding-top:16px;font-size:15px;line-height:1.5;color:#333;"><strong>Carer:</strong> ${escapeShiftAssignmentEmailHtml(params.carerLegalName)}</td></tr>
         ${roleHtml}
         <tr><td style="padding-top:12px;font-size:15px;line-height:1.5;color:#333;"><strong>Date:</strong> ${escapeShiftAssignmentEmailHtml(dateLabel)}</td></tr>
@@ -102,7 +139,22 @@ export function buildShiftAssignmentCentreEmailContent(params: {
         </td></tr>
         ${documentSharePreviewLabel ? `<tr><td style="padding-top:8px;font-size:13px;line-height:1.5;color:#666;text-align:center;">${escapeShiftAssignmentEmailHtml(documentSharePreviewLabel)}</td></tr>` : ''}`);
 
-  return { subject, html, text, defaultSubject: defaultShiftAssignmentCentreEmailSubject({ centreName: params.centreName, shiftDate: params.shiftDate }), defaultMessage: defaultShiftAssignmentCentreEmailMessage() };
+  const text = appendIntraEmailSignOffText(
+    [
+      'Staffing confirmation',
+      '',
+      `Carer: ${params.carerLegalName}`,
+      ...(params.roleNeeded != null ? [`Role: ${params.roleNeeded}`, ''] : []),
+      `Date: ${dateLabel}`,
+      `Time: ${timeLabel}`,
+      ...(shiftNotesTrimmed.length > 0 ? ['', 'Shift Notes:', shiftNotesTrimmed] : []),
+      '',
+      `View ${params.carerLegalName}'s current approved documents:`,
+      documentSharePreviewLabel ?? params.documentShareUrl,
+    ].join('\n'),
+  );
+
+  return { subject, html, text, defaultSubject, defaultBody };
 }
 
 /** Guard for template tests — centre email must not leak internal shift fields. */

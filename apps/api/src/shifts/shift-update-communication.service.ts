@@ -20,10 +20,8 @@ import { buildShiftUpdateUnassignCarerEmailContent } from './shift-update-unassi
 import { buildShiftUpdateUnassignCentreEmailContent } from './shift-update-unassign-centre-email.template';
 import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
 import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
-import {
-  defaultShiftUpdateCentreEmailMessage,
-  defaultShiftUpdateCentreEmailSubject,
-} from './shift-update-centre-email.template';
+import { buildShiftUpdateCentreEmailDefaultBody } from './shift-update-centre-email.template';
+import { defaultShiftUpdateCentreEmailSubject } from './shift-update-centre-email.template';
 import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
 import { centreDeferredRecipientResult } from './shift-communication-policy.util';
@@ -225,7 +223,11 @@ export class ShiftUpdateCommunicationService {
     const includedChanges = this.filterChanges(params.changes, params.include);
     const defaults = {
       subject: defaultShiftUpdateCentreEmailSubject(params.context.centreName),
-      message: defaultShiftUpdateCentreEmailMessage(),
+      body: buildShiftUpdateCentreEmailDefaultBody({
+        centreName: params.context.centreName,
+        carerLegalName: params.context.carerLegalName,
+        includedChanges,
+      }),
     };
     const resolved = normalizeCentreEmailCustomContent(params.centreEmail, defaults);
     const content = params.assignmentUnassigned
@@ -238,7 +240,7 @@ export class ShiftUpdateCommunicationService {
           carerLegalName: params.context.carerLegalName,
           includedChanges,
           customSubject: resolved.subject,
-          customMessage: resolved.message,
+          customBody: resolved.body,
         });
 
     const recipientEmail = normalizeNotificationEmail(primaryEmail);

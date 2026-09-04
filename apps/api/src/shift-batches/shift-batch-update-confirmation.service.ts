@@ -30,12 +30,11 @@ import {
 } from './shift-batch-completion.types';
 import { computeBatchProgressCounts } from './shift-batch-progress.util';
 import type { CentreEmailCustomContentInput } from '../email/centre-email-custom-content.util';
-import { normalizeCentreEmailCustomContent } from '../email/centre-email-custom-content.util';
-import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 import {
-  defaultBatchConfirmationUpdateEmailMessage,
-  defaultBatchConfirmationUpdateEmailSubject,
-} from './shift-batch-confirmation-update-email.template';
+  validateCentreEmailBody,
+  validateCentreEmailSubject,
+} from '../email/centre-email-custom-content.util';
+import { centreEmailCustomAuditMetadata } from '../email/centre-email-audit.util';
 
 @Injectable()
 export class ShiftBatchUpdateConfirmationService {
@@ -149,10 +148,22 @@ export class ShiftBatchUpdateConfirmationService {
       .where(eq(shiftBatches.id, batchId))
       .limit(1);
     const centreName = centreMetaRows[0]?.centreName ?? 'Centre';
-    const resolvedCentreEmail = normalizeCentreEmailCustomContent(centreEmailInput, {
-      subject: defaultBatchConfirmationUpdateEmailSubject(centreName),
-      message: defaultBatchConfirmationUpdateEmailMessage(centreName),
-    });
+    const resolvedCentreEmail = centreEmailInput
+      ? {
+          subject:
+            centreEmailInput.subject != null
+              ? validateCentreEmailSubject(centreEmailInput.subject)
+              : undefined,
+          body:
+            centreEmailInput.body != null
+              ? validateCentreEmailBody(centreEmailInput.body)
+              : centreEmailInput.message != null
+                ? validateCentreEmailBody(centreEmailInput.message)
+                : undefined,
+        }
+      : undefined;
+    const centreEmailCustomized =
+      resolvedCentreEmail?.subject != null || resolvedCentreEmail?.body != null;
 
     const scheduledId = await this.db.transaction(async (tx) => {
       const batchRows = await tx
@@ -261,13 +272,7 @@ export class ShiftBatchUpdateConfirmationService {
             highlightedChanges,
             scheduledCommunicationId: scheduled.id,
             recipientEmail: primary.email,
-            ...centreEmailCustomAuditMetadata(
-              {
-                subject: resolvedCentreEmail.subject,
-                message: resolvedCentreEmail.message,
-              },
-              resolvedCentreEmail.customized,
-            ),
+            ...centreEmailCustomAuditMetadata(resolvedCentreEmail, centreEmailCustomized),
           },
         },
         tx,
