@@ -140,18 +140,22 @@ export function CommunicationsNotesAndImportantTerminologyBody() {
       <h3>Review Centre Email</h3>
       <p>
         Supported Centre shift confirmation and update workflows let Ops review the Centre
-        recipient, edit <strong>Subject</strong> and <strong>Message</strong>, and preview the final
-        email structure before sending. There is no raw HTML editing.
+        recipient, edit <strong>Subject</strong>, and edit the full visible written email body before
+        sending. There is no raw HTML editing.
       </p>
-      <p>System-managed information remains locked in the preview, including:</p>
+      <p>Ops can edit all visible written email text in the draft, including shift or batch details,
+        Carer names, What Changed summaries, Shift Notes, and closing copy.</p>
+      <p>System-managed elements include:</p>
       <ul>
-        <li>Shift or Batch details</li>
-        <li>Carer legal names</li>
-        <li>What Changed summaries</li>
-        <li>Shift Notes</li>
-        <li>secure document sections</li>
-        <li>branding and sign-off</li>
+        <li>recipient (Centre primary contact)</li>
+        <li>Intra branding and layout</li>
+        <li>standard sign-off</li>
+        <li>secure document-link mechanics (links are injected when sent)</li>
       </ul>
+      <p>
+        <strong>Important:</strong> Email edits affect only the outgoing email. They do not update
+        Shift or Batch data in the platform.
+      </p>
 
       <h3>Which Centre emails support review and customisation</h3>
       <p>Review Centre Email currently applies to:</p>

@@ -94,9 +94,10 @@ export function EditOrCancelAShiftBody() {
       </p>
       <p>
         When Centre communication is selected on an individual shift, Ops next reviews{" "}
-        <strong>Review Centre Email</strong> before the update is sent. Subject and Message are
-        editable. <strong>What Changed</strong> and current shift details remain system-generated —
-        Ops cannot edit shift facts from the email review. To correct a fact, go back and edit the
+        <strong>Review Centre Email</strong> before the update is sent. The full visible email body
+        and Subject are editable, including <strong>What Changed</strong> and current shift-detail
+        wording shown in the draft. Edits affect the outgoing email only — they do not change the
+        underlying Shift. To correct authoritative shift facts in the platform, go back and edit the
         shift itself, then select <strong>Save changes &amp; send email</strong> from the review
         dialog.
       </p>

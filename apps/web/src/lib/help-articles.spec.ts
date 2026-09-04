@@ -293,12 +293,50 @@ describe("help article registry", () => {
       ["next two weeks", "manage-staff-profiles-and-availability"],
       ["review centre email", "assign-replace-or-unassign-a-carer"],
       ["customize email", "assign-replace-or-unassign-a-carer"],
+      ["full email", "assign-replace-or-unassign-a-carer"],
+      ["email body", "communications-notes-and-important-terminology"],
+      ["edit entire email", "communications-notes-and-important-terminology"],
       ["legal name", "communications-notes-and-important-terminology"],
       ["display name", "communications-notes-and-important-terminology"],
     ];
     for (const [query, slug] of cases) {
       expect(searchHelpArticles(query).some((a) => a.slug === slug)).toBe(true);
     }
+  });
+
+  it("documents full Centre email body editing in affected Help articles", () => {
+    const assign = readFileSync(
+      join(process.cwd(), "src/content/help/content/assign-replace-or-unassign-a-carer-body.tsx"),
+      "utf8",
+    );
+    const editShift = readFileSync(
+      join(process.cwd(), "src/content/help/content/edit-or-cancel-a-shift-body.tsx"),
+      "utf8",
+    );
+    const batch = readFileSync(
+      join(process.cwd(), "src/content/help/content/fill-complete-and-update-a-batch-request-body.tsx"),
+      "utf8",
+    );
+    const communications = readFileSync(
+      join(
+        process.cwd(),
+        "src/content/help/content/communications-notes-and-important-terminology-body.tsx",
+      ),
+      "utf8",
+    );
+
+    for (const source of [assign, editShift, batch, communications]) {
+      expect(source).toMatch(/full visible email body|full visible written email body/i);
+      expect(source).not.toMatch(/Subject and Message are editable/);
+      expect(source).not.toMatch(/Subject \+ Message editable/);
+    }
+
+    expect(assign).toContain("Changes affect this email only");
+    expect(editShift).toContain("Edits affect the outgoing email only");
+    expect(batch).toContain("do not modify the Batch or child Shift records");
+    expect(communications).toContain("Email edits affect only the outgoing email");
+    expect(communications).toContain("secure document-link mechanics");
+    expect(communications).toContain("cancellation or unassignment emails");
   });
 });
 

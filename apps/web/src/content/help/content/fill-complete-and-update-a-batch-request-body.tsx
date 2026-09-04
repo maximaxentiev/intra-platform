@@ -157,15 +157,17 @@ export function FillCompleteAndUpdateABatchRequestBody() {
         </li>
         <li>Select <strong>Continue to email review</strong>.</li>
         <li>
-          In <strong>Review Centre Email</strong>, review the read-only recipient, customise{" "}
-          <strong>Subject</strong> and <strong>Message</strong> if needed, review the rendered
-          preview, then select <strong>Complete Request &amp; send confirmation</strong>.
+          In <strong>Review Centre Email</strong>, review the read-only recipient, edit the full
+          visible email body and <strong>Subject</strong> if needed, then select{" "}
+          <strong>Complete Request &amp; send confirmation</strong>.
         </li>
       </ol>
 
       <p>
-        Active shift assignments, system-generated batch details, and secure document links remain
-        locked in the email preview. See{" "}
+        Ops may edit written shift and assignment wording in the draft. Changes affect this email
+        only — they do not modify the Batch or child Shift records. Secure document-link blocks
+        remain protected. If the Batch changes materially after the draft was generated, the platform
+        may require reviewing the email again before sending. See{" "}
         <HelpArticleLink slug="communications-notes-and-important-terminology">
           Communications, Notes &amp; Important Terminology
         </HelpArticleLink>{" "}
@@ -240,8 +242,8 @@ export function FillCompleteAndUpdateABatchRequestBody() {
         </li>
         <li>Select <strong>Continue to email review</strong>.</li>
         <li>
-          In <strong>Review Centre Email</strong>, customise <strong>Subject</strong> and{" "}
-          <strong>Message</strong>, review the rendered preview, then send the update.
+          In <strong>Review Centre Email</strong>, edit the full visible email body and{" "}
+          <strong>Subject</strong> if needed, then send the update.
         </li>
       </ol>
 
@@ -253,10 +255,11 @@ export function FillCompleteAndUpdateABatchRequestBody() {
 
       <p>
         The update email contains the selected change summaries plus all current active
-        assignments with up-to-date details and document links. <strong>What changed</strong> and
-        the current assignment list remain system-generated and cannot be edited from the email
-        editor. If the batch changes while you are reviewing and the send becomes stale, the
-        platform may ask you to refresh and review again before sending.
+        assignments with up-to-date details and document links. Ops may edit written{" "}
+        <strong>What changed</strong> and assignment wording in the draft. Email edits do not
+        change Batch or child Shift records. Secure document-link blocks remain protected. If the
+        batch changes while you are reviewing and the send becomes stale, the platform may ask you
+        to refresh and review again before sending.
       </p>
       <p>
         After a successful update, the batch returns to <strong>Completed</strong> and the new

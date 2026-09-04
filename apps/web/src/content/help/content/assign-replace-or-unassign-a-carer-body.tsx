@@ -90,22 +90,24 @@ export function AssignReplaceOrUnassignACarerBody() {
 
       <p>
         On an individual shift, when Centre communication applies, Ops next sees{" "}
-        <strong>Review Centre Email</strong> before the assignment is finalised. Customise{" "}
-        <strong>Subject</strong> and <strong>Message</strong> if needed, review the rendered email
-        preview, then select <strong>Send confirmation</strong>.
+        <strong>Review Centre Email</strong> before the assignment is finalised. Edit the full
+        visible email body and <strong>Subject</strong> as needed, then select{" "}
+        <strong>Send confirmation</strong>.
       </p>
 
       <HelpScreenshot
         src={SCREENSHOTS.reviewCentreEmail}
-        alt="Review Centre Email dialog with editable Subject and Message and rendered preview"
-        caption="Review Centre Email lets Ops customise Subject and Message before sending."
+        alt="Review Centre Email dialog with editable Subject and full email body"
+        caption="Review Centre Email lets Ops edit the full written email before sending."
       />
 
       <p>
-        In <strong>Review Centre Email</strong>, the Centre recipient is read-only. Shift details,
-        Carer legal names, Shift Notes, and the secure document section remain system-generated.
-        Closing or cancelling the email review before <strong>Send confirmation</strong> does not
-        complete the assignment and does not send a Centre email.
+        In <strong>Review Centre Email</strong>, the Centre recipient is read-only. Ops can edit
+        all visible written email text, including shift details, Carer names, Shift Notes, and
+        closing copy. Changes affect this email only — they do not modify the Shift in the platform.
+        Secure document-link blocks and Intra branding/sign-off remain system-managed. Closing or
+        cancelling the email review before <strong>Send confirmation</strong> does not complete the
+        assignment and does not send a Centre email.
       </p>
 
       <p>
@@ -268,10 +270,11 @@ export function AssignReplaceOrUnassignACarerBody() {
         Confirm <strong>Send confirmation communication?</strong>, then choose{" "}
         <strong>Centre</strong> and/or <strong>Carer</strong> under <strong>Choose recipients</strong>.
         When <strong>Centre</strong> is selected on an individual shift, Ops reviews the Centre
-        email in <strong>Review Centre Email</strong> before it is sent. Subject and Message may be
-        customised; the recipient and system-generated shift details remain locked. Carer-only
-        resend is unchanged. Resending does not change assignment state — it sends another copy of
-        the confirmation.
+        email in <strong>Review Centre Email</strong> before it is sent. The full visible email body
+        and Subject may be edited. Changes affect the email only and do not modify the Shift.
+        The recipient and secure document-link blocks remain system-managed. Carer-only resend is
+        unchanged. Resending does not change assignment state — it sends another copy of the
+        confirmation.
       </p>
       <p>
         On batch child shifts, only the carer can be selected. Centre resend is deferred with the

@@ -9,6 +9,7 @@ import { ensureFreshStaffDocumentShareUrlForCentreEmail } from '../staff-documen
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
 import { ShiftAssignmentNotificationsService } from './shift-assignment-notifications.service';
 import { ShiftCommunicationPolicyService } from './shift-communication-policy.service';
+import { buildCentreEmailSecureDocMarker } from '../email/centre-email-body.util';
 
 vi.mock('../staff-documents/staff-document-share-email.util', () => ({
   ensureFreshStaffDocumentShareUrlForCentreEmail: vi.fn(),
@@ -40,7 +41,7 @@ describe('ShiftAssignmentConfirmationService', () => {
 
     const contextRow = {
       shiftId: 'shift-1',
-      assignedStaffId: 'staff-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       shiftDate: '2026-08-25',
       startTime: '08:30:00',
       endTime: '16:30:00',
@@ -129,7 +130,7 @@ describe('ShiftAssignmentConfirmationService', () => {
   it('sends centre and carer confirmations and persists sent records', async () => {
     const result = await service.sendAssignmentConfirmations({
       shiftId: 'shift-1',
-      assignedStaffId: 'staff-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       actorUserId: 'ops-1',
       trigger: 'assign',
     });
@@ -150,7 +151,7 @@ describe('ShiftAssignmentConfirmationService', () => {
 
     const result = await service.sendAssignmentConfirmations({
       shiftId: 'shift-1',
-      assignedStaffId: 'staff-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       actorUserId: 'ops-1',
       trigger: 'assign',
     });
@@ -165,7 +166,7 @@ describe('ShiftAssignmentConfirmationService', () => {
 
     const availability = await service.resolveRecipientAvailability({
       shiftId: 'shift-1',
-      assignedStaffId: 'staff-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       actorUserId: 'ops-1',
     });
 
@@ -205,7 +206,7 @@ describe('ShiftAssignmentConfirmationService', () => {
                     where: vi.fn().mockResolvedValue([
                       {
                         shiftId: 'shift-1',
-                        assignedStaffId: 'staff-1',
+                        assignedStaffId: '11111111-1111-4111-8111-111111111111',
                         shiftDate: '2026-08-25',
                         startTime: '08:30:00',
                         endTime: '16:30:00',
@@ -246,7 +247,7 @@ describe('ShiftAssignmentConfirmationService', () => {
 
     const result = await service.sendAssignmentConfirmations({
       shiftId: 'shift-1',
-      assignedStaffId: 'staff-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
       actorUserId: 'ops-1',
       trigger: 'assign',
     });
@@ -256,5 +257,35 @@ describe('ShiftAssignmentConfirmationService', () => {
     expect(result.centre.attempted).toBe(false);
     expect(result.carer.sent).toBe(true);
     expect(transport.sent.filter((m) => m.to === 'centre@example.test')).toHaveLength(0);
+  });
+
+  it('sends one carer and one customized centre email when both recipients are selected', async () => {
+    const customBody = [
+      'COMBINED_CUSTOM_BODY centre wording',
+      buildCentreEmailSecureDocMarker('11111111-1111-4111-8111-111111111111'),
+    ].join('\n');
+
+    const result = await service.sendAssignmentConfirmations({
+      shiftId: 'shift-1',
+      assignedStaffId: '11111111-1111-4111-8111-111111111111',
+      actorUserId: 'ops-1',
+      trigger: 'assign',
+      recipients: { centre: true, carer: true },
+      centreEmail: {
+        subject: 'COMBINED_CUSTOM_SUBJECT',
+        body: customBody,
+      },
+    });
+
+    expect(result.centre.sent).toBe(true);
+    expect(result.carer.sent).toBe(true);
+    expect(transport.sent).toHaveLength(2);
+
+    const centreMessages = transport.sent.filter((m) => m.to === 'centre@example.test');
+    const carerMessages = transport.sent.filter((m) => m.to === 'carer@example.test');
+    expect(centreMessages).toHaveLength(1);
+    expect(carerMessages).toHaveLength(1);
+    expect(centreMessages[0]?.subject).toBe('COMBINED_CUSTOM_SUBJECT');
+    expect(centreMessages[0]?.text).toContain('COMBINED_CUSTOM_BODY centre wording');
   });
 });
