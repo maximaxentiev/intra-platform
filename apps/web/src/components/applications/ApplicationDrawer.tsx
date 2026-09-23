@@ -13,13 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ApplicationStatusBadge, Chips, Dash, FieldRow, YesNo } from "@/components/applications/primitives";
 import { DocumentCard } from "@/components/applications/documents";
+import { Button } from "@/components/ui/button";
 import {
   applicationsApi,
   asYesNo,
+  complianceDocumentsForDisplay,
   fmtDate,
   fmtDateTime,
   fullName,
   label as toLabel,
+  resumeDocument,
   roleLabel,
   type ApplicationActivityEvent,
   type ApplicationDocument,
@@ -255,14 +258,29 @@ export function ApplicationDrawer({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Documents
               </h3>
-              {row.documents.length ? (
+              <FieldRow label="Resume">
+                {resumeDocument(row.documents) ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0 text-sm font-normal"
+                    onClick={() => onOpenDoc(resumeDocument(row.documents)!)}
+                  >
+                    View
+                  </Button>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Not provided</span>
+                )}
+              </FieldRow>
+              {complianceDocumentsForDisplay(row.documents).length ? (
                 <div className="grid gap-2">
-                  {row.documents.map((d) => (
+                  {complianceDocumentsForDisplay(row.documents).map((d) => (
                     <DocumentCard key={d.id} doc={d} onOpen={onOpenDoc} />
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+                <p className="text-sm text-muted-foreground">No compliance documents uploaded.</p>
               )}
             </section>
 

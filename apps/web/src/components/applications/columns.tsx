@@ -7,10 +7,13 @@ import {
   fmtDate,
   fullName,
   label as toLabel,
+  complianceDocumentsForDisplay,
+  resumeDocument,
   type ApplicationDocument,
   type ApplicationRole,
   type ApplicationRow,
 } from "@/lib/applications";
+import { Button } from "@/components/ui/button";
 import type { ApplicationFilters } from "@/components/applications/ApplicationsFilters";
 
 export interface AppColumn {
@@ -130,11 +133,33 @@ const SHARED_AFTER: AppColumn[] = [
     cell: (r) => <Chips values={langList(r)} />,
   },
   {
+    key: "resume",
+    header: "Resume",
+    minWidth: 108,
+    cell: (r, ctx) => {
+      const resume = resumeDocument(r.documents);
+      if (!resume) return <Dash />;
+      return (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="h-auto px-0 text-sm font-normal"
+          onClick={() => ctx.openDoc(resume)}
+        >
+          View resume
+        </Button>
+      );
+    },
+  },
+  {
     key: "documents",
     header: "Documents",
     minWidth: 210,
-    sortValue: (r) => r.documents.length,
-    cell: (r, ctx) => <DocumentChips docs={r.documents} onOpen={ctx.openDoc} />,
+    sortValue: (r) => complianceDocumentsForDisplay(r.documents).length,
+    cell: (r, ctx) => (
+      <DocumentChips docs={complianceDocumentsForDisplay(r.documents)} onOpen={ctx.openDoc} />
+    ),
   },
 ];
 

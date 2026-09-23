@@ -12,6 +12,7 @@ describe("applications document labels", () => {
     expect(DOCUMENT_LABELS.ece_diploma).toBe("ECE Diploma");
     expect(DOCUMENT_LABELS.rece_proof).toBe("RECE Proof");
     expect(DOCUMENT_LABELS.qualification_certificate).toBe("Qualification Certificate");
+    expect(DOCUMENT_LABELS.resume).toBe("Resume");
   });
 
   it("provides short labels for document chips", () => {

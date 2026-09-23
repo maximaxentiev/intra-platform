@@ -103,11 +103,22 @@ function includeLegacyQualificationCertificate(status: string | undefined): bool
   return status === 'eca_canada' || status === 'ece_canada';
 }
 
+function resumeDocument(): NormalizedNetworkApplication['documents'][number] {
+  return {
+    id: randomUUID(),
+    category: 'resume',
+    originalFilename: 'resume.pdf',
+    contentType: 'application/pdf',
+    size: 2048,
+  };
+}
+
 function complianceDocuments(): NormalizedNetworkApplication['documents'] {
   const vscId = randomUUID();
   const cprId = randomUUID();
   const immId = randomUUID();
   return [
+    resumeDocument(),
     {
       id: vscId,
       category: 'vulnerable_sector_check',
@@ -156,8 +167,16 @@ export function documentMeta(
   category: NormalizedNetworkApplication['documents'][number]['category'],
   filename = 'doc.pdf',
 ): NormalizedNetworkApplication['documents'][number] {
-  const contentType =
-    filename.endsWith('.png') ? 'image/png' : 'application/pdf';
+  const lower = filename.toLowerCase();
+  const contentType = lower.endsWith('.png')
+    ? 'image/png'
+    : lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : lower.endsWith('.doc')
+        ? 'application/msword'
+        : lower.endsWith('.docx')
+          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          : 'application/pdf';
   return {
     id: randomUUID(),
     category,
@@ -197,7 +216,7 @@ export function matchedFilesFromPayload(payload: NormalizedNetworkApplication) {
     mimetype: doc.contentType,
     size: doc.size,
     buffer:
-      doc.contentType === 'image/png'
+      doc.contentType === 'image/png' || doc.contentType === 'image/jpeg'
         ? fakePngBuffer(doc.size)
         : fakePdfBuffer(doc.originalFilename, doc.size),
   })) as Express.Multer.File[];

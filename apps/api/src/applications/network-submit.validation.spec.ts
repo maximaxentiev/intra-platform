@@ -30,7 +30,8 @@ describe('network submit validation', () => {
     const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
     expect(parsed.role).toBe('ECA');
     expect(parsed.applicant.email).toContain('@example.test');
-    expect(parsed.documents).toHaveLength(4);
+    expect(parsed.documents).toHaveLength(5);
+    expect(parsed.documents.filter((d) => d.category === 'resume')).toHaveLength(1);
   });
 
   it('parses a valid ECE/RECE payload', () => {
@@ -333,5 +334,110 @@ describe('network submit buffers', () => {
   it('creates fake pdf buffers of requested size', () => {
     const buf = fakePdfBuffer('test', 256);
     expect(buf.byteLength).toBe(256);
+  });
+});
+
+describe('network submit resume documents', () => {
+  for (const role of ['ECA', 'ECE/RECE', 'Nanny'] as const) {
+    it(`accepts ${role} with exactly one resume`, () => {
+      const payload = buildEcaApplicationJson({ role });
+      const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+      expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+      expect(parsed.documents.filter((d) => d.category === 'resume')).toHaveLength(1);
+    });
+  }
+
+  it('rejects missing resume', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.filter((d) => d.category !== 'resume');
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(() => assertRequiredDocumentsPresent(parsed)).toThrow(/Exactly one resume/i);
+  });
+
+  it('rejects multiple resume documents', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents.push(documentMeta('resume', 'second-resume.pdf'));
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(() => assertRequiredDocumentsPresent(parsed)).toThrow(/Only one resume/i);
+  });
+
+  for (const [filename, contentType] of [
+    ['resume.pdf', 'application/pdf'],
+    ['resume.doc', 'application/msword'],
+    ['resume.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    ['resume.png', 'image/png'],
+    ['resume.jpg', 'image/jpeg'],
+    ['resume.jpeg', 'image/jpeg'],
+  ] as const) {
+    it(`accepts resume file type ${filename}`, () => {
+      const payload = buildEcaApplicationJson();
+      payload.documents = payload.documents.map((d) =>
+        d.category === 'resume'
+          ? { ...d, originalFilename: filename, contentType, size: 2048 }
+          : d,
+      );
+      const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+      const resume = parsed.documents.find((d) => d.category === 'resume');
+      expect(resume?.contentType).toBe(contentType);
+      expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+    });
+  }
+
+  it('accepts resume metadata with application/octet-stream when extension is allowed', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.map((d) =>
+      d.category === 'resume'
+        ? { ...d, originalFilename: 'resume.pdf', contentType: 'application/octet-stream', size: 2048 }
+        : d,
+    );
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.find((d) => d.category === 'resume')?.contentType).toBe('application/pdf');
+    const files = matchedFilesFromPayload(parsed);
+    const resumeMeta = parsed.documents.find((d) => d.category === 'resume')!;
+    const resumeFile = files.find((f) => f.fieldname === `doc_${resumeMeta.id}`);
+    expect(resumeFile).toBeTruthy();
+    resumeFile!.mimetype = 'application/octet-stream';
+    expect(() => matchSubmitFiles(parsed.documents, files)).not.toThrow();
+  });
+
+  it('rejects unsupported resume extension', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.map((d) =>
+      d.category === 'resume' ? { ...d, originalFilename: 'resume.exe', contentType: 'application/pdf' } : d,
+    );
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('rejects resume larger than 10 MB', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.map((d) =>
+      d.category === 'resume' ? { ...d, size: NETWORK_SUBMIT_MAX_FILE_BYTES + 1 } : d,
+    );
+    expect(() => parseNetworkApplicationJson(JSON.stringify(payload))).toThrow(BadRequestException);
+  });
+
+  it('accepts resume exactly 10 MB', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.map((d) =>
+      d.category === 'resume' ? { ...d, size: NETWORK_SUBMIT_MAX_FILE_BYTES } : d,
+    );
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.find((d) => d.category === 'resume')?.size).toBe(NETWORK_SUBMIT_MAX_FILE_BYTES);
+  });
+
+  it('does not treat resume as a qualification document', () => {
+    const payload = buildEcaApplicationJson({ role: 'ECA', qualificationStatus: null });
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.some((d) => d.category === 'resume')).toBe(true);
+    expect(parsed.documents.some((d) => d.category === 'eca_diploma')).toBe(false);
+    expect(() => assertRequiredDocumentsPresent(parsed)).not.toThrow();
+  });
+
+  it('allows legacy parsed payloads without resume for read paths only', () => {
+    const payload = buildEcaApplicationJson();
+    payload.documents = payload.documents.filter((d) => d.category !== 'resume');
+    const parsed = parseNetworkApplicationJson(JSON.stringify(payload));
+    expect(parsed.documents.some((d) => d.category === 'resume')).toBe(false);
+    expect(() => assertRequiredDocumentsPresent(parsed)).toThrow(BadRequestException);
   });
 });

@@ -13,6 +13,8 @@ const webRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (rel: string) => readFileSync(join(webRoot, rel), "utf8");
 
 const applicationsPage = read("routes/_authenticated/applications.tsx");
+const columnsSource = read("components/applications/columns.tsx");
+const documentContent = read("lib/application-document-content.ts");
 const applicationActions = read("components/applications/ApplicationActions.tsx");
 const applicationDrawer = read("components/applications/ApplicationDrawer.tsx");
 const filtersPanel = read("components/applications/ApplicationsFilters.tsx");
@@ -66,6 +68,15 @@ describe("applications table columns", () => {
       const keys = columnKeys(role);
       expect(keys).toContain("covid");
       expect(keys).toContain("documents");
+      expect(keys).toContain("resume");
+    }
+  });
+
+  it("places Resume before Documents in every role tab", () => {
+    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+      const keys = columnKeys(role);
+      expect(keys.indexOf("resume")).toBeGreaterThan(-1);
+      expect(keys.indexOf("resume")).toBeLessThan(keys.indexOf("documents"));
     }
   });
 
@@ -136,6 +147,12 @@ describe("applications filter panel layout (R12)", () => {
 });
 
 describe("application drawer regression", () => {
+  it("exposes resume in the drawer documents section", () => {
+    expect(applicationDrawer).toContain('label="Resume"');
+    expect(applicationDrawer).toContain("resumeDocument(row.documents)");
+    expect(applicationDrawer).toContain("Not provided");
+  });
+
   it("still exposes full compliance documents in the drawer", () => {
     expect(applicationDrawer).toContain('title="Compliance"');
     expect(applicationDrawer).toContain('label="Vulnerable sector check"');
@@ -149,6 +166,25 @@ describe("application drawer regression", () => {
     expect(applicationDrawer).toContain('label="Qualification status"');
     expect(applicationDrawer).toContain("row.roleSpecific.qualificationStatus");
     expect(applicationDrawer).toContain("row.eligibility.gtaEligible");
+  });
+});
+
+describe("applications resume column rendering", () => {
+  it("uses secure document access rather than public storage URLs", () => {
+    expect(columnsSource).toContain("openDoc(resume)");
+    expect(columnsSource).not.toMatch(/storage\.googleapis|s3\.amazonaws|public\/applications/);
+    expect(documentContent).toContain("/applications/");
+    expect(documentContent).toContain("/content");
+    expect(documentContent).toContain('credentials: "include"');
+    expect(applicationsPage).not.toMatch(/storage\.googleapis|s3\.amazonaws/);
+  });
+
+  it("shows View resume action wiring for applicants with a resume document", () => {
+    const resumeCol = columnsForRole("eca").find((c) => c.key === "resume");
+    expect(resumeCol?.header).toBe("Resume");
+    expect(columnsSource).toContain("View resume");
+    expect(columnsSource).toContain("resumeDocument(r.documents)");
+    expect(columnsSource).toContain("<Dash />");
   });
 });
 

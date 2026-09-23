@@ -13,6 +13,9 @@ import {
   type PublicRoleValue,
   isDocumentCategoryAllowedForRole,
   qualificationStatusRequiresCertificate,
+  resolveSubmitContentType,
+  RESUME_DOCUMENT_CATEGORY,
+  RESUME_MAX_FILE_BYTES,
 } from './network-submit.constants';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -316,20 +319,25 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
       throw new BadRequestException(`documents[${index}].category is invalid.`);
     }
     const originalFilename = reqString(row, 'originalFilename', `documents[${index}].originalFilename`);
-    const contentType = reqString(row, 'contentType', `documents[${index}].contentType`).toLowerCase();
+    const contentTypeRaw = reqString(row, 'contentType', `documents[${index}].contentType`);
     const size = row.size;
     if (typeof size !== 'number' || !Number.isInteger(size) || size <= 0) {
       throw new BadRequestException(`documents[${index}].size must be a positive integer.`);
     }
-    if (size > NETWORK_SUBMIT_MAX_FILE_BYTES) {
+    const maxBytes =
+      categoryRaw === RESUME_DOCUMENT_CATEGORY ? RESUME_MAX_FILE_BYTES : NETWORK_SUBMIT_MAX_FILE_BYTES;
+    if (size > maxBytes) {
       throw new BadRequestException(`documents[${index}] exceeds max file size.`);
-    }
-    if (!ALLOWED_SUBMIT_MIME_TYPES.has(contentType)) {
-      throw new BadRequestException(`documents[${index}] has a disallowed content type.`);
     }
     const ext = extensionOf(originalFilename);
     if (!ALLOWED_SUBMIT_EXTENSIONS.has(ext)) {
       throw new BadRequestException(`documents[${index}] has a disallowed file extension.`);
+    }
+    let contentType: string;
+    try {
+      contentType = resolveSubmitContentType(contentTypeRaw, originalFilename);
+    } catch {
+      throw new BadRequestException(`documents[${index}] has a disallowed content type.`);
     }
     return {
       id,
@@ -437,12 +445,14 @@ export function matchSubmitFiles(
     if (file.size !== meta.size) {
       throw new BadRequestException(`Document ${meta.id} size does not match metadata.`);
     }
-    const mime = (file.mimetype || '').toLowerCase();
-    if (mime !== meta.contentType) {
-      throw new BadRequestException(`Document ${meta.id} content type does not match metadata.`);
-    }
-    if (!ALLOWED_SUBMIT_MIME_TYPES.has(mime)) {
+    let resolvedMime: string;
+    try {
+      resolvedMime = resolveSubmitContentType(file.mimetype || '', meta.originalFilename);
+    } catch {
       throw new BadRequestException(`Document ${meta.id} has a disallowed content type.`);
+    }
+    if (resolvedMime !== meta.contentType) {
+      throw new BadRequestException(`Document ${meta.id} content type does not match metadata.`);
     }
     return { meta, buffer: file.buffer, fieldName };
   });
@@ -471,6 +481,7 @@ export function requiredDocumentCategories(
   payload: NormalizedNetworkApplication,
 ): DocumentCategoryValue[] {
   const required: DocumentCategoryValue[] = [
+    RESUME_DOCUMENT_CATEGORY,
     'vulnerable_sector_check',
     'first_aid_cpr',
     'immunization_records',
@@ -487,6 +498,14 @@ export function requiredDocumentCategories(
 }
 
 export function assertRequiredDocumentsPresent(payload: NormalizedNetworkApplication): void {
+  const resumeDocuments = payload.documents.filter((d) => d.category === RESUME_DOCUMENT_CATEGORY);
+  if (resumeDocuments.length === 0) {
+    throw new BadRequestException('Exactly one resume document is required.');
+  }
+  if (resumeDocuments.length > 1) {
+    throw new BadRequestException('Only one resume document is allowed.');
+  }
+
   const present = new Set(payload.documents.map((d) => d.category));
   for (const category of requiredDocumentCategories(payload)) {
     if (!present.has(category)) {

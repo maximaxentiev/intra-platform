@@ -34,13 +34,60 @@ export const DOCUMENT_CATEGORY_VALUES = [
   'eca_diploma',
   'ece_diploma',
   'rece_proof',
+  'resume',
   'vulnerable_sector_check',
   'first_aid_cpr',
   'immunization_records',
   'covid19_vaccination',
 ] as const;
 
+const SUBMIT_EXTENSION_TO_MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+function extensionOf(filename: string): string {
+  const idx = filename.lastIndexOf('.');
+  return idx >= 0 ? filename.slice(idx).toLowerCase() : '';
+}
+
+/** Normalize declared or inferred MIME for public application uploads. */
+export function resolveSubmitContentType(contentType: string, originalFilename: string): string {
+  const normalized = contentType.trim().toLowerCase();
+  const canonical =
+    normalized === 'image/jpg'
+      ? 'image/jpeg'
+      : normalized;
+  if (canonical && canonical !== 'application/octet-stream' && ALLOWED_SUBMIT_MIME_TYPES.has(canonical)) {
+    return canonical;
+  }
+  const ext = extensionOf(originalFilename);
+  const inferred = SUBMIT_EXTENSION_TO_MIME[ext];
+  if (!inferred || !ALLOWED_SUBMIT_EXTENSIONS.has(ext)) {
+    throw new Error('disallowed content type');
+  }
+  return inferred;
+}
+
+export function isResolvableSubmitContentType(contentType: string, originalFilename: string): boolean {
+  try {
+    resolveSubmitContentType(contentType, originalFilename);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type DocumentCategoryValue = (typeof DOCUMENT_CATEGORY_VALUES)[number];
+
+export const RESUME_DOCUMENT_CATEGORY = 'resume' as const satisfies DocumentCategoryValue;
+
+/** Resume uploads are capped at 10 MB (same as generic per-file limit). */
+export const RESUME_MAX_FILE_BYTES = NETWORK_SUBMIT_MAX_FILE_BYTES;
 
 /** Structured qualification uploads aligned with staff document types (optional at intake). */
 export const STRUCTURED_QUALIFICATION_CATEGORIES = [

@@ -52,6 +52,7 @@ export const applicationDocumentCategory = pgEnum('application_document_category
   'eca_diploma',
   'ece_diploma',
   'rece_proof',
+  'resume',
   'vulnerable_sector_check',
   'first_aid_cpr',
   'immunization_records',

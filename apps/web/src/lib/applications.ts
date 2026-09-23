@@ -13,6 +13,7 @@ export type DocumentCategory =
   | "eca_diploma"
   | "ece_diploma"
   | "rece_proof"
+  | "resume"
   | "vulnerable_sector_check"
   | "first_aid_cpr"
   | "immunization_records"
@@ -181,6 +182,7 @@ export const DOCUMENT_LABELS: Record<DocumentCategory, string> = {
   eca_diploma: "ECA Diploma",
   ece_diploma: "ECE Diploma",
   rece_proof: "RECE Proof",
+  resume: "Resume",
   training_proof: "Nanny Training Proof",
   covid19_vaccination: "COVID-19 Vaccination Proof",
 };
@@ -193,9 +195,18 @@ export const DOCUMENT_SHORT_LABELS: Record<DocumentCategory, string> = {
   eca_diploma: "ECA Diploma",
   ece_diploma: "ECE Diploma",
   rece_proof: "RECE Proof",
+  resume: "Resume",
   training_proof: "Training",
   covid19_vaccination: "COVID-19",
 };
+
+export function resumeDocument(documents: ApplicationDocument[]): ApplicationDocument | undefined {
+  return documents.find((doc) => doc.category === "resume");
+}
+
+export function complianceDocumentsForDisplay(documents: ApplicationDocument[]): ApplicationDocument[] {
+  return documents.filter((doc) => doc.category !== "resume");
+}
 
 /** Known coded answers → human labels. Unknown codes fall back to humanize(). */
 const VALUE_LABELS: Record<string, string> = {
