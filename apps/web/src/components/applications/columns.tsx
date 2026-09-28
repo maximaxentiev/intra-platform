@@ -9,10 +9,17 @@ import {
   label as toLabel,
   complianceDocumentsForDisplay,
   resumeDocument,
+  vscDocumentsForDisplay,
   type ApplicationDocument,
   type ApplicationRole,
   type ApplicationRow,
 } from "@/lib/applications";
+import {
+  displayNannyBool,
+  displayNannyText,
+  displaySpokenEnglish,
+  nannyView,
+} from "@/lib/applications-nanny-display";
 import { Button } from "@/components/ui/button";
 import type { ApplicationFilters } from "@/components/applications/ApplicationsFilters";
 
@@ -78,25 +85,89 @@ const SHARED_BEFORE: AppColumn[] = [
   },
 ];
 
-const NANNY_ONLY: AppColumn[] = [
+const nannyCell =
+  (pick: (n: NonNullable<ReturnType<typeof nannyView>>) => string | null | undefined | boolean | number | string[]) =>
+  (r: ApplicationRow) => {
+    const n = nannyView(r);
+    if (!n) return <Dash />;
+    const v = pick(n);
+    if (Array.isArray(v)) return <Chips values={v.map((x) => toLabel(String(x)))} />;
+    if (typeof v === "boolean") return <span className="text-sm">{displayNannyBool(v)}</span>;
+    if (typeof v === "number") return <span className="text-sm">{Number.isFinite(v) ? v : "—"}</span>;
+    return <Trunc value={displayNannyText(typeof v === "string" ? v : null)} className="text-sm" />;
+  };
+
+const NANNY_COLUMNS: AppColumn[] = [
+  { key: "firstName", header: "First Name", minWidth: 120, sortValue: (r) => r.applicant.firstName, cell: (r) => <Trunc value={r.applicant.firstName} className="text-sm" /> },
+  { key: "lastName", header: "Last Name", minWidth: 120, sortValue: (r) => r.applicant.lastName, cell: (r) => <Trunc value={r.applicant.lastName} className="text-sm" /> },
+  { key: "preferredName", header: "Preferred Name", minWidth: 140, cell: (r) => <Trunc value={displayNannyText(nannyView(r)?.applicant.preferredName ?? r.applicant.preferredName ?? null)} className="text-sm" /> },
+  { key: "email", header: "Email Address", minWidth: 210, sortValue: (r) => r.applicant.email.toLowerCase(), cell: (r) => <Trunc value={r.applicant.email} className="text-sm" /> },
+  { key: "phone", header: "Phone Number", minWidth: 140, sortValue: (r) => r.applicant.phone, cell: (r) => <Trunc value={r.applicant.phone} className="text-sm tabular-nums" /> },
+  { key: "city", header: "City", minWidth: 130, cell: (r) => <Trunc value={displayNannyText(nannyView(r)?.applicant.city ?? r.applicant.city ?? null)} className="text-sm" /> },
+  { key: "postalCode", header: "Postal Code", minWidth: 110, cell: (r) => <Trunc value={displayNannyText(nannyView(r)?.applicant.postalCode ?? r.applicant.postalCode ?? null)} className="text-sm" /> },
+  { key: "gender", header: "Gender", minWidth: 110, cell: (r) => <Trunc value={displayNannyText(r.applicant.gender)} className="text-sm" /> },
+  { key: "gtaCommute", header: "GTA Commute", minWidth: 120, cell: nannyCell((n) => n.eligibility.canCommuteGta) },
+  { key: "canadaStatus", header: "Canada Status", minWidth: 170, cell: nannyCell((n) => n.eligibility.canadaStatus) },
+  { key: "legalWork", header: "Legally Authorized to Work", minWidth: 190, cell: nannyCell((n) => n.eligibility.legallyAuthorizedToWork) },
+  { key: "workPermitExpiry", header: "Work Permit Expiry", minWidth: 150, cell: (r) => <span className="text-sm whitespace-nowrap">{nannyView(r)?.eligibility.workPermitExpiry ? fmtDate(nannyView(r)!.eligibility.workPermitExpiry) : "—"}</span> },
+  { key: "workPermitChildcare", header: "Work Permit Childcare Restrictions", minWidth: 220, cell: nannyCell((n) => n.eligibility.workPermitChildcareRestrictions) },
+  { key: "offCampus", header: "Authorized Off Campus", minWidth: 170, cell: nannyCell((n) => n.eligibility.authorizedOffCampus) },
+  { key: "workHourLimits", header: "Work Hour Limits", minWidth: 140, cell: nannyCell((n) => n.eligibility.workHourLimitStatus) },
+  { key: "maxWeeklyHours", header: "Maximum Weekly Hours", minWidth: 170, cell: nannyCell((n) => n.eligibility.maxWeeklyWorkHours) },
+  { key: "prevExperience", header: "Previous Childcare Experience", minWidth: 210, cell: nannyCell((n) => n.experience.hasChildcareExperience) },
+  { key: "experienceYears", header: "Years of Childcare Experience", minWidth: 210, cell: nannyCell((n) => n.experience.years) },
+  { key: "experienceTypes", header: "Types of Childcare Experience", minWidth: 220, cell: (r) => <Chips values={(nannyView(r)?.experience.types ?? r.experience.nannyExperienceTypes).map(toLabel)} /> },
+  { key: "ageGroups", header: "Age Groups", minWidth: 200, cell: (r) => <Chips values={(nannyView(r)?.experience.ageGroups ?? []).map(toLabel)} /> },
+  { key: "specialExperience", header: "Special Childcare Experience", minWidth: 220, cell: (r) => <Chips values={(nannyView(r)?.experience.specialExperienceTypes ?? []).map(toLabel)} /> },
+  { key: "specialDetails", header: "Specialized Experience Details", minWidth: 220, cell: (r) => <Trunc value={displayNannyText(nannyView(r)?.experience.specialExperienceDescription)} className="text-sm" /> },
+  { key: "education", header: "Education / Certifications", minWidth: 210, cell: (r) => <Chips values={(nannyView(r)?.qualifications.educationCertifications ?? []).map(toLabel)} /> },
+  { key: "programName", header: "Program / Certification Name", minWidth: 210, cell: nannyCell((n) => n.qualifications.educationProgramName) },
+  { key: "firstAid", header: "First Aid & CPR", minWidth: 150, cell: nannyCell((n) => n.compliance.firstAidStatus) },
+  { key: "firstAidExpiry", header: "First Aid Expiry", minWidth: 130, cell: (r) => <span className="text-sm whitespace-nowrap">{nannyView(r)?.compliance.firstAidExpiry ? fmtDate(nannyView(r)!.compliance.firstAidExpiry) : "—"}</span> },
+  { key: "vscStatus", header: "VSC Status", minWidth: 150, cell: nannyCell((n) => n.compliance.vscStatus) },
+  { key: "vscIssueDate", header: "VSC Issue Date", minWidth: 130, cell: (r) => <span className="text-sm whitespace-nowrap">{nannyView(r)?.compliance.vscIssueDate ? fmtDate(nannyView(r)!.compliance.vscIssueDate) : "—"}</span> },
   {
-    key: "experienceTypes",
-    header: "Experience Types",
-    minWidth: 200,
-    cell: (r) => <Chips values={r.experience.nannyExperienceTypes.map(toLabel)} />,
+    key: "vscDocument",
+    header: "VSC Document",
+    minWidth: 130,
+    cell: (r, ctx) => {
+      const docs = vscDocumentsForDisplay(r.documents);
+      if (!docs.length) return <Dash />;
+      if (docs.length === 1) {
+        return (
+          <Button type="button" variant="link" size="sm" className="h-auto px-0 text-sm font-normal" onClick={() => ctx.openDoc(docs[0]!)}>
+            View
+          </Button>
+        );
+      }
+      return (
+        <Button type="button" variant="link" size="sm" className="h-auto px-0 text-sm font-normal" onClick={() => ctx.openDoc(docs[0]!)}>
+          View documents
+        </Button>
+      );
+    },
+  },
+  { key: "spokenEnglish", header: "Spoken English", minWidth: 130, cell: (r) => <span className="text-sm">{displaySpokenEnglish(r)}</span> },
+  {
+    key: "submitted",
+    header: "Submitted",
+    minWidth: 120,
+    sortValue: (r) => r.submittedAt ?? "",
+    cell: (r) => <span className="text-sm whitespace-nowrap">{fmtDate(r.submittedAt)}</span>,
   },
   {
-    key: "trainingCompleted",
-    header: "Training Completed",
-    minWidth: 155,
-    sortValue: (r) => (r.roleSpecific.nannyTrainingCompleted ? 1 : 0),
-    cell: (r) => <YesNo value={r.roleSpecific.nannyTrainingCompleted} />,
-  },
-  {
-    key: "trainingDescription",
-    header: "Training Description",
-    minWidth: 220,
-    cell: (r) => <Trunc value={r.roleSpecific.nannyTrainingDescription} className="text-sm" />,
+    key: "resume",
+    header: "Resume",
+    minWidth: 108,
+    cell: (r, ctx) => {
+      const resume = resumeDocument(r.documents);
+      if (!resume) return <Dash />;
+      return (
+        <Button type="button" variant="link" size="sm" className="h-auto px-0 text-sm font-normal" onClick={() => ctx.openDoc(resume)}>
+          View resume
+        </Button>
+      );
+    },
   },
 ];
 
@@ -165,9 +236,7 @@ const SHARED_AFTER: AppColumn[] = [
 
 /** Middle columns (Applicant / Actions are rendered by the table). */
 export function columnsForRole(role: ApplicationRole): AppColumn[] {
-  return role === "nanny"
-    ? [...SHARED_BEFORE, ...NANNY_ONLY, ...SHARED_AFTER]
-    : [...SHARED_BEFORE, ...SHARED_AFTER];
+  return role === "nanny" ? NANNY_COLUMNS : [...SHARED_BEFORE, ...SHARED_AFTER];
 }
 
 // ---------------------------------------------------------------------------

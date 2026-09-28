@@ -57,6 +57,51 @@ export interface ApplicationListItem {
   updatedAt: string;
 }
 
+export interface NannyApplicationOpsView {
+  intakeVersion: "legacy" | "nanny_v2";
+  accuracyConfirmed: boolean | null;
+  applicant: {
+    preferredName: string | null;
+    city: string | null;
+    postalCode: string | null;
+  };
+  eligibility: {
+    canCommuteGta: boolean | null;
+    canadaStatus: string | null;
+    legallyAuthorizedToWork: string | null;
+    workPermitExpiry: string | null;
+    workPermitChildcareRestrictions: string | null;
+    authorizedOffCampus: string | null;
+    workHourLimitStatus: string | null;
+    maxWeeklyWorkHours: number | null;
+  };
+  experience: {
+    hasChildcareExperience: boolean | null;
+    years: string | null;
+    types: string[];
+    ageGroups: string[];
+    specialExperienceTypes: string[];
+    specialExperienceDescription: string | null;
+  };
+  qualifications: {
+    educationCertifications: string[];
+    educationProgramName: string | null;
+  };
+  compliance: {
+    firstAidStatus: string | null;
+    firstAidExpiry: string | null;
+    vscStatus: string | null;
+    vscIssueDate: string | null;
+  };
+  languages: {
+    spokenEnglishRating: number | null;
+  };
+  legacyTraining?: {
+    completed: boolean | null;
+    description: string | null;
+  };
+}
+
 export interface ApplicationDetail {
   id: string;
   status: ApplicationStatus;
@@ -65,8 +110,11 @@ export interface ApplicationDetail {
     firstName: string;
     middleName: string;
     lastName: string;
+    preferredName?: string;
     email: string;
     phone: string;
+    city?: string;
+    postalCode?: string;
     gender: string;
   };
   eligibility: { gtaEligible: boolean | null; statusInCanada: string };
@@ -96,8 +144,10 @@ export interface ApplicationDetail {
     consentPolicyVersion: string;
     consentAcceptedAt: string | null;
     submittedAt: string;
+    accuracyConfirmed?: boolean | null;
     payloadSnapshot: Record<string, unknown>;
   };
+  nanny?: NannyApplicationOpsView;
   workflow: {
     contactedAt: string | null;
     hiredAt: string | null;
@@ -206,6 +256,10 @@ export function resumeDocument(documents: ApplicationDocument[]): ApplicationDoc
 
 export function complianceDocumentsForDisplay(documents: ApplicationDocument[]): ApplicationDocument[] {
   return documents.filter((doc) => doc.category !== "resume");
+}
+
+export function vscDocumentsForDisplay(documents: ApplicationDocument[]): ApplicationDocument[] {
+  return documents.filter((doc) => doc.category === "vulnerable_sector_check");
 }
 
 /** Known coded answers → human labels. Unknown codes fall back to humanize(). */

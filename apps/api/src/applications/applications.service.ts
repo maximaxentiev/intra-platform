@@ -17,6 +17,7 @@ import {
   buildContentDisposition,
   isInlinePreviewContentType,
 } from './application-document-content.util';
+import { buildNannyApplicationOpsView } from './application-nanny-view.util';
 import type { ListApplicationsQuery } from './dto/applications.dto';
 
 export interface ApplicationDocumentStreamResult {
@@ -66,8 +67,11 @@ function buildDetail(row: typeof applications.$inferSelect, docs: typeof applica
       firstName: row.firstName,
       middleName: row.middleName,
       lastName: row.lastName,
+      preferredName: row.preferredName,
       email: row.email,
       phone: row.phone,
+      city: row.city,
+      postalCode: row.postalCode,
       gender: row.gender,
     },
     eligibility: {
@@ -104,8 +108,10 @@ function buildDetail(row: typeof applications.$inferSelect, docs: typeof applica
       consentPolicyVersion: row.consentPolicyVersion,
       consentAcceptedAt: row.consentAcceptedAt,
       submittedAt: row.submittedAt,
+      accuracyConfirmed: row.accuracyConfirmed,
       payloadSnapshot: row.payloadSnapshot,
     },
+    nanny: buildNannyApplicationOpsView(row) ?? undefined,
     workflow: {
       contactedAt: row.contactedAt,
       contactedByUserId: row.contactedByUserId,
@@ -148,6 +154,7 @@ export class ApplicationsService {
           ilike(applications.lastName, pattern),
           ilike(applications.email, pattern),
           ilike(applications.phone, pattern),
+          ilike(applications.city, pattern),
         )!,
       );
     }

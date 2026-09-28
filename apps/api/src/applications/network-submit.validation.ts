@@ -1,7 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   ALLOWED_SUBMIT_EXTENSIONS,
-  ALLOWED_SUBMIT_MIME_TYPES,
   CHILDCARE_EXPERIENCE_MAX_LENGTH,
   DOCUMENT_CATEGORY_VALUES,
   DOC_FIELD_PREFIX,
@@ -17,6 +16,11 @@ import {
   RESUME_DOCUMENT_CATEGORY,
   RESUME_MAX_FILE_BYTES,
 } from './network-submit.constants';
+import {
+  assertNannyV2DocumentsPresent,
+  isNannyV2ApplicationRoot,
+  parseNannyV2ApplicationJson,
+} from './network-submit-nanny.validation';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -31,7 +35,11 @@ export interface NetworkDocumentMeta {
   size: number;
 }
 
+export type NetworkIntakeVersion = 'legacy' | 'nanny_v2';
+
 export interface NormalizedNetworkApplication {
+  intakeVersion?: NetworkIntakeVersion;
+  accuracyConfirmed?: boolean;
   metadata: {
     formId: string;
     externalApplicationId: string;
@@ -49,15 +57,33 @@ export interface NormalizedNetworkApplication {
     email: string;
     phone: string;
     gender: string;
+    preferredName?: string | null;
+    city?: string;
+    postalCode?: string;
   };
   eligibility: {
     gtaEligible: boolean;
     statusInCanada: string;
   };
+  eligibilityExtended?: {
+    legallyAuthorizedToWork: string;
+    workPermitExpiry: string | null;
+    workPermitChildcareRestrictions: string | null;
+    authorizedOffCampus: string | null;
+    workHourLimitStatus: string | null;
+    maxWeeklyWorkHours: number | null;
+  };
   experience: {
     duration: string;
     description?: string;
     types?: string[];
+    ageGroups?: string[];
+    hasChildcareExperience?: boolean;
+    specialExperienceTypes?: string[];
+  };
+  qualifications?: {
+    educationCertifications: string[];
+    educationProgramName: string | null;
   };
   roleSpecific: {
     qualification?: { status: string };
@@ -68,12 +94,17 @@ export interface NormalizedNetworkApplication {
     firstAidCpr: { hasDocument: boolean; expiryDate?: string };
     immunizations: { hasRequiredImmunizations: boolean };
     covid19: { vaccinated: boolean | null; proofProvided: boolean };
+    nannyFirstAidStatus?: string;
+    nannyVscStatus?: string;
   };
   languages: {
     englishProficiency: string;
     speaksAdditionalLanguages: boolean;
     additional?: Array<{ language: string; proficiency: string }>;
+    spokenEnglishRating?: number;
   };
+  /** Website-shaped nanny payload stored in payload_snapshot. */
+  websitePayload?: Record<string, unknown>;
   documents: NetworkDocumentMeta[];
 }
 
@@ -196,6 +227,9 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
   }
 
   const root = assertObject(parsed, 'application');
+  if (isNannyV2ApplicationRoot(root)) {
+    return parseNannyV2ApplicationJson(root);
+  }
   const metadata = assertObject(root.metadata, 'metadata');
   const applicant = assertObject(root.applicant, 'applicant');
   const eligibility = assertObject(root.eligibility, 'eligibility');
@@ -335,7 +369,10 @@ export function parseNetworkApplicationJson(raw: string): NormalizedNetworkAppli
     }
     let contentType: string;
     try {
-      contentType = resolveSubmitContentType(contentTypeRaw, originalFilename);
+      contentType = resolveSubmitContentType(contentTypeRaw, originalFilename, {
+        role,
+        category: categoryRaw as DocumentCategoryValue,
+      });
     } catch {
       throw new BadRequestException(`documents[${index}] has a disallowed content type.`);
     }
@@ -422,6 +459,7 @@ export interface MatchedSubmitFile {
 export function matchSubmitFiles(
   documents: NetworkDocumentMeta[],
   files: Express.Multer.File[],
+  context?: Pick<NormalizedNetworkApplication, 'intakeVersion' | 'role'>,
 ): MatchedSubmitFile[] {
   const byField = new Map<string, Express.Multer.File>();
   for (const file of files) {
@@ -447,7 +485,11 @@ export function matchSubmitFiles(
     }
     let resolvedMime: string;
     try {
-      resolvedMime = resolveSubmitContentType(file.mimetype || '', meta.originalFilename);
+      resolvedMime = resolveSubmitContentType(file.mimetype || '', meta.originalFilename, {
+        intakeVersion: context?.intakeVersion,
+        role: context?.role,
+        category: meta.category,
+      });
     } catch {
       throw new BadRequestException(`Document ${meta.id} has a disallowed content type.`);
     }
@@ -466,7 +508,20 @@ export function mapCovidVaccinationStatus(covid19: NormalizedNetworkApplication[
   return 'not_vaccinated';
 }
 
-export function complianceToDbFields(compliance: NormalizedNetworkApplication['compliance']) {
+export function complianceToDbFields(
+  compliance: NormalizedNetworkApplication['compliance'],
+  intakeVersion?: NetworkIntakeVersion,
+) {
+  if (intakeVersion === 'nanny_v2') {
+    return {
+      vscStatus: compliance.nannyVscStatus ?? '',
+      vscIssueOrRequestDate: compliance.vulnerableSectorCheck.issueDate ?? null,
+      firstAidCprStatus: compliance.nannyFirstAidStatus ?? '',
+      firstAidCprExpiry: compliance.firstAidCpr.expiryDate ?? null,
+      immunizationStatus: '',
+      covidVaccinationStatus: 'not_provided',
+    };
+  }
   return {
     vscStatus: compliance.vulnerableSectorCheck.hasDocument ? 'provided' : 'missing',
     vscIssueOrRequestDate: compliance.vulnerableSectorCheck.issueDate ?? null,
@@ -498,6 +553,10 @@ export function requiredDocumentCategories(
 }
 
 export function assertRequiredDocumentsPresent(payload: NormalizedNetworkApplication): void {
+  if (payload.intakeVersion === 'nanny_v2') {
+    assertNannyV2DocumentsPresent(payload);
+    return;
+  }
   const resumeDocuments = payload.documents.filter((d) => d.category === RESUME_DOCUMENT_CATEGORY);
   if (resumeDocuments.length === 0) {
     throw new BadRequestException('Exactly one resume document is required.');

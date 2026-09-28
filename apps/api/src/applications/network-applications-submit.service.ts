@@ -57,7 +57,7 @@ export class NetworkApplicationsSubmitService {
   ): Promise<NetworkSubmitSuccess> {
     const payload = parseNetworkApplicationJson(applicationJson);
     assertRequiredDocumentsPresent(payload);
-    const matchedFiles = matchSubmitFiles(payload.documents, files);
+    const matchedFiles = matchSubmitFiles(payload.documents, files, payload);
 
     await this.rateLimit.assertAllowed(clientIp, payload.applicant.email);
 
@@ -85,7 +85,7 @@ export class NetworkApplicationsSubmitService {
       throw new HttpException('metadata.submittedAt is invalid.', HttpStatus.BAD_REQUEST);
     }
 
-    const compliance = complianceToDbFields(payload.compliance);
+    const compliance = complianceToDbFields(payload.compliance, payload.intakeVersion);
     const uploadedKeys: string[] = [];
 
     try {
@@ -101,6 +101,10 @@ export class NetworkApplicationsSubmitService {
             email: payload.applicant.email,
             phone: payload.applicant.phone,
             gender: payload.applicant.gender,
+            preferredName: payload.applicant.preferredName ?? '',
+            city: payload.applicant.city ?? '',
+            postalCode: payload.applicant.postalCode ?? '',
+            accuracyConfirmed: payload.accuracyConfirmed ?? null,
             gtaEligible: payload.eligibility.gtaEligible,
             statusInCanada: payload.eligibility.statusInCanada,
             experienceDuration: payload.experience.duration,
@@ -125,7 +129,10 @@ export class NetworkApplicationsSubmitService {
             consentPolicyVersion: payload.metadata.consentPolicyVersion,
             consentAcceptedAt,
             submittedAt,
-            payloadSnapshot: payload as unknown as Record<string, unknown>,
+            payloadSnapshot:
+              payload.intakeVersion === 'nanny_v2' && payload.websitePayload
+                ? (payload.websitePayload as Record<string, unknown>)
+                : (payload as unknown as Record<string, unknown>),
           });
         } catch (err) {
           if (this.isUniqueViolation(err)) {

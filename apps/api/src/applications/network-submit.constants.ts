@@ -55,17 +55,68 @@ function extensionOf(filename: string): string {
   return idx >= 0 ? filename.slice(idx).toLowerCase() : '';
 }
 
+export type ResolveSubmitContentTypeOptions = {
+  role?: PublicRoleValue;
+  category?: DocumentCategoryValue;
+  intakeVersion?: 'legacy' | 'nanny_v2';
+};
+
 /** Normalize declared or inferred MIME for public application uploads. */
-export function resolveSubmitContentType(contentType: string, originalFilename: string): string {
+export function resolveSubmitContentType(
+  contentType: string,
+  originalFilename: string,
+  options?: ResolveSubmitContentTypeOptions,
+): string {
   const normalized = contentType.trim().toLowerCase();
   const canonical =
     normalized === 'image/jpg'
       ? 'image/jpeg'
       : normalized;
+  const ext = extensionOf(originalFilename);
+
+  if (options?.intakeVersion === 'nanny_v2' && options.category === RESUME_DOCUMENT_CATEGORY) {
+    if (canonical && canonical !== 'application/octet-stream') {
+      const nannyResumeMimes = new Set([
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ]);
+      if (nannyResumeMimes.has(canonical)) return canonical;
+    }
+    const nannyResumeExt = new Set(['.pdf', '.doc', '.docx']);
+    if (nannyResumeExt.has(ext)) {
+      if (ext === '.pdf') return 'application/pdf';
+      if (ext === '.doc') return 'application/msword';
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    throw new Error('disallowed content type');
+  }
+
+  if (options?.intakeVersion === 'nanny_v2' && options.category === 'vulnerable_sector_check') {
+    const vscMimes = new Set([
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/heic',
+      'image/heif',
+    ]);
+    const vscExt = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif']);
+    if (canonical && canonical !== 'application/octet-stream' && vscMimes.has(canonical)) {
+      return canonical;
+    }
+    if (vscExt.has(ext)) {
+      if (ext === '.pdf') return 'application/pdf';
+      if (ext === '.png') return 'image/png';
+      if (ext === '.heic') return 'image/heic';
+      if (ext === '.heif') return 'image/heif';
+      return 'image/jpeg';
+    }
+    throw new Error('disallowed content type');
+  }
+
   if (canonical && canonical !== 'application/octet-stream' && ALLOWED_SUBMIT_MIME_TYPES.has(canonical)) {
     return canonical;
   }
-  const ext = extensionOf(originalFilename);
   const inferred = SUBMIT_EXTENSION_TO_MIME[ext];
   if (!inferred || !ALLOWED_SUBMIT_EXTENSIONS.has(ext)) {
     throw new Error('disallowed content type');

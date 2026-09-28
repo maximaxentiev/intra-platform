@@ -26,8 +26,8 @@ function columnKeys(role: "eca" | "ece_rece" | "nanny") {
 }
 
 describe("applications table columns", () => {
-  it("includes childcare experience description column for every role", () => {
-    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+  it("includes childcare experience description column for ECA/ECE", () => {
+    for (const role of ["eca", "ece_rece"] as const) {
       const keys = columnKeys(role);
       expect(keys).toContain("childcareExperience");
       expect(keys).toContain("experienceDuration");
@@ -54,8 +54,8 @@ describe("applications table columns", () => {
     }
   });
 
-  it("removes redundant required compliance document columns from every role", () => {
-    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+  it("removes redundant required compliance document columns from ECA/ECE roles", () => {
+    for (const role of ["eca", "ece_rece"] as const) {
       const keys = columnKeys(role);
       for (const key of REMOVED_COMPLIANCE_COLUMNS) {
         expect(keys).not.toContain(key);
@@ -63,8 +63,8 @@ describe("applications table columns", () => {
     }
   });
 
-  it("retains COVID-19 and Documents columns for differentiating optional uploads", () => {
-    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+  it("retains COVID-19 and Documents columns for ECA/ECE optional uploads", () => {
+    for (const role of ["eca", "ece_rece"] as const) {
       const keys = columnKeys(role);
       expect(keys).toContain("covid");
       expect(keys).toContain("documents");
@@ -72,38 +72,67 @@ describe("applications table columns", () => {
     }
   });
 
-  it("places Resume before Documents in every role tab", () => {
-    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+  it("places Resume before Documents on ECA/ECE tabs", () => {
+    for (const role of ["eca", "ece_rece"] as const) {
       const keys = columnKeys(role);
       expect(keys.indexOf("resume")).toBeGreaterThan(-1);
       expect(keys.indexOf("resume")).toBeLessThan(keys.indexOf("documents"));
     }
   });
 
-  it("does not show GTA Eligible or Qualification as list columns", () => {
-    for (const role of ["eca", "ece_rece", "nanny"] as const) {
+  it("does not show GTA Eligible or Qualification as list columns for ECA/ECE", () => {
+    for (const role of ["eca", "ece_rece"] as const) {
       const keys = columnKeys(role);
       expect(keys).not.toContain("gtaEligible");
       expect(keys).not.toContain("qualification");
     }
   });
 
-  it("keeps nanny-specific training columns and other shared list columns", () => {
+  it("includes every expanded Nanny application column header", () => {
+    const headers = columnsForRole("nanny").map((c) => c.header);
+    const expected = [
+      "First Name",
+      "Last Name",
+      "Preferred Name",
+      "Email Address",
+      "Phone Number",
+      "City",
+      "Postal Code",
+      "Gender",
+      "GTA Commute",
+      "Canada Status",
+      "Legally Authorized to Work",
+      "Work Permit Expiry",
+      "Work Permit Childcare Restrictions",
+      "Authorized Off Campus",
+      "Work Hour Limits",
+      "Maximum Weekly Hours",
+      "Previous Childcare Experience",
+      "Years of Childcare Experience",
+      "Types of Childcare Experience",
+      "Age Groups",
+      "Special Childcare Experience",
+      "Specialized Experience Details",
+      "Education / Certifications",
+      "Program / Certification Name",
+      "First Aid & CPR",
+      "First Aid Expiry",
+      "VSC Status",
+      "VSC Issue Date",
+      "VSC Document",
+      "Spoken English",
+      "Submitted",
+      "Resume",
+    ];
+    expect(headers).toEqual(expected);
+  });
+
+  it("keeps ECA/ECE shared list columns", () => {
     expect(columnKeys("eca")).toEqual(
       expect.arrayContaining(["email", "childcareExperience", "covid", "documents"]),
     );
     expect(columnKeys("ece_rece")).toEqual(
       expect.arrayContaining(["email", "childcareExperience", "covid", "documents"]),
-    );
-    expect(columnKeys("nanny")).toEqual(
-      expect.arrayContaining([
-        "experienceTypes",
-        "trainingCompleted",
-        "trainingDescription",
-        "childcareExperience",
-        "covid",
-        "documents",
-      ]),
     );
   });
 });
@@ -166,6 +195,12 @@ describe("application drawer regression", () => {
     expect(applicationDrawer).toContain('label="Qualification status"');
     expect(applicationDrawer).toContain("row.roleSpecific.qualificationStatus");
     expect(applicationDrawer).toContain("row.eligibility.gtaEligible");
+  });
+});
+
+describe("applications table horizontal overflow", () => {
+  it("uses overflow-auto on the list table wrapper", () => {
+    expect(applicationsPage).toContain("overflow-auto");
   });
 });
 

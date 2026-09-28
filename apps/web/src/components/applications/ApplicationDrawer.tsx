@@ -24,10 +24,16 @@ import {
   label as toLabel,
   resumeDocument,
   roleLabel,
+  vscDocumentsForDisplay,
   type ApplicationActivityEvent,
   type ApplicationDocument,
   type ApplicationRow,
 } from "@/lib/applications";
+import {
+  displayNannyBool,
+  displayNannyText,
+  displaySpokenEnglish,
+} from "@/lib/applications-nanny-display";
 import { cn } from "@/lib/utils";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -148,6 +154,8 @@ export function ApplicationDrawer({
 
   const name = fullName(row);
   const isNanny = row.applicant.role === "nanny";
+  const nanny = row.nanny;
+  const isNannyV2 = isNanny && nanny?.intakeVersion === "nanny_v2";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -170,141 +178,237 @@ export function ApplicationDrawer({
 
         <ScrollArea className="flex-1">
           <div className="space-y-5 px-5 py-5">
-            <Section title="Applicant">
-              <FieldRow label="Full name">{name}</FieldRow>
-              <FieldRow label="Role">{roleLabel(row.applicant.role)}</FieldRow>
-              <FieldRow label="Email">
-                <a className="text-primary hover:underline" href={`mailto:${row.applicant.email}`}>
-                  {row.applicant.email}
-                </a>
-              </FieldRow>
-              <FieldRow label="Phone">
-                <a className="text-primary hover:underline" href={`tel:${row.applicant.phone}`}>
-                  {row.applicant.phone}
-                </a>
-              </FieldRow>
-              <FieldRow label="Gender">{toLabel(row.applicant.gender)}</FieldRow>
-            </Section>
-
-            <Section title="Eligibility">
-              <FieldRow label="GTA eligible">
-                <YesNo value={row.eligibility.gtaEligible} />
-              </FieldRow>
-              <FieldRow label="Status in Canada">{toLabel(row.eligibility.statusInCanada)}</FieldRow>
-            </Section>
-
-            <Section title="Experience">
-              <FieldRow label="Experience duration">{toLabel(row.experience.duration)}</FieldRow>
-              <FieldRow label="Childcare experience">
-                {row.experience.description?.trim() ? (
-                  <span className="whitespace-pre-wrap break-words">{row.experience.description}</span>
-                ) : (
-                  <span className="text-muted-foreground">Not provided</span>
-                )}
-              </FieldRow>
-              {isNanny && (
-                <FieldRow label="Experience types">
-                  <Chips values={row.experience.nannyExperienceTypes.map(toLabel)} max={6} />
-                </FieldRow>
-              )}
-            </Section>
-
-            {(isNanny || row.roleSpecific.qualificationStatus?.trim()) ? (
-              <Section title={isNanny ? "Training" : "Qualifications"}>
-                {isNanny ? (
-                  <>
-                    <FieldRow label="Training completed">
-                      <YesNo value={row.roleSpecific.nannyTrainingCompleted} />
-                    </FieldRow>
-                    <FieldRow label="Training description">
-                      {row.roleSpecific.nannyTrainingDescription || <Dash />}
-                    </FieldRow>
-                  </>
-                ) : (
-                  <FieldRow label="Qualification status">
-                    {toLabel(row.roleSpecific.qualificationStatus)}
+            {isNannyV2 && nanny ? (
+              <>
+                <Section title="Applicant">
+                  <FieldRow label="First name">{row.applicant.firstName}</FieldRow>
+                  <FieldRow label="Last name">{row.applicant.lastName}</FieldRow>
+                  <FieldRow label="Preferred name">{displayNannyText(nanny.applicant.preferredName)}</FieldRow>
+                  <FieldRow label="Email">
+                    <a className="text-primary hover:underline" href={`mailto:${row.applicant.email}`}>
+                      {row.applicant.email}
+                    </a>
                   </FieldRow>
-                )}
-              </Section>
-            ) : null}
+                  <FieldRow label="Phone">
+                    <a className="text-primary hover:underline" href={`tel:${row.applicant.phone}`}>
+                      {row.applicant.phone}
+                    </a>
+                  </FieldRow>
+                  <FieldRow label="City">{displayNannyText(nanny.applicant.city)}</FieldRow>
+                  <FieldRow label="Postal code">{displayNannyText(nanny.applicant.postalCode)}</FieldRow>
+                  <FieldRow label="Gender">{displayNannyText(row.applicant.gender)}</FieldRow>
+                </Section>
 
-            <Section title="Compliance">
-              <FieldRow label="Vulnerable sector check">
-                <YesNo value={asYesNo(row.compliance.vscStatus)} unknownLabel={toLabel(row.compliance.vscStatus)} />
-              </FieldRow>
-              <FieldRow label="VSC date">{fmtDate(row.compliance.vscIssueOrRequestDate)}</FieldRow>
-              <FieldRow label="First aid & CPR">
-                <YesNo
-                  value={asYesNo(row.compliance.firstAidCprStatus)}
-                  unknownLabel={toLabel(row.compliance.firstAidCprStatus)}
-                />
-              </FieldRow>
-              <FieldRow label="CPR expiry">{fmtDate(row.compliance.firstAidCprExpiry)}</FieldRow>
-              <FieldRow label="Immunizations">
-                <YesNo
-                  value={asYesNo(row.compliance.immunizationStatus)}
-                  unknownLabel={toLabel(row.compliance.immunizationStatus)}
-                />
-              </FieldRow>
-              <FieldRow label="COVID-19 vaccination">
-                <YesNo
-                  value={asYesNo(row.compliance.covidVaccinationStatus)}
-                  unknownLabel={toLabel(row.compliance.covidVaccinationStatus) || "Not provided"}
-                />
-              </FieldRow>
-            </Section>
+                <Section title="Work Eligibility">
+                  <FieldRow label="GTA commute">{displayNannyBool(nanny.eligibility.canCommuteGta)}</FieldRow>
+                  <FieldRow label="Canada status">{displayNannyText(nanny.eligibility.canadaStatus)}</FieldRow>
+                  <FieldRow label="Legal authorization">{displayNannyText(nanny.eligibility.legallyAuthorizedToWork)}</FieldRow>
+                  <FieldRow label="Work permit expiry">{fmtDate(nanny.eligibility.workPermitExpiry) || "—"}</FieldRow>
+                  <FieldRow label="Childcare restriction">{displayNannyText(nanny.eligibility.workPermitChildcareRestrictions)}</FieldRow>
+                  <FieldRow label="Off-campus authorization">{displayNannyText(nanny.eligibility.authorizedOffCampus)}</FieldRow>
+                  <FieldRow label="Work-hour limit">{displayNannyText(nanny.eligibility.workHourLimitStatus)}</FieldRow>
+                  <FieldRow label="Max weekly hours">
+                    {nanny.eligibility.maxWeeklyWorkHours ?? "—"}
+                  </FieldRow>
+                </Section>
 
-            <section className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Documents
-              </h3>
-              <FieldRow label="Resume">
-                {resumeDocument(row.documents) ? (
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto px-0 text-sm font-normal"
-                    onClick={() => onOpenDoc(resumeDocument(row.documents)!)}
-                  >
-                    View
-                  </Button>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Not provided</span>
-                )}
-              </FieldRow>
-              {complianceDocumentsForDisplay(row.documents).length ? (
-                <div className="grid gap-2">
-                  {complianceDocumentsForDisplay(row.documents).map((d) => (
-                    <DocumentCard key={d.id} doc={d} onOpen={onOpenDoc} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No compliance documents uploaded.</p>
-              )}
-            </section>
+                <Section title="Childcare Experience">
+                  <FieldRow label="Previous experience">{displayNannyBool(nanny.experience.hasChildcareExperience)}</FieldRow>
+                  <FieldRow label="Years">{displayNannyText(nanny.experience.years)}</FieldRow>
+                  <FieldRow label="Experience types">
+                    <Chips values={nanny.experience.types.map(toLabel)} max={8} />
+                  </FieldRow>
+                  <FieldRow label="Age groups">
+                    <Chips values={nanny.experience.ageGroups.map(toLabel)} max={8} />
+                  </FieldRow>
+                </Section>
 
-            <Section title="Languages">
-              <FieldRow label="English proficiency">
-                {toLabel(row.languages.englishProficiency)}
-              </FieldRow>
-              <FieldRow label="Additional languages">
-                {row.languages.additionalLanguages.length ? (
-                  <div className="space-y-1">
-                    {row.languages.additionalLanguages.map((l) => (
-                      <div key={`${l.language}-${l.proficiency}`}>
-                        {toLabel(l.language)}
-                        {l.proficiency ? (
-                          <span className="text-muted-foreground"> · {toLabel(l.proficiency)}</span>
-                        ) : null}
+                <Section title="Special Experience">
+                  <FieldRow label="Selections">
+                    <Chips values={nanny.experience.specialExperienceTypes.map(toLabel)} max={8} />
+                  </FieldRow>
+                  <FieldRow label="Description">
+                    {nanny.experience.specialExperienceDescription?.trim() ? (
+                      <span className="whitespace-pre-wrap break-words">{nanny.experience.specialExperienceDescription}</span>
+                    ) : (
+                      "—"
+                    )}
+                  </FieldRow>
+                </Section>
+
+                <Section title="Education & Qualifications">
+                  <FieldRow label="Selections">
+                    <Chips values={nanny.qualifications.educationCertifications.map(toLabel)} max={8} />
+                  </FieldRow>
+                  <FieldRow label="Program / certification name">
+                    {displayNannyText(nanny.qualifications.educationProgramName)}
+                  </FieldRow>
+                </Section>
+
+                <Section title="First Aid & VSC">
+                  <FieldRow label="First Aid status">{displayNannyText(nanny.compliance.firstAidStatus)}</FieldRow>
+                  <FieldRow label="First Aid expiry">{fmtDate(nanny.compliance.firstAidExpiry) || "—"}</FieldRow>
+                  <FieldRow label="VSC status">{displayNannyText(nanny.compliance.vscStatus)}</FieldRow>
+                  <FieldRow label="VSC issue date">{fmtDate(nanny.compliance.vscIssueDate) || "—"}</FieldRow>
+                  <FieldRow label="VSC document(s)">
+                    {vscDocumentsForDisplay(row.documents).length ? (
+                      <div className="grid gap-2">
+                        {vscDocumentsForDisplay(row.documents).map((d) => (
+                          <DocumentCard key={d.id} doc={d} onOpen={onOpenDoc} />
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Dash />
-                )}
-              </FieldRow>
-            </Section>
+                    ) : (
+                      "—"
+                    )}
+                  </FieldRow>
+                </Section>
+
+                <Section title="Language">
+                  <FieldRow label="Spoken English">{displaySpokenEnglish(row)}</FieldRow>
+                </Section>
+
+                <section className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Documents</h3>
+                  <FieldRow label="Resume">
+                    {resumeDocument(row.documents) ? (
+                      <Button type="button" variant="link" size="sm" className="h-auto px-0 text-sm font-normal" onClick={() => onOpenDoc(resumeDocument(row.documents)!)}>
+                        View
+                      </Button>
+                    ) : (
+                      "—"
+                    )}
+                  </FieldRow>
+                </section>
+              </>
+            ) : (
+              <>
+                <Section title="Applicant">
+                  <FieldRow label="Full name">{name}</FieldRow>
+                  <FieldRow label="Role">{roleLabel(row.applicant.role)}</FieldRow>
+                  <FieldRow label="Email">
+                    <a className="text-primary hover:underline" href={`mailto:${row.applicant.email}`}>
+                      {row.applicant.email}
+                    </a>
+                  </FieldRow>
+                  <FieldRow label="Phone">
+                    <a className="text-primary hover:underline" href={`tel:${row.applicant.phone}`}>
+                      {row.applicant.phone}
+                    </a>
+                  </FieldRow>
+                  <FieldRow label="Gender">{toLabel(row.applicant.gender)}</FieldRow>
+                </Section>
+
+                <Section title="Eligibility">
+                  <FieldRow label="GTA eligible">
+                    <YesNo value={row.eligibility.gtaEligible} />
+                  </FieldRow>
+                  <FieldRow label="Status in Canada">{toLabel(row.eligibility.statusInCanada)}</FieldRow>
+                </Section>
+
+                <Section title="Experience">
+                  <FieldRow label="Experience duration">{toLabel(row.experience.duration)}</FieldRow>
+                  <FieldRow label="Childcare experience">
+                    {row.experience.description?.trim() ? (
+                      <span className="whitespace-pre-wrap break-words">{row.experience.description}</span>
+                    ) : (
+                      <span className="text-muted-foreground">Not provided</span>
+                    )}
+                  </FieldRow>
+                  {isNanny && (
+                    <FieldRow label="Experience types">
+                      <Chips values={row.experience.nannyExperienceTypes.map(toLabel)} max={6} />
+                    </FieldRow>
+                  )}
+                </Section>
+
+                {(isNanny || row.roleSpecific.qualificationStatus?.trim()) ? (
+                  <Section title={isNanny ? "Training" : "Qualifications"}>
+                    {isNanny ? (
+                      <>
+                        <FieldRow label="Training completed">
+                          <YesNo value={row.roleSpecific.nannyTrainingCompleted} />
+                        </FieldRow>
+                        <FieldRow label="Training description">
+                          {row.roleSpecific.nannyTrainingDescription || <Dash />}
+                        </FieldRow>
+                      </>
+                    ) : (
+                      <FieldRow label="Qualification status">
+                        {toLabel(row.roleSpecific.qualificationStatus)}
+                      </FieldRow>
+                    )}
+                  </Section>
+                ) : null}
+
+                <Section title="Compliance">
+                  <FieldRow label="Vulnerable sector check">
+                    <YesNo value={asYesNo(row.compliance.vscStatus)} unknownLabel={toLabel(row.compliance.vscStatus)} />
+                  </FieldRow>
+                  <FieldRow label="VSC date">{fmtDate(row.compliance.vscIssueOrRequestDate)}</FieldRow>
+                  <FieldRow label="First aid & CPR">
+                    <YesNo
+                      value={asYesNo(row.compliance.firstAidCprStatus)}
+                      unknownLabel={toLabel(row.compliance.firstAidCprStatus)}
+                    />
+                  </FieldRow>
+                  <FieldRow label="CPR expiry">{fmtDate(row.compliance.firstAidCprExpiry)}</FieldRow>
+                  <FieldRow label="Immunizations">
+                    <YesNo
+                      value={asYesNo(row.compliance.immunizationStatus)}
+                      unknownLabel={toLabel(row.compliance.immunizationStatus)}
+                    />
+                  </FieldRow>
+                  <FieldRow label="COVID-19 vaccination">
+                    <YesNo
+                      value={asYesNo(row.compliance.covidVaccinationStatus)}
+                      unknownLabel={toLabel(row.compliance.covidVaccinationStatus) || "Not provided"}
+                    />
+                  </FieldRow>
+                </Section>
+
+                <section className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Documents</h3>
+                  <FieldRow label="Resume">
+                    {resumeDocument(row.documents) ? (
+                      <Button type="button" variant="link" size="sm" className="h-auto px-0 text-sm font-normal" onClick={() => onOpenDoc(resumeDocument(row.documents)!)}>
+                        View
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Not provided</span>
+                    )}
+                  </FieldRow>
+                  {complianceDocumentsForDisplay(row.documents).length ? (
+                    <div className="grid gap-2">
+                      {complianceDocumentsForDisplay(row.documents).map((d) => (
+                        <DocumentCard key={d.id} doc={d} onOpen={onOpenDoc} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No compliance documents uploaded.</p>
+                  )}
+                </section>
+
+                <Section title="Languages">
+                  <FieldRow label="English proficiency">{toLabel(row.languages.englishProficiency)}</FieldRow>
+                  <FieldRow label="Additional languages">
+                    {row.languages.additionalLanguages.length ? (
+                      <div className="space-y-1">
+                        {row.languages.additionalLanguages.map((l) => (
+                          <div key={`${l.language}-${l.proficiency}`}>
+                            {toLabel(l.language)}
+                            {l.proficiency ? (
+                              <span className="text-muted-foreground"> · {toLabel(l.proficiency)}</span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <Dash />
+                    )}
+                  </FieldRow>
+                </Section>
+              </>
+            )}
 
             <Section title="Application information">
               <FieldRow label="Submitted">{fmtDateTime(row.metadata.submittedAt)}</FieldRow>
@@ -319,12 +423,17 @@ export function ApplicationDrawer({
               <FieldRow label="Form ID">
                 <span className="text-xs font-mono">{row.metadata.formId || "—"}</span>
               </FieldRow>
+              <FieldRow label="Accuracy confirmed">
+                {row.metadata.accuracyConfirmed === null || row.metadata.accuracyConfirmed === undefined ? (
+                  <Dash />
+                ) : (
+                  <YesNo value={row.metadata.accuracyConfirmed} />
+                )}
+              </FieldRow>
               <FieldRow label="Consent">
                 <YesNo value={row.metadata.consentAccepted} />
                 {row.metadata.consentPolicyVersion ? (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    v{row.metadata.consentPolicyVersion}
-                  </span>
+                  <span className="ml-2 text-xs text-muted-foreground">{row.metadata.consentPolicyVersion}</span>
                 ) : null}
               </FieldRow>
               <FieldRow label="Consent accepted">{fmtDateTime(row.metadata.consentAcceptedAt)}</FieldRow>
