@@ -435,7 +435,7 @@ describe.runIf(POSTGRES_READY)('Batch document share integration', () => {
     expect(outcome.kind).toBe('valid');
     if (outcome.kind !== 'valid') return;
 
-    const urlMatches = outcome.text.match(/https:\/\/platform\.intra\.ca\/documents\/[^\s]+/g) ?? [];
+    const urlMatches = outcome.html.match(/https:\/\/platform\.intra\.ca\/documents\/[^"']+/g) ?? [];
     expect(urlMatches.length).toBe(2);
     expect(urlMatches[0]).toBe(urlMatches[1]);
     await assertDocumentShareUrlValid(db, config, FIXTURE.staffA, urlMatches[0]!);

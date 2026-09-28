@@ -14,7 +14,7 @@ describe('DocumentExpiryReminderService eligibility', () => {
       service.isEligibleForScheduling({
         documentType: 'first_aid_cpr',
         reviewStatus: 'approved',
-        expiryDate: '2026-09-04',
+        expiryDate: '2027-06-01',
         set: { currentSubmissionId: 'sub-1' },
         submission: { id: 'sub-1', supersededAt: null },
         accountStatus: 'active',
@@ -28,7 +28,7 @@ describe('DocumentExpiryReminderService eligibility', () => {
       service.isEligibleForScheduling({
         documentType: 'immunizations',
         reviewStatus: 'approved',
-        expiryDate: '2026-09-04',
+        expiryDate: '2027-06-01',
         set: { currentSubmissionId: 'sub-1' },
         submission: { id: 'sub-1', supersededAt: null },
         accountStatus: 'active',
@@ -42,7 +42,7 @@ describe('DocumentExpiryReminderService eligibility', () => {
       service.isEligibleForScheduling({
         documentType: 'covid19_vaccination',
         reviewStatus: 'approved',
-        expiryDate: '2026-09-04',
+        expiryDate: '2027-06-01',
         set: { currentSubmissionId: 'sub-1' },
         submission: { id: 'sub-1', supersededAt: null },
         accountStatus: 'active',

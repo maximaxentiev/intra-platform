@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -38,6 +38,7 @@ const FIXTURE = {
   centreB: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbba2',
   staffA: 'cccccccc-cccc-4ccc-8ccc-cccccccccca1',
   staffB: 'cccccccc-cccc-4ccc-8ccc-cccccccccca2',
+  staffC: 'cccccccc-cccc-4ccc-8ccc-cccccccccca3',
   dateFrom: '2026-08-01',
   dateTo: '2026-08-31',
 };
@@ -61,8 +62,14 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
       new ReportsActivityService(db),
     );
 
-    await db.delete(shifts).where(inArray(shifts.centreId, [FIXTURE.centreA, FIXTURE.centreB]));
-    await db.delete(staff).where(inArray(staff.id, [FIXTURE.staffA, FIXTURE.staffB]));
+    await db.delete(shifts).where(
+      and(
+        inArray(shifts.centreId, [FIXTURE.centreA, FIXTURE.centreB]),
+        gte(shifts.shiftDate, FIXTURE.dateFrom),
+        lte(shifts.shiftDate, FIXTURE.dateTo),
+      ),
+    );
+    await db.delete(staff).where(inArray(staff.id, [FIXTURE.staffA, FIXTURE.staffB, FIXTURE.staffC]));
     await db.delete(centres).where(inArray(centres.id, [FIXTURE.centreA, FIXTURE.centreB]));
 
     await db.insert(centres).values([
@@ -93,6 +100,17 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
         city: 'Toronto',
         role: 'ECA',
       },
+      {
+        id: FIXTURE.staffC,
+        legalFirstName: 'Casey',
+        legalLastName: 'Alpha',
+        legalName: 'Casey Alpha',
+        displayName: 'Casey',
+        useDisplayName: true,
+        email: `${FIXTURE.staffC}@example.test`,
+        city: 'Toronto',
+        role: 'ECA',
+      },
     ]);
 
     const rows = await db
@@ -113,7 +131,7 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
           startTime: '09:15:00',
           endTime: '16:45:00',
           status: 'completed',
-          assignedStaffId: FIXTURE.staffB,
+          assignedStaffId: FIXTURE.staffC,
           roleNeeded: 'ECA',
         },
         {
@@ -178,7 +196,7 @@ describe.skipIf(!POSTGRES_READY)('Reports centre usage shifts PostgreSQL integra
     if (shiftIds.length > 0) {
       await db.delete(shifts).where(inArray(shifts.id, shiftIds));
     }
-    await db.delete(staff).where(inArray(staff.id, [FIXTURE.staffA, FIXTURE.staffB]));
+    await db.delete(staff).where(inArray(staff.id, [FIXTURE.staffA, FIXTURE.staffB, FIXTURE.staffC]));
     await db.delete(centres).where(inArray(centres.id, [FIXTURE.centreA, FIXTURE.centreB]));
     await pool.end();
   });

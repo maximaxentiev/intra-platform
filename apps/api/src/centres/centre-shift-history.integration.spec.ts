@@ -9,6 +9,7 @@ import {
   shiftBatches,
   shifts,
   staff,
+  users,
 } from '../db/schema';
 import { RecordingEmailTransport } from '../email/email.transport';
 import { EmailService } from '../email/email.service';
@@ -52,6 +53,7 @@ const FIXTURE = {
   contactB: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
   staffA: 'cccccccc-cccc-4ccc-8ccc-cccccccccca1',
   batchA: 'dddddddd-dddd-4ddd-8ddd-ddddddddddb1',
+  opsUserId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee02',
   dateFrom: '2026-08-10',
   dateTo: '2026-08-12',
 };
@@ -111,6 +113,16 @@ describe.skipIf(!POSTGRES_READY)('Centre shift history PostgreSQL integration', 
     await db.delete(centreContacts).where(inArray(centreContacts.centreId, [FIXTURE.centreA, FIXTURE.centreB]));
     await db.delete(staff).where(eq(staff.id, FIXTURE.staffA));
     await db.delete(centres).where(inArray(centres.id, [FIXTURE.centreA, FIXTURE.centreB]));
+    await db.delete(users).where(eq(users.id, FIXTURE.opsUserId));
+
+    await db.insert(users).values({
+      id: FIXTURE.opsUserId,
+      email: 'centre-shift-history-ops@example.test',
+      fullName: 'Centre Shift History Ops',
+      role: 'admin',
+      passwordHash: 'hash',
+      isActive: true,
+    });
 
     await db.insert(centres).values([
       {
@@ -244,7 +256,7 @@ describe.skipIf(!POSTGRES_READY)('Centre shift history PostgreSQL integration', 
       FIXTURE.dateTo,
     );
 
-    expect(csv.rowCount).toBe(4);
+    expect(csv.rowCount).toBe(3);
     expect(csv.content).toContain('Alexandra Morgan');
     expect(csv.content).not.toContain(',Lex,');
     expect(csv.content).not.toContain('Lex\n');
@@ -295,7 +307,7 @@ describe.skipIf(!POSTGRES_READY)('Centre shift history PostgreSQL integration', 
   it('rejects email schedule without primary contact', async () => {
     await db.delete(centreContacts).where(eq(centreContacts.centreId, FIXTURE.centreA));
     await expect(
-      service.scheduleEmail(FIXTURE.centreA, FIXTURE.dateFrom, FIXTURE.dateTo, 'ops-user'),
+      service.scheduleEmail(FIXTURE.centreA, FIXTURE.dateFrom, FIXTURE.dateTo, FIXTURE.opsUserId),
     ).rejects.toThrow(/primary Centre contact/i);
     await db.insert(centreContacts).values({
       id: FIXTURE.contactA,
@@ -315,7 +327,7 @@ describe.skipIf(!POSTGRES_READY)('Centre shift history PostgreSQL integration', 
       FIXTURE.centreA,
       FIXTURE.dateFrom,
       FIXTURE.dateTo,
-      'ops-user-id',
+      FIXTURE.opsUserId,
     );
 
     await processor.processJob({

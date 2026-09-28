@@ -30,8 +30,8 @@ function categoryInput(
   };
 }
 
-function buildMap(inputs: StaffDocumentCategoryComplianceInput[]) {
-  return buildCategoryComplianceMap(inputs);
+function buildMap(inputs: StaffDocumentCategoryComplianceInput[], asOfDate?: Date) {
+  return buildCategoryComplianceMap(inputs, asOfDate);
 }
 
 describe('report-document-status.util', () => {

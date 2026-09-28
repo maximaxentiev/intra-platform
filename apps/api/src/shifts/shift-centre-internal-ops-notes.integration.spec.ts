@@ -3,7 +3,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as schema from '../db/schema';
-import { centres, shifts } from '../db/schema';
+import { centres, shifts, users } from '../db/schema';
 import { CentresService } from '../centres/centres.service';
 import { PlatformAuditService } from '../platform-audit/platform-audit.service';
 import { ShiftAssignmentConfirmationService } from './shift-assignment-confirmation.service';
@@ -72,6 +72,16 @@ describe.skipIf(!POSTGRES_READY)('Shift workspace centre internal ops notes Post
 
     await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centreId));
     await db.delete(centres).where(eq(centres.id, FIXTURE.centreId));
+    await db.delete(users).where(eq(users.id, FIXTURE.actorUserId));
+
+    await db.insert(users).values({
+      id: FIXTURE.actorUserId,
+      email: 'shift-centre-notes-ops@example.test',
+      fullName: 'Shift Centre Notes Ops',
+      role: 'admin',
+      passwordHash: 'hash',
+      isActive: true,
+    });
 
     await db.insert(centres).values({
       id: FIXTURE.centreId,
@@ -98,6 +108,7 @@ describe.skipIf(!POSTGRES_READY)('Shift workspace centre internal ops notes Post
   afterAll(async () => {
     await db.delete(shifts).where(eq(shifts.centreId, FIXTURE.centreId));
     await db.delete(centres).where(eq(centres.id, FIXTURE.centreId));
+    await db.delete(users).where(eq(users.id, FIXTURE.actorUserId));
     await pool.end();
   });
 

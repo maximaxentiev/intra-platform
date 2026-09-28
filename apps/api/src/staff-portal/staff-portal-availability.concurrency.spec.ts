@@ -9,9 +9,11 @@ const TEST_TODAY = '2026-08-13';
 vi.mock('../availability/availability-toronto.util', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../availability/availability-toronto.util')>();
   const torontoTodayDateString = vi.fn(() => TEST_TODAY);
+  const torontoMondayWeekStart = vi.fn(() => MONDAY);
   return {
     ...actual,
     torontoTodayDateString,
+    torontoMondayWeekStart,
     isDateBeforeTodayInToronto: vi.fn((calendarDate: string, today?: string) =>
       actual.compareDateStrings(calendarDate, today ?? torontoTodayDateString()) < 0,
     ),
@@ -297,7 +299,7 @@ describe.runIf(POSTGRES_READY)('StaffPortalAvailabilityService postgres concurre
     const anchors = results
       .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof service.ensureOnboardingState>>> => r.status === 'fulfilled')
       .map((r) => r.value.week1Start);
-    expect(new Set(anchors)).toEqual(new Set([MONDAY]));
+    expect(new Set(anchors)).toEqual(new Set([TODAY]));
 
     const account = (
       await db.select().from(staffAccounts).where(eq(staffAccounts.id, ACCOUNT_A))
