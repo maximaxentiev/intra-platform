@@ -35,3 +35,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# One-time historical imports (PII); never commit CSV exports
+/private-imports/

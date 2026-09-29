@@ -58,7 +58,7 @@ export interface ApplicationListItem {
 }
 
 export interface NannyApplicationOpsView {
-  intakeVersion: "legacy" | "nanny_v2";
+  intakeVersion: "legacy" | "nanny_v2" | "historical_import";
   accuracyConfirmed: boolean | null;
   applicant: {
     preferredName: string | null;

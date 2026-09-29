@@ -155,7 +155,9 @@ export function ApplicationDrawer({
   const name = fullName(row);
   const isNanny = row.applicant.role === "nanny";
   const nanny = row.nanny;
-  const isNannyV2 = isNanny && nanny?.intakeVersion === "nanny_v2";
+  const isNannyV2 =
+    isNanny &&
+    (nanny?.intakeVersion === "nanny_v2" || nanny?.intakeVersion === "historical_import");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -424,17 +426,25 @@ export function ApplicationDrawer({
                 <span className="text-xs font-mono">{row.metadata.formId || "—"}</span>
               </FieldRow>
               <FieldRow label="Accuracy confirmed">
-                {row.metadata.accuracyConfirmed === null || row.metadata.accuracyConfirmed === undefined ? (
+                {nanny?.intakeVersion === "historical_import" ? (
+                  <span className="text-sm text-muted-foreground">Not recorded (historical import)</span>
+                ) : row.metadata.accuracyConfirmed === null || row.metadata.accuracyConfirmed === undefined ? (
                   <Dash />
                 ) : (
                   <YesNo value={row.metadata.accuracyConfirmed} />
                 )}
               </FieldRow>
               <FieldRow label="Consent">
-                <YesNo value={row.metadata.consentAccepted} />
-                {row.metadata.consentPolicyVersion ? (
-                  <span className="ml-2 text-xs text-muted-foreground">{row.metadata.consentPolicyVersion}</span>
-                ) : null}
+                {nanny?.intakeVersion === "historical_import" ? (
+                  <span className="text-sm text-muted-foreground">Not recorded (historical import)</span>
+                ) : (
+                  <>
+                    <YesNo value={row.metadata.consentAccepted} />
+                    {row.metadata.consentPolicyVersion ? (
+                      <span className="ml-2 text-xs text-muted-foreground">{row.metadata.consentPolicyVersion}</span>
+                    ) : null}
+                  </>
+                )}
               </FieldRow>
               <FieldRow label="Consent accepted">{fmtDateTime(row.metadata.consentAcceptedAt)}</FieldRow>
               <FieldRow label="Application ID">

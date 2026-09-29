@@ -1,7 +1,7 @@
 import type { applications } from '../db/schema';
 
 export interface NannyApplicationOpsView {
-  intakeVersion: 'legacy' | 'nanny_v2';
+  intakeVersion: 'legacy' | 'nanny_v2' | 'historical_import';
   accuracyConfirmed: boolean | null;
   applicant: {
     preferredName: string | null;
@@ -79,8 +79,63 @@ export function buildNannyApplicationOpsView(
   if (row.role !== 'nanny') return null;
 
   const snapshot = row.payloadSnapshot ?? {};
+  const intakeVersionRaw = stringOrNull(snapshot.intakeVersion as string | undefined);
+  const isHistoricalImport = intakeVersionRaw === 'historical_import';
   const eligibilitySnap = asObject(snapshot.eligibility);
-  const isV2 = eligibilitySnap !== null && 'canCommuteGta' in eligibilitySnap;
+  const isV2 =
+    !isHistoricalImport && eligibilitySnap !== null && 'canCommuteGta' in eligibilitySnap;
+
+  if (isHistoricalImport) {
+    const applicant = asObject(snapshot.applicant);
+    const experience = asObject(snapshot.experience);
+    const qualifications = asObject(snapshot.qualifications);
+    const compliance = asObject(snapshot.compliance);
+    const languages = asObject(snapshot.languages);
+
+    return {
+      intakeVersion: 'historical_import',
+      accuracyConfirmed: row.accuracyConfirmed ?? null,
+      applicant: {
+        preferredName: stringOrNull(applicant?.preferredName) ?? stringOrNull(row.preferredName),
+        city: stringOrNull(applicant?.city) ?? stringOrNull(row.city),
+        postalCode: stringOrNull(applicant?.postalCode) ?? stringOrNull(row.postalCode),
+      },
+      eligibility: {
+        canCommuteGta: boolOrNull(eligibilitySnap?.canCommuteGta) ?? row.gtaEligible,
+        canadaStatus: stringOrNull(eligibilitySnap?.canadaStatus) ?? stringOrNull(row.statusInCanada),
+        legallyAuthorizedToWork: stringOrNull(eligibilitySnap?.legallyAuthorizedToWork),
+        workPermitExpiry: stringOrNull(eligibilitySnap?.workPermitExpiry),
+        workPermitChildcareRestrictions: stringOrNull(eligibilitySnap?.workPermitChildcareRestrictions),
+        authorizedOffCampus: stringOrNull(eligibilitySnap?.authorizedOffCampus),
+        workHourLimitStatus: stringOrNull(eligibilitySnap?.workHourLimitStatus),
+        maxWeeklyWorkHours: intOrNull(eligibilitySnap?.maxWeeklyWorkHours),
+      },
+      experience: {
+        hasChildcareExperience: boolOrNull(experience?.hasChildcareExperience),
+        years: stringOrNull(experience?.years) ?? stringOrNull(row.experienceDuration),
+        types: stringArray(experience?.types).length
+          ? stringArray(experience?.types)
+          : row.nannyExperienceTypes ?? [],
+        ageGroups: stringArray(experience?.ageGroups),
+        specialExperienceTypes: stringArray(experience?.specialExperienceTypes),
+        specialExperienceDescription:
+          stringOrNull(experience?.specialExperienceDescription) ?? stringOrNull(row.childcareExperience),
+      },
+      qualifications: {
+        educationCertifications: stringArray(qualifications?.educationCertifications),
+        educationProgramName: stringOrNull(qualifications?.educationProgramName),
+      },
+      compliance: {
+        firstAidStatus: stringOrNull(compliance?.firstAidStatus) ?? stringOrNull(row.firstAidCprStatus),
+        firstAidExpiry: stringOrNull(compliance?.firstAidExpiry) ?? stringOrNull(row.firstAidCprExpiry),
+        vscStatus: stringOrNull(compliance?.vscStatus) ?? stringOrNull(row.vscStatus),
+        vscIssueDate: stringOrNull(compliance?.vscIssueDate) ?? stringOrNull(row.vscIssueOrRequestDate),
+      },
+      languages: {
+        spokenEnglishRating: intOrNull(languages?.spokenEnglishRating),
+      },
+    };
+  }
 
   if (isV2) {
     const applicant = asObject(snapshot.applicant);
