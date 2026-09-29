@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   HttpException,
   InternalServerErrorException,
@@ -282,6 +285,24 @@ describe('NetworkApplicationsSubmitService', () => {
 
     expect(result.applicationId).toBe('race-winner-id');
     expect(storage.uploadObject).not.toHaveBeenCalled();
+  });
+});
+
+describe('NetworkApplicationsSubmitService submission emails', () => {
+  it('does not send applicant or internal notification emails on submit', () => {
+    const applicationsDir = dirname(fileURLToPath(import.meta.url));
+    const submitServiceSource = readFileSync(
+      join(applicationsDir, 'network-applications-submit.service.ts'),
+      'utf8',
+    );
+    const controllerSource = readFileSync(
+      join(applicationsDir, 'public-applications.controller.ts'),
+      'utf8',
+    );
+
+    for (const source of [submitServiceSource, controllerSource]) {
+      expect(source).not.toMatch(/EmailService|sendEmail|resend|@\/lib\/email/);
+    }
   });
 });
 
