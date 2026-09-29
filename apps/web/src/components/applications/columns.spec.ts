@@ -160,17 +160,17 @@ describe("applications list presentation (R9/R11)", () => {
 });
 
 describe("applications filter panel layout (R12)", () => {
-  it("uses viewport-constrained flex layout with scrollable body", () => {
-    expect(filtersPanel).toContain("max-h-[min(calc(100dvh-2rem),32rem)]");
-    expect(filtersPanel).toContain("overflow-hidden");
+  it("uses a right-side sheet with scrollable filter groups", () => {
+    expect(filtersPanel).toContain("SheetContent");
+    expect(filtersPanel).toContain('side="right"');
     expect(filtersPanel).toContain("min-h-0 flex-1 overflow-y-auto");
-    expect(filtersPanel).not.toContain("ScrollArea");
+    expect(filtersPanel).toContain("Collapsible");
   });
 
-  it("keeps header actions and bottom date filters reachable in the scroll body", () => {
+  it("keeps apply/clear actions and key filters in the panel", () => {
     expect(filtersPanel).toContain("Clear all");
-    expect(filtersPanel).toContain("Close");
-    expect(filtersPanel).toContain('label="CPR Expiry"');
+    expect(filtersPanel).toContain("Apply filters");
+    expect(filtersPanel).toContain('label="First Aid expiry"');
     expect(filtersPanel).toContain('label="Status"');
   });
 });

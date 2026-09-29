@@ -21,7 +21,7 @@ import {
   nannyView,
 } from "@/lib/applications-nanny-display";
 import { Button } from "@/components/ui/button";
-import type { ApplicationFilters } from "@/components/applications/ApplicationsFilters";
+import type { ApplicationFilters } from "@/lib/application-filters-types";
 
 export interface AppColumn {
   key: string;

@@ -9,9 +9,13 @@ const sampleApplication = {
   firstName: 'Jane',
   middleName: '',
   lastName: 'Doe',
+  preferredName: '',
   email: 'jane@example.com',
   phone: '4165550100',
+  city: '',
+  postalCode: '',
   gender: '',
+  accuracyConfirmed: null,
   gtaEligible: true,
   statusInCanada: 'citizen',
   experienceDuration: '2 years',
@@ -70,11 +74,19 @@ function createMockDb() {
   countChain.where.mockResolvedValue([{ count: 1 }]);
   countChain.from.mockReturnValue(countChain);
 
+  const docsChain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockResolvedValue([]),
+  };
+
   let selectCall = 0;
   const db = {
     select: vi.fn(() => {
       selectCall += 1;
-      return selectCall === 1 ? chain : countChain;
+      if (selectCall === 1) return chain;
+      if (selectCall === 2) return countChain;
+      return docsChain;
     }),
   };
 
@@ -99,7 +111,7 @@ describe('ApplicationsService', () => {
     expect(result.total).toBe(1);
     expect(result.limit).toBe(25);
     expect(result.offset).toBe(0);
-    expect(result.items[0]?.email).toBe('jane@example.com');
+    expect(result.items[0]?.applicant.email).toBe('jane@example.com');
     expect(chain.limit).toHaveBeenCalledWith(25);
     expect(chain.offset).toHaveBeenCalledWith(0);
   });

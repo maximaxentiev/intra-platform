@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowDown,
@@ -35,25 +35,26 @@ import {
   ApplicationsFilterPanel,
   EMPTY_FILTERS,
   countActiveFilters,
-  type ApplicationFilters,
 } from "@/components/applications/ApplicationsFilters";
-import {
-  columnsForRole,
-  matchesFilters,
-  matchesSearch,
-  sortRows,
-  type SortState,
-} from "@/components/applications/columns";
+import { columnsForRole, type SortState } from "@/components/applications/columns";
 import {
   ROLE_TABS,
   applicationsApi,
-  fetchAllForRole,
   fullName,
   type ApplicationRole,
   type ApplicationRow,
 } from "@/lib/applications";
+import {
+  applicationFiltersToApiParams,
+  deserializeApplicationSearch,
+  serializeApplicationSearch,
+} from "@/lib/application-list-params";
+import { useState } from "react";
+
+const PAGE_SIZE = 25;
 
 export const Route = createFileRoute("/_authenticated/applications")({
+  validateSearch: (search: Record<string, unknown>) => deserializeApplicationSearch(search),
   component: ApplicationsPage,
   errorComponent: ({ error }) => (
     <div role="alert" className="p-6 text-sm text-destructive">
@@ -62,52 +63,70 @@ export const Route = createFileRoute("/_authenticated/applications")({
   ),
 });
 
-const PAGE_SIZE = 25;
-
 function ApplicationsPage() {
-  const [role, setRole] = useState<ApplicationRole>("eca");
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<ApplicationFilters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortState>(null);
-  const [page, setPage] = useState(0);
+  const navigate = useNavigate({ from: Route.fullPath });
+  const searchState = Route.useSearch();
+  const { role, q: search, page, filters } = searchState;
   const [hidden, setHidden] = useState<Record<string, string[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [reviewPendingId, setReviewPendingId] = useState<string | null>(null);
   const docs = useDocumentViewer();
 
+  const sort: SortState = useMemo(() => {
+    const { sortBy, sortDir } = searchState.sort;
+    if (!sortBy || !sortDir) return null;
+    const key =
+      sortBy === "applicant"
+        ? "applicant"
+        : sortBy === "email"
+          ? "email"
+          : sortBy === "status"
+            ? "status"
+            : sortBy === "reviewedAt"
+              ? "reviewedAt"
+              : sortBy === "createdAt"
+                ? "createdAt"
+                : "submitted";
+    return { key, dir: sortDir };
+  }, [searchState.sort]);
+
+  const listParams = useMemo(
+    () =>
+      applicationFiltersToApiParams(role, search, filters, page, PAGE_SIZE, {
+        sortBy:
+          sort?.key === "applicant"
+            ? "applicant"
+            : sort?.key === "email"
+              ? "email"
+              : sort?.key === "status"
+                ? "status"
+                : sort?.key === "reviewedAt"
+                  ? "reviewedAt"
+                  : sort?.key === "createdAt"
+                    ? "createdAt"
+                    : "submittedAt",
+        sortDir: sort?.dir,
+      }),
+    [role, search, filters, page, sort],
+  );
+
   const listQuery = useQuery({
-    queryKey: ["applications", role],
-    queryFn: () => fetchAllForRole(role),
+    queryKey: ["applications", listParams],
+    queryFn: () => applicationsApi.list(listParams),
     staleTime: 30_000,
   });
 
-  const detailQueries = useQueries({
-    queries: (listQuery.data ?? []).map((item) => ({
-      queryKey: ["application", item.id],
-      queryFn: () => applicationsApi.get(item.id),
-      staleTime: 60_000,
-    })),
-  });
-
   const rows: ApplicationRow[] = useMemo(() => {
-    const items = listQuery.data ?? [];
-    return detailQueries
-      .map((q, i) => {
-        const detail = q.data;
-        const item = items[i];
-        if (!detail || !item) return null;
-        return {
-          ...detail,
-          submittedAt: item.submittedAt ?? detail.metadata.submittedAt,
-          reviewedAt: item.reviewedAt ?? detail.workflow.reviewedAt,
-        } as ApplicationRow;
-      })
-      .filter((r): r is ApplicationRow => r !== null);
-  }, [detailQueries, listQuery.data]);
+    return (listQuery.data?.items ?? []).map((detail) => ({
+      ...detail,
+      submittedAt: detail.metadata.submittedAt ?? detail.createdAt,
+      reviewedAt: detail.workflow.reviewedAt,
+    }));
+  }, [listQuery.data?.items]);
 
-  const detailsLoading = detailQueries.some((q) => q.isLoading);
-  const loading = listQuery.isLoading || (rows.length === 0 && detailsLoading);
-  const errored = listQuery.isError || (!listQuery.isLoading && detailQueries.some((q) => q.isError));
+  const total = listQuery.data?.total ?? 0;
+  const loading = listQuery.isLoading;
+  const errored = listQuery.isError;
 
   const allColumns = useMemo(() => columnsForRole(role), [role]);
   const hiddenForRole = hidden[role] ?? [];
@@ -116,37 +135,51 @@ function ApplicationsPage() {
     [allColumns, hiddenForRole],
   );
 
-  const filtered = useMemo(
-    () => rows.filter((r) => matchesSearch(r, search) && matchesFilters(r, filters)),
-    [rows, search, filters],
-  );
-  const sorted = useMemo(() => sortRows(filtered, sort, allColumns), [filtered, sort, allColumns]);
-
-  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
-  const pageRows = sorted.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const pageRows = rows;
 
   const openRow = rows.find((r) => r.id === openId) ?? null;
   const activeFilterCount = countActiveFilters(filters);
   const hasQuery = activeFilterCount > 0 || search.trim() !== "";
 
+  function patchSearch(patch: Partial<ReturnType<typeof deserializeApplicationSearch>>) {
+    const next = {
+      ...searchState,
+      ...patch,
+      filters: patch.filters ?? searchState.filters,
+      sort: patch.sort ?? searchState.sort,
+    };
+    void navigate({
+      search: serializeApplicationSearch(next) as never,
+    });
+  }
+
   function changeRole(next: ApplicationRole) {
-    setRole(next);
-    setPage(0);
-    setSort(null);
-    setFilters(EMPTY_FILTERS);
-    setSearch("");
+    patchSearch({ role: next, page: 0, filters: EMPTY_FILTERS, q: "", sort: {} });
   }
 
   function toggleSort(key: string) {
-    setPage(0);
-    setSort((prev) =>
-      !prev || prev.key !== key
-        ? { key, dir: "asc" }
-        : prev.dir === "asc"
-          ? { key, dir: "desc" }
-          : null,
-    );
+    const apiKey =
+      key === "applicant"
+        ? "applicant"
+        : key === "email"
+          ? "email"
+          : key === "status"
+            ? "status"
+            : key === "reviewedAt"
+              ? "reviewedAt"
+              : key === "createdAt"
+                ? "createdAt"
+                : "submittedAt";
+    const prev = searchState.sort;
+    const nextSort =
+      !prev.sortBy || prev.sortBy !== apiKey
+        ? { sortBy: apiKey as typeof prev.sortBy, sortDir: "asc" as const }
+        : prev.sortDir === "asc"
+          ? { sortBy: apiKey as typeof prev.sortBy, sortDir: "desc" as const }
+          : {};
+    patchSearch({ page: 0, sort: nextSort });
   }
 
   async function markReviewed(id: string) {
@@ -154,13 +187,6 @@ function ApplicationsPage() {
     try {
       await applicationsApi.review(id);
       await listQuery.refetch();
-      await Promise.all(
-        detailQueries.map((query, index) => {
-          const item = listQuery.data?.[index];
-          if (item?.id === id) return query.refetch();
-          return Promise.resolve();
-        }),
-      );
     } finally {
       setReviewPendingId(null);
     }
@@ -179,7 +205,6 @@ function ApplicationsPage() {
     <div className="space-y-5">
       <PageHeader title="Applications" />
 
-      {/* Role switcher */}
       <Tabs value={role} onValueChange={(v) => changeRole(v as ApplicationRole)}>
         <TabsList>
           {ROLE_TABS.map((t) => (
@@ -190,16 +215,12 @@ function ApplicationsPage() {
         </TabsList>
       </Tabs>
 
-      {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1 min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => patchSearch({ q: e.target.value, page: 0 })}
             placeholder="Search by name, email or phone…"
             className="h-10 pl-9 pr-9"
             aria-label="Search applications"
@@ -207,7 +228,7 @@ function ApplicationsPage() {
           {search && (
             <button
               type="button"
-              onClick={() => setSearch("")}
+              onClick={() => patchSearch({ q: "", page: 0 })}
               aria-label="Clear search"
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
             >
@@ -220,11 +241,8 @@ function ApplicationsPage() {
             role={role}
             rows={rows}
             filters={filters}
-            onChange={(f) => {
-              setFilters(f);
-              setPage(0);
-            }}
-            onClear={() => setFilters(EMPTY_FILTERS)}
+            onApply={(f) => patchSearch({ filters: f, page: 0 })}
+            onClear={() => patchSearch({ filters: EMPTY_FILTERS, page: 0 })}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -280,27 +298,23 @@ function ApplicationsPage() {
       <ActiveFilterChips
         filters={filters}
         onRemove={(key) =>
-          setFilters((prev) => ({ ...prev, [key]: EMPTY_FILTERS[key] } as ApplicationFilters))
+          patchSearch({
+            filters: { ...filters, [key]: EMPTY_FILTERS[key] } as typeof filters,
+            page: 0,
+          })
         }
-        onClear={() => setFilters(EMPTY_FILTERS)}
+        onClear={() => patchSearch({ filters: EMPTY_FILTERS, page: 0 })}
       />
 
-      {/* Result count */}
       {!loading && !errored && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
-            {sorted.length} application{sorted.length === 1 ? "" : "s"}
-            {hasQuery ? ` of ${rows.length}` : ""}
+            {total} application{total === 1 ? "" : "s"}
+            {hasQuery ? " matching filters" : ""}
           </span>
-          {detailsLoading && (
-            <span className="inline-flex items-center gap-1 text-xs">
-              <Loader2 className="h-3 w-3 animate-spin" /> loading details…
-            </span>
-          )}
         </div>
       )}
 
-      {/* States */}
       {errored ? (
         <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-8 text-center">
           <AlertTriangle className="mx-auto h-6 w-6 text-destructive" aria-hidden />
@@ -318,30 +332,31 @@ function ApplicationsPage() {
             <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : total === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <Inbox className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden />
-          <p className="mt-2 text-sm font-medium">No applications yet</p>
-          <p className="text-xs text-muted-foreground">
-            New {ROLE_TABS.find((t) => t.role === role)?.label} applications will appear here.
-          </p>
-        </div>
-      ) : sorted.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <Search className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden />
-          <p className="mt-2 text-sm font-medium">No matching applications</p>
-          <p className="text-xs text-muted-foreground">Try adjusting your search or filters.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              setSearch("");
-              setFilters(EMPTY_FILTERS);
-            }}
-          >
-            Clear search & filters
-          </Button>
+          {hasQuery ? (
+            <>
+              <Search className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden />
+              <p className="mt-2 text-sm font-medium">No matching applications</p>
+              <p className="text-xs text-muted-foreground">Try adjusting your search or filters.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => patchSearch({ q: "", filters: EMPTY_FILTERS, page: 0 })}
+              >
+                Clear search & filters
+              </Button>
+            </>
+          ) : (
+            <>
+              <Inbox className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden />
+              <p className="mt-2 text-sm font-medium">No applications yet</p>
+              <p className="text-xs text-muted-foreground">
+                New {ROLE_TABS.find((t) => t.role === role)?.label} applications will appear here.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -429,11 +444,9 @@ function ApplicationsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
-              Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, sorted.length)} of{" "}
-              {sorted.length}
+              Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, total)} of {total}
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -441,7 +454,7 @@ function ApplicationsPage() {
                 size="sm"
                 className="h-8"
                 disabled={safePage === 0}
-                onClick={() => setPage(safePage - 1)}
+                onClick={() => patchSearch({ page: safePage - 1 })}
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
               </Button>
@@ -453,7 +466,7 @@ function ApplicationsPage() {
                 size="sm"
                 className="h-8"
                 disabled={safePage >= pageCount - 1}
-                onClick={() => setPage(safePage + 1)}
+                onClick={() => patchSearch({ page: safePage + 1 })}
               >
                 Next <ChevronRight className="h-4 w-4" />
               </Button>

@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Readable } from 'stream';
 import { DRIZZLE, type Database } from '../db/drizzle.module';
 import {
@@ -18,6 +18,10 @@ import {
   isInlinePreviewContentType,
 } from './application-document-content.util';
 import { buildNannyApplicationOpsView } from './application-nanny-view.util';
+import {
+  buildApplicationsListOrderBy,
+  buildApplicationsListWhere,
+} from './applications-list-filter.util';
 import type { ListApplicationsQuery } from './dto/applications.dto';
 
 export interface ApplicationDocumentStreamResult {
@@ -140,33 +144,15 @@ export class ApplicationsService {
   async list(q: ListApplicationsQuery) {
     const limit = q.limit ?? 25;
     const offset = q.offset ?? 0;
-    const filters = [];
-
-    if (q.role) filters.push(eq(applications.role, q.role));
-    if (q.status) filters.push(eq(applications.status, q.status));
-
-    const search = q.q?.trim();
-    if (search) {
-      const pattern = `%${search}%`;
-      filters.push(
-        or(
-          ilike(applications.firstName, pattern),
-          ilike(applications.lastName, pattern),
-          ilike(applications.email, pattern),
-          ilike(applications.phone, pattern),
-          ilike(applications.city, pattern),
-        )!,
-      );
-    }
-
-    const where = filters.length ? and(...filters) : undefined;
+    const where = buildApplicationsListWhere(q);
+    const orderParts = buildApplicationsListOrderBy(q);
 
     const [rows, countRows] = await Promise.all([
       this.db
         .select()
         .from(applications)
         .where(where)
-        .orderBy(desc(applications.submittedAt), desc(applications.createdAt))
+        .orderBy(...orderParts)
         .limit(limit)
         .offset(offset),
       this.db
@@ -175,8 +161,24 @@ export class ApplicationsService {
         .where(where),
     ]);
 
+    const ids = rows.map((r) => r.id);
+    const docs =
+      ids.length > 0
+        ? await this.db
+            .select()
+            .from(applicationDocuments)
+            .where(inArray(applicationDocuments.applicationId, ids))
+            .orderBy(applicationDocuments.uploadedAt)
+        : [];
+    const docsByApp = new Map<string, typeof docs>();
+    for (const doc of docs) {
+      const list = docsByApp.get(doc.applicationId) ?? [];
+      list.push(doc);
+      docsByApp.set(doc.applicationId, list);
+    }
+
     return {
-      items: rows.map(listItem),
+      items: rows.map((row) => buildDetail(row, docsByApp.get(row.id) ?? [])),
       total: countRows[0]?.count ?? 0,
       limit,
       offset,

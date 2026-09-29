@@ -168,14 +168,14 @@ export interface ApplicationRow extends ApplicationDetail {
 }
 
 export interface ApplicationsPage {
-  items: ApplicationListItem[];
+  items: ApplicationDetail[];
   total: number;
   limit: number;
   offset: number;
 }
 
 export const applicationsApi = {
-  list: (params: { role?: ApplicationRole; status?: ApplicationStatus; limit?: number; offset?: number }) =>
+  list: (params: Record<string, string | number | undefined>) =>
     api.get<ApplicationsPage>("/applications", params),
   get: (id: string) => api.get<ApplicationDetail>(`/applications/${id}`),
   activity: (id: string) => api.get<ApplicationActivityEvent[]>(`/applications/${id}/activity`),
